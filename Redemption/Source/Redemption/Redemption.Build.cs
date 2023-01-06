@@ -1,0 +1,53 @@
+// Copyright Epic Games, Inc. All Rights Reserved.
+
+using UnrealBuildTool;
+
+public class Redemption : ModuleRules
+{
+	public Redemption(ReadOnlyTargetRules Target) : base(Target)
+	{
+		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
+
+		PublicDependencyModuleNames.AddRange(
+			new string[]
+			{
+				"Core",
+				"CoreOnline",
+				"CoreUObject",
+				"ApplicationCore",
+				"Engine",
+				"InputCore",
+				"EnhancedInput",
+				"GameplayTags",
+				"GameplayTasks",
+				"GameplayAbilities",
+				"AIModule",
+				"PhysicsCore",
+				"DataRegistry",
+				"ReplicationGraph",
+				"Json",
+				//"AnimationLocomotionLibraryRuntime",
+				"PoseSearch",
+				"ControlRig",
+				"MotionWarping",
+				"MotionTrajectory",
+				"ChaosVehiclesCore",
+				"StateTreeModule",
+				"StructUtils",
+				"HairStrandsCore",
+				"ContextualAnimation",
+				"Media",
+				"MediaUtils",
+				"MediaAssets",
+				"AudioMixer",
+				"GeometryCollectionEngine",
+				"Gauntlet",
+				"MassZoneGraphNavigation",
+			}
+		);
+
+		// Generate compile errors if using DrawDebug functions in test/shipping builds.
+		PublicDefinitions.Add("SHIPPING_DRAW_DEBUG_ERROR=1");
+	}
+}
+
