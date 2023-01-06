@@ -60,7 +60,7 @@ ABaseCharacter::ABaseCharacter(const FObjectInitializer& ObjectInitializer)
 
 	WvMoveComp->bOrientRotationToMovement = true;
 	WvMoveComp->RotationRate = FRotator(0.0f, 500.0f, 0.0f);
-	GetCharacterMovement()->JumpZVelocity = 700.f;
+	GetCharacterMovement()->JumpZVelocity = 500.f;
 	GetCharacterMovement()->AirControl = 0.35f;
 	GetCharacterMovement()->MaxWalkSpeed = 500.f;
 	GetCharacterMovement()->MinAnalogWalkSpeed = 20.f;
@@ -162,5 +162,10 @@ void ABaseCharacter::OnRep_ReplicatedAcceleration()
 		UnpackedAcceleration.Z = double(ReplicatedAcceleration.AccelZ) * MaxAccel / 127.0; // [-127, 127] -> [-MaxAccel, MaxAccel]
 		WvCharacterMovementComponent->SetReplicatedAcceleration(UnpackedAcceleration);
 	}
+}
+
+UWvCharacterMovementComponent* ABaseCharacter::GetWvCharacterMovementComponent() const
+{
+	return CastChecked<UWvCharacterMovementComponent>(GetCharacterMovement());
 }
 

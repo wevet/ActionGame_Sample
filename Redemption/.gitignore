@@ -75,6 +75,9 @@ DerivedDataCache/*
 Content/__ExternalObjects__/*
 Content/__ExternalActors__/*
 Content/MetaHumans/*
+Content/WB_Dresswear/*
+
+.vsconfig
 
 # ignore PyCharm Directory
 .idea/

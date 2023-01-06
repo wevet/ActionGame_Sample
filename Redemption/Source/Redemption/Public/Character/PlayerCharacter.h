@@ -49,8 +49,6 @@ protected:
 	float BaseLookUpRate;
 
 protected:
-	void MoveForward(float Value);
-	void MoveRight(float Value);
 	void Move(const FInputActionValue& Value);
 
 	void TurnAtRate(float Rate);

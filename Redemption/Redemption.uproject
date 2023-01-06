@@ -20,6 +20,10 @@
 			"Enabled": true
 		},
 		{
+			"Name": "ChaosCarGlass",
+			"Enabled": true
+		},
+		{
 			"Name": "ModelingToolsEditorMode",
 			"Enabled": true,
 			"TargetAllowList": [

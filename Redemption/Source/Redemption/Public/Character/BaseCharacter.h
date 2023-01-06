@@ -35,6 +35,7 @@ struct FWvReplicatedAcceleration
 class UPredictiveIKComponent;
 class UMotionWarpingComponent;
 class UCharacterMovementTrajectoryComponent;
+class UWvCharacterMovementComponent;
 
 
 UCLASS(Abstract)
@@ -78,6 +79,7 @@ public:
 	FORCEINLINE class UMotionWarpingComponent* GetMotionWarpingComponent() const { return MotionWarpingComponent; }
 	FORCEINLINE class UCharacterMovementTrajectoryComponent* GetCharacterMovementTrajectoryComponent() const { return CharacterMovementTrajectoryComponent; }
 	UAbilitySystemComponent* GetAbilitySystemComponent() const { return AbilitySystemComponent; };
+	UWvCharacterMovementComponent* GetWvCharacterMovementComponent() const;
 
 protected:
 	UPROPERTY(Transient, ReplicatedUsing = OnRep_ReplicatedAcceleration)
