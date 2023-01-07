@@ -1,30 +1,25 @@
-// Copyright 2020 PrecisionGaming (Gareth Tim Sibson)
+// Copyright Epic Games, Inc. All Rights Reserved.
 
 #include "RopePhy.h"
 
 URopePhy::URopePhy()
 {
 	PrimaryComponentTick.bCanEverTick = false;
-	//Names of class variables use two suffixes //first = Variable Group  //second = Rope Cutting	//E.g. Arrays are NameARC
-	///////////////////////////////////////////////////////Default Assets
 	StartMeshTypeDARC = nullptr;
 	Mesh01TypeDARC = nullptr;
 	Mesh02TypeDARC = nullptr;
 	Mesh03TypeDARC = nullptr;
 	Mesh04TypeDARC = nullptr;
 	EndMeshTypeDARC = nullptr;
-	///////////////////////////////////////////////////////Pointer References 
 	SphereCollPRC = nullptr;
 	SplineMeshPRC = nullptr;
 	SplinePRC = nullptr;
 	SplineBuildPRC = nullptr;
 	UserSplinePRC = nullptr;
 	PhysicsConstraintPRC = nullptr;
-	///////////////////////////////////////////////////////Arrays
 	CollisionArrayARC.Empty();
 	SplineMeshArrayARC.Empty();
 	PhysicsConstraintArrayARC.Empty();
-	///////////////////////////////////////////////////////Collision
 	CollUnitScaleCRC = 0.2f;
 	LinearDampeningCRC = 0.75;
 	AngularDampeningCRC = 1.5;
@@ -36,15 +31,12 @@ URopePhy::URopePhy()
 	GenericSharedTagCRC = FName("RopeCutting");
 	MassCRC = 0.0;
 	MassScaleCRC = 2.0;
-	///////////////////////////////////////////////////////Build
 	InstanceSpecificIDStrBRC = this->GetName();
 	InstanceSpecificIDTagBRC = FName(*InstanceSpecificIDStrBRC);
 	UnitLengthBVRC = 15.0f;
 	UsedInGameEG = true;
 	UserSplineSetToSocketLocBRC = false;
-	///////////////////////////////////////////////////////Construction Tracking
 	HasBuiltBRC = false;
-	///////////////////////////////////////////////////////Mesh
 	StartMeshWidthSMRC = 0.0f;
 	StartMeshMaterial01SMRC = nullptr;
 	StartMeshMaterial02SMRC = nullptr;
@@ -63,13 +55,13 @@ URopePhy::URopePhy()
 	EndMeshWidthSMRC = 0.0f;
 	EndMeshMaterial01SMRC = nullptr;
 	EndMeshMaterial02SMRC = nullptr;
-	///////////////////////////////////////////////////////Constraints
 	AngularDrivePositionStrengthConsRC = 512.0f;
 	AngularDriveVelocityStrengthConsRC = 256.0f;
 	SetAngularSwing1LimitConsRC = 45.0f;
 	SetAngularSwing2LimitConsRC = 45.0f;
 	SetAngularTwistLimitConsRC = 45.0f;
 }
+
 void URopePhy::SetUserSplineStartLocation_RC(USplineComponent* UserSpline, FVector LocationUserSplineStart, bool UseRelativeLocationUserSplineStart)
 {
 	if (HasBuiltBRC == false)
@@ -85,6 +77,7 @@ void URopePhy::SetUserSplineStartLocation_RC(USplineComponent* UserSpline, FVect
 		UserSplineSetToSocketLocBRC = true;
 	}
 }
+
 void URopePhy::SetUserSplineEndLocation_RC(USplineComponent* UserSpline, FVector LocationUserSplineEnd, bool UseRelativeLocationUserSplineEnd)
 {
 	if (HasBuiltBRC == false)
@@ -100,6 +93,7 @@ void URopePhy::SetUserSplineEndLocation_RC(USplineComponent* UserSpline, FVector
 		UserSplineSetToSocketLocBRC = true;
 	}
 }
+
 TArray<USphereComponent*> URopePhy::Build_RC(UStaticMesh* Mesh, UStaticMesh* StartEndMesh, float CollisionScale, USplineComponent* UserSpline, float UnitLength, FVector RopeOffset, bool DisableRopeOffset)
 {
 	TArray<USphereComponent*> CollisionArrayBRC;
@@ -249,6 +243,7 @@ TArray<USphereComponent*> URopePhy::Build_RC(UStaticMesh* Mesh, UStaticMesh* Sta
 	}
 	return CollisionArrayBRC;
 }
+
 TArray<USphereComponent*> URopePhy::Collision_RC(float CollisionScale, float AngularDampening, float LinearDampening, float VelocitySolverIterationCount, float PositionSolverIterationCount, float StabilizationThresholdMultiplier, float SleepThresholdMultiplier, float InertiaTensorScale, float Mass, float MassScale)
 {
 	TArray<USphereComponent*> ReturnSphereCollArray;
@@ -312,6 +307,7 @@ TArray<USphereComponent*> URopePhy::Collision_RC(float CollisionScale, float Ang
 		return ReturnSphereCollArray;
 	}
 }
+
 TArray<USplineMeshComponent*> URopePhy::Mesh_RC(UStaticMesh* StartMesh, float StartMeshWidth, UMaterialInterface* StartMeshMat01, UMaterialInterface* StartMeshMat02, UStaticMesh* Mesh01, float Mesh01Width, UMaterialInterface* Mesh01Mat01, UMaterialInterface* Mesh01Mat02, UStaticMesh* Mesh02, float Mesh02Width, UMaterialInterface* Mesh02Mat01, UMaterialInterface* Mesh02Mat02, UStaticMesh* Mesh03, float Mesh03Width, UMaterialInterface* Mesh03Mat01, UMaterialInterface* Mesh03Mat02, UStaticMesh* Mesh04, float Mesh04Width, UMaterialInterface* Mesh04Mat01, UMaterialInterface* Mesh04Mat02, UStaticMesh* EndMesh, float EndMeshWidth, UMaterialInterface* EndMeshMat01, UMaterialInterface* EndMeshMat02)
 {
 	TArray<USplineMeshComponent*> ReturnSplineMeshArray;
@@ -461,6 +457,7 @@ TArray<USplineMeshComponent*> URopePhy::Mesh_RC(UStaticMesh* StartMesh, float St
 		return ReturnSplineMeshArray;
 	}
 }
+
 TArray<UPhysicsConstraintComponent*> URopePhy::Constraint_RC(const int32 AngularDrivePositionStrength, const int32 AngularDriveVelocityStrength, const int32 SetAngularSwing1Limit, const int32 SetAngularSwing2Limit, const int32 SetAngularTwistLimit)
 {
 	TArray<UPhysicsConstraintComponent*> ReturnPhysicsConstrArray;
@@ -499,6 +496,7 @@ TArray<UPhysicsConstraintComponent*> URopePhy::Constraint_RC(const int32 Angular
 		return ReturnPhysicsConstrArray;
 	}
 }
+
 USphereComponent* URopePhy::GetFirstCollisionObject_RC()
 {
 	USphereComponent* ReturnCollisionSphere = nullptr;
@@ -508,6 +506,7 @@ USphereComponent* URopePhy::GetFirstCollisionObject_RC()
 	}
 	return ReturnCollisionSphere;
 }
+
 USphereComponent* URopePhy::GetLastCollisionObject_RC()
 {
 	USphereComponent* ReturnCollisionSphere = nullptr;
@@ -517,6 +516,7 @@ USphereComponent* URopePhy::GetLastCollisionObject_RC()
 	}
 	return ReturnCollisionSphere;
 }
+
 TArray<USphereComponent*> URopePhy::GetCollisionArray_RC()
 {
 	TArray<USphereComponent*> ReturnCollisionArrayRC;
@@ -526,6 +526,7 @@ TArray<USphereComponent*> URopePhy::GetCollisionArray_RC()
 	}
 	return ReturnCollisionArrayRC;
 }
+
 USplineComponent* URopePhy::GetSpline_RC()
 {
 	USplineComponent* ReturnSplineRC = nullptr;
@@ -535,6 +536,7 @@ USplineComponent* URopePhy::GetSpline_RC()
 	}
 	return ReturnSplineRC;
 }
+
 void URopePhy::Destroy_RC()
 {
 	if (HasBuiltBRC == true)
@@ -594,6 +596,7 @@ void URopePhy::Destroy_RC()
 		
 	}
 }
+
 const FName URopePhy::CreateUniqueName(const FString ComponentType, const int ComponentNumber, const FString ThisComponentStrNameCUNIn)
 {
 	const FString ComponentNumberStr = FString::FromInt(ComponentNumber);
@@ -604,6 +607,7 @@ const FName URopePhy::CreateUniqueName(const FString ComponentType, const int Co
 
 	return OutputFName;
 }
+
 void URopePhy::CreateSpline(USplineComponent* InSplineCS, const FVector WorldLocationCS, const FRotator WorldRotationCS, UWorld* WorldRefCSIn, USceneComponent* SelfRefCSIn)
 {
 	InSplineCS->CreationMethod = EComponentCreationMethod::UserConstructionScript;
@@ -618,6 +622,7 @@ void URopePhy::CreateSpline(USplineComponent* InSplineCS, const FVector WorldLoc
 	InSplineCS->SetWorldRotation(WorldRotationCS);
 	InSplineCS->SetLocationAtSplinePoint(0, WorldLocationCS, ESplineCoordinateSpace::World);
 }
+
 void URopePhy::AddPointsToSpline(USplineComponent* SplineToGrow, USplineComponent* UserSplineCRSIn, const int NumberOfLoopsAPTSIn, const float UnitLengthAPTSIn, const FVector RopeOffsetAPTSIn)
 {
 	float RenderSplinePointSpacing;
@@ -627,6 +632,7 @@ void URopePhy::AddPointsToSpline(USplineComponent* SplineToGrow, USplineComponen
 		SplineToGrow->AddSplineWorldPoint(FVector(UserSplineCRSIn->GetLocationAtDistanceAlongSpline(RenderSplinePointSpacing, ESplineCoordinateSpace::World)) + RopeOffsetAPTSIn);
 	}
 }
+
 void URopePhy::SplineUpDir(USplineComponent* ITargetSpline, const float ISplineUpDirClamp)
 {
 	FVector StartSplineUpVector;
@@ -655,6 +661,7 @@ void URopePhy::SplineUpDir(USplineComponent* ITargetSpline, const float ISplineU
 		ITargetSpline->SetUpVectorAtSplinePoint((i + 1), SplineUpDirClampedEnd, ESplineCoordinateSpace::Local, true);
 	}
 }
+
 void URopePhy::AdjustRenderSplineLocation(USplineComponent* RenderSpline, USplineComponent* UserSpline, UPrimitiveComponent* AttachedPrimitive, const int NumberOfLoops, const FName SocketName)
 {
 	if (AttachedPrimitive != nullptr)
@@ -674,6 +681,7 @@ void URopePhy::AdjustRenderSplineLocation(USplineComponent* RenderSpline, USplin
 		}
 	}
 }
+
 void URopePhy::CreateSplineMeshes(USplineMeshComponent* SplineMeshCSMInput, UWorld* WorldRefCSMIn, USplineComponent* SplineOwnerRefCSMIn)
 {
 	SplineMeshCSMInput->CreationMethod = EComponentCreationMethod::UserConstructionScript;
@@ -682,6 +690,7 @@ void URopePhy::CreateSplineMeshes(USplineMeshComponent* SplineMeshCSMInput, UWor
 	SplineMeshCSMInput->AttachToComponent(SplineOwnerRefCSMIn, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
 	SplineMeshCSMInput->SetCollisionEnabled(ECollisionEnabled::Type::NoCollision);
 }
+
 void URopePhy::ConfigureSplineMeshes(USplineMeshComponent* SplineMeshConfigSMInput, UStaticMesh* MeshTypeConfigSMInput, float MeshWidthConfigSMInput, UMaterialInterface* MeshMaterial01ConfigSMInput, UMaterialInterface* MeshMaterial02ConfigSMInput)
 {
 	SplineMeshConfigSMInput->SetStaticMesh(MeshTypeConfigSMInput);
@@ -704,6 +713,7 @@ void URopePhy::ConfigureSplineMeshes(USplineMeshComponent* SplineMeshConfigSMInp
 		SplineMeshConfigSMInput->SetMaterial(1, MeshMaterial02ConfigSMInput);
 	}
 }
+
 void URopePhy::SetSplMLocTang(USplineComponent* ITargetSpline, USplineMeshComponent* InTargetSplM, const int32 IEditPoint, const float UnitLengthSSMLTIn)
 {
 	FVector StartPoint;
@@ -728,6 +738,7 @@ void URopePhy::SetSplMLocTang(USplineComponent* ITargetSpline, USplineMeshCompon
 	FVector Upvectorlast = FMath::Lerp(UpVectorMid, Splineselected, 0.5);
 	InTargetSplM->SetSplineUpDir(UpVectorMid, true);
 }
+
 void URopePhy::MakePhysConstr(UPhysicsConstraintComponent* PhyConstrMPCIn, UWorld* WorldRefMPCIn, const FVector WorldLocationMPCIn, USphereComponent* CollRefAttachMPCIn)
 {
 	PhyConstrMPCIn->CreationMethod = EComponentCreationMethod::UserConstructionScript;
@@ -737,6 +748,7 @@ void URopePhy::MakePhysConstr(UPhysicsConstraintComponent* PhyConstrMPCIn, UWorl
 	PhyConstrMPCIn->SetWorldLocation(WorldLocationMPCIn);
 
 }
+
 void URopePhy::PhyConstrConfig(UPhysicsConstraintComponent* PhyConstrIn, float SetAngularSwing1LimitPCCIn, float SetAngularSwing2LimitPCCIn, float SetAngularTwistLimitPCCIn, float PositionStrengthPCCIn, float VelocityStrengthPCCIn)
 {
 	if (PositionStrengthPCCIn <= 0.0f)
@@ -778,6 +790,7 @@ void URopePhy::PhyConstrConfig(UPhysicsConstraintComponent* PhyConstrIn, float S
 	PhyConstrIn->SetAngularVelocityDriveSLERP(true);
 	PhyConstrIn->SetAngularDriveParams(PositionStrengthPCCIn, VelocityStrengthPCCIn, 0.0f);
 }
+
 void URopePhy::SphereCollisionConfig(bool ShouldBlock, bool SimPhysics, USphereComponent* SphereCollisionIn, float AngularDampeningSCCIn, float LinearDampeningSCCIn, float PositionSolverSCCIn, float VelocitySolverSCCIn, float StabilizationThresholdMultiplierSCCIn, float SleepThresholdMultiplierSCCIn, float InertiaTensorScaleSCCIn, float CollUnitScaleSCCIn, float Mass, float MassScale)
 {
 	SphereCollisionIn->SetCollisionEnabled(ECollisionEnabled::Type::QueryAndPhysics);
@@ -808,6 +821,7 @@ void URopePhy::SphereCollisionConfig(bool ShouldBlock, bool SimPhysics, USphereC
 		SphereCollisionIn->SetMassScale(FName("None"), MassScale);
 	}
 }
+
 void URopePhy::onTimerEnd()
 {
 	if (UsedInGameEG == true)
@@ -815,6 +829,7 @@ void URopePhy::onTimerEnd()
 		GetWorld()->GetTimerManager().SetTimer(_loopTimerHandle, this, &URopePhy::RuntimeUpdate_RC, 0.016, false);
 	}
 }
+
 void URopePhy::RuntimeUpdate_RC()
 {
 	if (UsedInGameEG == true)
@@ -839,6 +854,7 @@ void URopePhy::RuntimeUpdate_RC()
 		onTimerEnd();
 	}
 }
+
 void URopePhy::BeginPlay()
 {
 	Super::BeginPlay();

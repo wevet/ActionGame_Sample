@@ -1,4 +1,4 @@
-// Copyright 2020 PrecisionGaming (Gareth Tim Sibson)
+// Copyright Epic Games, Inc. All Rights Reserved.
 
 #include "RopeCuttingController.h"
 

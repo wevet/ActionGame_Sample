@@ -1,4 +1,4 @@
-// Copyright 2022 PrecisionGaming (Gareth Tim Sibson)
+// Copyright Epic Games, Inc. All Rights Reserved.
 
 #pragma once
 

@@ -1,37 +1,29 @@
-// Copyright 2020 PrecisionGaming (Gareth Tim Sibson)
+// Copyright Epic Games, Inc. All Rights Reserved.
 
 #include "RopeStatic.h"
 
 URopeStatic::URopeStatic()
 {
 	PrimaryComponentTick.bCanEverTick = false;
-	//Names of class variables use two suffixes //first = Variable Group  //second = Rope Cutting	//E.g. Arrays are NameARC
-	///////////////////////////////////////////////////////////Default Assets
 	StartMeshTypeDARC = nullptr;
 	Mesh01TypeDARC = nullptr;
 	Mesh02TypeDARC = nullptr;
 	Mesh03TypeDARC = nullptr;
 	Mesh04TypeDARC = nullptr;
 	EndMeshTypeDARC = nullptr;
-	////////////////////////////////////////////////////////////Pointer References
 	SphereCollPRC = nullptr;
 	SplineMeshPRC = nullptr;
 	SplinePRC = nullptr;
 	SplineBuildPRC = nullptr;
 	UserSplinePRC = nullptr;
-	///////////////////////////////////////////////////////////Arrays
 	CollisionArrayCRC.Empty();
 	SplineMeshArraySMRC.Empty();
-	///////////////////////////////////////////////////////////Collision
 	CollUnitScaleCRC = 0.2f;
-	///////////////////////////////////////////////////////////Build
 	InstanceSpecificIDStrBRC = this->GetName();
 	InstanceSpecificIDTagBRC = FName(*InstanceSpecificIDStrBRC);
 	UnitLengthBVRC = 15.0f;
 	UserSplineSetToSocketLocBRC = false;
-	///////////////////////////////////////////////////////////Construction Tracking
 	HasBuiltBRC = false;
-	///////////////////////////////////////////////////////////Mesh
 	StartMeshWidthSMRC = 0.0f;
 	StartMeshMaterial01SMRC = nullptr;
 	StartMeshMaterial02SMRC = nullptr;
@@ -51,6 +43,8 @@ URopeStatic::URopeStatic()
 	EndMeshMaterial01SMRC = nullptr;
 	EndMeshMaterial02SMRC = nullptr;
 }
+
+
 void URopeStatic::SetUserSplineStartLocation_RC(USplineComponent* UserSpline, FVector LocationUserSplineStart, bool UseRelativeLocationUserSplineStart)
 {
 	if (HasBuiltBRC == false)
@@ -66,6 +60,8 @@ void URopeStatic::SetUserSplineStartLocation_RC(USplineComponent* UserSpline, FV
 		UserSplineSetToSocketLocBRC = true;
 	}
 }
+
+
 void URopeStatic::SetUserSplineEndLocation_RC(USplineComponent* UserSpline, FVector LocationUserSplineEnd, bool UseRelativeLocationUserSplineEnd)
 {
 	if (HasBuiltBRC == false)
@@ -81,6 +77,8 @@ void URopeStatic::SetUserSplineEndLocation_RC(USplineComponent* UserSpline, FVec
 		UserSplineSetToSocketLocBRC = true;
 	}
 }
+
+
 TArray<USphereComponent*> URopeStatic::Build_RC(USplineComponent* UserSpline, UStaticMesh* Mesh, UStaticMesh* StartEndMesh, int CollisionScale, float UnitLength, FVector RopeOffset, bool DisableRopeOffset)
 {
 	TArray<USphereComponent*> CollisionArrayBRC;
@@ -224,6 +222,8 @@ TArray<USphereComponent*> URopeStatic::Build_RC(USplineComponent* UserSpline, US
 	}
 	return CollisionArrayBRC;
 }
+
+
 TArray<USplineMeshComponent*> URopeStatic::Mesh_RC(UStaticMesh* StartMesh, float StartMeshWidth, UMaterialInterface* StartMeshMat01, UMaterialInterface* StartMeshMat02, UStaticMesh* Mesh01, float Mesh01Width, UMaterialInterface* Mesh01Mat01, UMaterialInterface* Mesh01Mat02, UStaticMesh* Mesh02, float Mesh02Width, UMaterialInterface* Mesh02Mat01, UMaterialInterface* Mesh02Mat02, UStaticMesh* Mesh03, float Mesh03Width, UMaterialInterface* Mesh03Mat01, UMaterialInterface* Mesh03Mat02, UStaticMesh* Mesh04, float Mesh04Width, UMaterialInterface* Mesh04Mat01, UMaterialInterface* Mesh04Mat02, UStaticMesh* EndMesh, float EndMeshWidth, UMaterialInterface* EndMeshMat01, UMaterialInterface* EndMeshMat02)
 {
 	TArray<USplineMeshComponent*> ReturnSplineMeshArray;
@@ -373,6 +373,8 @@ TArray<USplineMeshComponent*> URopeStatic::Mesh_RC(UStaticMesh* StartMesh, float
 		return ReturnSplineMeshArray;
 	}
 }
+
+
 USphereComponent* URopeStatic::GetFirstCollisionObject_RC()
 {
 	USphereComponent* ReturnCollisionSphere = nullptr;
@@ -382,6 +384,8 @@ USphereComponent* URopeStatic::GetFirstCollisionObject_RC()
 	}
 	return ReturnCollisionSphere;
 }
+
+
 USphereComponent* URopeStatic::GetLastCollisionObject_RC()
 {
 	USphereComponent* ReturnCollisionSphere = nullptr;
@@ -391,6 +395,8 @@ USphereComponent* URopeStatic::GetLastCollisionObject_RC()
 	}
 	return ReturnCollisionSphere;
 }
+
+
 TArray<USphereComponent*> URopeStatic::GetCollisionArray_RC()
 {
 	TArray<USphereComponent*> ReturnCollisionArrayRC;
@@ -400,6 +406,8 @@ TArray<USphereComponent*> URopeStatic::GetCollisionArray_RC()
 	}
 	return ReturnCollisionArrayRC;
 }
+
+
 USplineComponent* URopeStatic::Get_Spline_RC()
 {
 	USplineComponent* ReturnSplineRC = nullptr;
@@ -409,6 +417,8 @@ USplineComponent* URopeStatic::Get_Spline_RC()
 	}
 	return ReturnSplineRC;
 }
+
+
 void URopeStatic::Destroy_RC()
 {
 	if (HasBuiltBRC == true)
@@ -450,6 +460,8 @@ void URopeStatic::Destroy_RC()
 	}	
 		
 }
+
+
 const FName URopeStatic::CreateUniqueName(const FString ComponentType, const int ComponentNumber, const FString ThisComponentStrNameCUNIn)
 {
 	const FString ComponentNumberStr = FString::FromInt(ComponentNumber);
@@ -457,6 +469,7 @@ const FName URopeStatic::CreateUniqueName(const FString ComponentType, const int
 	const FName OutputFName = FName(*ConvertStr);
 	return OutputFName;
 }
+
 void URopeStatic::CreateSpline(USplineComponent* InSplineCS, const FVector WorldLocationCS, const FRotator WorldRotationCS, UWorld* WorldRefCSIn, USceneComponent* SelfRefCSIn)
 {
 	InSplineCS->CreationMethod = EComponentCreationMethod::UserConstructionScript;
@@ -470,6 +483,8 @@ void URopeStatic::CreateSpline(USplineComponent* InSplineCS, const FVector World
 	InSplineCS->SetWorldRotation(WorldRotationCS);
 	InSplineCS->SetLocationAtSplinePoint(0, WorldLocationCS, ESplineCoordinateSpace::World);
 }
+
+
 void URopeStatic::AddPointsToSpline(USplineComponent* SplineToGrow, USplineComponent* UserSplineCRSIn, const int NumberOfLoopsAPTSIn, const float UnitLengthAPTSIn, const FVector RopeOffsetAPTSIn)
 {
 	float RenderSplinePointSpacing;
@@ -479,6 +494,8 @@ void URopeStatic::AddPointsToSpline(USplineComponent* SplineToGrow, USplineCompo
 		SplineToGrow->AddSplineWorldPoint(FVector(UserSplineCRSIn->GetLocationAtDistanceAlongSpline(RenderSplinePointSpacing, ESplineCoordinateSpace::World)) + RopeOffsetAPTSIn);
 	}
 }
+
+
 void URopeStatic::SplineUpDir(USplineComponent* ITargetSpline, const float ISplineUpDirClamp)
 {
 	FVector StartSplineUpVector;
@@ -507,6 +524,7 @@ void URopeStatic::SplineUpDir(USplineComponent* ITargetSpline, const float ISpli
 		ITargetSpline->SetUpVectorAtSplinePoint((i + 1), SplineUpDirClampedEnd, ESplineCoordinateSpace::Local, true);
 	}
 }
+
 void URopeStatic::AdjustRenderSplineLocation(USplineComponent* RenderSpline, USplineComponent* UserSpline, UPrimitiveComponent* AttachedPrimitive, const int NumberOfLoops, const FName SocketName)
 {
 	if (AttachedPrimitive != nullptr)
@@ -526,6 +544,7 @@ void URopeStatic::AdjustRenderSplineLocation(USplineComponent* RenderSpline, USp
 		}
 	}
 }
+
 void URopeStatic::CreateSplineMeshes(USplineMeshComponent* SplineMeshCSMInput, UWorld* WorldRefCSMIn, USplineComponent* SplineOwnerRefCSMIn)
 {
 	SplineMeshCSMInput->CreationMethod = EComponentCreationMethod::UserConstructionScript;
@@ -534,6 +553,7 @@ void URopeStatic::CreateSplineMeshes(USplineMeshComponent* SplineMeshCSMInput, U
 	SplineMeshCSMInput->AttachToComponent(SplineOwnerRefCSMIn, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
 	SplineMeshCSMInput->SetCollisionEnabled(ECollisionEnabled::Type::NoCollision);
 }
+
 void URopeStatic::ConfigureSplineMeshes(USplineMeshComponent* SplineMeshConfigSMInput, UStaticMesh* MeshTypeConfigSMInput, float MeshWidthConfigSMInput, UMaterialInterface* MeshMaterial01ConfigSMInput, UMaterialInterface* MeshMaterial02ConfigSMInput)
 {
 	SplineMeshConfigSMInput->SetStaticMesh(MeshTypeConfigSMInput);
@@ -556,6 +576,8 @@ void URopeStatic::ConfigureSplineMeshes(USplineMeshComponent* SplineMeshConfigSM
 		SplineMeshConfigSMInput->SetMaterial(1, MeshMaterial02ConfigSMInput);
 	}
 }
+
+
 void URopeStatic::SetSplMLocTang(USplineComponent* ITargetSpline, USplineMeshComponent* InTargetSplM, const int32 IEditPoint, const float UnitLengthSSMLTIn)
 {
 	FVector StartPoint;
@@ -580,3 +602,5 @@ void URopeStatic::SetSplMLocTang(USplineComponent* ITargetSpline, USplineMeshCom
 	FVector Upvectorlast = FMath::Lerp(UpVectorMid, Splineselected, 0.5);
 	InTargetSplM->SetSplineUpDir(UpVectorMid, true);
 }
+
+
