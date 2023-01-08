@@ -7,6 +7,8 @@
 #include "InputActionValue.h"
 #include "PlayerCharacter.generated.h"
 
+class UWvSpringArmComponent;
+
 /**
  * 
  */
@@ -16,14 +18,14 @@ class REDEMPTION_API APlayerCharacter : public ABaseCharacter
 	GENERATED_BODY()
 	
 public:
-	APlayerCharacter(const FObjectInitializer& ObjectInitializer);
+	APlayerCharacter(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
 
 protected:
 	virtual void BeginPlay() override;
 
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
-	class USpringArmComponent* CameraBoom;
+	class UWvSpringArmComponent* CameraBoom;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 	class UCameraComponent* FollowCamera;
@@ -59,6 +61,6 @@ protected:
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
 public:
-	FORCEINLINE class USpringArmComponent* GetCameraBoom() const { return CameraBoom; }
+	FORCEINLINE class UWvSpringArmComponent* GetCameraBoom() const { return CameraBoom; }
 	FORCEINLINE class UCameraComponent* GetFollowCamera() const { return FollowCamera; }
 };

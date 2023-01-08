@@ -74,15 +74,15 @@ ABaseCharacter::ABaseCharacter(const FObjectInitializer& ObjectInitializer)
 	MotionWarpingComponent->bSearchForWindowsInAnimsWithinMontages = true;
 	CharacterMovementTrajectoryComponent = CreateDefaultSubobject<UCharacterMovementTrajectoryComponent>(TEXT("CharacterMovementTrajectoryComponent"));
 
-	AbilitySystemComponent = CreateDefaultSubobject<UAbilitySystemComponent>(TEXT("AbilitySystemComponent"));
-	AbilitySystemComponent->bAutoActivate = 1;
+	WvAbilitySystemComponent = CreateDefaultSubobject<UWvAbilitySystemComponent>(TEXT("WvAbilitySystemComponent"));
+	WvAbilitySystemComponent->bAutoActivate = 1;
 }
 
 void ABaseCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
-	if (AbilitySystemComponent)
+	if (WvAbilitySystemComponent)
 	{
 		if (!HasAuthority())
 		{
@@ -94,19 +94,19 @@ void ABaseCharacter::BeginPlay()
 		{
 			if (Ability)
 			{
-				AbilitySystemComponent->GiveAbility(FGameplayAbilitySpec(Ability.GetDefaultObject(), 1, inputID++));
+				WvAbilitySystemComponent->GiveAbility(FGameplayAbilitySpec(Ability.GetDefaultObject(), 1, inputID++));
 			}
 		}
-		AbilitySystemComponent->InitAbilityActorInfo(this, this);
+		WvAbilitySystemComponent->InitAbilityActorInfo(this, this);
 	}
 }
 
 void ABaseCharacter::PossessedBy(AController* NewController)
 {
 	Super::PossessedBy(NewController);
-	if (AbilitySystemComponent)
+	if (WvAbilitySystemComponent)
 	{
-		AbilitySystemComponent->RefreshAbilityActorInfo();
+		WvAbilitySystemComponent->RefreshAbilityActorInfo();
 	}
 }
 
@@ -168,6 +168,11 @@ void ABaseCharacter::OnRep_ReplicatedAcceleration()
 UWvCharacterMovementComponent* ABaseCharacter::GetWvCharacterMovementComponent() const
 {
 	return CastChecked<UWvCharacterMovementComponent>(GetCharacterMovement());
+}
+
+UWvAbilitySystemComponent* ABaseCharacter::GetWvAbilitySystemComponent() const
+{
+	return CastChecked<UWvAbilitySystemComponent>(WvAbilitySystemComponent);
 }
 
 void ABaseCharacter::VelocityModement()

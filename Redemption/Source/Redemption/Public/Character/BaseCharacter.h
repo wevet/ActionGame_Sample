@@ -3,6 +3,7 @@
 #pragma once
 
 #include "AbilitySystemInterface.h"
+#include "Component/WvAbilitySystemComponent.h"
 #include "Containers/Array.h"
 #include "Engine/EngineTypes.h"
 //#include "GameplayCueInterface.h"
@@ -57,6 +58,17 @@ public:
 	virtual void Tick(float DeltaTime) override;
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
+public:
+	/**
+	* Returns the ability system component to use for this actor.
+	* It may live on another actor, such as a Pawn using the PlayerState's component
+	*/
+	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override 
+	{
+		return WvAbilitySystemComponent; 
+	}
+
+
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Component, meta = (AllowPrivateAccess = "true"))
 	class UPredictiveIKComponent* PredictiveIKComponent;
@@ -68,7 +80,7 @@ protected:
 	class UCharacterMovementTrajectoryComponent* CharacterMovementTrajectoryComponent;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Component, meta = (AllowPrivateAccess = "true"))
-	class UAbilitySystemComponent* AbilitySystemComponent;
+	class UWvAbilitySystemComponent* WvAbilitySystemComponent;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Abilities)
 	TArray<TSubclassOf<class UGameplayAbility>> AbilityList;
@@ -78,8 +90,8 @@ public:
 	FORCEINLINE class UPredictiveIKComponent* GetPredictiveIKComponent() const { return PredictiveIKComponent; }
 	FORCEINLINE class UMotionWarpingComponent* GetMotionWarpingComponent() const { return MotionWarpingComponent; }
 	FORCEINLINE class UCharacterMovementTrajectoryComponent* GetCharacterMovementTrajectoryComponent() const { return CharacterMovementTrajectoryComponent; }
-	UAbilitySystemComponent* GetAbilitySystemComponent() const { return AbilitySystemComponent; };
 	UWvCharacterMovementComponent* GetWvCharacterMovementComponent() const;
+	UWvAbilitySystemComponent* GetWvAbilitySystemComponent() const;
 
 protected:
 	UPROPERTY(Transient, ReplicatedUsing = OnRep_ReplicatedAcceleration)
