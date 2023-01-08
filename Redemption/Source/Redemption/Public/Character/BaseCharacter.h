@@ -87,4 +87,11 @@ protected:
 
 	UFUNCTION()
 	void OnRep_ReplicatedAcceleration();
+
+
+	UFUNCTION(BlueprintCallable, Category = Movement)
+	void VelocityModement();
+
+	UFUNCTION(BlueprintCallable, Category = Movement)
+	void StrafeModement();
 };

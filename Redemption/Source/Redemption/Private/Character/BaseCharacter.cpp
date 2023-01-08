@@ -37,6 +37,8 @@ ABaseCharacter::ABaseCharacter(const FObjectInitializer& ObjectInitializer)
 {
 	PrimaryActorTick.bCanEverTick = true;
 
+	NetCullDistanceSquared = 900000000.0f;
+
 	GetCapsuleComponent()->InitCapsuleSize(42.f, 96.0f);
 
 	bUseControllerRotationPitch = false;
@@ -44,28 +46,27 @@ ABaseCharacter::ABaseCharacter(const FObjectInitializer& ObjectInitializer)
 	bUseControllerRotationRoll = false;
 
 	UWvCharacterMovementComponent* WvMoveComp = CastChecked<UWvCharacterMovementComponent>(GetCharacterMovement());
-	//WvMoveComp->GravityScale = 1.0f;
-	//WvMoveComp->MaxAcceleration = 2400.0f;
-	//WvMoveComp->BrakingFrictionFactor = 1.0f;
-	//WvMoveComp->BrakingFriction = 6.0f;
-	//WvMoveComp->GroundFriction = 8.0f;
-	//WvMoveComp->BrakingDecelerationWalking = 1400.0f;
+	WvMoveComp->GravityScale = 1.0f;
+	WvMoveComp->MaxAcceleration = 2400.0f;
+	WvMoveComp->BrakingFrictionFactor = 1.0f;
+	WvMoveComp->BrakingFriction = 6.0f;
+	WvMoveComp->GroundFriction = 8.0f;
+	WvMoveComp->BrakingDecelerationWalking = 1400.0f;
 	//WvMoveComp->bUseControllerDesiredRotation = false;
 	//WvMoveComp->bOrientRotationToMovement = false;
-	//WvMoveComp->RotationRate = FRotator(0.0f, 720.0f, 0.0f);
+	WvMoveComp->RotationRate = FRotator(0.0f, 720.0f, 0.0f);
 	WvMoveComp->bAllowPhysicsRotationDuringAnimRootMotion = false;
 	WvMoveComp->GetNavAgentPropertiesRef().bCanCrouch = true;
 	WvMoveComp->bCanWalkOffLedgesWhenCrouching = true;
 	WvMoveComp->SetCrouchedHalfHeight(65.0f);
 
 	WvMoveComp->bOrientRotationToMovement = true;
-	WvMoveComp->RotationRate = FRotator(0.0f, 180.0f, 0.0f);
+	//WvMoveComp->RotationRate = FRotator(0.0f, 500.0f, 0.0f);
 	GetCharacterMovement()->JumpZVelocity = 500.f;
 	GetCharacterMovement()->AirControl = 0.35f;
 	GetCharacterMovement()->MaxWalkSpeed = 500.f;
 	GetCharacterMovement()->MinAnalogWalkSpeed = 20.f;
 	GetCharacterMovement()->BrakingDecelerationWalking = 2000.f;
-
 
 	PredictiveIKComponent = CreateDefaultSubobject<UPredictiveIKComponent>(TEXT("PredictiveIKComponent"));
 
@@ -167,5 +168,23 @@ void ABaseCharacter::OnRep_ReplicatedAcceleration()
 UWvCharacterMovementComponent* ABaseCharacter::GetWvCharacterMovementComponent() const
 {
 	return CastChecked<UWvCharacterMovementComponent>(GetCharacterMovement());
+}
+
+void ABaseCharacter::VelocityModement()
+{
+	if (GetCharacterMovement())
+	{
+		GetCharacterMovement()->bUseControllerDesiredRotation = false;
+		GetCharacterMovement()->bOrientRotationToMovement = true;
+	}
+}
+
+void ABaseCharacter::StrafeModement()
+{
+	if (GetCharacterMovement())
+	{
+		GetCharacterMovement()->bUseControllerDesiredRotation = true;
+		GetCharacterMovement()->bOrientRotationToMovement = false;
+	}
 }
 
