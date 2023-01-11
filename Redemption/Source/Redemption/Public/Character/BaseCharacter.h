@@ -2,13 +2,17 @@
 
 #pragma once
 
+#include "CoreMinimal.h"
 #include "AbilitySystemInterface.h"
 #include "Component/WvAbilitySystemComponent.h"
 #include "Containers/Array.h"
 #include "Engine/EngineTypes.h"
 //#include "GameplayCueInterface.h"
 //#include "GameplayTagAssetInterface.h"
+// Perception
 #include "GenericTeamAgentInterface.h"
+#include "Perception/AISightTargetInterface.h"
+#include "Perception/AIPerceptionStimuliSourceComponent.h"
 #include "HAL/Platform.h"
 #include "GameFramework/Character.h"
 #include "UObject/UObjectGlobals.h"
@@ -40,7 +44,7 @@ class UWvCharacterMovementComponent;
 
 
 UCLASS(Abstract)
-class REDEMPTION_API ABaseCharacter : public ACharacter, public IAbilitySystemInterface
+class REDEMPTION_API ABaseCharacter : public ACharacter, public IAbilitySystemInterface, public IAISightTargetInterface, public IGenericTeamAgentInterface
 {
 	GENERATED_BODY()
 
@@ -60,6 +64,19 @@ public:
 
 public:
 	/**
+	* Retrieve team identifier in form of FGenericTeamId
+	* Returns the FGenericTeamID that represents "which team this character belongs to".
+	* There are three teams prepared by default: hostile, neutral, and friendly.
+	* Required for AI Perception's "Detection by Affiliation" to work.
+	*/
+	virtual FGenericTeamId GetGenericTeamId() const override
+	{
+		return MyTeamID;
+	}
+
+	virtual void SetGenericTeamId(const FGenericTeamId& NewTeamID) override;
+
+	/**
 	* Returns the ability system component to use for this actor.
 	* It may live on another actor, such as a Pawn using the PlayerState's component
 	*/
@@ -67,6 +84,14 @@ public:
 	{
 		return WvAbilitySystemComponent; 
 	}
+
+	/**
+	* Implementation should check whether from given ObserverLocation
+	* implementer can be seen. If so OutSeenLocation should contain
+	* first visible location
+	* Return sight strength for how well the target is seen.
+	*/
+	virtual bool CanBeSeenFrom(const FVector& ObserverLocation, FVector& OutSeenLocation, int32& NumberOfLoSChecksPerformed, float& OutSightStrength, const AActor* IgnoreActor = nullptr, const bool* bWasVisible = nullptr, int32* UserData = nullptr) const override;
 
 
 protected:
@@ -98,6 +123,9 @@ protected:
 	FWvReplicatedAcceleration ReplicatedAcceleration;
 
 	UFUNCTION()
+	void OnRep_MyTeamID(FGenericTeamId OldTeamID);
+
+	UFUNCTION()
 	void OnRep_ReplicatedAcceleration();
 
 
@@ -106,4 +134,8 @@ protected:
 
 	UFUNCTION(BlueprintCallable, Category = Movement)
 	void StrafeModement();
+
+protected:
+	UPROPERTY(ReplicatedUsing = OnRep_MyTeamID)
+	FGenericTeamId MyTeamID;
 };

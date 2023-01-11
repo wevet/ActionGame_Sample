@@ -30,6 +30,9 @@
 #include "UObject/ObjectPtr.h"
 #include "UObject/UObjectBaseUtility.h"
 
+// Misc
+#include "Engine/SkeletalMeshSocket.h"
+
 #include UE_INLINE_GENERATED_CPP_BY_NAME(BaseCharacter)
 
 ABaseCharacter::ABaseCharacter(const FObjectInitializer& ObjectInitializer)
@@ -76,6 +79,8 @@ ABaseCharacter::ABaseCharacter(const FObjectInitializer& ObjectInitializer)
 
 	WvAbilitySystemComponent = CreateDefaultSubobject<UWvAbilitySystemComponent>(TEXT("WvAbilitySystemComponent"));
 	WvAbilitySystemComponent->bAutoActivate = 1;
+
+	MyTeamID = FGenericTeamId(0);
 }
 
 void ABaseCharacter::BeginPlay()
@@ -130,6 +135,7 @@ void ABaseCharacter::GetLifetimeReplicatedProps(TArray< FLifetimeProperty >& Out
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME_CONDITION(ThisClass, ReplicatedAcceleration, COND_SimulatedOnly);
+	DOREPLIFETIME(ThisClass, MyTeamID)
 }
 
 void ABaseCharacter::PreReplication(IRepChangedPropertyTracker& ChangedPropertyTracker)
@@ -165,6 +171,32 @@ void ABaseCharacter::OnRep_ReplicatedAcceleration()
 	}
 }
 
+void ABaseCharacter::OnRep_MyTeamID(FGenericTeamId OldTeamID)
+{
+	//ConditionalBroadcastTeamChanged(this, OldTeamID, MyTeamID);
+}
+
+void ABaseCharacter::SetGenericTeamId(const FGenericTeamId& NewTeamID)
+{
+	if (GetController() == nullptr)
+	{
+		if (HasAuthority())
+		{
+			const FGenericTeamId OldTeamID = MyTeamID;
+			MyTeamID = NewTeamID;
+			//ConditionalBroadcastTeamChanged(this, OldTeamID, MyTeamID);
+		}
+		else
+		{
+			UE_LOG(LogTemp, Error, TEXT("You can't set the team ID on a character (%s) except on the authority"), *GetPathNameSafe(this));
+		}
+	}
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT("You can't set the team ID on a possessed character (%s); it's driven by the associated controller"), *GetPathNameSafe(this));
+	}
+}
+
 UWvCharacterMovementComponent* ABaseCharacter::GetWvCharacterMovementComponent() const
 {
 	return CastChecked<UWvCharacterMovementComponent>(GetCharacterMovement());
@@ -191,5 +223,55 @@ void ABaseCharacter::StrafeModement()
 		GetCharacterMovement()->bUseControllerDesiredRotation = true;
 		GetCharacterMovement()->bOrientRotationToMovement = false;
 	}
+}
+
+// AI Perception
+// ttps://blog.gamedev.tv/ai-sight-perception-to-custom-points/
+bool ABaseCharacter::CanBeSeenFrom(const FVector& ObserverLocation,	FVector& OutSeenLocation, int32& NumberOfLoSChecksPerformed, float& OutSightStrength, const AActor* IgnoreActor, const bool* bWasVisible, int32* UserData) const
+{
+	check(GetMesh());
+	static const FName AILineOfSight = FName(TEXT("TestPawnLineOfSight"));
+
+	FHitResult HitResult;
+	const TArray<USkeletalMeshSocket*> Sockets = GetMesh()->SkeletalMesh->GetActiveSocketList();
+	const int32 CollisionQuery = ECC_TO_BITFIELD(ECC_WorldStatic) | ECC_TO_BITFIELD(ECC_WorldDynamic) | ECC_TO_BITFIELD(ECC_Pawn);
+
+	for (int i = 0; i < Sockets.Num(); ++i)
+	{
+		const FVector SocketLocation = GetMesh()->GetSocketLocation(Sockets[i]->SocketName);
+		const bool bHitResult = GetWorld()->LineTraceSingleByObjectType(
+			HitResult,
+			ObserverLocation,
+			SocketLocation,
+			FCollisionObjectQueryParams(CollisionQuery),
+			FCollisionQueryParams(AILineOfSight, true, IgnoreActor));
+
+		++NumberOfLoSChecksPerformed;
+		if (!bHitResult || (HitResult.GetActor() && HitResult.GetActor()->IsOwnedBy(this)))
+		{
+			OutSeenLocation = SocketLocation;
+			OutSightStrength = 1;
+			//UE_LOG(LogStray, Warning, TEXT("Socket Name: %s"), *Sockets[i]->SocketName.ToString());
+			return true;
+		}
+	}
+
+	const bool bHitResult = GetWorld()->LineTraceSingleByObjectType(
+		HitResult,
+		ObserverLocation,
+		GetActorLocation(),
+		FCollisionObjectQueryParams(CollisionQuery),
+		FCollisionQueryParams(AILineOfSight, true, IgnoreActor));
+
+	++NumberOfLoSChecksPerformed;
+	if (!bHitResult || (HitResult.GetActor() && HitResult.GetActor()->IsOwnedBy(this)))
+	{
+		OutSeenLocation = GetActorLocation();
+		OutSightStrength = 1;
+		return true;
+	}
+
+	OutSightStrength = 0;
+	return false;
 }
 
