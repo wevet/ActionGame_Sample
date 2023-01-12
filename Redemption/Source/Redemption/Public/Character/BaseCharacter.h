@@ -13,6 +13,7 @@
 #include "GenericTeamAgentInterface.h"
 #include "Perception/AISightTargetInterface.h"
 #include "Perception/AIPerceptionStimuliSourceComponent.h"
+#include "MotionTrajectoryCharacterMovement.h"
 #include "HAL/Platform.h"
 #include "GameFramework/Character.h"
 #include "UObject/UObjectGlobals.h"
@@ -39,7 +40,6 @@ struct FWvReplicatedAcceleration
 
 class UPredictiveIKComponent;
 class UMotionWarpingComponent;
-class UCharacterMovementTrajectoryComponent;
 class UWvCharacterMovementComponent;
 
 
@@ -122,9 +122,16 @@ public:
 	UWvCharacterMovementComponent* GetWvCharacterMovementComponent() const;
 	UWvAbilitySystemComponent* GetWvAbilitySystemComponent() const;
 
+public:
+	UFUNCTION(BlueprintCallable, Category = Movement)
+	FTrajectorySampleRange GetTrajectorySampleRange() const;
+
 protected:
 	UPROPERTY(Transient, ReplicatedUsing = OnRep_ReplicatedAcceleration)
 	FWvReplicatedAcceleration ReplicatedAcceleration;
+
+	UPROPERTY(ReplicatedUsing = OnRep_MyTeamID)
+	FGenericTeamId MyTeamID;
 
 	UFUNCTION()
 	void OnRep_MyTeamID(FGenericTeamId OldTeamID);
@@ -140,6 +147,6 @@ protected:
 	void StrafeModement();
 
 protected:
-	UPROPERTY(ReplicatedUsing = OnRep_MyTeamID)
-	FGenericTeamId MyTeamID;
+	UPROPERTY()
+	FTrajectorySampleRange TrajectorySampleRange;
 };

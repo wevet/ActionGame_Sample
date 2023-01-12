@@ -9,7 +9,6 @@
 #include "Component/WvCharacterMovementComponent.h"
 #include "Component/PredictiveIKComponent.h"
 #include "MotionWarpingComponent.h"
-#include "MotionTrajectoryCharacterMovement.h"
 #include "AI/Navigation/NavigationTypes.h"
 #include "AbilitySystemComponent.h"
 #include "Delegates/Delegate.h"
@@ -118,6 +117,11 @@ void ABaseCharacter::PossessedBy(AController* NewController)
 void ABaseCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+
+	if (IsValid(CharacterMovementTrajectoryComponent))
+	{
+		TrajectorySampleRange = CharacterMovementTrajectoryComponent->GetTrajectory();
+	}
 }
 
 void ABaseCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -274,4 +278,10 @@ bool ABaseCharacter::CanBeSeenFrom(const FVector& ObserverLocation,	FVector& Out
 	OutSightStrength = 0;
 	return false;
 }
+
+FTrajectorySampleRange ABaseCharacter::GetTrajectorySampleRange() const
+{
+	return TrajectorySampleRange;
+}
+
 

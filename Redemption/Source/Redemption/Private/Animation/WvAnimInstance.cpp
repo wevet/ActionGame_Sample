@@ -3,7 +3,6 @@
 #include "Animation/WvAnimInstance.h"
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemGlobals.h"
-#include "Character/BaseCharacter.h"
 #include "Component/WvCharacterMovementComponent.h"
 
 
@@ -59,6 +58,9 @@ void UWvAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 	UWvCharacterMovementComponent* CharMoveComp = CastChecked<UWvCharacterMovementComponent>(Character->GetCharacterMovement());
 	const FWvCharacterGroundInfo& GroundInfo = CharMoveComp->GetGroundInfo();
 	GroundDistance = GroundInfo.GroundDistance;
+
+	TrajectorySampleRange = Character->GetTrajectorySampleRange();
 }
+
 
 
