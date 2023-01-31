@@ -4,7 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "AbilitySystemInterface.h"
-#include "Component/WvAbilitySystemComponent.h"
+#include "Ability/WvAbilitySystemComponent.h"
 #include "Containers/Array.h"
 #include "Engine/EngineTypes.h"
 //#include "GameplayCueInterface.h"
@@ -149,4 +149,15 @@ protected:
 protected:
 	UPROPERTY()
 	FTrajectorySampleRange TrajectorySampleRange;
+
+	// Angle threshold to determine if the input direction is vertically aligned with Actor
+	int InputDirVerThreshold = 40;
+	float InputDirVerAngleThres = 40.0f;
+	FVector2D InputAxis = FVector2D::ZeroVector;
+
+public:
+	FVector2D GetInputAxis() const;
+	FVector GetMoveDir() const;
+	FVector GetForwardMoveDir(FVector CompareDir) const;
+	FVector GetRightMoveDir(FVector CompareDir) const;
 };

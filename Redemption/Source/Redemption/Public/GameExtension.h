@@ -20,14 +20,12 @@ namespace Game
 			return UGameplayStatics::GetPlayerController(WorldContextObject, PlayerIndex);
 		}
 
-
 		// usage
 		// ControllerExtension::GetCameraManager(this);
 		static FORCEINLINE APlayerCameraManager* GetCameraManager(const UObject* WorldContextObject, int32 PlayerIndex = 0)
 		{
 			return UGameplayStatics::GetPlayerCameraManager(WorldContextObject, PlayerIndex);
 		}
-
 
 		// usage
 		// ControllerExtension::GetPlayerPawn(this)
@@ -69,13 +67,11 @@ namespace Game
 			return (Array.Num() <= 0);
 		}
 
-
 		template<typename T>
 		static FORCEINLINE bool NullOrEmpty(const TArray<T> Array)
 		{
 			return (Array.Num() <= 0);
 		}
-
 
 		template<typename T>
 		static FORCEINLINE bool NullOrEmpty(const TArray<TWeakObjectPtr<T>> Array)
@@ -106,7 +102,6 @@ namespace Game
 			return FindComponents;
 		}
 
-
 		// usage
 		// auto TargetComponent = ComponentExtension::GetComponentFirst<USkeletalMeshComponent>(this);
 		template<typename T>
@@ -124,7 +119,6 @@ namespace Game
 			}
 			return nullptr;
 		}
-
 
 		// usage
 		// auto TargetComponent = ComponentExtension::GetComponentLast<USkeletalMeshComponent>(this);

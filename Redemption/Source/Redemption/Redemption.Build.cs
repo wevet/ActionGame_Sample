@@ -43,6 +43,7 @@ public class Redemption : ModuleRules
 				"GeometryCollectionEngine",
 				"Gauntlet",
 				"MassZoneGraphNavigation",
+				"Niagara",
 			}
 		);
 

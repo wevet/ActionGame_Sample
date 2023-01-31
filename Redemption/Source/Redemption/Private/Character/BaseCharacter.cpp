@@ -10,7 +10,6 @@
 #include "Component/PredictiveIKComponent.h"
 #include "MotionWarpingComponent.h"
 #include "AI/Navigation/NavigationTypes.h"
-#include "AbilitySystemComponent.h"
 #include "Delegates/Delegate.h"
 #include "Engine/EngineBaseTypes.h"
 #include "Engine/World.h"
@@ -28,6 +27,9 @@
 #include "UObject/Object.h"
 #include "UObject/ObjectPtr.h"
 #include "UObject/UObjectBaseUtility.h"
+#include "Kismet/KismetMathLibrary.h"
+#include "Kismet/KismetSystemLibrary.h"
+#include "Misc/WvCommonUtils.h"
 
 // Misc
 #include "Engine/SkeletalMeshSocket.h"
@@ -237,7 +239,7 @@ bool ABaseCharacter::CanBeSeenFrom(const FVector& ObserverLocation,	FVector& Out
 	static const FName AILineOfSight = FName(TEXT("TestPawnLineOfSight"));
 
 	FHitResult HitResult;
-	const TArray<USkeletalMeshSocket*> Sockets = GetMesh()->SkeletalMesh->GetActiveSocketList();
+	const TArray<USkeletalMeshSocket*> Sockets = GetMesh()->GetSkeletalMeshAsset()->GetActiveSocketList();
 	const int32 CollisionQuery = ECC_TO_BITFIELD(ECC_WorldStatic) | ECC_TO_BITFIELD(ECC_WorldDynamic) | ECC_TO_BITFIELD(ECC_Pawn);
 
 	for (int i = 0; i < Sockets.Num(); ++i)
@@ -282,6 +284,52 @@ bool ABaseCharacter::CanBeSeenFrom(const FVector& ObserverLocation,	FVector& Out
 FTrajectorySampleRange ABaseCharacter::GetTrajectorySampleRange() const
 {
 	return TrajectorySampleRange;
+}
+
+FVector2D ABaseCharacter::GetInputAxis() const
+{
+	return InputAxis;
+}
+
+FVector ABaseCharacter::GetMoveDir() const
+{
+	return GetForwardMoveDir(-GetActorUpVector()) * InputAxis.Y + GetRightMoveDir(-GetActorUpVector()) * InputAxis.X;
+}
+
+FVector ABaseCharacter::GetRightMoveDir(FVector CompareDir) const
+{
+	const FRotator ControllRotation = GetControlRotation();
+	FVector CameraRight = UKismetMathLibrary::GetRightVector(ControllRotation);
+	const float Angle = UWvCommonUtils::GetAngleBetweenVector(CameraRight, CompareDir);
+	if (Angle < InputDirVerThreshold)
+	{
+		CameraRight = UKismetMathLibrary::GetUpVector(ControllRotation);
+	}
+	else if (180 - Angle < InputDirVerAngleThres)
+	{
+		CameraRight = FVector::ZeroVector - UKismetMathLibrary::GetUpVector(ControllRotation);
+	}
+	CameraRight = UKismetMathLibrary::ProjectVectorOnToPlane(CameraRight, GetActorUpVector());
+	CameraRight.Normalize();
+	return CameraRight;
+}
+
+FVector ABaseCharacter::GetForwardMoveDir(FVector CompareDir) const
+{
+	const FRotator ControllRotation = GetControlRotation();
+	FVector CameraForward = UKismetMathLibrary::GetForwardVector(ControllRotation);
+	const float Angle = UWvCommonUtils::GetAngleBetweenVector(CameraForward, CompareDir);
+	if (Angle < InputDirVerThreshold)
+	{
+		CameraForward = UKismetMathLibrary::GetUpVector(ControllRotation);
+	}
+	else if (180 - Angle < InputDirVerAngleThres)
+	{
+		CameraForward = FVector::ZeroVector - UKismetMathLibrary::GetUpVector(ControllRotation);
+	}
+	CameraForward = UKismetMathLibrary::ProjectVectorOnToPlane(CameraForward, GetActorUpVector());
+	CameraForward.Normalize();
+	return CameraForward;
 }
 
 

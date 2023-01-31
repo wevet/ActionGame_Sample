@@ -67,7 +67,7 @@ void APlayerCharacter::Move(const FInputActionValue& Value)
 	if (Controller != nullptr)
 	{
 		// input is a Vector2D
-		FVector2D MovementVector = Value.Get<FVector2D>();
+		InputAxis = Value.Get<FVector2D>();
 
 		// find out which way is forward
 		const FRotator Rotation = Controller->GetControlRotation();
@@ -80,8 +80,8 @@ void APlayerCharacter::Move(const FInputActionValue& Value)
 		const FVector RightDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
 
 		// add movement 
-		AddMovementInput(ForwardDirection, MovementVector.Y);
-		AddMovementInput(RightDirection, MovementVector.X);
+		AddMovementInput(ForwardDirection, InputAxis.Y);
+		AddMovementInput(RightDirection, InputAxis.X);
 	}
 }
 

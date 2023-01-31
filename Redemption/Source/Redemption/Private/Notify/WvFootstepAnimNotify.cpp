@@ -1,0 +1,105 @@
+// Fill out your copyright notice in the Description page of Project Settings.
+
+
+#include "Notify/WvFootstepAnimNotify.h"
+#include "PhysicsEngine/PhysicsSettings.h"
+#include "PhysicalMaterials/PhysicalMaterial.h"
+
+void UWvFootstepAnimNotify::Notify(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, const FAnimNotifyEventReference& EventReference)
+{
+	TraceFoot(MeshComp, Animation);
+}
+
+FName UWvFootstepAnimNotify::GetSurfaceName(TEnumAsByte<EPhysicalSurface> SurfaceType) const
+{
+	if (SurfaceType == SurfaceType_Default)
+	{
+		return TEXT("Default");
+	}
+	else if (const FPhysicalSurfaceName* FoundSurface = UPhysicsSettings::Get()->PhysicalSurfaces.FindByPredicate(
+		[&](const FPhysicalSurfaceName& SurfaceName)
+	{
+		return SurfaceName.Type == SurfaceType;
+	}))
+	{
+		return FoundSurface->Name;
+	}
+	return NAME_None;
+}
+
+void UWvFootstepAnimNotify::TraceFoot(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation)
+{
+	if (AActor* OwnerActor = MeshComp ? MeshComp->GetOwner() : nullptr)
+	{
+		// 足元下方向への距離はアセット依存なのでプロパティ化
+		const FVector LocalTraceOffset = GetTraceOffset();
+		const FVector SocketLocation = MeshComp->GetSocketLocation(SocketName);
+		// 地面へのめり込みを考慮して開始地点は少し浮かす
+		const FVector TraceBegin = SocketLocation + FVector::UpVector * TraceBeginDistance;
+		const FVector TraceEnd = TraceBegin + LocalTraceOffset;
+
+		FCollisionQueryParams TraceParams(NAME_None, false, OwnerActor);
+		TraceParams.bReturnPhysicalMaterial = true;
+
+		UWorld* World = OwnerActor->GetWorld();
+		if (World->IsGameWorld())
+		{
+			FTraceDelegate TraceFootDelegate;
+			TraceFootDelegate.BindUObject(this, &UWvFootstepAnimNotify::TraceFootDone, MeshComp, Animation);
+			World->AsyncLineTraceByChannel(
+				EAsyncTraceType::Single, 
+				TraceBegin, 
+				TraceEnd,
+				ECC_Visibility, 
+				TraceParams,
+				FCollisionResponseParams::DefaultResponseParam,
+				&TraceFootDelegate);
+		}
+#if WITH_EDITOR
+		else
+		{
+			FHitResult HitResult;
+			if (World->LineTraceSingleByChannel(HitResult, TraceBegin, TraceEnd, ECC_Visibility, TraceParams))
+			{
+				FVector HitLocation = HitResult.Location;
+				EPhysicalSurface HitSurfaceType = SurfaceTypeInEditor;
+				TriggerEffect(OwnerActor, Animation, HitLocation, HitSurfaceType);
+			}
+			else
+			{
+				DrawDebugLine(World, TraceBegin, TraceEnd, FColor::Red, false, 1.f);
+			}
+		}
+#endif
+	}
+}
+
+void UWvFootstepAnimNotify::TraceFootDone(const FTraceHandle& TraceHandle, FTraceDatum& TraceDatum, USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation)
+{
+	if (TraceDatum.OutHits.Num() == 0)
+	{
+		return;
+	}
+
+	if (AActor* OwnerActor = MeshComp ? MeshComp->GetOwner() : nullptr)
+	{
+		const FHitResult& HitResult = TraceDatum.OutHits[0];
+		FVector HitLocation = HitResult.Location;
+		EPhysicalSurface HitSurfaceType = HitResult.PhysMaterial.IsValid() ? HitResult.PhysMaterial->SurfaceType.GetValue() : EPhysicalSurface::SurfaceType_Default;
+		TriggerEffect(OwnerActor, Animation, HitLocation, HitSurfaceType);
+	}
+}
+
+void UWvFootstepAnimNotify::TriggerEffect(AActor* Owner, UAnimSequenceBase* Animation, const FVector Location, const TEnumAsByte<EPhysicalSurface> SurfaceType)
+{
+	// do something
+	const FName SurfaceName = GetSurfaceName(SurfaceType);
+
+}
+
+// todo
+FVector UWvFootstepAnimNotify::GetTraceOffset() const
+{
+	return TraceEndOffset;
+}
+
