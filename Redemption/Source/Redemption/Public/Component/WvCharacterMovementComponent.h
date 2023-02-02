@@ -87,4 +87,5 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Component, meta = (AllowPrivateAccess = "true"))
 	class UCapsuleComponent* CapsuleComponent;
 
+	FTraceDelegate TraceFootDelegate;
 };

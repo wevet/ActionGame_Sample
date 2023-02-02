@@ -311,7 +311,7 @@ void UWvCharacterMovementComponent::PhysWalking(float deltaTime, int32 Iteration
 			}
 			else
 			{
-				if (!bLedgeEndHit)
+				if (bLedgeEndHit)
 				{
 					RevertMove(OldLocation, OldBase, PreviousBaseLocation, OldFloor, false);
 					return;
@@ -438,8 +438,7 @@ const FVector UWvCharacterMovementComponent::GetInputVelocity()
 
 	if (BaseCharacter)
 	{
-		const FVector MoveDir = BaseCharacter->GetMoveDir();
-		return MoveDir;
+		return BaseCharacter->GetMoveDir();
 	}
 	return FVector::ZeroVector;
 }
@@ -459,7 +458,6 @@ void UWvCharacterMovementComponent::CheckLedgeDown()
 		//FRotator(0.0f, CharacterOwner->GetControlRotation().Yaw, 0.0f).Vector();
 
 		FCollisionQueryParams TraceParams(FName(TEXT("LedgeAsyncTrace")), false, CharacterOwner);
-		FTraceDelegate TraceFootDelegate;
 		TraceFootDelegate.BindUObject(this, &UWvCharacterMovementComponent::LedgeTraceDone);
 
 
@@ -489,6 +487,8 @@ void UWvCharacterMovementComponent::CheckLedgeDown()
 
 void UWvCharacterMovementComponent::LedgeTraceDone(const FTraceHandle& TraceHandle, FTraceDatum& TraceDatum)
 {
+	TraceFootDelegate.Unbind();
+
 	if (TraceDatum.OutHits.Num() == 0)
 	{
 		bLedgeEndHit = false;
