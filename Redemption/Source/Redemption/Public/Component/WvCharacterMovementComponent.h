@@ -66,26 +66,57 @@ protected:
 	virtual void InitializeComponent() override;
 
 protected:
-	void CheckLedgeDown();
+	void CheckLedgeForward();
+	void CheckLedgeForwardCompleted(const FTraceHandle& TraceHandle, FTraceDatum& TraceDatum);
+	void CheckLedgeEndCompleted(const FTraceHandle& TraceHandle, FTraceDatum& TraceDatum);
 	const FVector GetInputVelocity();
-	void LedgeTraceDone(const FTraceHandle& TraceHandle, FTraceDatum& TraceDatum);
 
 protected:
 	FWvCharacterGroundInfo CachedGroundInfo;
 
-	UPROPERTY(Transient)
-	bool bHasReplicatedAcceleration = false;
-
-	bool bLedgeEndHit = false;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Character Movement: Ledge")
-	int32 LedgeDetectCount = 5;
-
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Reference, meta = (AllowPrivateAccess = "true"))
 	class ABaseCharacter* BaseCharacter;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Component, meta = (AllowPrivateAccess = "true"))
-	class UCapsuleComponent* CapsuleComponent;
+	UPROPERTY(Transient)
+	bool bHasReplicatedAcceleration = false;
 
+	////////////////
+	/// LEDGE END
+	////////////////	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Character Movement: Ledge")
+	bool bWantsToLedgeEnd = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Character Movement: Ledge")
+	FVector2D CapsuleDetection = FVector2D(10.0f, 10.0f);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Character Movement: Ledge")
+	float HorizontalFallEdgeThreshold = 75.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Character Movement: Ledge")
+	float VerticalFallEdgeThreshold = 10.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Character Movement: Ledge")
+	float DownTraceThreshold = 250.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Character Movement: Ledge")
+	float DistanceThreshold = 60.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Character Movement: Ledge")
+	FVector2D LedgeCapsuleScale = FVector2D(4.0f, 4.0f);
+
+private:
+	////////////////
+	/// LEDGE END
+	////////////////	
+	FVector GetLedgeInputVelocity() const;
+	void DetectLedgeEnd();
+	void DetectLedgeEndCompleted(const FTraceHandle& TraceHandle, FTraceDatum& TraceDatum);
+	void DetectLedgeDownCompleted(const FTraceHandle& TraceHandle, FTraceDatum& TraceDatum);
+	bool bHasFallEdge = false;
 	FTraceDelegate TraceFootDelegate;
+	FVector FallEdgePoint = FVector::ZeroVector;
+
+public:
+	bool HasFallEdge() const { return bHasFallEdge; }
+
 };

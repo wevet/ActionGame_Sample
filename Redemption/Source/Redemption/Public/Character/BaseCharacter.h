@@ -157,7 +157,9 @@ protected:
 
 public:
 	FVector2D GetInputAxis() const;
-	FVector GetMoveDir() const;
+	FVector GetLedgeInputVelocity() const;
 	FVector GetForwardMoveDir(FVector CompareDir) const;
 	FVector GetRightMoveDir(FVector CompareDir) const;
+
+	FVector GetCharacterFeetLocation() const;
 };

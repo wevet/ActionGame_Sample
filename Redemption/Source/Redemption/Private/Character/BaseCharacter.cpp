@@ -291,7 +291,7 @@ FVector2D ABaseCharacter::GetInputAxis() const
 	return InputAxis;
 }
 
-FVector ABaseCharacter::GetMoveDir() const
+FVector ABaseCharacter::GetLedgeInputVelocity() const
 {
 	return GetForwardMoveDir(-GetActorUpVector()) * InputAxis.Y + GetRightMoveDir(-GetActorUpVector()) * InputAxis.X;
 }
@@ -332,4 +332,11 @@ FVector ABaseCharacter::GetForwardMoveDir(FVector CompareDir) const
 	return CameraForward;
 }
 
+FVector ABaseCharacter::GetCharacterFeetLocation() const
+{
+	auto Position = GetActorLocation();
+	const float Height = GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
+	Position.Z -= Height;
+	return Position;
+}
 
