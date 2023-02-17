@@ -50,7 +50,7 @@ static TAutoConsoleVariable<int32> CVarDebugCharacterMovementFallEdge(
 namespace WvCharacter
 {
 	static float GroundTraceDistance = 100000.0f;
-	FAutoConsoleVariableRef CVar_GroundTraceDistance(TEXT("WvCharacter.GroundTraceDistance"), GroundTraceDistance, TEXT("Distance to trace down when generating ground information."), ECVF_Cheat);
+	FAutoConsoleVariableRef CVar_GroundTraceDistance(TEXT("wv.GroundTraceDistance"), GroundTraceDistance, TEXT("Distance to trace down when generating ground information."), ECVF_Cheat);
 };
 
 
@@ -212,7 +212,7 @@ void UWvCharacterMovementComponent::PhysWalking(float deltaTime, int32 Iteration
 
 		// Save current values
 		UPrimitiveComponent* const OldBase = GetMovementBase();
-		const FVector PreviousBaseLocation = (OldBase != NULL) ? OldBase->GetComponentLocation() : FVector::ZeroVector;
+		const FVector PreviousBaseLocation = (OldBase != nullptr) ? OldBase->GetComponentLocation() : FVector::ZeroVector;
 		const FVector OldLocation = UpdatedComponent->GetComponentLocation();
 		const FFindFloorResult OldFloor = CurrentFloor;
 
@@ -446,32 +446,36 @@ FVector UWvCharacterMovementComponent::GetLedgeInputVelocity() const
 
 void UWvCharacterMovementComponent::DetectLedgeEnd()
 {
-	if (!IsMovingOnGround())
+	if (HasFallEdge())
 	{
-		bHasFallEdge = false;
 		return;
 	}
 
-	const float CurrentSpeed = GetMaxSpeed() / 2.0f;
+	bHasFallEdgeHitDown, bHasFallEdgeHitSide, bHasFallEdge = false;
+
+	if (!IsMovingOnGround())
+	{
+		return;
+	}
+
+	//const float CurrentSpeed = GetMaxSpeed() / 2.0f;
 	const float Radius = CharacterOwner->GetCapsuleComponent()->GetScaledCapsuleRadius() * LedgeCapsuleScale.X;
 	const float BaseHeight = CharacterOwner->GetCapsuleComponent()->GetScaledCapsuleHalfHeight() * LedgeCapsuleScale.Y;
 	const float StepHeight = BaseHeight + MaxStepHeight;
-	//const int DetectNum = FMath::CeilToInt(CurrentSpeed / Radius);
-
-	FVector Forward = GetLedgeInputVelocity();
-	if (Forward.IsNearlyZero())
+	  
+	LastFallEdgeInput = GetLedgeInputVelocity();
+	if (LastFallEdgeInput.IsNearlyZero())
 	{
-		Forward = CharacterOwner->GetActorForwardVector();
+		LastFallEdgeInput = CharacterOwner->GetActorForwardVector();
 	}
 
-	//const FVector StartLoc = FVector(CharacterOwner->GetActorLocation().X, CharacterOwner->GetActorLocation().Y, CharacterOwner->GetActorLocation().Z + BaseHeight);
 	const FVector StartLoc = CharacterOwner->GetActorLocation();
-
 	FCollisionQueryParams CollisionQuerry(FName(TEXT("LedgeAsyncTrace")), false, CharacterOwner);
 	FCollisionResponseParams CollisionResponse = FCollisionResponseParams(ECR_Block);
 	TraceFootDelegate.BindUObject(this, &UWvCharacterMovementComponent::DetectLedgeEndCompleted);
 
-	const FVector TraceStartLocation = StartLoc + (Forward * CapsuleDetection.X);
+	//const FVector TraceStartLocation = StartLoc + (LastFallEdgeInput * CapsuleDetection.X);
+	const FVector TraceStartLocation = StartLoc;
 	const FVector TraceEndLocation = TraceStartLocation + (FVector::DownVector * CapsuleDetection.Y);
 
 	GetWorld()->AsyncSweepByChannel(
@@ -488,6 +492,7 @@ void UWvCharacterMovementComponent::DetectLedgeEnd()
 #if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
 	if (CVarDebugCharacterMovementFallEdge.GetValueOnAnyThread() > 0)
 	{
+		DrawDebugLine(GetWorld(), TraceStartLocation, TraceEndLocation, FColor::Blue, false);
 		DrawDebugCapsule(GetWorld(), TraceStartLocation, StepHeight, Radius, FQuat::Identity, FColor::Blue);
 	}
 #endif // !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
@@ -499,7 +504,6 @@ void UWvCharacterMovementComponent::DetectLedgeEndCompleted(const FTraceHandle& 
 
 	if (TraceDatum.OutHits.Num() == 0)
 	{
-		bHasFallEdge = false;
 		return;
 	}
 
@@ -515,28 +519,35 @@ void UWvCharacterMovementComponent::DetectLedgeEndCompleted(const FTraceHandle& 
 	const auto UpValue = CharacterOwner->GetActorUpVector();
 
 	float ClosestDotToCenter = 0.f;
-	FHitResult* Hits = nullptr;
+	float ClosestDistance = 0.f;
+	FHitResult* CurrentHitResult = nullptr;
 	for (const FHitResult& HitResult : TraceDatum.OutHits)
 	{
-		if (!HitResult.bBlockingHit)
+		if (!HitResult.bBlockingHit || !HitResult.bStartPenetrating)
 		{
 			continue;
 		}
 
-		const FVector HorizontalNormal = HitResult.Normal.GetSafeNormal2D();
+		auto SlopeZAngle = UKismetMathLibrary::DegAcos(FVector::DotProduct(HitResult.ImpactNormal, FVector(0.0f, 0.0f, 1.0f)));
+		if (GetWalkableFloorAngle() >= SlopeZAngle)
+		{
+			continue;
+		}
 
-		const float HorizontalDot = FVector::DotProduct(Forward, -HorizontalNormal);
+#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
+		if (CVarDebugCharacterMovementFallEdge.GetValueOnAnyThread() > 0)
+		{
+			//DrawDebugSphere(GetWorld(), HitResult.ImpactPoint, 4.0f, 12, FColor::Orange, false, 5.0f, 0, 1.5f);
+		}
+#endif // !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
+
+		const FVector HorizontalNormal = HitResult.Normal.GetSafeNormal2D();
+		const float HorizontalDot = FVector::DotProduct(LastFallEdgeInput, -HorizontalNormal);
 		const float VerticalDot = FVector::DotProduct(HitResult.Normal, HorizontalNormal);
 		const float HorizontalDegrees = FMath::RadiansToDegrees(FMath::Acos(HorizontalDot));
 		const float VerticalDegrees = FMath::RadiansToDegrees(FMath::Acos(VerticalDot));
 		const bool bIsCeiling = FMath::IsNearlyZero(VerticalDot);
 
-		auto SlopeZAngle = UKismetMathLibrary::DegAcos(FVector::DotProduct(HitResult.ImpactNormal, FVector(0.0f, 0.0f, 1.0f)));
-
-		if (GetWalkableFloorAngle() >= SlopeZAngle)
-		{
-			continue;
-		}
 
 		float OutSlopePitch = 0.f;
 		float OutSlopeYaw = 0.f;
@@ -545,11 +556,8 @@ void UWvCharacterMovementComponent::DetectLedgeEndCompleted(const FTraceHandle& 
 #if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
 		if (CVarDebugCharacterMovementFallEdge.GetValueOnAnyThread() > 0)
 		{
-			//auto XAngle = UKismetMathLibrary::DegAcos(FVector::DotProduct(HitResult.ImpactNormal, FVector(1.0f, 0.0f, 0.0f)));
-			//UE_LOG(LogTemp, Log, TEXT("XAngle => %f"), XAngle);
-
-			//auto YAngle = UKismetMathLibrary::DegAcos(FVector::DotProduct(HitResult.ImpactNormal, FVector(0.0f, 1.0f, 0.0f)));
-			//UE_LOG(LogTemp, Log, TEXT("YAngle => %f"), YAngle);
+			//UE_LOG(LogTemp, Log, TEXT("OutSlopePitch => %f"), OutSlopePitch);
+			//UE_LOG(LogTemp, Log, TEXT("OutSlopeYaw => %f"), OutSlopeYaw);
 			//UE_LOG(LogTemp, Log, TEXT("HorizontalDegrees => %f"), HorizontalDegrees);
 			//UE_LOG(LogTemp, Log, TEXT("VerticalDegrees => %f"), VerticalDegrees);
 		}
@@ -563,34 +571,35 @@ void UWvCharacterMovementComponent::DetectLedgeEndCompleted(const FTraceHandle& 
 			}
 		}
 
-		const auto Distance = (CharacterOwner->GetActorLocation() - HitResult.ImpactPoint).Size2D();
-		if (Distance >= DistanceThreshold)
+		const float Distance = (CharacterOwner->GetActorLocation() - HitResult.ImpactPoint).Size2D();
+		if (Distance >= EdgeDistanceThreshold)
 		{
 			continue;
 		}
 
 		if (HorizontalDegrees >= HorizontalFallEdgeThreshold && !bIsCeiling)
 		{
-
 			const float FeetLocationDiff = (HitResult.ImpactPoint.Z - FeetLocation.Z);
-			const float Dot = FVector::DotProduct(Forward, (HitResult.ImpactPoint - FeetLocation).GetSafeNormal());
+			const float Dot = FVector::DotProduct(LastFallEdgeInput, (HitResult.ImpactPoint - FeetLocation).GetSafeNormal());
+			const float MinDistance = (FeetLocation - HitResult.ImpactPoint).Size2D();
 
-			if (Dot > ClosestDotToCenter && FeetLocationDiff <= 0.0f)
+			if (MinDistance > ClosestDistance && FeetLocationDiff <= 0.0f)
 			{
+				ClosestDistance = Distance;
 				ClosestDotToCenter = Dot;
-				Hits = const_cast<FHitResult*>(&HitResult);
+				CurrentHitResult = const_cast<FHitResult*>(&HitResult);
 			}
-
 		}
-
-
 	}
 
-	if (Hits)
+
+	if (CurrentHitResult)
 	{
-		FallEdgePoint = FVector(Hits->ImpactPoint.X, Hits->ImpactPoint.Y, FeetLocation.Z);
-		const FVector TraceStart = FallEdgePoint;
-		const FVector TraceEnd = TraceStart + (FVector::DownVector * DownTraceThreshold);
+		FallEdgePoint = CurrentHitResult->ImpactPoint;
+		FallEdgeNormal = CurrentHitResult->ImpactNormal * SideTraceOffset;
+		FVector TraceStart = FallEdgePoint;
+		TraceStart.Z = FeetLocation.Z;
+		const FVector TraceEnd = TraceStart + (FVector::DownVector * DownTraceOffset);
 
 		FCollisionQueryParams CollisionQuerry(FName(TEXT("LedgeAsyncTrace")), false, CharacterOwner);
 		FCollisionResponseParams CollisionResponse = FCollisionResponseParams(ECR_Block);
@@ -610,33 +619,24 @@ void UWvCharacterMovementComponent::DetectLedgeEndCompleted(const FTraceHandle& 
 		{
 			{
 				const float CharDistance = (CharacterOwner->GetActorLocation() - FallEdgePoint).Size2D();
-				FString DebugStr = TEXT("FallEdge Distance -> ");
-				DebugStr.Append(FString::SanitizeFloat(CharDistance));
+				const FString DebugStr = FString::Format(TEXT("FallEdgeDistance -> {0}"), { FString::SanitizeFloat(CharDistance) });
 				DrawDebugString(GetWorld(), TraceStart, DebugStr, nullptr, FColor::Yellow, 0.0f, false, 1.2f);
 			}
 
 			{
-				FString DebugStr = TEXT("FallEdgePoint -> ");
-				DebugStr.Append(FString::Format(TEXT(" {0}"), { *FallEdgePoint.ToString() }));
+				const FString DebugStr = FString::Format(TEXT("FallEdgeLocation -> {0}"), { *FallEdgePoint.ToString() });
 				DrawDebugString(GetWorld(), TraceStart + FVector::UpVector * 12.0f, DebugStr, nullptr, FColor::Yellow, 0.0f, false, 1.2f);
 			}
 
-			if (Hits->GetActor())
+			if (CurrentHitResult->GetActor())
 			{
-				FString DebugStr = TEXT("HitActor -> ");
-				DebugStr.Append(FString::Format(TEXT(" {0}"), { *Hits->GetActor()->GetName() }));
+				const FString DebugStr = FString::Format(TEXT("FallEdgeActor -> {0}"), { *CurrentHitResult->GetActor()->GetName() });
 				DrawDebugString(GetWorld(), TraceStart + FVector::UpVector * 24.0f, DebugStr, nullptr, FColor::Yellow, 0.0f, false, 1.2f);
 			}
 
-			if (CurrentFloor.HitResult.GetActor())
-			{
-				FString DebugStr = TEXT("CurrentFloor Actor -> ");
-				DebugStr.Append(FString::Format(TEXT(" {0}"), { *CurrentFloor.HitResult.GetActor()->GetName() }));
-				DrawDebugString(GetWorld(), TraceStart + FVector::UpVector * 36.0f, DebugStr, nullptr, FColor::Yellow, 0.0f, false, 1.2f);
-			}
-
-			DrawDebugSphere(GetWorld(), TraceStart, 4.0f, 12, FColor::Magenta, false, 5.0f, 0, 1.5f);
-			DrawDebugLine(GetWorld(), TraceStart, TraceEnd, FColor::Magenta, false, 5.0f, 0, 1.5f);
+			DrawDebugSphere(GetWorld(), FallEdgePoint, 4.0f, 12, FColor::Cyan, false, 5.0f, 0, 1.5f);
+			DrawDebugLine(GetWorld(), FallEdgePoint, FallEdgePoint + FallEdgeNormal, FColor::Cyan, false, 5.0f, 0, 1.5f);
+			DrawDebugLine(GetWorld(), TraceStart, TraceEnd, FColor::Cyan, false, 5.0f, 0, 1.5f);
 		}
 #endif // !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
 	}
@@ -647,32 +647,37 @@ void UWvCharacterMovementComponent::DetectLedgeDownCompleted(const FTraceHandle&
 {
 	TraceFootDelegate.Unbind();
 
-	if (TraceDatum.OutHits.Num() == 0)
+	if (TraceDatum.OutHits.Num() > 0)
 	{
-		bHasFallEdge = true;
-#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
-		if (CVarDebugCharacterMovementFallEdge.GetValueOnAnyThread() > 0)
+		const FHitResult& HitResult = TraceDatum.OutHits[0];
+		if (IsWalkable(HitResult))
 		{
-			UE_LOG(LogTemp, Log, TEXT("not hit FallEdge"));
-		}
-#endif // !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
-		return;
-	}
-
-	const FHitResult& HitResult = TraceDatum.OutHits[0];
-
-	if (IsWalkable(HitResult))
-	{
-		if (HitResult.Distance > MaxStepHeight)
-		{
-			bHasFallEdge = true;
-#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
-			if (CVarDebugCharacterMovementFallEdge.GetValueOnAnyThread() > 0)
+			const float Distance = (HitResult.TraceStart - HitResult.ImpactPoint).Size2D();
+			if (Distance > MaxStepHeight)
 			{
-				DrawDebugSphere(GetWorld(), HitResult.ImpactPoint, 4.0f, 12, FColor::Blue, false, 5.0f, 0, 1.5f);
-				UE_LOG(LogTemp, Log, TEXT("FallEdge => %f"), HitResult.Distance);
-			}
+				bHasFallEdgeHitDown = true;
+#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
+				if (CVarDebugCharacterMovementFallEdge.GetValueOnAnyThread() > 0)
+				{
+					DrawDebugSphere(GetWorld(), HitResult.ImpactPoint, 4.0f, 12, FColor::Red, false, 5.0f, 0, 1.5f);
+					UE_LOG(LogTemp, Log, TEXT("Hit but above a certain height. => %f"), HitResult.Distance);
+				}
 #endif // !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
+			}
+		}
+		else 
+		{
+			if (!HitResult.bStartPenetrating)
+			{
+				bHasFallEdgeHitDown = true;
+#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
+				if (CVarDebugCharacterMovementFallEdge.GetValueOnAnyThread() > 0)
+				{
+					DrawDebugSphere(GetWorld(), HitResult.TraceEnd, 4.0f, 12, FColor::Red, false, 5.0f, 0, 1.5f);
+					UE_LOG(LogTemp, Log, TEXT("not hit FallEdge -> %s"), *FString(__FUNCTION__));
+				}
+#endif // !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
+			}
 		}
 	}
 	else
@@ -680,13 +685,100 @@ void UWvCharacterMovementComponent::DetectLedgeDownCompleted(const FTraceHandle&
 #if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
 		if (CVarDebugCharacterMovementFallEdge.GetValueOnAnyThread() > 0)
 		{
-			bHasFallEdge = true;
-			DrawDebugSphere(GetWorld(), HitResult.TraceEnd, 4.0f, 12, FColor::Red, false, 5.0f, 0, 1.5f);
-			UE_LOG(LogTemp, Log, TEXT("not hit FallEdge => %f"), HitResult.Distance);
+			bHasFallEdgeHitDown = true;
+			UE_LOG(LogTemp, Log, TEXT("Empty HitResult -> %s"), *FString(__FUNCTION__));
 		}
 #endif // !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
-
 	}
 
+
+	if (!bHasFallEdgeHitDown)
+	{
+#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
+		if (CVarDebugCharacterMovementFallEdge.GetValueOnAnyThread() > 0)
+		{
+			UE_LOG(LogTemp, Log, TEXT("Hit lower than MaxStepHeight. Abort processing. -> %s"), *FString(__FUNCTION__));
+		}
+#endif // !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
+		return;
+	}
+
+	const FVector TraceStart = FallEdgePoint;
+	const FVector TraceEnd = FallEdgePoint + FallEdgeNormal;
+	FCollisionQueryParams CollisionQuerry(FName(TEXT("LedgeAsyncTrace")), false, CharacterOwner);
+	FCollisionResponseParams CollisionResponse = FCollisionResponseParams(ECR_Block);
+	TraceFootDelegate.BindUObject(this, &UWvCharacterMovementComponent::DetectLedgeSideCompleted);
+
+	GetWorld()->AsyncLineTraceByChannel(
+		EAsyncTraceType::Single,
+		TraceStart,
+		TraceEnd,
+		ECollisionChannel::ECC_Pawn,
+		CollisionQuerry,
+		CollisionResponse,
+		&TraceFootDelegate);
+}
+
+void UWvCharacterMovementComponent::DetectLedgeSideCompleted(const FTraceHandle& TraceHandle, FTraceDatum& TraceDatum)
+{
+	TraceFootDelegate.Unbind();
+
+	if (TraceDatum.OutHits.Num() > 0)
+	{
+		const FHitResult& HitResult = TraceDatum.OutHits[0];
+		if (IsWalkable(HitResult))
+		{
+			const float Distance = (HitResult.TraceStart - HitResult.ImpactPoint).Size2D();
+			const float Radius = CharacterOwner->GetCapsuleComponent()->GetScaledCapsuleRadius();
+			if (Distance > Radius)
+			{
+				bHasFallEdgeHitSide = true;
+
+#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
+				if (CVarDebugCharacterMovementFallEdge.GetValueOnAnyThread() > 0)
+				{
+					DrawDebugSphere(GetWorld(), HitResult.ImpactPoint, 4.0f, 12, FColor::Red, false, 5.0f, 0, 1.5f);
+					UE_LOG(LogTemp, Log, TEXT("Hit on the side, but wide."));
+				}
+#endif // !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
+			}
+		}
+
+	}
+	else
+	{
+		bHasFallEdgeHitSide = true;
+#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
+		if (CVarDebugCharacterMovementFallEdge.GetValueOnAnyThread() > 0)
+		{
+			UE_LOG(LogTemp, Log, TEXT("Empty HitResult -> %s"), *FString(__FUNCTION__));
+		}
+#endif // !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
+	}
+
+
+	if (bHasFallEdgeHitDown && bHasFallEdgeHitSide)
+	{
+		bHasFallEdge = true;
+		FTimerHandle handle;
+		CharacterOwner->GetWorldTimerManager().SetTimer(handle, [this]()
+		{
+#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
+			if (CVarDebugCharacterMovementFallEdge.GetValueOnAnyThread() > 0)
+			{
+				UE_LOG(LogTemp, Log, TEXT("Reset Teating."));
+			}
+#endif // !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
+
+			bHasFallEdgeHitDown, bHasFallEdgeHitSide, bHasFallEdge = false;
+		}, 2.0f, false);
+
+#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
+		if (CVarDebugCharacterMovementFallEdge.GetValueOnAnyThread() > 0)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Edge detected, Teating Animation is performed."));
+		}
+#endif // !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
+	}
 }
 

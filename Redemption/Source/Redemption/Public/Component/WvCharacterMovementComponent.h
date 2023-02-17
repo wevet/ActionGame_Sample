@@ -87,7 +87,7 @@ protected:
 	bool bWantsToLedgeEnd = false;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Character Movement: Ledge")
-	FVector2D CapsuleDetection = FVector2D(10.0f, 10.0f);
+	FVector2D CapsuleDetection = FVector2D(1.0f, 10.0f);
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Character Movement: Ledge")
 	float HorizontalFallEdgeThreshold = 75.0f;
@@ -96,13 +96,16 @@ protected:
 	float VerticalFallEdgeThreshold = 10.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Character Movement: Ledge")
-	float DownTraceThreshold = 250.0f;
+	float DownTraceOffset = 250.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Character Movement: Ledge")
-	float DistanceThreshold = 60.0f;
+	float SideTraceOffset = 250.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Character Movement: Ledge")
-	FVector2D LedgeCapsuleScale = FVector2D(4.0f, 4.0f);
+	float EdgeDistanceThreshold = 100.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Character Movement: Ledge")
+	FVector2D LedgeCapsuleScale = FVector2D(3.0f, 2.5f);
 
 private:
 	////////////////
@@ -112,9 +115,14 @@ private:
 	void DetectLedgeEnd();
 	void DetectLedgeEndCompleted(const FTraceHandle& TraceHandle, FTraceDatum& TraceDatum);
 	void DetectLedgeDownCompleted(const FTraceHandle& TraceHandle, FTraceDatum& TraceDatum);
+	void DetectLedgeSideCompleted(const FTraceHandle& TraceHandle, FTraceDatum& TraceDatum);
 	bool bHasFallEdge = false;
+	bool bHasFallEdgeHitDown = false;
+	bool bHasFallEdgeHitSide = false;
 	FTraceDelegate TraceFootDelegate;
 	FVector FallEdgePoint = FVector::ZeroVector;
+	FVector FallEdgeNormal = FVector::ZeroVector;
+	FVector LastFallEdgeInput = FVector::ZeroVector;
 
 public:
 	bool HasFallEdge() const { return bHasFallEdge; }
