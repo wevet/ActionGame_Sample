@@ -65,7 +65,6 @@ ABaseCharacter::ABaseCharacter(const FObjectInitializer& ObjectInitializer)
 	WvMoveComp->SetCrouchedHalfHeight(65.0f);
 
 	WvMoveComp->bOrientRotationToMovement = true;
-	//WvMoveComp->RotationRate = FRotator(0.0f, 500.0f, 0.0f);
 	GetCharacterMovement()->JumpZVelocity = 500.f;
 	GetCharacterMovement()->AirControl = 0.35f;
 	GetCharacterMovement()->MaxWalkSpeed = 500.f;

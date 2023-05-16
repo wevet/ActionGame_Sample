@@ -31,6 +31,44 @@ struct FWvCharacterGroundInfo
 	float GroundDistance;
 };
 
+USTRUCT(BlueprintType)
+struct FWvEdgeDetectionInfo
+{
+	GENERATED_BODY()
+
+	FWvEdgeDetectionInfo()
+	{
+
+	}
+
+	UPROPERTY()
+	FHitResult GroundHitResult;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FVector TraceAxis = FVector::ZeroVector;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float ForwardTraceOffset = 100.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float DownTraceOffset = 250.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float SideTraceOffset = 250.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float EdgeDistanceThreshold = 100.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float HorizontalFallEdgeThreshold = 75.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float VerticalFallEdgeThreshold = 10.0f;
+
+	FTraceDelegate EdgeTraceDelegate;
+};
+
+
 class ABaseCharacter;
 
 /**
@@ -66,12 +104,6 @@ protected:
 	virtual void InitializeComponent() override;
 
 protected:
-	void CheckLedgeForward();
-	void CheckLedgeForwardCompleted(const FTraceHandle& TraceHandle, FTraceDatum& TraceDatum);
-	void CheckLedgeEndCompleted(const FTraceHandle& TraceHandle, FTraceDatum& TraceDatum);
-	const FVector GetInputVelocity();
-
-protected:
 	FWvCharacterGroundInfo CachedGroundInfo;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Reference, meta = (AllowPrivateAccess = "true"))
@@ -85,6 +117,9 @@ protected:
 	////////////////	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Character Movement: Ledge")
 	bool bWantsToLedgeEnd = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Character Movement: Ledge")
+	FWvEdgeDetectionInfo EdgeDetectionInfo;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Character Movement: Ledge")
 	FVector2D CapsuleDetection = FVector2D(1.0f, 10.0f);

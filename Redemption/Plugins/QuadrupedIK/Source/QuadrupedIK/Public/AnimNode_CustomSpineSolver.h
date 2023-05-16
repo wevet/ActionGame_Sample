@@ -15,7 +15,7 @@ class USkeletalMeshComponent;
 USTRUCT(BlueprintInternalUseOnly)
 struct QUADRUPEDIK_API FAnimNode_CustomSpineSolver : public FAnimNode_Base
 {
-	GENERATED_USTRUCT_BODY()
+	GENERATED_BODY()
 
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = InputData, meta = (PinHiddenByDefault))
@@ -89,8 +89,6 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = BasicSettings, meta = (PinHiddenByDefault))
 	float MinFeetDistance = 45.0f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = BasicSettings, meta = (PinHiddenByDefault))
-	bool bDisplayLineTrace = true;
 #pragma endregion
 
 #pragma region MasterCurveSettings
@@ -156,21 +154,12 @@ public:
 #pragma endregion
 
 #pragma region PelvisControl
-	/// <summary>
-	/// スロープを登るとき
-	/// </summary>
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = PelvisControl, meta = (PinHiddenByDefault))
 	float SlantedHeightUpOffset = 0.0f;
 
-	/// <summary>
-	/// スロープを下るとき
-	/// </summary>
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = PelvisControl, meta = (PinHiddenByDefault))
 	float SlantedHeightDownOffset = 0.0f;
 
-	/// <summary>
-	/// 相対的な足の上げ下げ差
-	/// </summary>
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = PelvisControl, meta = (PinHiddenByDefault))
 	float DipMultiplier = 0.0f;
 
@@ -332,8 +321,8 @@ public:
 
 	mutable float AdaptiveAlpha = 1;
 	FInputScaleBias AlphaScaleBias;
-	int TickCounter = 0;
-	int TraceDrawCounter = 0;
+	int32 TickCounter = 0;
+	int32 TraceDrawCounter = 0;
 	float FormatLocationLerp = 15.0f;
 	float FormatTraceLerp = 15.0f;
 	float FormatSnakeLerp = 2.0f;
@@ -414,8 +403,8 @@ public:
 	FVector SmoothApproach(const FVector PastPosition, const FVector PastTargetPosition, const FVector TargetPosition, const float Speed) const;
 	FVector RotateAroundPoint(const FVector InputPoint, const FVector ForwardVector, const FVector Origin, const float Angle) const;
 
-	void ImpactRotation(const int PointIndex, FTransform& OutputTransform, FCSPose<FCompactPose>& MeshBases, const bool bIsReverse);
-	void TailImpactRotation(const int OriginPointIndex, FTransform& OutputTransform, FCSPose<FCompactPose>& MeshBases);
+	void TailImpactRotation(const int32 OriginPointIndex, FTransform& OutputTransform, FCSPose<FCompactPose>& MeshBases);
+	void ImpactRotation(const int32 PointIndex, FTransform& OutputTransform, FCSPose<FCompactPose>& MeshBases, const bool bIsReverse);
 	FName GetChildBone(const FName BoneName);
 
 	const TArray<FName> BoneArrayMachine(
@@ -484,5 +473,6 @@ protected:
 
 private:
 	bool LineTraceInitialized = false;
+	bool bDisplayLineTrace = false;
 };
 

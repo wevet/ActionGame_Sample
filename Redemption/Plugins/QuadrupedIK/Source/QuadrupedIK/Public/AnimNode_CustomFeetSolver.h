@@ -13,7 +13,7 @@ class USkeletalMeshComponent;
 USTRUCT()
 struct QUADRUPEDIK_API FAnimNode_CustomFeetSolver : public FAnimNode_CustomIKControlBase
 {
-	GENERATED_USTRUCT_BODY()
+	GENERATED_BODY()
 
 public:
 	FAnimNode_CustomFeetSolver();
@@ -125,9 +125,6 @@ public:
 	*/
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Settings, meta = (PinHiddenByDefault))
 	bool bShouldRotateFeet = true;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Settings, meta = (PinHiddenByDefault))
-	bool bShowTraceInGame = true;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Settings, meta = (PinHiddenByDefault))
 	bool bEnablePitch = true;
@@ -257,12 +254,9 @@ public:
 	UPROPERTY(EditAnywhere, Category = TraceSettings, meta = (PinHiddenByDefault))
 	FRuntimeFloatCurve TraceDownMultiplierCurve;
 
-
-
-
 	FCustomBoneStruct IKBoneData;
-	int FeetCounter = 0;
-	int FirstTimeCounter = 0;
+	int32 FeetCounter = 0;
+	int32 FirstTimeCounter = 0;
 	float TargetFPS = -1.0f;
 	float ScaleMode = 1.0f;
 	float DTLocationSpeed = 0.0f;
@@ -272,6 +266,7 @@ public:
 	bool bSolveShouldFail = false;
 	bool bIsInitialized = false;
 	bool bFirstTimeSetup = true;
+	bool bShowTraceInGame = false;
 
 	TArray<FVector> TraceStartList = TArray<FVector>();
 	TArray<FVector> TraceEndList = TArray<FVector>();
@@ -321,15 +316,15 @@ public:
 public:
 	void ApplyLegFull(
 		const FName FootName, 
-		const int SpineIndex, 
-		const int FeetIndex, 
+		const int32 SpineIndex,
+		const int32 FeetIndex,
 		FComponentSpacePoseContext& MeshBasesSaved, 
 		TArray<FBoneTransform>& OutBoneTransforms);
 
 	void ApplyTwoBoneIK(
 		const FBoneReference IKFootBone, 
-		const int SpineIndex, 
-		const int FeetIndex, 
+		const int32 SpineIndex,
+		const int32 FeetIndex,
 		const TEnumAsByte<enum EBoneControlSpace> EffectorLocationSpace, 
 		TEnumAsByte<enum EBoneControlSpace> JointTargetLocationSpace, 
 		FComponentSpacePoseContext& MeshBasesSaved, 
@@ -337,8 +332,8 @@ public:
 
 	void ApplySingleBoneIK(
 		const FBoneReference IKFootBone,
-		const int SpineIndex,
-		const int FeetIndex,
+		const int32 SpineIndex,
+		const int32 FeetIndex,
 		TEnumAsByte<enum EBoneControlSpace> EffectorLocationSpace,
 		TEnumAsByte<enum EBoneControlSpace> JointTargetLocationSpace,
 		FComponentSpacePoseContext& MeshBasesSaved,
@@ -359,7 +354,7 @@ public:
 	TArray<FName> BoneArrayMachine_Feet(int32 Index, FName StartBoneName, FName KneeBoneName, FName ThighBoneName, FName EndBoneName, const bool bWasFootBone);
 
 	bool CheckLoopExist(
-		const int OrderIndex,
+		const int32 OrderIndex,
 		const float FeetSlopeOffsetMultiplier,
 		const TArray<FCustomBone_FingerData> FingerArray,
 		const float FeetAlpha,
@@ -379,23 +374,23 @@ public:
 
 	FVector AnimationLocationLerp(
 		const bool bIsHit, 
-		const int SpineIndex, 
-		const int FeetIndex, 
+		const int32 SpineIndex,
+		const int32 FeetIndex,
 		const FVector StartPosition,
 		const FVector EndPosition, 
 		const float DeltaSeconds) const;
 
 	FQuat AnimationQuatSlerp(
 		const bool bIsHit,
-		const int SpineIndex,
-		const int FeetIndex,
+		const int32 SpineIndex,
+		const int32 FeetIndex,
 		const FQuat StartRotation,
 		const FQuat EndRotation,
 		const float DeltaSeconds) const;
 
 	FRotator RotationFromImpactNormal(
-		const int SpineIndex,
-		const int FeetIndex,
+		const int32 SpineIndex,
+		const int32 FeetIndex,
 		const bool bIsFinger,
 		FComponentSpacePoseContext& Output,
 		const FVector NormalImpactInput,
