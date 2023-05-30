@@ -528,7 +528,7 @@ void UWvCharacterMovementComponent::DetectLedgeEndCompleted(const FTraceHandle& 
 			continue;
 		}
 
-		auto SlopeZAngle = UKismetMathLibrary::DegAcos(FVector::DotProduct(HitResult.ImpactNormal, FVector(0.0f, 0.0f, 1.0f)));
+		const float SlopeZAngle = UKismetMathLibrary::DegAcos(FVector::DotProduct(HitResult.ImpactNormal, FVector(0.0f, 0.0f, 1.0f)));
 		if (GetWalkableFloorAngle() >= SlopeZAngle)
 		{
 			continue;
@@ -547,7 +547,6 @@ void UWvCharacterMovementComponent::DetectLedgeEndCompleted(const FTraceHandle& 
 		const float HorizontalDegrees = FMath::RadiansToDegrees(FMath::Acos(HorizontalDot));
 		const float VerticalDegrees = FMath::RadiansToDegrees(FMath::Acos(VerticalDot));
 		const bool bIsCeiling = FMath::IsNearlyZero(VerticalDot);
-
 
 		float OutSlopePitch = 0.f;
 		float OutSlopeYaw = 0.f;

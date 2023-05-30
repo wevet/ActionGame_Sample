@@ -87,6 +87,10 @@
 			"Enabled": true
 		},
 		{
+			"Name": "LiveLinkCurveDebugUI",
+			"Enabled": true
+		},
+		{
 			"Name": "MotionTrajectory",
 			"Enabled": true
 		},
@@ -112,18 +116,6 @@
 		},
 		{
 			"Name": "HairStrands",
-			"Enabled": true
-		},
-		{
-			"Name": "LiveLink",
-			"Enabled": true
-		},
-		{
-			"Name": "LiveLinkControlRig",
-			"Enabled": true
-		},
-		{
-			"Name": "LiveLinkCurveDebugUI",
 			"Enabled": true
 		},
 		{
@@ -158,6 +150,10 @@
 		},
 		{
 			"Name": "NiagaraFluids",
+			"Enabled": true
+		},
+		{
+			"Name": "HoudiniNiagara",
 			"Enabled": true
 		}
 	]
