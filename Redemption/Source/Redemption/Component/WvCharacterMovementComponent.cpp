@@ -1,6 +1,6 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-#include "Component/WvCharacterMovementComponent.h"
+#include "WvCharacterMovementComponent.h"
 #include "Redemption.h"
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemGlobals.h"

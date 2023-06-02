@@ -3,7 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Ability/WvGameplayAbility.h"
+#include "WvGameplayAbility.h"
 #include "AbilitySystemComponent.h"
 #include "WvAbilitySystemComponent.generated.h"
 

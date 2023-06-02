@@ -1,7 +1,7 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "Notify/WvFootstepAnimNotify.h"
+#include "WvFootstepAnimNotify.h"
 #include "PhysicsEngine/PhysicsSettings.h"
 #include "PhysicalMaterials/PhysicalMaterial.h"
 

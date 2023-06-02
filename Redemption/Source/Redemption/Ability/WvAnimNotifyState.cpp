@@ -1,9 +1,9 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-#include "Ability/WvAnimNotifyState.h"
-#include "Ability/WvGameplayAbility.h"
+#include "WvAnimNotifyState.h"
+#include "WvGameplayAbility.h"
 #include "AbilitySystemInterface.h"
-#include "Ability/WvAbilitySystemComponent.h"
+#include "WvAbilitySystemComponent.h"
 
 
 UWvAnimNotifyState::UWvAnimNotifyState(const FObjectInitializer& ObjectInitializer)	: Super(ObjectInitializer)

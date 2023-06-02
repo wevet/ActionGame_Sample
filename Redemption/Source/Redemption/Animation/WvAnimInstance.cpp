@@ -1,6 +1,6 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-#include "Animation/WvAnimInstance.h"
+#include "WvAnimInstance.h"
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemGlobals.h"
 #include "Component/WvCharacterMovementComponent.h"

@@ -1,7 +1,7 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "Component/PredictiveIKComponent.h"
+#include "PredictiveIKComponent.h"
 
 const FName UPredictiveIKComponent::LeftFootCurveName(TEXT("LeftFootCurve"));
 const FName UPredictiveIKComponent::RightFootCurveName(TEXT("RightFootCurve"));

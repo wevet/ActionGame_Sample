@@ -1,7 +1,7 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-#include "Ability/WvAbilitySystemComponent.h"
-#include "Ability/WvAnimNotifyState.h"
+#include "WvAbilitySystemComponent.h"
+#include "WvAnimNotifyState.h"
 #include "AbilitySystemGlobals.h"
 #include "Character/BaseCharacter.h"
 

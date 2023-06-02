@@ -1,6 +1,6 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-#include "Component/WvSpringArmComponent.h"
+#include "WvSpringArmComponent.h"
 #include "DrawDebugHelpers.h"
 #include "PhysicsEngine/PhysicsSettings.h"
 
