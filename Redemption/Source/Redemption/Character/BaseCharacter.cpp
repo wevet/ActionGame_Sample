@@ -5,9 +5,6 @@
 #include "Redemption.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/InputComponent.h"
-#include "GameFramework/CharacterMovementComponent.h"
-#include "Component/WvCharacterMovementComponent.h"
-#include "Component/PredictiveIKComponent.h"
 #include "MotionWarpingComponent.h"
 #include "AI/Navigation/NavigationTypes.h"
 #include "Delegates/Delegate.h"
@@ -34,6 +31,11 @@
 // Misc
 #include "Engine/SkeletalMeshSocket.h"
 
+#include "Component/WvCharacterMovementComponent.h"
+#include "Component/PredictiveIKComponent.h"
+#include "Locomotion/LocomotionComponent.h"
+
+
 #include UE_INLINE_GENERATED_CPP_BY_NAME(BaseCharacter)
 
 ABaseCharacter::ABaseCharacter(const FObjectInitializer& ObjectInitializer)
@@ -56,9 +58,7 @@ ABaseCharacter::ABaseCharacter(const FObjectInitializer& ObjectInitializer)
 	WvMoveComp->BrakingFriction = 6.0f;
 	WvMoveComp->GroundFriction = 8.0f;
 	WvMoveComp->BrakingDecelerationWalking = 1400.0f;
-	//WvMoveComp->bUseControllerDesiredRotation = false;
-	//WvMoveComp->bOrientRotationToMovement = false;
-	WvMoveComp->RotationRate = FRotator(0.0f, 720.0f, 0.0f);
+	WvMoveComp->RotationRate = FRotator(0.0f, 420.0f, 0.0f);
 	WvMoveComp->bAllowPhysicsRotationDuringAnimRootMotion = false;
 	WvMoveComp->GetNavAgentPropertiesRef().bCanCrouch = true;
 	WvMoveComp->bCanWalkOffLedgesWhenCrouching = true;
@@ -72,13 +72,18 @@ ABaseCharacter::ABaseCharacter(const FObjectInitializer& ObjectInitializer)
 	GetCharacterMovement()->BrakingDecelerationWalking = 2000.f;
 
 	PredictiveIKComponent = CreateDefaultSubobject<UPredictiveIKComponent>(TEXT("PredictiveIKComponent"));
+	PredictiveIKComponent->bAutoActivate = 1;
 
 	MotionWarpingComponent = CreateDefaultSubobject<UMotionWarpingComponent>(TEXT("MotionWarpingComponent"));
 	MotionWarpingComponent->bSearchForWindowsInAnimsWithinMontages = true;
+
 	CharacterMovementTrajectoryComponent = CreateDefaultSubobject<UCharacterMovementTrajectoryComponent>(TEXT("CharacterMovementTrajectoryComponent"));
 
 	WvAbilitySystemComponent = CreateDefaultSubobject<UWvAbilitySystemComponent>(TEXT("WvAbilitySystemComponent"));
 	WvAbilitySystemComponent->bAutoActivate = 1;
+
+	LocomotionComponent = CreateDefaultSubobject<ULocomotionComponent>(TEXT("LocomotionComponent"));
+	LocomotionComponent->bAutoActivate = 1;
 
 	MyTeamID = FGenericTeamId(0);
 }
@@ -86,6 +91,9 @@ ABaseCharacter::ABaseCharacter(const FObjectInitializer& ObjectInitializer)
 void ABaseCharacter::BeginPlay()
 {
 	Super::BeginPlay();
+
+	USkeletalMeshComponent* SkelMesh = GetMesh();
+	SkelMesh->AddTickPrerequisiteActor(this);
 
 	if (WvAbilitySystemComponent)
 	{
@@ -128,6 +136,68 @@ void ABaseCharacter::Tick(float DeltaTime)
 void ABaseCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
+}
+
+void ABaseCharacter::OnMovementModeChanged(EMovementMode PrevMovementMode, uint8 PreviousCustomMode)
+{
+	Super::OnMovementModeChanged(PrevMovementMode, PreviousCustomMode);
+	if (IsValid(LocomotionComponent))
+	{
+		const auto MovementMode = LocomotionComponent->GetPawnMovementModeChanged(PrevMovementMode, PreviousCustomMode);
+		ILocomotionInterface::Execute_SetLSMovementMode(LocomotionComponent, MovementMode);
+	}
+}
+
+void ABaseCharacter::OnStartCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust)
+{
+	Super::OnStartCrouch(HalfHeightAdjust, ScaledHalfHeightAdjust);
+	if (IsValid(LocomotionComponent))
+	{
+		ILocomotionInterface::Execute_SetLSStanceMode(LocomotionComponent, ELSStance::Crouching);
+	}
+}
+
+void ABaseCharacter::OnEndCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust)
+{
+	Super::OnEndCrouch(HalfHeightAdjust, ScaledHalfHeightAdjust);
+	if (IsValid(LocomotionComponent))
+	{
+		ILocomotionInterface::Execute_SetLSStanceMode(LocomotionComponent, ELSStance::Standing);
+	}
+}
+
+void ABaseCharacter::Landed(const FHitResult& Hit)
+{
+	Super::Landed(Hit);
+	if (IsValid(LocomotionComponent))
+	{
+		LocomotionComponent->OnLanded();
+	}
+}
+
+void ABaseCharacter::Jump()
+{
+	if (GetCharacterMovement()->IsCrouching())
+	{
+		UnCrouch();
+	}
+	else
+	{
+		Super::Jump();
+	}
+	if (IsValid(LocomotionComponent))
+	{
+		LocomotionComponent->StartJumping();
+	}
+}
+
+void ABaseCharacter::StopJumping()
+{
+	Super::StopJumping();
+	if (IsValid(LocomotionComponent))
+	{
+		LocomotionComponent->StopJumping();
+	}
 }
 
 void ABaseCharacter::PreInitializeComponents()
@@ -230,6 +300,22 @@ void ABaseCharacter::StrafeModement()
 	}
 }
 
+void ABaseCharacter::DoSprinting()
+{
+	if (IsValid(LocomotionComponent))
+	{
+		LocomotionComponent->SetSprintPressed(true);
+	}
+}
+
+void ABaseCharacter::DoStopSprinting()
+{
+	if (IsValid(LocomotionComponent))
+	{
+		LocomotionComponent->SetSprintPressed(false);
+	}
+}
+
 // AI Perception
 // ttps://blog.gamedev.tv/ai-sight-perception-to-custom-points/
 bool ABaseCharacter::CanBeSeenFrom(const FVector& ObserverLocation,	FVector& OutSeenLocation, int32& NumberOfLoSChecksPerformed, float& OutSightStrength, const AActor* IgnoreActor, const bool* bWasVisible, int32* UserData) const
@@ -241,9 +327,9 @@ bool ABaseCharacter::CanBeSeenFrom(const FVector& ObserverLocation,	FVector& Out
 	const TArray<USkeletalMeshSocket*> Sockets = GetMesh()->GetSkeletalMeshAsset()->GetActiveSocketList();
 	const int32 CollisionQuery = ECC_TO_BITFIELD(ECC_WorldStatic) | ECC_TO_BITFIELD(ECC_WorldDynamic) | ECC_TO_BITFIELD(ECC_Pawn);
 
-	for (int i = 0; i < Sockets.Num(); ++i)
+	for (int32 Index = 0; Index < Sockets.Num(); ++Index)
 	{
-		const FVector SocketLocation = GetMesh()->GetSocketLocation(Sockets[i]->SocketName);
+		const FVector SocketLocation = GetMesh()->GetSocketLocation(Sockets[Index]->SocketName);
 		const bool bHitResult = GetWorld()->LineTraceSingleByObjectType(
 			HitResult,
 			ObserverLocation,
@@ -256,7 +342,6 @@ bool ABaseCharacter::CanBeSeenFrom(const FVector& ObserverLocation,	FVector& Out
 		{
 			OutSeenLocation = SocketLocation;
 			OutSightStrength = 1;
-			//UE_LOG(LogStray, Warning, TEXT("Socket Name: %s"), *Sockets[i]->SocketName.ToString());
 			return true;
 		}
 	}

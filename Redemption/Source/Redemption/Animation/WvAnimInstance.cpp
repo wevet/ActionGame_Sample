@@ -8,6 +8,15 @@
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(WvAnimInstance)
 
+void FBaseAnimInstanceProxy::Initialize(UAnimInstance* InAnimInstance)
+{
+	Super::Initialize(InAnimInstance);
+}
+
+bool FBaseAnimInstanceProxy::Evaluate(FPoseContext& Output)
+{
+	return Super::Evaluate(Output);
+}
 
 UWvAnimInstance::UWvAnimInstance(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
@@ -35,13 +44,20 @@ void UWvAnimInstance::NativeInitializeAnimation()
 {
 	Super::NativeInitializeAnimation();
 
-	if (AActor* OwningActor = GetOwningActor())
+	Character = Cast<ABaseCharacter>(TryGetPawnOwner());
+
+	if (!Character.IsValid())
 	{
-		if (UAbilitySystemComponent* ASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(OwningActor))
-		{
-			InitializeWithAbilitySystem(ASC);
-		}
+		return;
 	}
+
+	CharacterMovementComponent = CastChecked<UWvCharacterMovementComponent>(Character->GetCharacterMovement());
+
+	if (UAbilitySystemComponent* ASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(Character.Get()))
+	{
+		InitializeWithAbilitySystem(ASC);
+	}
+
 }
 
 
@@ -49,15 +65,16 @@ void UWvAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 {
 	Super::NativeUpdateAnimation(DeltaSeconds);
 
-	const ABaseCharacter* Character = Cast<ABaseCharacter>(GetOwningActor());
-	if (!Character)
+	if (!Character.IsValid())
 	{
 		return;
 	}
 
-	UWvCharacterMovementComponent* CharMoveComp = CastChecked<UWvCharacterMovementComponent>(Character->GetCharacterMovement());
-	const FWvCharacterGroundInfo& GroundInfo = CharMoveComp->GetGroundInfo();
-	GroundDistance = GroundInfo.GroundDistance;
+	if (IsValid(CharacterMovementComponent))
+	{
+		const FWvCharacterGroundInfo& GroundInfo = CharacterMovementComponent->GetGroundInfo();
+		GroundDistance = GroundInfo.GroundDistance;
+	}
 
 	TrajectorySampleRange = Character->GetTrajectorySampleRange();
 }

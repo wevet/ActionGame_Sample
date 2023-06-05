@@ -1,0 +1,244 @@
+// Fill out your copyright notice in the Description page of Project Settings.
+
+#pragma once
+
+#include "Engine/EngineTypes.h"
+#include "Curves/CurveFloat.h"
+#include "Components/PrimitiveComponent.h"
+#include "LocomotionSystemTypes.generated.h"
+
+
+UENUM(BlueprintType)
+enum class ELSGait : uint8
+{
+	Walking   UMETA(DisplayName = "Walking"),
+	Running   UMETA(DisplayName = "Running"),
+	Sprinting UMETA(DisplayName = "Sprinting"),
+	Max UMETA(Hidden),
+};
+
+UENUM(BlueprintType)
+enum class ELSMovementMode : uint8
+{
+	None     UMETA(DisplayName = "None"),
+	Grounded UMETA(DisplayName = "Grounded"),
+	Falling  UMETA(DisplayName = "Falling"),
+	Ragdoll  UMETA(DisplayName = "Ragdoll"),
+	Swimming UMETA(DisplayName = "Swimming"),
+	Mantling UMETA(DisplayName = "Mantling"),
+	Vaulting UMETA(DisplayName = "Vaulting"),
+};
+
+UENUM(BlueprintType)
+enum class ELSRotationMode : uint8
+{
+	VelocityDirection UMETA(DisplayName = "VelocityDirection"),
+	LookingDirection  UMETA(DisplayName = "LookingDirection"),
+};
+
+UENUM(BlueprintType)
+enum class ELSStance : uint8
+{
+	Standing UMETA(DisplayName = "Standing"),
+	Crouching  UMETA(DisplayName = "Crouching"),
+};
+
+UENUM(BlueprintType)
+enum class ELSCardinalDirection : uint8
+{
+	North UMETA(DisplayName = "North"),
+	East  UMETA(DisplayName = "East"),
+	West  UMETA(DisplayName = "West"),
+	South UMETA(DisplayName = "South"),
+};
+
+UENUM(BlueprintType)
+enum class EMantleType : uint8
+{
+	HighMantle   UMETA(DisplayName = "HighMantle"),
+	LowMantle    UMETA(DisplayName = "LowMantle"),
+	FallingCatch UMETA(DisplayName = "FallingCatch"),
+};
+
+USTRUCT(BlueprintType)
+struct REDEMPTION_API FLSComponentAndTransform
+{
+	GENERATED_BODY()
+
+public:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FTransform Transform;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPrimitiveComponent* Component;
+
+public:
+	FLSComponentAndTransform()
+	{
+		Component = nullptr;
+		Transform = FTransform::Identity;
+	}
+};
+
+USTRUCT(BlueprintType)
+struct REDEMPTION_API FCameraSettings
+{
+	GENERATED_BODY()
+
+public:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float TargetArmLength;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float CameraLagSpeed;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FVector SocketOffset;
+
+public:
+	FCameraSettings() :
+		TargetArmLength(300.0f),
+		CameraLagSpeed(10.0f),
+		SocketOffset(0.f, 0.f, 45.f)
+	{
+
+	}
+};
+
+USTRUCT(BlueprintType)
+struct REDEMPTION_API FCameraSettingsGait
+{
+	GENERATED_BODY()
+
+public:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	struct FCameraSettings Walk;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	struct FCameraSettings Run;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	struct FCameraSettings Sprint;
+
+public:
+	FCameraSettingsGait()
+	{}
+};
+
+USTRUCT(BlueprintType)
+struct REDEMPTION_API FCameraSettingsStance
+{
+	GENERATED_BODY()
+
+public:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	struct FCameraSettingsGait Standing;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	struct FCameraSettings Crouching;
+
+public:
+	FCameraSettingsStance()
+	{}
+};
+
+USTRUCT(BlueprintType)
+struct REDEMPTION_API FCameraSettingsTarget
+{
+	GENERATED_BODY()
+
+public:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	struct FCameraSettingsStance VelocityDirection;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	struct FCameraSettingsStance LookingDirection;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	struct FCameraSettings Aiming;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	struct FCameraSettings FPS;
+	
+	//UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	//struct FCameraSettings Ragdoll;
+
+public:
+	FCameraSettingsTarget()
+	{}
+};
+
+
+USTRUCT(BlueprintType)
+struct REDEMPTION_API FRequestAbilityAnimationData
+{
+	GENERATED_BODY()
+
+public:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float PlayRate;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float TimeToStartMontageAt;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UAnimMontage* AnimMontage;
+
+public:
+	FRequestAbilityAnimationData()
+	{
+		PlayRate = 1.0f;
+		TimeToStartMontageAt = 1.0f;
+		AnimMontage = nullptr;
+	}
+};
+
+
+USTRUCT(BlueprintType)
+struct REDEMPTION_API FMantleTraceSettings
+{
+	GENERATED_BODY()
+
+public:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float MaxLedgeHeight;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float MinLedgeHeight;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float ReachDistance;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float ForwardTraceRadius;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float DownwardTraceRadius;
+
+public:
+	FMantleTraceSettings()
+	{
+		MaxLedgeHeight = 0.0f;
+		MinLedgeHeight = 0.0f;
+		ReachDistance = 0.0f;
+		ForwardTraceRadius = 0.0f;
+		DownwardTraceRadius = 0.0f;
+	}
+};
+
+
+USTRUCT(BlueprintType)
+struct REDEMPTION_API FLocomotionEssencialVariables
+{
+	GENERATED_BODY()
+
+public:
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	ELSStance LSStance;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	ELSRotationMode LSRotationMode;
+
+public:
+	FLocomotionEssencialVariables()
+	{}
+};

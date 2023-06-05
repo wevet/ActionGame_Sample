@@ -7,9 +7,9 @@
 #include "Ability/WvAbilitySystemComponent.h"
 #include "Containers/Array.h"
 #include "Engine/EngineTypes.h"
-//#include "GameplayCueInterface.h"
-//#include "GameplayTagAssetInterface.h"
-// Perception
+#include "GameplayCueInterface.h"
+#include "GameplayTagAssetInterface.h"
+#include "Locomotion/LocomotionSystemTypes.h"
 #include "GenericTeamAgentInterface.h"
 #include "Perception/AISightTargetInterface.h"
 #include "Perception/AIPerceptionStimuliSourceComponent.h"
@@ -41,6 +41,7 @@ struct FWvReplicatedAcceleration
 class UPredictiveIKComponent;
 class UMotionWarpingComponent;
 class UWvCharacterMovementComponent;
+class ULocomotionComponent;
 
 
 UCLASS(Abstract)
@@ -53,14 +54,19 @@ public:
 	virtual void PreInitializeComponents() override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	virtual void PreReplication(IRepChangedPropertyTracker& ChangedPropertyTracker) override;
+	virtual void Tick(float DeltaTime) override;
+	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+	virtual void Jump() override;
+	virtual void StopJumping() override;
 
 protected:
 	virtual void BeginPlay() override;
 	virtual void PossessedBy(AController* NewController) override;
+	virtual void OnMovementModeChanged(EMovementMode PrevMovementMode, uint8 PreviousCustomMode = 0) override;
+	virtual void OnStartCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust) override;
+	virtual void OnEndCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust) override;
+	virtual void Landed(const FHitResult& Hit) override;
 
-public:	
-	virtual void Tick(float DeltaTime) override;
-	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
 public:
 	/**
@@ -97,10 +103,30 @@ public:
 	*/
 	virtual bool CanBeSeenFrom(const FVector& ObserverLocation, FVector& OutSeenLocation, int32& NumberOfLoSChecksPerformed, float& OutSightStrength, const AActor* IgnoreActor = nullptr, const bool* bWasVisible = nullptr, int32* UserData = nullptr) const override;
 
+	FORCEINLINE class UPredictiveIKComponent* GetPredictiveIKComponent() const { return PredictiveIKComponent; }
+	FORCEINLINE class UMotionWarpingComponent* GetMotionWarpingComponent() const { return MotionWarpingComponent; }
+	FORCEINLINE class UCharacterMovementTrajectoryComponent* GetCharacterMovementTrajectoryComponent() const { return CharacterMovementTrajectoryComponent; }
+	UWvCharacterMovementComponent* GetWvCharacterMovementComponent() const;
+	UWvAbilitySystemComponent* GetWvAbilitySystemComponent() const;
+
+	UFUNCTION(BlueprintCallable, Category = Movement)
+	FTrajectorySampleRange GetTrajectorySampleRange() const;
+
+	FVector2D GetInputAxis() const;
+	FVector GetLedgeInputVelocity() const;
+	FVector GetForwardMoveDir(FVector CompareDir) const;
+	FVector GetRightMoveDir(FVector CompareDir) const;
+	FVector GetCharacterFeetLocation() const;
+
+	virtual void DoSprinting();
+	virtual void DoStopSprinting();
 
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Component, meta = (AllowPrivateAccess = "true"))
 	class UPredictiveIKComponent* PredictiveIKComponent;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Component, meta = (AllowPrivateAccess = "true"))
+	class ULocomotionComponent* LocomotionComponent;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Component, meta = (AllowPrivateAccess = "true"))
 	class UMotionWarpingComponent* MotionWarpingComponent;
@@ -114,19 +140,6 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Abilities)
 	TArray<TSubclassOf<class UGameplayAbility>> AbilityList;
 
-
-public:
-	FORCEINLINE class UPredictiveIKComponent* GetPredictiveIKComponent() const { return PredictiveIKComponent; }
-	FORCEINLINE class UMotionWarpingComponent* GetMotionWarpingComponent() const { return MotionWarpingComponent; }
-	FORCEINLINE class UCharacterMovementTrajectoryComponent* GetCharacterMovementTrajectoryComponent() const { return CharacterMovementTrajectoryComponent; }
-	UWvCharacterMovementComponent* GetWvCharacterMovementComponent() const;
-	UWvAbilitySystemComponent* GetWvAbilitySystemComponent() const;
-
-public:
-	UFUNCTION(BlueprintCallable, Category = Movement)
-	FTrajectorySampleRange GetTrajectorySampleRange() const;
-
-protected:
 	UPROPERTY(Transient, ReplicatedUsing = OnRep_ReplicatedAcceleration)
 	FWvReplicatedAcceleration ReplicatedAcceleration;
 
@@ -139,27 +152,19 @@ protected:
 	UFUNCTION()
 	void OnRep_ReplicatedAcceleration();
 
-
 	UFUNCTION(BlueprintCallable, Category = Movement)
 	void VelocityModement();
 
 	UFUNCTION(BlueprintCallable, Category = Movement)
 	void StrafeModement();
 
-protected:
 	UPROPERTY()
 	FTrajectorySampleRange TrajectorySampleRange;
 
 	// Angle threshold to determine if the input direction is vertically aligned with Actor
-	int InputDirVerThreshold = 40;
+	int32 InputDirVerThreshold = 40;
 	float InputDirVerAngleThres = 40.0f;
 	FVector2D InputAxis = FVector2D::ZeroVector;
 
-public:
-	FVector2D GetInputAxis() const;
-	FVector GetLedgeInputVelocity() const;
-	FVector GetForwardMoveDir(FVector CompareDir) const;
-	FVector GetRightMoveDir(FVector CompareDir) const;
-
-	FVector GetCharacterFeetLocation() const;
 };
+
