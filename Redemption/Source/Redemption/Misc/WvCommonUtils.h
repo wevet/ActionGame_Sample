@@ -17,6 +17,8 @@ class REDEMPTION_API UWvCommonUtils : public UBlueprintFunctionLibrary
 
 public:
 	static float GetAngleBetweenVector(FVector Vec1, FVector Vec2);
-
 	static float GetAngleBetween3DVector(FVector Vec1, FVector Vec2);
+
+	static FTransform TransformSubStract(const FTransform& TransformA, const FTransform& TransformB);
+	static FTransform TransformAdd(const FTransform& TransformA, const FTransform& TransformB);
 };

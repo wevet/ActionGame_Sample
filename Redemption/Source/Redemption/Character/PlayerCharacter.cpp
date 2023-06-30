@@ -8,8 +8,11 @@
 #include "GameFramework/Controller.h"
 //#include "GameFramework/SpringArmComponent.h"
 #include "Component/WvSpringArmComponent.h"
+#include "Locomotion/LocomotionComponent.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
+
+#include UE_INLINE_GENERATED_CPP_BY_NAME(PlayerCharacter)
 
 
 APlayerCharacter::APlayerCharacter(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
@@ -65,15 +68,28 @@ void APlayerCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerIn
 			EnhancedInputComponent->BindAction(SprintAction, ETriggerEvent::Triggered, this, &ABaseCharacter::DoSprinting);
 			EnhancedInputComponent->BindAction(SprintAction, ETriggerEvent::Completed, this, &ABaseCharacter::DoStopSprinting);
 		}
+
+		if (StrafeAction)
+		{
+			EnhancedInputComponent->BindAction(StrafeAction, ETriggerEvent::Triggered, this, &ABaseCharacter::StrafeModement);
+			EnhancedInputComponent->BindAction(StrafeAction, ETriggerEvent::Completed, this, &ABaseCharacter::VelocityModement);
+		}
 	}
 }
 
 void APlayerCharacter::Move(const FInputActionValue& Value)
 {
+	// input is a Vector2D
+	InputAxis = Value.Get<FVector2D>();
+
+	if (IsValid(LocomotionComponent))
+	{
+		LocomotionComponent->Move(InputAxis);
+	}
+
+#if false
 	if (Controller != nullptr)
 	{
-		// input is a Vector2D
-		InputAxis = Value.Get<FVector2D>();
 		// find out which way is forward
 		const FRotator Rotation = Controller->GetControlRotation();
 		const FRotator YawRotation(0, Rotation.Yaw, 0);
@@ -85,6 +101,8 @@ void APlayerCharacter::Move(const FInputActionValue& Value)
 		AddMovementInput(ForwardDirection, InputAxis.Y);
 		AddMovementInput(RightDirection, InputAxis.X);
 	}
+#endif
+
 }
 
 void APlayerCharacter::Look(const FInputActionValue& Value)

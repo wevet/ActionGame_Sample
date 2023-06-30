@@ -9,7 +9,7 @@
 #include "GameplayTagContainer.h"
 #include "LocomotionComponent.generated.h"
 
-class UCharacterMovementComponent;
+class UWvCharacterMovementComponent;
 class USkeletalMeshComponent;
 class UAnimInstance;
 class UWvAbilitySystemComponent;
@@ -202,7 +202,7 @@ public:
 
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
-	class UCharacterMovementComponent* CharacterMovementComponent;
+	class UWvCharacterMovementComponent* CharacterMovementComponent;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
 	class USkeletalMeshComponent* SkeletalMeshComponent;
@@ -212,10 +212,16 @@ protected:
 
 #pragma region LS_Property_Edit
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion")
+	FLocomotionEssencialVariables LocomotionEssencialVariables;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion")
 	float WalkingAcceleration;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion")
 	float RunningAcceleration;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion")
+	float SprintingAcceleration;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion")
 	float WalkingDeceleration;
@@ -224,28 +230,28 @@ protected:
 	float RunningDeceleration;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion")
+	float SprintingDeceleration;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion")
 	float WalkingGroundFriction;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion")
 	float RunningGroundFriction;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion")
-	ELSMovementMode LSMovementMode;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion")
-	ELSGait LSGait;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion")
-	ELSStance LSStance;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion")
-	ELSRotationMode LSRotationMode;
+	float SprintingGroundFriction;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion")
 	FVector2D SpeedRate = FVector2D(160.f, 380.f);
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion")
 	FVector2D RotationInterpSpeedRate = FVector2D(5.f, 10.f);
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion")
+	FRotator RunningRotationRate = FRotator(0.0f, 560.0f, 0.0f);
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion")
+	FRotator SprintingRotationRate = FRotator(0.0f, 420.0f, 0.0f);
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion|AimOffset")
 	float LookAtInterpSpeed = 6.0f;
@@ -269,90 +275,16 @@ protected:
 	ULocomotionStateDataAsset* LocomotionStateDataAsset;
 #pragma endregion
 
-#pragma region LS_Property_Read
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
-	FVector MovementInput;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
-	FVector RagdollLocation;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
-	FRotator CharacterRotation;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
-	FRotator LookingRotation;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
-	FRotator LastVelocityRotation;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
-	FRotator LastMovementInputRotation;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
-	bool bWasMoving;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
-	bool bWasMovementInput;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
-	bool bRagdollOnGround;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
-	bool bAiming;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion|AimOffset")
-	bool bLookAtAimOffset;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion|AimOffset")
-	FTransform LookAtTransform;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion|AimOffset")
-	float AimYawDelta;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion|AimOffset")
-	float AimYawRate;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
-	float RotationRateMultiplier;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
-	float RotationOffset;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
-	float VelocityDifference;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
-	float RotationDifference;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
-	float Direction;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
-	FVector RagdollVelocity;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
-	FRotator JumpRotation;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
-	FRotator TargetRotation;
-#pragma endregion
-
 public:
 	void SetLockUpdatingRotation(const bool NewLockUpdatingRotation);
 	bool GetLockUpdatingRotation() const;
 
-	UFUNCTION(BlueprintCallable, Category = "Locomotion")
 	void ApplyCharacterRotation(const FRotator InTargetRotation, const bool bInterpRotation, const float InterpSpeed);
-
 	void SetLookAtAimTransform(const bool NewLookAtAimOffset, const FTransform NewLookAtTransform);
-	FVector2D GetInputAxis() const;
 
-	void MoveForward(const float NewForwardAxisValue);
-	void MoveRight(const float NewRightAxisValue);
+	void Move(const FVector2D InputAxis);
 	void SetSprintPressed(const bool NewSprintPressed);
 	bool GetSprintPressed() const;
-
-	UAnimInstance* GetLocomotionAnimInstance() const;
 
 	FVector GetLandingLocation() const;
 	void ToggleRightShoulder();
@@ -370,19 +302,7 @@ public:
 	float ChooseBrakingDeceleration() const;
 	float ChooseGroundFriction() const;
 
-	FORCEINLINE float GetAimYawDelta() const { return AimYawDelta; }
-	FORCEINLINE float GetAimYawRate() const { return AimYawRate; }
-	FORCEINLINE float GetVelocityDifference() const { return VelocityDifference; }
-	FORCEINLINE float GetRotationDifference() const { return RotationDifference; }
-	FORCEINLINE float GetDirection() const { return Direction; }
-	FORCEINLINE FRotator GetLastVelocityRotation() const { return LastVelocityRotation; }
-	FORCEINLINE FRotator GetLastMovementInputRotation() const { return LastMovementInputRotation; }
-	FORCEINLINE FRotator GetCharacterRotation() const { return CharacterRotation; }
-	FORCEINLINE FRotator GetLookingRotation() const { return LookingRotation; }
-	FORCEINLINE ELSMovementMode GetLSPrevMovementMode() { return LSPrevMovementMode; }
-	FORCEINLINE ELSMovementMode GetLSMovementMode() { return LSMovementMode; }
-	FORCEINLINE FName GetPelvisBoneName() const { return PelvisBoneName; }
-	FORCEINLINE bool GetRightShoulder() const { return bRightShoulder; }
+	FLocomotionEssencialVariables GetLocomotionEssencialVariables() const { return LocomotionEssencialVariables; }
 
 	const UWvAbilitySystemComponent* FindAbilitySystemComponent();
 	FRequestAbilityAnimationData GetRequestAbilityAnimationData() const;
@@ -407,6 +327,9 @@ private:
 
 	void DoCharacterGrounded();
 	void UpdateCharacterMovementSettings();
+
+	void MoveForward(const float NewForwardAxisValue);
+	void MoveRight(const float NewRightAxisValue);
 	void MovementInputControl(const bool bForwardAxis);
 	void GroundMovementInput(const bool bForwardAxis);
 	void RagdollMovementInput();
@@ -425,12 +348,6 @@ private:
 	TWeakObjectPtr<class ABaseCharacter> Character;
 
 	UPROPERTY()
-	class UAnimInstance* LocomotionAnimInstance;
-
-	UPROPERTY()
-	FLocomotionEssencialVariables LocomotionEssencialVariables;
-
-	UPROPERTY()
 	FRequestAbilityAnimationData RequestAbilityAnimationData;
 
 	FVector LandingLocation = FVector::ZeroVector;
@@ -439,12 +356,8 @@ private:
 	bool bDebugTrace;
 	bool bShouldSprint;
 	bool bLockUpdatingRotation;
-	bool bRightShoulder;
 
 	float ForwardAxisValue;
 	float RightAxisValue;
-
-	ELSCardinalDirection CardinalDirection;
-	ELSMovementMode LSPrevMovementMode;
 
 };

@@ -24,3 +24,20 @@ float UWvCommonUtils::GetAngleBetween3DVector(FVector Vec1, FVector Vec2)
 	return Angle;
 }
 
+FTransform UWvCommonUtils::TransformSubStract(const FTransform& TransformA, const FTransform& TransformB)
+{
+	FVector Location = TransformA.GetLocation() - TransformB.GetLocation();
+	FVector Scale = TransformA.GetScale3D() - TransformB.GetScale3D();
+	FQuat Rotation = TransformA.GetRotation() - TransformA.GetRotation();
+	return FTransform(Rotation, Location, Scale);
+}
+
+
+FTransform UWvCommonUtils::TransformAdd(const FTransform& TransformA, const FTransform& TransformB)
+{
+	FVector Location = TransformA.GetTranslation() + TransformB.GetTranslation();
+	FVector Scale = TransformA.GetScale3D() + TransformB.GetScale3D();
+	FQuat Rotation = TransformA.GetRotation() + TransformB.GetRotation();
+	return FTransform(Rotation, Location, Scale);
+}
+

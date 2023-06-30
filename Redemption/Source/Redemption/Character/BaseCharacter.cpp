@@ -51,6 +51,10 @@ ABaseCharacter::ABaseCharacter(const FObjectInitializer& ObjectInitializer)
 	bUseControllerRotationYaw = false;
 	bUseControllerRotationRoll = false;
 
+	USkeletalMeshComponent* MeshComp = GetMesh();
+	check(MeshComp);
+	MeshComp->SetRelativeRotation(FRotator(0.0f, -90.0f, 0.0f));  // Rotate mesh to be X forward since it is exported as Y forward.
+
 	UWvCharacterMovementComponent* WvMoveComp = CastChecked<UWvCharacterMovementComponent>(GetCharacterMovement());
 	WvMoveComp->GravityScale = 1.0f;
 	WvMoveComp->MaxAcceleration = 2400.0f;
@@ -58,18 +62,18 @@ ABaseCharacter::ABaseCharacter(const FObjectInitializer& ObjectInitializer)
 	WvMoveComp->BrakingFriction = 6.0f;
 	WvMoveComp->GroundFriction = 8.0f;
 	WvMoveComp->BrakingDecelerationWalking = 1400.0f;
+	WvMoveComp->bUseControllerDesiredRotation = false;
+	WvMoveComp->bOrientRotationToMovement = true;
 	WvMoveComp->RotationRate = FRotator(0.0f, 420.0f, 0.0f);
 	WvMoveComp->bAllowPhysicsRotationDuringAnimRootMotion = false;
 	WvMoveComp->GetNavAgentPropertiesRef().bCanCrouch = true;
 	WvMoveComp->bCanWalkOffLedgesWhenCrouching = true;
 	WvMoveComp->SetCrouchedHalfHeight(65.0f);
 
-	WvMoveComp->bOrientRotationToMovement = true;
-	GetCharacterMovement()->JumpZVelocity = 500.f;
-	GetCharacterMovement()->AirControl = 0.35f;
-	GetCharacterMovement()->MaxWalkSpeed = 500.f;
-	GetCharacterMovement()->MinAnalogWalkSpeed = 20.f;
-	GetCharacterMovement()->BrakingDecelerationWalking = 2000.f;
+	WvMoveComp->JumpZVelocity = 500.f;
+	WvMoveComp->AirControl = 0.35f;
+	WvMoveComp->MinAnalogWalkSpeed = 20.f;
+
 
 	PredictiveIKComponent = CreateDefaultSubobject<UPredictiveIKComponent>(TEXT("PredictiveIKComponent"));
 	PredictiveIKComponent->bAutoActivate = 1;
@@ -251,6 +255,11 @@ void ABaseCharacter::OnRep_MyTeamID(FGenericTeamId OldTeamID)
 	//ConditionalBroadcastTeamChanged(this, OldTeamID, MyTeamID);
 }
 
+FGenericTeamId ABaseCharacter::GetGenericTeamId() const
+{
+	return MyTeamID;
+}
+
 void ABaseCharacter::SetGenericTeamId(const FGenericTeamId& NewTeamID)
 {
 	if (GetController() == nullptr)
@@ -272,6 +281,11 @@ void ABaseCharacter::SetGenericTeamId(const FGenericTeamId& NewTeamID)
 	}
 }
 
+UAbilitySystemComponent* ABaseCharacter::GetAbilitySystemComponent() const
+{
+	return WvAbilitySystemComponent;
+}
+
 UWvCharacterMovementComponent* ABaseCharacter::GetWvCharacterMovementComponent() const
 {
 	return CastChecked<UWvCharacterMovementComponent>(GetCharacterMovement());
@@ -282,12 +296,22 @@ UWvAbilitySystemComponent* ABaseCharacter::GetWvAbilitySystemComponent() const
 	return CastChecked<UWvAbilitySystemComponent>(WvAbilitySystemComponent);
 }
 
+ULocomotionComponent* ABaseCharacter::GetLocomotionComponent() const
+{
+	return LocomotionComponent;
+}
+
 void ABaseCharacter::VelocityModement()
 {
 	if (GetCharacterMovement())
 	{
 		GetCharacterMovement()->bUseControllerDesiredRotation = false;
 		GetCharacterMovement()->bOrientRotationToMovement = true;
+	}
+
+	if (IsValid(LocomotionComponent))
+	{
+		ILocomotionInterface::Execute_SetLSRotationMode(LocomotionComponent, ELSRotationMode::VelocityDirection);
 	}
 }
 
@@ -297,6 +321,11 @@ void ABaseCharacter::StrafeModement()
 	{
 		GetCharacterMovement()->bUseControllerDesiredRotation = true;
 		GetCharacterMovement()->bOrientRotationToMovement = false;
+	}
+
+	if (IsValid(LocomotionComponent))
+	{
+		ILocomotionInterface::Execute_SetLSRotationMode(LocomotionComponent, ELSRotationMode::LookingDirection);
 	}
 }
 
@@ -422,5 +451,21 @@ FVector ABaseCharacter::GetCharacterFeetLocation() const
 	const float Height = GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
 	Position.Z -= Height;
 	return Position;
+}
+
+void ABaseCharacter::CheckVaultInput(float DeltaTime)
+{
+	UWvCharacterMovementComponent* MovementComp = GetWvCharacterMovementComponent();
+	if (!MovementComp)
+		return;
+
+	if (LocomotionComponent && LocomotionComponent->HasMoving_Implementation())
+	{
+		const bool bDidVault = MovementComp->DoVault(bClientUpdating);
+		if (bDidVault)
+		{
+			// do something
+		}
+	}
 }
 

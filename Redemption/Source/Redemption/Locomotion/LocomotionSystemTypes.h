@@ -232,13 +232,98 @@ struct REDEMPTION_API FLocomotionEssencialVariables
 	GENERATED_BODY()
 
 public:
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
+	FVector MovementInput;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
+	FVector RagdollLocation;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
+	FVector Velocity;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
+	FRotator CharacterRotation;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
+	FRotator LookingRotation;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
+	FRotator LastVelocityRotation;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
+	FRotator LastMovementInputRotation;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
+	bool bWasMoving;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
+	bool bWasMovementInput;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
+	bool bRagdollOnGround;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
+	bool bAiming;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
+	bool bRightShoulder;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion|AimOffset")
+	bool bLookAtAimOffset;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion|AimOffset")
+	FTransform LookAtTransform;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion|AimOffset")
+	float AimYawDelta;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion|AimOffset")
+	float AimYawRate;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
+	float RotationRateMultiplier;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
+	float RotationOffset;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
+	float VelocityDifference;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
+	float RotationDifference;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
+	float Direction;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
+	FVector RagdollVelocity;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
+	FRotator JumpRotation;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
+	FRotator TargetRotation;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion")
+	ELSMovementMode LSMovementMode;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion")
+	ELSGait LSGait;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion")
 	ELSStance LSStance;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion")
 	ELSRotationMode LSRotationMode;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
+	ELSCardinalDirection CardinalDirection;
+
+	ELSMovementMode LSPrevMovementMode;
 
 public:
 	FLocomotionEssencialVariables()
 	{}
+
+	void Init(const FRotator Rotation);
 };

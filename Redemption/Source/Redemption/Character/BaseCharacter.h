@@ -75,21 +75,14 @@ public:
 	* There are three teams prepared by default: hostile, neutral, and friendly.
 	* Required for AI Perception's "Detection by Affiliation" to work.
 	*/
-	virtual FGenericTeamId GetGenericTeamId() const override
-	{
-		return MyTeamID;
-	}
-
+	virtual FGenericTeamId GetGenericTeamId() const override;
 	virtual void SetGenericTeamId(const FGenericTeamId& NewTeamID) override;
 
 	/**
 	* Returns the ability system component to use for this actor.
 	* It may live on another actor, such as a Pawn using the PlayerState's component
 	*/
-	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override 
-	{
-		return WvAbilitySystemComponent; 
-	}
+	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
 
 	/**
 	* The method needs to check whether the implementer is visible from given observer's location.
@@ -108,6 +101,7 @@ public:
 	FORCEINLINE class UCharacterMovementTrajectoryComponent* GetCharacterMovementTrajectoryComponent() const { return CharacterMovementTrajectoryComponent; }
 	UWvCharacterMovementComponent* GetWvCharacterMovementComponent() const;
 	UWvAbilitySystemComponent* GetWvAbilitySystemComponent() const;
+	ULocomotionComponent* GetLocomotionComponent() const;
 
 	UFUNCTION(BlueprintCallable, Category = Movement)
 	FTrajectorySampleRange GetTrajectorySampleRange() const;
@@ -120,6 +114,9 @@ public:
 
 	virtual void DoSprinting();
 	virtual void DoStopSprinting();
+	virtual void VelocityModement();
+	virtual void StrafeModement();
+	virtual void CheckVaultInput(float DeltaTime);
 
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Component, meta = (AllowPrivateAccess = "true"))
@@ -151,12 +148,6 @@ protected:
 
 	UFUNCTION()
 	void OnRep_ReplicatedAcceleration();
-
-	UFUNCTION(BlueprintCallable, Category = Movement)
-	void VelocityModement();
-
-	UFUNCTION(BlueprintCallable, Category = Movement)
-	void StrafeModement();
 
 	UPROPERTY()
 	FTrajectorySampleRange TrajectorySampleRange;

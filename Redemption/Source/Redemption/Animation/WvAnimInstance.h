@@ -46,12 +46,18 @@ public:
 
 	UWvAnimInstance(const FObjectInitializer& ObjectInitializer);
 
-protected:
 #if WITH_EDITOR
 	virtual EDataValidationResult IsDataValid(TArray<FText>& ValidationErrors) override;
 #endif
 	virtual void NativeInitializeAnimation() override;
 	virtual void NativeUpdateAnimation(float DeltaSeconds) override;
+	virtual void NativeThreadSafeUpdateAnimation(float DeltaSeconds) override;
+	virtual void NativePostEvaluateAnimation() override;
+	virtual void NativeUninitializeAnimation() override;
+	virtual void NativeBeginPlay() override;
+
+protected:
+	virtual FAnimInstanceProxy* CreateAnimInstanceProxy() override;
 
 public:
 	virtual void InitializeWithAbilitySystem(UAbilitySystemComponent* ASC);
@@ -75,6 +81,9 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "MotionMatching")
 	FTrajectorySampleRange TrajectorySampleRange;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
+	FLocomotionEssencialVariables LocomotionEssencialVariables;
 
 	// Blueprintの変数にマッピングできるGameplayTagです。Tagが追加または削除されると、変数が自動的に更新される。
 	// GameplayTagを手動で照会する代わりに、これらを使用する必要があります。

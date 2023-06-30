@@ -3,7 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "WvGameplayAbility.h"
+#include "GameplayTagContainer.h"
 #include "WvAbilityType.generated.h"
 
 
@@ -30,6 +30,18 @@ enum class EHitDirection : uint8
 	RightDown_LeftUp UMETA(DisplayName = "Lower right to upper left"),
 	RightUp_LeftDown UMETA(DisplayName = "Upper right to lower left"),
 	Back_Front UMETA(DisplayName = "Back to front"),
+};
+
+USTRUCT(BlueprintType)
+struct FWvAbilityData
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	FVector SourceCollisionCenter;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	FRotator CollisionVelocity;
 };
 
 //UCLASS()

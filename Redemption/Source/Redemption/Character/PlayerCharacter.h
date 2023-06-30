@@ -22,6 +22,7 @@ public:
 
 protected:
 	virtual void BeginPlay() override;
+	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
@@ -45,6 +46,9 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	class UInputAction* SprintAction;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	class UInputAction* StrafeAction;
+
 	/** Base turn rate, in deg/sec. Other scaling may affect final turn rate. */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera)
 	float BaseTurnRate;
@@ -56,12 +60,11 @@ protected:
 protected:
 	void Move(const FInputActionValue& Value);
 
+private:
 	void TurnAtRate(float Rate);
 	void LookUpAtRate(float Rate);
 	void Look(const FInputActionValue& Value);
 
-protected:
-	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
 public:
 	FORCEINLINE class UWvSpringArmComponent* GetCameraBoom() const { return CameraBoom; }

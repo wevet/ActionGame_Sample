@@ -3,6 +3,7 @@
 #include "LocomotionComponent.h"
 #include "Character/BaseCharacter.h"
 #include "Ability/WvAbilitySystemComponent.h"
+#include "Component/WvCharacterMovementComponent.h"
 
 #include "AbilitySystemInterface.h"
 #include "Engine.h"
@@ -31,6 +32,7 @@ static TAutoConsoleVariable<int32> CVarDebugLocomotionSystem(
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(LocomotionComponent)
 
+#define DISABLE_MOVEMENT_COMP 0
 
 #pragma region LocomotionDA
 FGameplayTag ULocomotionStateDataAsset::FindStanceTag(const ELSStance LSStance) const
@@ -61,12 +63,7 @@ ULocomotionComponent::ULocomotionComponent(const FObjectInitializer& ObjectIniti
 	RagdollPoseSnapshot = FName(TEXT("RagdollPose"));
 	PelvisBoneName = FName(TEXT("pelvis"));
 
-	bAiming = false;
-	bWasMoving = false;
 	bShouldSprint = false;
-	bRightShoulder = true;
-	bRagdollOnGround = false;
-	bWasMovementInput = false;
 	bDebugTrace = false;
 	bLockUpdatingRotation = false;
 	bDoSprint = false;
@@ -75,19 +72,27 @@ ULocomotionComponent::ULocomotionComponent(const FObjectInitializer& ObjectIniti
 	// LS
 	WalkingSpeed = 200.f;
 	RunningSpeed = 400.f;
-	SprintingSpeed = 800.f;
-	WalkingAcceleration = 800.f;
-	RunningAcceleration = 1000.f;
-	WalkingDeceleration = 600.f;
-	RunningDeceleration = 800.f;
-	WalkingGroundFriction = 8.0f;
-	RunningGroundFriction = 6.0f;
+	SprintingSpeed = 600.f;
+	WalkingAcceleration = 600.f;
+	RunningAcceleration = 800.f;
+	SprintingAcceleration = 1000.0f;
+	WalkingDeceleration = 400.f;
+	RunningDeceleration = 600.f;
+	SprintingDeceleration = 800.0f;
+	WalkingGroundFriction = 6.0f;
+	RunningGroundFriction = 4.0f;
+	SprintingGroundFriction = 2.0f;
 
-	LSGait = ELSGait::Running;
-	LSStance = ELSStance::Standing;
-	LSRotationMode = ELSRotationMode::VelocityDirection;
-	LSMovementMode = ELSMovementMode::Grounded;
-	LSPrevMovementMode = ELSMovementMode::None;
+	LocomotionEssencialVariables.bRightShoulder = true;
+	LocomotionEssencialVariables.bAiming = false;
+	LocomotionEssencialVariables.bRagdollOnGround = false;
+	LocomotionEssencialVariables.bWasMoving = false;
+	LocomotionEssencialVariables.bWasMovementInput = false;
+	LocomotionEssencialVariables.LSGait = ELSGait::Running;
+	LocomotionEssencialVariables.LSStance = ELSStance::Standing;
+	LocomotionEssencialVariables.LSRotationMode = ELSRotationMode::VelocityDirection;
+	LocomotionEssencialVariables.LSMovementMode = ELSMovementMode::Grounded;
+	LocomotionEssencialVariables.LSPrevMovementMode = ELSMovementMode::None;
 }
 
 void ULocomotionComponent::BeginPlay()
@@ -95,41 +100,20 @@ void ULocomotionComponent::BeginPlay()
 	Super::BeginPlay();
 
 	const FRotator Rotation = GetOwner()->GetActorRotation();
-	LastVelocityRotation = Rotation;
-	LookingRotation = Rotation;
-	LastMovementInputRotation = Rotation;
-	TargetRotation = Rotation;
-	CharacterRotation = Rotation;
+	LocomotionEssencialVariables.Init(Rotation);
+
 	Character = Cast<ABaseCharacter>(GetOwner());
-
-	if (Character.IsValid())
-	{
-		CharacterMovementComponent = Character->GetCharacterMovement();
-		SkeletalMeshComponent = Character->GetMesh();
-		LocomotionAnimInstance = SkeletalMeshComponent->GetAnimInstance();
-
-		if (!LocomotionAnimInstance)
-		{
-			UE_LOG(LogTemp, Error, TEXT("not valid LocomotionAnimInstance => %s, funcName => %s"), *Character->GetName(), *FString(__FUNCTION__));
-			Super::SetComponentTickEnabled(false);
-			return;
-		}
-	}
-	else
-	{
-		UE_LOG(LogTemp, Error, TEXT("Cast Failed Owner => %s"), *FString(__FUNCTION__));
-		Super::SetComponentTickEnabled(false);
-		return;
-	}
+	CharacterMovementComponent = Cast<UWvCharacterMovementComponent>(Character->GetCharacterMovement());
+	SkeletalMeshComponent = Character->GetMesh();
 
 	ILocomotionInterface::Execute_OnLSRotationModeChange(this);
 	ILocomotionInterface::Execute_OnLSStanceChange(this);
 
 	if (FindAbilitySystemComponent() && LocomotionStateDataAsset)
 	{
-		AbilitySystemComponent->AddGameplayTag(LocomotionStateDataAsset->FindMovementModeTag(LSMovementMode));
-		AbilitySystemComponent->AddGameplayTag(LocomotionStateDataAsset->FindRotationModeTag(LSRotationMode));
-		AbilitySystemComponent->AddGameplayTag(LocomotionStateDataAsset->FindStanceTag(LSStance));
+		AbilitySystemComponent->AddGameplayTag(LocomotionStateDataAsset->FindMovementModeTag(LocomotionEssencialVariables.LSMovementMode));
+		AbilitySystemComponent->AddGameplayTag(LocomotionStateDataAsset->FindRotationModeTag(LocomotionEssencialVariables.LSRotationMode));
+		AbilitySystemComponent->AddGameplayTag(LocomotionStateDataAsset->FindStanceTag(LocomotionEssencialVariables.LSStance));
 	}
 	else
 	{
@@ -156,7 +140,7 @@ void ULocomotionComponent::TickComponent(float DeltaTime, ELevelTick TickType, F
 
 	CalculateEssentialVariables();
 
-	switch (LSMovementMode)
+	switch (LocomotionEssencialVariables.LSMovementMode)
 	{
 		case ELSMovementMode::Grounded:
 		DoWhileGrounded();
@@ -199,86 +183,82 @@ void ULocomotionComponent::SetLSMovementMode_Implementation(const ELSMovementMod
 		return;
 	}
 
-	if (LSMovementMode == NewALSMovementMode)
+	if (LocomotionEssencialVariables.LSMovementMode == NewALSMovementMode)
 	{
 		return;
 	}
 
 	if (FindAbilitySystemComponent() && LocomotionStateDataAsset)
 	{
-		AbilitySystemComponent->RemoveGameplayTag(LocomotionStateDataAsset->FindMovementModeTag(LSMovementMode));
+		AbilitySystemComponent->RemoveGameplayTag(LocomotionStateDataAsset->FindMovementModeTag(LocomotionEssencialVariables.LSMovementMode));
 		AbilitySystemComponent->AddGameplayTag(LocomotionStateDataAsset->FindMovementModeTag(NewALSMovementMode));
 	}
 
-	LSPrevMovementMode = LSMovementMode;
-	LSMovementMode = NewALSMovementMode;
+	LocomotionEssencialVariables.LSPrevMovementMode = LocomotionEssencialVariables.LSMovementMode;
+	LocomotionEssencialVariables.LSMovementMode = NewALSMovementMode;
 	OnMovementModeChange_Implementation();
 }
 
 void ULocomotionComponent::SetLSGaitMode_Implementation(const ELSGait NewLSGait)
 {
-	if (LSGait == NewLSGait)
+	if (LocomotionEssencialVariables.LSGait == NewLSGait)
 	{
 		return;
 	}
 
 	if (FindAbilitySystemComponent() && LocomotionStateDataAsset)
 	{
-		AbilitySystemComponent->RemoveGameplayTag(LocomotionStateDataAsset->FindGaitTag(LSGait));
+		AbilitySystemComponent->RemoveGameplayTag(LocomotionStateDataAsset->FindGaitTag(LocomotionEssencialVariables.LSGait));
 		AbilitySystemComponent->AddGameplayTag(LocomotionStateDataAsset->FindGaitTag(NewLSGait));
 	}
 
-	LSGait = NewLSGait;
+	LocomotionEssencialVariables.LSGait = NewLSGait;
 	OnLSGaitChange_Implementation();
 }
 
 void ULocomotionComponent::SetLSStanceMode_Implementation(const ELSStance NewLSStance)
 {
-	if (LSStance == NewLSStance)
+	if (LocomotionEssencialVariables.LSStance == NewLSStance)
 	{
 		return;
 	}
 
 	if (FindAbilitySystemComponent() && LocomotionStateDataAsset)
 	{
-		AbilitySystemComponent->RemoveGameplayTag(LocomotionStateDataAsset->FindStanceTag(LSStance));
+		AbilitySystemComponent->RemoveGameplayTag(LocomotionStateDataAsset->FindStanceTag(LocomotionEssencialVariables.LSStance));
 		AbilitySystemComponent->AddGameplayTag(LocomotionStateDataAsset->FindStanceTag(NewLSStance));
 	}
 
-	LSStance = NewLSStance;
+	LocomotionEssencialVariables.LSStance = NewLSStance;
 	OnLSStanceChange_Implementation();
 }
 
 void ULocomotionComponent::SetLSRotationMode_Implementation(const ELSRotationMode NewLSRotationMode)
 {
-	if (LSRotationMode == NewLSRotationMode)
+	if (LocomotionEssencialVariables.LSRotationMode == NewLSRotationMode)
 	{
 		return;
 	}
 
 	if (FindAbilitySystemComponent() && LocomotionStateDataAsset)
 	{
-		AbilitySystemComponent->RemoveGameplayTag(LocomotionStateDataAsset->FindRotationModeTag(LSRotationMode));
+		AbilitySystemComponent->RemoveGameplayTag(LocomotionStateDataAsset->FindRotationModeTag(LocomotionEssencialVariables.LSRotationMode));
 		AbilitySystemComponent->AddGameplayTag(LocomotionStateDataAsset->FindRotationModeTag(NewLSRotationMode));
 	}
 
-	LSRotationMode = NewLSRotationMode;
+	LocomotionEssencialVariables.LSRotationMode = NewLSRotationMode;
 	OnLSRotationModeChange_Implementation();
 }
 
 void ULocomotionComponent::OnMovementModeChange_Implementation()
 {
-	if (ILocomotionInterface* Interface = Cast<ILocomotionInterface>(LocomotionAnimInstance))
-	{
-		Interface->SetLSMovementMode_Implementation(LSMovementMode);
-	}
-
-	switch (LSPrevMovementMode)
+	switch (LocomotionEssencialVariables.LSPrevMovementMode)
 	{
 		case ELSMovementMode::Grounded:
 		{
-			JumpRotation = bWasMoving ? LastVelocityRotation : CharacterRotation;
-			RotationOffset = 0.f;
+			LocomotionEssencialVariables.JumpRotation = LocomotionEssencialVariables.bWasMoving ?
+				LocomotionEssencialVariables.LastVelocityRotation : LocomotionEssencialVariables.CharacterRotation;
+			LocomotionEssencialVariables.RotationOffset = 0.f;
 		}
 		break;
 		case ELSMovementMode::Falling:
@@ -288,7 +268,7 @@ void ULocomotionComponent::OnMovementModeChange_Implementation()
 		break;
 		case ELSMovementMode::Ragdoll:
 		{
-			JumpRotation = CharacterRotation;
+			LocomotionEssencialVariables.JumpRotation = LocomotionEssencialVariables.CharacterRotation;
 		}
 		break;
 		case ELSMovementMode::Swimming:
@@ -311,13 +291,8 @@ void ULocomotionComponent::OnMovementModeChange_Implementation()
 
 void ULocomotionComponent::OnLSRotationModeChange_Implementation()
 {
-	if (ILocomotionInterface* Interface = Cast<ILocomotionInterface>(LocomotionAnimInstance))
-	{
-		Interface->SetLSRotationMode_Implementation(LSRotationMode);
-	}
-
-	if (bWasMoving)
-		RotationRateMultiplier = 0.0f;
+	if (LocomotionEssencialVariables.bWasMoving)
+		LocomotionEssencialVariables.RotationRateMultiplier = 0.0f;
 
 	if (OnRotationModeChangeDelegate.IsBound())
 		OnRotationModeChangeDelegate.Broadcast();
@@ -325,11 +300,6 @@ void ULocomotionComponent::OnLSRotationModeChange_Implementation()
 
 void ULocomotionComponent::OnLSStanceChange_Implementation()
 {
-	if (ILocomotionInterface* Interface = Cast<ILocomotionInterface>(LocomotionAnimInstance))
-	{
-		Interface->SetLSStanceMode_Implementation(LSStance);
-	}
-
 	UpdateCharacterMovementSettings();
 
 	if (OnStanceChangeDelegate.IsBound())
@@ -339,11 +309,6 @@ void ULocomotionComponent::OnLSStanceChange_Implementation()
 
 void ULocomotionComponent::OnLSGaitChange_Implementation()
 {
-	if (ILocomotionInterface* Interface = Cast<ILocomotionInterface>(LocomotionAnimInstance))
-	{
-		Interface->SetLSGaitMode_Implementation(LSGait);
-	}
-
 	UpdateCharacterMovementSettings();
 
 	if (OnGaitChangeDelegate.IsBound())
@@ -353,23 +318,18 @@ void ULocomotionComponent::OnLSGaitChange_Implementation()
 
 void ULocomotionComponent::SetLSAiming_Implementation(const bool NewLSAiming)
 {
-	if (bAiming == NewLSAiming)
+	if (LocomotionEssencialVariables.bAiming == NewLSAiming)
 	{
 		return;
 	}
-	bAiming = NewLSAiming;
+	LocomotionEssencialVariables.bAiming = NewLSAiming;
 
 	if (FindAbilitySystemComponent() && LocomotionStateDataAsset)
 	{
-		if (bAiming)
+		if (LocomotionEssencialVariables.bAiming)
 			AbilitySystemComponent->RemoveGameplayTag(LocomotionStateDataAsset->AimingTag);
 		else
 			AbilitySystemComponent->AddGameplayTag(LocomotionStateDataAsset->AimingTag);
-	}
-
-	if (ILocomotionInterface* Interface = Cast<ILocomotionInterface>(LocomotionAnimInstance))
-	{
-		Interface->SetLSAiming_Implementation(bAiming);
 	}
 
 	UpdateCharacterMovementSettings();
@@ -381,39 +341,22 @@ void ULocomotionComponent::SetLSAiming_Implementation(const bool NewLSAiming)
 void ULocomotionComponent::SetWalkingSpeed_Implementation(const float InWalkingSpeed)
 {
 	WalkingSpeed = InWalkingSpeed;
-	if (ILocomotionInterface* Interface = Cast<ILocomotionInterface>(LocomotionAnimInstance))
-	{
-		Interface->SetWalkingSpeed_Implementation(WalkingSpeed);
-	}
 }
 
 void ULocomotionComponent::SetRunningSpeed_Implementation(const float InRunningSpeed)
 {
 	RunningSpeed = InRunningSpeed;
-	if (ILocomotionInterface* Interface = Cast<ILocomotionInterface>(LocomotionAnimInstance))
-	{
-		Interface->SetRunningSpeed_Implementation(RunningSpeed);
-	}
 }
 
 void ULocomotionComponent::SetSprintingSpeed_Implementation(const float InSprintingSpeed)
 {
 	SprintingSpeed = InSprintingSpeed;
-	if (ILocomotionInterface* Interface = Cast<ILocomotionInterface>(LocomotionAnimInstance))
-	{
-		Interface->SetSprintingSpeed_Implementation(SprintingSpeed);
-	}
 }
 
 void ULocomotionComponent::SetCrouchingSpeed_Implementation(const float InCrouchingSpeed)
 {
 	if (CharacterMovementComponent)
 		CharacterMovementComponent->MaxWalkSpeedCrouched = InCrouchingSpeed;
-
-	if (ILocomotionInterface* Interface = Cast<ILocomotionInterface>(LocomotionAnimInstance))
-	{
-		Interface->SetCrouchingSpeed_Implementation(InCrouchingSpeed);
-	}
 }
 
 void ULocomotionComponent::SetSwimmingSpeed_Implementation(const float InSwimmingSpeed)
@@ -421,51 +364,46 @@ void ULocomotionComponent::SetSwimmingSpeed_Implementation(const float InSwimmin
 	if (CharacterMovementComponent)
 		CharacterMovementComponent->MaxSwimSpeed = InSwimmingSpeed;
 
-	if (ILocomotionInterface* Interface = Cast<ILocomotionInterface>(LocomotionAnimInstance))
-	{
-		Interface->SetSwimmingSpeed_Implementation(InSwimmingSpeed);
-	}
-
 }
 
 ELSMovementMode ULocomotionComponent::GetLSMovementMode_Implementation() const
 {
-	return LSMovementMode;
+	return LocomotionEssencialVariables.LSMovementMode;
 }
 
 ELSGait ULocomotionComponent::GetLSGaitMode_Implementation() const
 {
-	return LSGait;
+	return LocomotionEssencialVariables.LSGait;
 }
 
 ELSStance ULocomotionComponent::GetLSStanceMode_Implementation() const
 {
-	return LSStance;
+	return LocomotionEssencialVariables.LSStance;
 }
 
 ELSRotationMode ULocomotionComponent::GetLSRotationMode_Implementation() const
 {
-	return LSRotationMode;
+	return LocomotionEssencialVariables.LSRotationMode;
 }
 
 ELSCardinalDirection ULocomotionComponent::GetCardinalDirection_Implementation() const
 {
-	return CardinalDirection;
+	return LocomotionEssencialVariables.CardinalDirection;
 }
 
 bool ULocomotionComponent::HasMovementInput_Implementation() const
 {
-	return bWasMovementInput;
+	return LocomotionEssencialVariables.bWasMovementInput;
 }
 
 bool ULocomotionComponent::HasMoving_Implementation() const
 {
-	return bWasMoving;
+	return LocomotionEssencialVariables.bWasMoving;
 }
 
 bool ULocomotionComponent::HasAiming_Implementation() const
 {
-	return bAiming;
+	return LocomotionEssencialVariables.bAiming;
 }
 
 float ULocomotionComponent::GetWalkingSpeed_Implementation() const
@@ -499,24 +437,78 @@ float ULocomotionComponent::GetSwimmingSpeed_Implementation() const
 
 void ULocomotionComponent::SetRightShoulder_Implementation(const bool NewRightShoulder)
 {
-	if (bRightShoulder == NewRightShoulder)
+	if (LocomotionEssencialVariables.bRightShoulder == NewRightShoulder)
 	{
 		return;
 	}
 
-	bRightShoulder = NewRightShoulder;
-	if (ILocomotionInterface* Interface = Cast<ILocomotionInterface>(LocomotionAnimInstance))
-	{
-		Interface->SetRightShoulder_Implementation(bRightShoulder);
-	}
+	LocomotionEssencialVariables.bRightShoulder = NewRightShoulder;
 }
 #pragma endregion
 
-#pragma region LS_Function
-FVector2D ULocomotionComponent::GetInputAxis() const
+#pragma region Ability
+FRequestAbilityAnimationData ULocomotionComponent::GetRequestAbilityAnimationData() const
 {
-	return FVector2D(RightAxisValue, ForwardAxisValue);
+	return RequestAbilityAnimationData;
 }
+
+const UWvAbilitySystemComponent* ULocomotionComponent::FindAbilitySystemComponent()
+{
+	if (!AbilitySystemComponent)
+	{
+		if (Character.IsValid())
+		{
+			if (IAbilitySystemInterface* ASI = Cast<IAbilitySystemInterface>(Character))
+			{
+				AbilitySystemComponent = Cast<UWvAbilitySystemComponent>(ASI->GetAbilitySystemComponent());
+			}
+		}
+	}
+	return AbilitySystemComponent;
+}
+
+UAnimMontage* ULocomotionComponent::GetCurrentMontage() const
+{
+	if (AbilitySystemComponent)
+	{
+		return AbilitySystemComponent->GetCurrentMontage();
+	}
+	return nullptr;
+}
+
+void ULocomotionComponent::HandleCrouchAction()
+{
+	if (FindAbilitySystemComponent() && LocomotionStateDataAsset)
+	{
+		const FGameplayTag GameplayTag = LocomotionStateDataAsset->StanceControlTag;
+		if (AbilitySystemComponent->HasActivatingAbilitiesWithTag(GameplayTag))
+		{
+			UE_LOG(LogTemp, Log, TEXT("already activating => %s"), *GameplayTag.GetTagName().ToString());
+			return;
+		}
+		UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(Character.Get(), GameplayTag, FGameplayEventData());
+	}
+}
+
+void ULocomotionComponent::AimingAction()
+{
+	if (FindAbilitySystemComponent() && LocomotionStateDataAsset)
+	{
+		if (AbilitySystemComponent->HasMatchingGameplayTag(LocomotionStateDataAsset->FindRotationModeTag(ELSRotationMode::VelocityDirection)))
+		{
+			SetLSRotationMode_Implementation(ELSRotationMode::LookingDirection);
+		}
+
+		const FGameplayTag GameplayTag = LocomotionStateDataAsset->AimingControlTag;
+		if (AbilitySystemComponent->HasActivatingAbilitiesWithTag(GameplayTag))
+		{
+			UE_LOG(LogTemp, Log, TEXT("already activating => %s"), *GameplayTag.GetTagName().ToString());
+			return;
+		}
+		UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(Character.Get(), GameplayTag, FGameplayEventData());
+	}
+}
+#pragma endregion
 
 void ULocomotionComponent::OnLanded()
 {
@@ -546,7 +538,7 @@ void ULocomotionComponent::OnLandedCallback()
 
 FVector ULocomotionComponent::ChooseVelocity() const
 {
-	if (LSMovementMode == ELSMovementMode::Ragdoll)
+	if (LocomotionEssencialVariables.LSMovementMode == ELSMovementMode::Ragdoll)
 	{
 		if (SkeletalMeshComponent)
 		{
@@ -563,9 +555,9 @@ FVector ULocomotionComponent::ChooseVelocity() const
 float ULocomotionComponent::ChooseMaxWalkSpeed() const
 {
 	float Speed = 0.0f;
-	if (bAiming)
+	if (LocomotionEssencialVariables.bAiming)
 	{
-		switch (LSGait)
+		switch (LocomotionEssencialVariables.LSGait)
 		{
 			case ELSGait::Walking:
 			case ELSGait::Running:
@@ -578,7 +570,7 @@ float ULocomotionComponent::ChooseMaxWalkSpeed() const
 	}
 	else
 	{
-		switch (LSGait)
+		switch (LocomotionEssencialVariables.LSGait)
 		{
 			case ELSGait::Walking:
 			Speed = WalkingSpeed;
@@ -597,7 +589,7 @@ float ULocomotionComponent::ChooseMaxWalkSpeed() const
 float ULocomotionComponent::ChooseMaxWalkSpeedCrouched() const
 {
 	//float Speed = CrouchingSpeed;
-	switch (LSGait)
+	switch (LocomotionEssencialVariables.LSGait)
 	{
 		case ELSGait::Walking:
 		case ELSGait::Running:
@@ -612,34 +604,45 @@ float ULocomotionComponent::ChooseMaxWalkSpeedCrouched() const
 
 float ULocomotionComponent::ChooseMaxAcceleration() const
 {
-	return (LSGait == ELSGait::Walking) ? WalkingAcceleration : RunningAcceleration;
+	if (LocomotionEssencialVariables.LSGait == ELSGait::Sprinting)
+		return SprintingAcceleration;
+
+	return (LocomotionEssencialVariables.LSGait == ELSGait::Walking) ? WalkingAcceleration : RunningAcceleration;
 }
 
 float ULocomotionComponent::ChooseBrakingDeceleration() const
 {
-	return (LSGait == ELSGait::Walking) ? WalkingDeceleration : RunningDeceleration;
+	if (LocomotionEssencialVariables.LSGait == ELSGait::Sprinting)
+		return SprintingDeceleration;
+
+	return (LocomotionEssencialVariables.LSGait == ELSGait::Walking) ? WalkingDeceleration : RunningDeceleration;
 }
 
 float ULocomotionComponent::ChooseGroundFriction() const
 {
-	return (LSGait == ELSGait::Walking) ? WalkingGroundFriction : RunningGroundFriction;
+	if (LocomotionEssencialVariables.LSGait == ELSGait::Sprinting)
+		return SprintingGroundFriction;
+
+	return (LocomotionEssencialVariables.LSGait == ELSGait::Walking) ? WalkingGroundFriction : RunningGroundFriction;
 }
 
 void ULocomotionComponent::UpdateCharacterMovementSettings()
 {
+#if !DISABLE_MOVEMENT_COMP
 	if (CharacterMovementComponent)
 	{
-		CharacterMovementComponent->MaxWalkSpeed = ChooseMaxWalkSpeed();
+		CharacterMovementComponent->MaxWalkSpeed = CharacterMovementComponent->GetMaxSpeed();
 		//CharacterMovementComponent->MaxWalkSpeedCrouched = ChooseMaxWalkSpeedCrouched();
 		CharacterMovementComponent->BrakingDecelerationWalking = ChooseBrakingDeceleration();
 		CharacterMovementComponent->MaxAcceleration = ChooseMaxAcceleration();
 		CharacterMovementComponent->GroundFriction = ChooseGroundFriction();
 	}
+#endif
 }
 
 void ULocomotionComponent::ManageCharacterRotation()
 {
-	switch (LSMovementMode)
+	switch (LocomotionEssencialVariables.LSMovementMode)
 	{
 		case ELSMovementMode::Grounded:
 		case ELSMovementMode::Swimming:
@@ -653,21 +656,21 @@ void ULocomotionComponent::ManageCharacterRotation()
 	}
 }
 
-
 const bool ULocomotionComponent::CanSprint()
 {
-	if (LSMovementMode == ELSMovementMode::Ragdoll || !bWasMoving)
+	if (LocomotionEssencialVariables.LSMovementMode == ELSMovementMode::Ragdoll || !LocomotionEssencialVariables.bWasMoving)
 	{
 		return false;
 	}
 
-	if (LSRotationMode == ELSRotationMode::VelocityDirection)
+	if (LocomotionEssencialVariables.LSRotationMode == ELSRotationMode::VelocityDirection)
 	{
 		return true;
 	}
 
 	const float YawLimit = 50.f;
-	const FRotator Rot = UKismetMathLibrary::NormalizedDeltaRotator(LastMovementInputRotation, LookingRotation);
+	const FRotator Rot = UKismetMathLibrary::NormalizedDeltaRotator(LocomotionEssencialVariables.LastMovementInputRotation, 
+		LocomotionEssencialVariables.LookingRotation);
 	return (FMath::Abs(Rot.Yaw) < YawLimit);
 }
 
@@ -678,11 +681,13 @@ void ULocomotionComponent::AddCharacterRotation(const FRotator AddAmount)
 
 	// Node to InvertRotator
 	const FRotator RotateAmount = UKismetMathLibrary::NegateRotator(AddAmount);
-	TargetRotation = UKismetMathLibrary::NormalizedDeltaRotator(TargetRotation, RotateAmount);
+	LocomotionEssencialVariables.TargetRotation = UKismetMathLibrary::NormalizedDeltaRotator(LocomotionEssencialVariables.TargetRotation, RotateAmount);
 
-	const FRotator RotateDiff = UKismetMathLibrary::NormalizedDeltaRotator(TargetRotation, CharacterRotation);
-	RotationDifference = RotateDiff.Yaw;
-	CharacterRotation = UKismetMathLibrary::NormalizedDeltaRotator(CharacterRotation, RotateAmount);
+	const FRotator RotateDiff = UKismetMathLibrary::NormalizedDeltaRotator(LocomotionEssencialVariables.TargetRotation,
+		LocomotionEssencialVariables.CharacterRotation);
+	LocomotionEssencialVariables.RotationDifference = RotateDiff.Yaw;
+	LocomotionEssencialVariables.CharacterRotation = UKismetMathLibrary::NormalizedDeltaRotator(
+		LocomotionEssencialVariables.CharacterRotation, RotateAmount);
 
 	// @TODO
 	//Character->SetActorRotation(CharacterRotation);
@@ -690,14 +695,14 @@ void ULocomotionComponent::AddCharacterRotation(const FRotator AddAmount)
 
 void ULocomotionComponent::DoWhileGrounded()
 {
-	const bool bWasStanding = (LSStance == ELSStance::Standing);
+	const bool bWasStanding = (LocomotionEssencialVariables.LSStance == ELSStance::Standing);
 
 	if (!bWasStanding)
 	{
 		return;
 	}
 
-	switch (LSGait)
+	switch (LocomotionEssencialVariables.LSGait)
 	{
 		case ELSGait::Walking:
 		break;
@@ -713,7 +718,7 @@ void ULocomotionComponent::DoWhileRagdolling()
 	FRotator ActorRotation = FRotator::ZeroRotator;
 	FVector ActorLocation = FVector::ZeroVector;
 	UpdateRagdollTransform(ActorRotation, ActorLocation);
-	CalcurateRagdollParams(RagdollVelocity, RagdollLocation, ActorRotation, ActorLocation);
+	CalcurateRagdollParams(LocomotionEssencialVariables.RagdollVelocity, LocomotionEssencialVariables.RagdollLocation, ActorRotation, ActorLocation);
 }
 
 void ULocomotionComponent::SprintCheck()
@@ -765,7 +770,7 @@ void ULocomotionComponent::UpdateRagdollTransform(FRotator& OutActorRotation, FV
 	if (!Character->IsLocallyControlled())
 	{
 		const FVector BoneLocation = SkeletalMeshComponent->GetSocketLocation(PelvisBoneName);
-		const FVector Position = (RagdollLocation - BoneLocation) * 200.0f;
+		const FVector Position = (LocomotionEssencialVariables.RagdollLocation - BoneLocation) * 200.0f;
 		SkeletalMeshComponent->AddForce(Position, PelvisBoneName, true);
 		return;
 	}
@@ -775,15 +780,16 @@ void ULocomotionComponent::UpdateRagdollTransform(FRotator& OutActorRotation, FV
 	const bool bWasGravity = (ChooseVelocity().Z < -4000.f);
 	SkeletalMeshComponent->SetEnableGravity(bWasGravity ? false : true);
 
-	RagdollVelocity = ChooseVelocity();
-	RagdollLocation = SkeletalMeshComponent->GetSocketLocation(PelvisBoneName);
+	LocomotionEssencialVariables.RagdollVelocity = ChooseVelocity();
+	LocomotionEssencialVariables.RagdollLocation = SkeletalMeshComponent->GetSocketLocation(PelvisBoneName);
 	const FRotator BoneRotation = SkeletalMeshComponent->GetSocketRotation(PelvisBoneName);
-	CalculateActorTransformRagdoll(BoneRotation, RagdollLocation, OutActorRotation, OutActorLocation);
+	CalculateActorTransformRagdoll(BoneRotation, LocomotionEssencialVariables.RagdollLocation, OutActorRotation, OutActorLocation);
 	//Character->SetActorLocation(OutActorLocation);
 
-	TargetRotation = OutActorRotation;
-	RotationDifference = UKismetMathLibrary::NormalizedDeltaRotator(TargetRotation, CharacterRotation).Yaw;
-	CharacterRotation = OutActorRotation;
+	LocomotionEssencialVariables.TargetRotation = OutActorRotation;
+	LocomotionEssencialVariables.RotationDifference = UKismetMathLibrary::NormalizedDeltaRotator(LocomotionEssencialVariables.TargetRotation,
+		LocomotionEssencialVariables.CharacterRotation).Yaw;
+	LocomotionEssencialVariables.CharacterRotation = OutActorRotation;
 	//Character->SetActorRotation(CharacterRotation);
 
 	// @TODO
@@ -792,10 +798,10 @@ void ULocomotionComponent::UpdateRagdollTransform(FRotator& OutActorRotation, FV
 
 void ULocomotionComponent::CalcurateRagdollParams(const FVector InRagdollVelocity, const FVector InRagdollLocation, const FRotator InActorRotation, const FVector InActorLocation)
 {
-	RagdollVelocity = InRagdollVelocity;
-	RagdollLocation = InRagdollLocation;
-	CharacterRotation = InActorRotation;
-	TargetRotation = CharacterRotation;
+	LocomotionEssencialVariables.RagdollVelocity = InRagdollVelocity;
+	LocomotionEssencialVariables.RagdollLocation = InRagdollLocation;
+	LocomotionEssencialVariables.CharacterRotation = InActorRotation;
+	LocomotionEssencialVariables.TargetRotation = LocomotionEssencialVariables.CharacterRotation;
 
 	if (Character.IsValid())
 	{
@@ -808,18 +814,18 @@ void ULocomotionComponent::DoCharacterFalling()
 {
 	const float InterpSpeed = 10.0f;
 
-	switch (LSRotationMode)
+	switch (LocomotionEssencialVariables.LSRotationMode)
 	{
 		case ELSRotationMode::VelocityDirection:
-		if (bWasMoving)
+		if (LocomotionEssencialVariables.bWasMoving)
 		{
-			ApplyCharacterRotation(FRotator(0.0f, JumpRotation.Yaw, 0.0f), true, InterpSpeed);
+			ApplyCharacterRotation(FRotator(0.0f, LocomotionEssencialVariables.JumpRotation.Yaw, 0.0f), true, InterpSpeed);
 		}
 		break;
 		case ELSRotationMode::LookingDirection:
 		{
-			JumpRotation = LookingRotation;
-			ApplyCharacterRotation(FRotator(0.0f, JumpRotation.Yaw, 0.0f), true, InterpSpeed);
+			LocomotionEssencialVariables.JumpRotation = LocomotionEssencialVariables.LookingRotation;
+			ApplyCharacterRotation(FRotator(0.0f, LocomotionEssencialVariables.JumpRotation.Yaw, 0.0f), true, InterpSpeed);
 		}
 		break;
 	}
@@ -827,13 +833,13 @@ void ULocomotionComponent::DoCharacterFalling()
 
 void ULocomotionComponent::DoCharacterGrounded()
 {
-	if (!bWasMoving)
+	if (!LocomotionEssencialVariables.bWasMoving)
 	{
 		if (!Character->IsPlayingRootMotion())
 		{
-			if (LSRotationMode == ELSRotationMode::LookingDirection)
+			if (LocomotionEssencialVariables.LSRotationMode == ELSRotationMode::LookingDirection)
 			{
-				if (bAiming)
+				if (LocomotionEssencialVariables.bAiming)
 				{
 					LimitRotation(90.f, 15.f);
 				}
@@ -848,14 +854,14 @@ void ULocomotionComponent::DoCharacterGrounded()
 	const float DefaultValue = 5.0f;
 	const FRotator Rotation = LookingDirectionWithOffset(DefaultValue, MinOffset.X, MinOffset.Y, MaxOffset.X, MaxOffset.Y, DefaultValue);
 
-	switch (LSRotationMode)
+	switch (LocomotionEssencialVariables.LSRotationMode)
 	{
 		case ELSRotationMode::VelocityDirection:
 		{
 			if (!bLockUpdatingRotation)
 			{
 				const float RotationRate = CalculateRotationRate(SpeedRate.X, RotationInterpSpeedRate.X, SpeedRate.Y, RotationInterpSpeedRate.Y);
-				ApplyCharacterRotation(FRotator(0.0f, LastVelocityRotation.Yaw, 0.0f), true, RotationRate);
+				ApplyCharacterRotation(FRotator(0.0f, LocomotionEssencialVariables.LastVelocityRotation.Yaw, 0.0f), true, RotationRate);
 			}
 			else
 			{
@@ -867,11 +873,18 @@ void ULocomotionComponent::DoCharacterGrounded()
 
 		case ELSRotationMode::LookingDirection:
 		{
-			const float RotationRate = (bAiming) ? CalculateRotationRate(SpeedRate.X, 15.f, SpeedRate.Y, 15.f) : CalculateRotationRate(SpeedRate.X, 10.f, SpeedRate.Y, 15.f);
+			const float RotationRate = (LocomotionEssencialVariables.bAiming) ? 
+				CalculateRotationRate(SpeedRate.X, 15.f, SpeedRate.Y, 15.f) : CalculateRotationRate(SpeedRate.X, 10.f, SpeedRate.Y, 15.f);
 			ApplyCharacterRotation(Rotation, true, RotationRate);
 		}
 		break;
 	}
+}
+
+void ULocomotionComponent::Move(const FVector2D InputAxis)
+{
+	MoveForward(InputAxis.Y);
+	MoveRight(InputAxis.X);
 }
 
 void ULocomotionComponent::MoveForward(const float NewForwardAxisValue)
@@ -888,7 +901,7 @@ void ULocomotionComponent::MoveRight(const float NewRightAxisValue)
 
 void ULocomotionComponent::MovementInputControl(const bool bForwardAxis)
 {
-	switch (LSMovementMode)
+	switch (LocomotionEssencialVariables.LSMovementMode)
 	{
 		case ELSMovementMode::Grounded:
 		case ELSMovementMode::Swimming:
@@ -928,7 +941,7 @@ void ULocomotionComponent::RagdollMovementInput()
 	const FVector Position = UKismetMathLibrary::Normal((OutForwardVector * ForwardAxisValue) + (OutRightVector * RightAxisValue));
 
 	float Speed = 0.0f;
-	switch (LSGait)
+	switch (LocomotionEssencialVariables.LSGait)
 	{
 		case ELSGait::Walking:
 		Speed = WALK_SPEED;
@@ -968,10 +981,10 @@ void ULocomotionComponent::CalculateActorTransformRagdoll(const FRotator InRagdo
 		HitResult,
 		true);
 
-	bRagdollOnGround = HitResult.bBlockingHit;
+	LocomotionEssencialVariables.bRagdollOnGround = HitResult.bBlockingHit;
 	const float Offset = 2.0f;
 	const float Diff = FMath::Abs(HitResult.ImpactPoint.Z - HitResult.TraceStart.Z);
-	const float Value = bRagdollOnGround ? (CapsuleHalfHeight - Diff) + Offset : 0.0f;
+	const float Value = LocomotionEssencialVariables.bRagdollOnGround ? (CapsuleHalfHeight - Diff) + Offset : 0.0f;
 	OutActorLocation = FVector(InRagdollLocation.X, InRagdollLocation.Y, InRagdollLocation.Z + Value);
 
 	const float Yaw = (OutActorRotation.Roll > 0.0f) ? OutActorRotation.Yaw : OutActorRotation.Yaw - 180.f;
@@ -986,43 +999,47 @@ void ULocomotionComponent::CalculateEssentialVariables()
 	// Check if the Character is moving and set (last speed rotation) and (direction) only when it is moving . so that they do not return to 0 when the speed is 0.
 	{
 		const FVector CurrentVector = FVector(ChooseVelocity().X, ChooseVelocity().Y, 0.0f);
-		bWasMoving = UKismetMathLibrary::NotEqual_VectorVector(CurrentVector, FVector::ZeroVector, 1.0f);
-		if (bWasMoving)
+		LocomotionEssencialVariables.bWasMoving = UKismetMathLibrary::NotEqual_VectorVector(CurrentVector, FVector::ZeroVector, 1.0f);
+		if (LocomotionEssencialVariables.bWasMoving)
 		{
-			LastVelocityRotation = UKismetMathLibrary::Conv_VectorToRotator(ChooseVelocity());
-			const FRotator DeltaRot = UKismetMathLibrary::NormalizedDeltaRotator(LastVelocityRotation, CharacterRotation);
-			Direction = DeltaRot.Yaw;
+			LocomotionEssencialVariables.LastVelocityRotation = UKismetMathLibrary::Conv_VectorToRotator(ChooseVelocity());
+			const FRotator DeltaRot = UKismetMathLibrary::NormalizedDeltaRotator(LocomotionEssencialVariables.LastVelocityRotation,
+				LocomotionEssencialVariables.CharacterRotation);
+			LocomotionEssencialVariables.Direction = DeltaRot.Yaw;
 		}
 	}
 
 	{
-		MovementInput = CharacterMovementComponent->GetLastInputVector();
-		bWasMovementInput = UKismetMathLibrary::NotEqual_VectorVector(MovementInput, FVector::ZeroVector, 0.0001f);
-		if (bWasMovementInput)
+		LocomotionEssencialVariables.MovementInput = CharacterMovementComponent->GetLastInputVector();
+		LocomotionEssencialVariables.bWasMovementInput = UKismetMathLibrary::NotEqual_VectorVector(LocomotionEssencialVariables.MovementInput, FVector::ZeroVector, 0.0001f);
+		if (LocomotionEssencialVariables.bWasMovementInput)
 		{
-			LastMovementInputRotation = UKismetMathLibrary::Conv_VectorToRotator(MovementInput);
-			const FRotator DeltaRot = UKismetMathLibrary::NormalizedDeltaRotator(LastMovementInputRotation, LastVelocityRotation);
-			VelocityDifference = DeltaRot.Yaw;
+			LocomotionEssencialVariables.LastMovementInputRotation = UKismetMathLibrary::Conv_VectorToRotator(LocomotionEssencialVariables.MovementInput);
+			const FRotator DeltaRot = UKismetMathLibrary::NormalizedDeltaRotator(LocomotionEssencialVariables.LastMovementInputRotation, 
+				LocomotionEssencialVariables.LastVelocityRotation);
+			LocomotionEssencialVariables.VelocityDifference = DeltaRot.Yaw;
 		}
 	}
 
 	{
-		const float PrevAimYaw = LookingRotation.Yaw;
+		const float PrevAimYaw = LocomotionEssencialVariables.LookingRotation.Yaw;
 		const float DeltaSeconds = GetWorld()->GetDeltaSeconds();
-		const FRotator CurrentLockingRotation = LookingRotation;
-		if (bLookAtAimOffset)
+		const FRotator CurrentLockingRotation = LocomotionEssencialVariables.LookingRotation;
+		if (LocomotionEssencialVariables.bLookAtAimOffset)
 		{
 			const FVector Start = Character->GetActorLocation();
-			const FVector Target = LookAtTransform.GetLocation();
-			LookingRotation = UKismetMathLibrary::FindLookAtRotation(Start, Target);
+			const FVector Target = LocomotionEssencialVariables.LookAtTransform.GetLocation();
+			LocomotionEssencialVariables.LookingRotation = UKismetMathLibrary::FindLookAtRotation(Start, Target);
 		}
 		else
 		{
-			LookingRotation = Character->GetControlRotation();
+			LocomotionEssencialVariables.LookingRotation = Character->GetControlRotation();
 		}
-		LookingRotation = UKismetMathLibrary::RInterpTo(CurrentLockingRotation, LookingRotation, DeltaSeconds, LookAtInterpSpeed);
-		AimYawRate = (LookingRotation.Yaw - PrevAimYaw) / DeltaSeconds;
-		AimYawDelta = UKismetMathLibrary::NormalizedDeltaRotator(LookingRotation, CharacterRotation).Yaw;
+		LocomotionEssencialVariables.LookingRotation = UKismetMathLibrary::RInterpTo(CurrentLockingRotation, 
+			LocomotionEssencialVariables.LookingRotation, DeltaSeconds, LookAtInterpSpeed);
+		LocomotionEssencialVariables.AimYawRate = (LocomotionEssencialVariables.LookingRotation.Yaw - PrevAimYaw) / DeltaSeconds;
+		LocomotionEssencialVariables.AimYawDelta = UKismetMathLibrary::NormalizedDeltaRotator(LocomotionEssencialVariables.LookingRotation,
+			LocomotionEssencialVariables.CharacterRotation).Yaw;
 	}
 }
 
@@ -1047,12 +1064,13 @@ const float ULocomotionComponent::CalculateRotationRate(
 	const float FastRange = UKismetMathLibrary::MapRangeClamped(Size, SlowSpeed, FastSpeed, SlowSpeedRate, FastSpeedRate);
 	const float SlowRange = UKismetMathLibrary::MapRangeClamped(Size, 0.0f, SlowSpeed, 1.0f, SlowSpeedRate);
 
-	if (RotationRateMultiplier != 1.0f)
+	if (LocomotionEssencialVariables.RotationRateMultiplier != 1.0f)
 	{
-		RotationRateMultiplier = FMath::Clamp(RotationRateMultiplier + GetWorld()->GetDeltaSeconds(), 0.0f, 1.0f);
+		LocomotionEssencialVariables.RotationRateMultiplier = FMath::Clamp(LocomotionEssencialVariables.RotationRateMultiplier + GetWorld()->GetDeltaSeconds(),
+			0.0f, 1.0f);
 	}
 	const float Value = (Size > SlowSpeed) ? FastRange : SlowRange;
-	const float Result = Value * RotationRateMultiplier;
+	const float Result = Value * LocomotionEssencialVariables.RotationRateMultiplier;
 	const float Min = 0.1f;
 	const float Max = 15.0f;
 	return FMath::Clamp(Result, Min, Max);
@@ -1066,28 +1084,29 @@ const FRotator ULocomotionComponent::LookingDirectionWithOffset(
 	const float SWAngle, 
 	const float Buffer)
 {
-	const FRotator LastRotation = bWasMovementInput ? LastMovementInputRotation : LastVelocityRotation;
-	const FRotator DeltaRot = UKismetMathLibrary::NormalizedDeltaRotator(LastRotation, LookingRotation);
+	const FRotator LastRotation = LocomotionEssencialVariables.bWasMovementInput ? 
+		LocomotionEssencialVariables.LastMovementInputRotation : LocomotionEssencialVariables.LastVelocityRotation;
+	const FRotator DeltaRot = UKismetMathLibrary::NormalizedDeltaRotator(LastRotation, LocomotionEssencialVariables.LookingRotation);
 
 	if (CardinalDirectionAngles(DeltaRot.Yaw, NWAngle, NEAngle, Buffer, ELSCardinalDirection::North))
 	{
-		CardinalDirection = ELSCardinalDirection::North;
+		LocomotionEssencialVariables.CardinalDirection = ELSCardinalDirection::North;
 	}
 	else if (CardinalDirectionAngles(DeltaRot.Yaw, NEAngle, SEAngle, Buffer, ELSCardinalDirection::East))
 	{
-		CardinalDirection = ELSCardinalDirection::East;
+		LocomotionEssencialVariables.CardinalDirection = ELSCardinalDirection::East;
 	}
 	else if (CardinalDirectionAngles(DeltaRot.Yaw, SWAngle, NWAngle, Buffer, ELSCardinalDirection::West))
 	{
-		CardinalDirection = ELSCardinalDirection::West;
+		LocomotionEssencialVariables.CardinalDirection = ELSCardinalDirection::West;
 	}
 	else
 	{
-		CardinalDirection = ELSCardinalDirection::South;
+		LocomotionEssencialVariables.CardinalDirection = ELSCardinalDirection::South;
 	}
 
 	float Result = 0.0f;
-	switch (CardinalDirection)
+	switch (LocomotionEssencialVariables.CardinalDirection)
 	{
 		case ELSCardinalDirection::North:
 		Result = DeltaRot.Yaw;
@@ -1103,16 +1122,17 @@ const FRotator ULocomotionComponent::LookingDirectionWithOffset(
 		break;
 	}
 
-	if (bAiming)
+	if (LocomotionEssencialVariables.bAiming)
 	{
-		if (LSGait == ELSGait::Walking)
+		if (LocomotionEssencialVariables.LSGait == ELSGait::Walking)
 		{
 			Result = 0.0f;
 		}
 	}
 	const float DeltaSeconds = GetWorld()->GetDeltaSeconds();
-	RotationOffset = UKismetMathLibrary::FInterpTo(RotationOffset, Result, DeltaSeconds, OffsetInterpSpeed);
-	return FRotator(0.0f, LookingRotation.Yaw + RotationOffset, 0.0f);
+	LocomotionEssencialVariables.RotationOffset = UKismetMathLibrary::FInterpTo(LocomotionEssencialVariables.RotationOffset, Result, 
+		DeltaSeconds, OffsetInterpSpeed);
+	return FRotator(0.0f, LocomotionEssencialVariables.LookingRotation.Yaw + LocomotionEssencialVariables.RotationOffset, 0.0f);
 }
 
 ELSMovementMode ULocomotionComponent::GetPawnMovementModeChanged(const EMovementMode PrevMovementMode, const uint8 PrevCustomMode) const
@@ -1147,23 +1167,25 @@ void ULocomotionComponent::ApplyCharacterRotation(const FRotator InTargetRotatio
 	if (!Character.IsValid())
 		return;
 
-	TargetRotation = InTargetRotation;
-	const FRotator RotateDiff = UKismetMathLibrary::NormalizedDeltaRotator(TargetRotation, CharacterRotation);
-	RotationDifference = RotateDiff.Yaw;
+	LocomotionEssencialVariables.TargetRotation = InTargetRotation;
+	const FRotator RotateDiff = UKismetMathLibrary::NormalizedDeltaRotator(LocomotionEssencialVariables.TargetRotation, 
+		LocomotionEssencialVariables.CharacterRotation);
+	LocomotionEssencialVariables.RotationDifference = RotateDiff.Yaw;
 
 	const float DeltaTime = GetWorld()->GetDeltaSeconds();
-	const FRotator InterpRotation = UKismetMathLibrary::RInterpTo(CharacterRotation, TargetRotation, DeltaTime, InterpSpeed);
-	CharacterRotation = bInterpRotation ? InterpRotation : TargetRotation;
+	const FRotator InterpRotation = UKismetMathLibrary::RInterpTo(LocomotionEssencialVariables.CharacterRotation, LocomotionEssencialVariables.TargetRotation,
+		DeltaTime, InterpSpeed);
+	LocomotionEssencialVariables.CharacterRotation = bInterpRotation ? InterpRotation : LocomotionEssencialVariables.TargetRotation;
 	// @TODO
 	//Character->SetActorRotation(CharacterRotation);
 }
 
 void ULocomotionComponent::LimitRotation(const float AimYawLimit, const float InterpSpeed)
 {
-	if (FMath::Abs(AimYawDelta) > AimYawLimit)
+	if (FMath::Abs(LocomotionEssencialVariables.AimYawDelta) > AimYawLimit)
 	{
-		const float A = (LookingRotation.Yaw + AimYawLimit);
-		const float B = (LookingRotation.Yaw - AimYawLimit);
+		const float A = (LocomotionEssencialVariables.LookingRotation.Yaw + AimYawLimit);
+		const float B = (LocomotionEssencialVariables.LookingRotation.Yaw - AimYawLimit);
 		const float Value = (AimYawLimit > 0.0f) ? B : A;
 		const FRotator Rotation = FRotator(0.f, Value, 0.f);
 		ApplyCharacterRotation(Rotation, true, InterpSpeed);
@@ -1179,15 +1201,16 @@ bool ULocomotionComponent::CardinalDirectionAngles(
 {
 	const bool A = UKismetMathLibrary::InRange_FloatFloat(Value, (Min + Buffer), (Max - Buffer));
 	const bool B = UKismetMathLibrary::InRange_FloatFloat(Value, (Min - Buffer), (Max + Buffer));
-	return (CardinalDirection == InCardinalDirection) ? B : A;
+	return (LocomotionEssencialVariables.CardinalDirection == InCardinalDirection) ? B : A;
 }
 
 void ULocomotionComponent::CustomAcceleration()
 {
+#if !DISABLE_MOVEMENT_COMP
 	if (!CharacterMovementComponent)
 		return;
 
-	const auto Velocity = FMath::Abs(VelocityDifference);
+	const auto Velocity = FMath::Abs(LocomotionEssencialVariables.VelocityDifference);
 	const float RangeA = 45.f;
 	const float RangeB = 130.f;
 
@@ -1195,6 +1218,7 @@ void ULocomotionComponent::CustomAcceleration()
 	const float GroundFrictionValue = UKismetMathLibrary::MapRangeClamped(Velocity, RangeA, RangeB, 1.0f, 0.4f);
 	CharacterMovementComponent->MaxAcceleration = RunningAcceleration * MaxAccelerationValue;
 	CharacterMovementComponent->GroundFriction = RunningGroundFriction * GroundFrictionValue;
+#endif
 }
 
 void ULocomotionComponent::SetSprintPressed(const bool NewSprintPressed)
@@ -1208,6 +1232,8 @@ void ULocomotionComponent::SetSprintPressed(const bool NewSprintPressed)
 
 	if (FindAbilitySystemComponent() && LocomotionStateDataAsset && CharacterMovementComponent)
 	{
+		CharacterMovementComponent->RotationRate = bShouldSprint ? SprintingRotationRate : RunningRotationRate;
+
 		// state gounded
 		if (CharacterMovementComponent->IsMovingOnGround())
 		{
@@ -1230,76 +1256,6 @@ bool ULocomotionComponent::GetSprintPressed() const
 {
 	return bShouldSprint;
 }
-#pragma endregion
-
-#pragma region Ability
-FRequestAbilityAnimationData ULocomotionComponent::GetRequestAbilityAnimationData() const
-{
-	return RequestAbilityAnimationData;
-}
-
-const UWvAbilitySystemComponent* ULocomotionComponent::FindAbilitySystemComponent()
-{
-	if (!AbilitySystemComponent)
-	{
-		if (Character.IsValid())
-		{
-			if (IAbilitySystemInterface* ASI = Cast<IAbilitySystemInterface>(Character))
-			{
-				AbilitySystemComponent = Cast<UWvAbilitySystemComponent>(ASI->GetAbilitySystemComponent());
-			}
-		}
-	}
-	return AbilitySystemComponent;
-}
-
-UAnimMontage* ULocomotionComponent::GetCurrentMontage() const
-{
-	if (AbilitySystemComponent)
-	{
-		return AbilitySystemComponent->GetCurrentMontage();
-	}
-	return nullptr;
-}
-
-void ULocomotionComponent::HandleCrouchAction()
-{
-	if (FindAbilitySystemComponent() && LocomotionStateDataAsset)
-	{
-		const FGameplayTag GameplayTag = LocomotionStateDataAsset->StanceControlTag;
-		if (AbilitySystemComponent->HasActivatingAbilitiesWithTag(GameplayTag))
-		{
-			UE_LOG(LogTemp, Log, TEXT("already activating => %s"), *GameplayTag.GetTagName().ToString());
-			return;
-		}
-		UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(Character.Get(), GameplayTag, FGameplayEventData());
-	}
-}
-
-void ULocomotionComponent::AimingAction()
-{
-	if (FindAbilitySystemComponent() && LocomotionStateDataAsset) 
-	{
-		if (AbilitySystemComponent->HasMatchingGameplayTag(LocomotionStateDataAsset->FindRotationModeTag(ELSRotationMode::VelocityDirection)))
-		{
-			SetLSRotationMode_Implementation(ELSRotationMode::LookingDirection);
-		}
-
-		const FGameplayTag GameplayTag = LocomotionStateDataAsset->AimingControlTag;
-		if (AbilitySystemComponent->HasActivatingAbilitiesWithTag(GameplayTag))
-		{
-			UE_LOG(LogTemp, Log, TEXT("already activating => %s"), *GameplayTag.GetTagName().ToString());
-			return;
-		}
-		UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(Character.Get(), GameplayTag, FGameplayEventData());
-	}
-}
-#pragma endregion
-
-UAnimInstance* ULocomotionComponent::GetLocomotionAnimInstance() const
-{
-	return LocomotionAnimInstance;
-}
 
 void ULocomotionComponent::SetLockUpdatingRotation(const bool NewLockUpdatingRotation)
 {
@@ -1316,7 +1272,7 @@ void ULocomotionComponent::StartJumping()
 	if (!Character.IsValid())
 		return;
 
-	switch (LSMovementMode)
+	switch (LocomotionEssencialVariables.LSMovementMode)
 	{
 		case ELSMovementMode::None:
 		break;
@@ -1337,8 +1293,8 @@ void ULocomotionComponent::StopJumping()
 
 void ULocomotionComponent::SetLookAtAimTransform(const bool NewLookAtAimOffset, const FTransform NewLookAtTransform)
 {
-	bLookAtAimOffset = NewLookAtAimOffset;
-	LookAtTransform = NewLookAtTransform;
+	LocomotionEssencialVariables.bLookAtAimOffset = NewLookAtAimOffset;
+	LocomotionEssencialVariables.LookAtTransform = NewLookAtTransform;
 
 	// todo animinstance
 }
@@ -1350,8 +1306,8 @@ FVector ULocomotionComponent::GetLandingLocation() const
 
 void ULocomotionComponent::ToggleRightShoulder()
 {
-	bRightShoulder = !bRightShoulder;
-	SetRightShoulder_Implementation(bRightShoulder);
+	LocomotionEssencialVariables.bRightShoulder = !LocomotionEssencialVariables.bRightShoulder;
+	SetRightShoulder_Implementation(LocomotionEssencialVariables.bRightShoulder);
 }
 
 void ULocomotionComponent::DrawDebugDirectionArrow()
@@ -1368,32 +1324,37 @@ void ULocomotionComponent::DrawDebugDirectionArrow()
 		// draw character rotation
 		{
 			const FVector RelativeLocation = BaseLocation + FVector::UpVector * 20.f;
-			DrawDebugDirectionalArrow(World, RelativeLocation, RelativeLocation + CharacterRotation.Vector() * 100.f, 10.f, FColor::Green, false, 0.f, 0, 2.f);
+			DrawDebugDirectionalArrow(World, 
+				RelativeLocation, RelativeLocation + LocomotionEssencialVariables.CharacterRotation.Vector() * 100.f, 
+				10.f, FColor::Green, false, 0.f, 0, 2.f);
 		}
 
 		// target rotation
 		{
 			const FVector RelativeLocation = BaseLocation + FVector::UpVector * 40.f;
-			DrawDebugDirectionalArrow(World, RelativeLocation, RelativeLocation + TargetRotation.Vector() * 100.f, 10.f, FColor::Orange, false, 0.f, 0, 2.f);
+			DrawDebugDirectionalArrow(World, RelativeLocation, RelativeLocation + LocomotionEssencialVariables.TargetRotation.Vector() * 100.f, 
+				10.f, FColor::Orange, false, 0.f, 0, 2.f);
 		}
 
 		// looking rotation
 		{
 			const FVector RelativeLocation = BaseLocation + FVector::UpVector * 60.f;
-			DrawDebugDirectionalArrow(World, RelativeLocation, RelativeLocation + LookingRotation.Vector() * 100.f, 10.f, FColor::Cyan, false, 0.f, 0, 2.f);
+			DrawDebugDirectionalArrow(World, RelativeLocation, RelativeLocation + LocomotionEssencialVariables.LookingRotation.Vector() * 100.f,
+				10.f, FColor::Cyan, false, 0.f, 0, 2.f);
 		}
 
 		// last movement input
 		{
 			const FVector RelativeLocation = BaseLocation + FVector::UpVector * -40.f;
-			DrawDebugDirectionalArrow(World, RelativeLocation, RelativeLocation + LastMovementInputRotation.Vector() * 100.f, 10.f, FColor::Red, false, 0.f, 0, 2.f);
+			DrawDebugDirectionalArrow(World, RelativeLocation, RelativeLocation + LocomotionEssencialVariables.LastMovementInputRotation.Vector() * 100.f,
+				10.f, FColor::Red, false, 0.f, 0, 2.f);
 		}
 
 		// movement input
 		{
 			const FVector RelativeLocation = BaseLocation + FVector::UpVector * -50.f;
-			const FRotator InputRot = UKismetMathLibrary::Conv_VectorToRotator(MovementInput);
-			FRotator ResultRot = FRotator(InputRot.Pitch, LastVelocityRotation.Yaw, InputRot.Roll);
+			const FRotator InputRot = UKismetMathLibrary::Conv_VectorToRotator(LocomotionEssencialVariables.MovementInput);
+			FRotator ResultRot = FRotator(InputRot.Pitch, LocomotionEssencialVariables.LastVelocityRotation.Yaw, InputRot.Roll);
 			DrawDebugDirectionalArrow(World, RelativeLocation, RelativeLocation + ResultRot.Vector() * 100.f, 10.f, FColor::Blue, false, 0.f, 0, 2.f);
 		}
 
@@ -1401,7 +1362,7 @@ void ULocomotionComponent::DrawDebugDirectionArrow()
 		{
 			const FVector RelativeLocation = BaseLocation + FVector::UpVector * -60.f;
 			const FRotator InputRot = UKismetMathLibrary::Conv_VectorToRotator(ChooseVelocity());
-			FRotator ResultRot = FRotator(InputRot.Pitch, LastVelocityRotation.Yaw, InputRot.Roll);
+			FRotator ResultRot = FRotator(InputRot.Pitch, LocomotionEssencialVariables.LastVelocityRotation.Yaw, InputRot.Roll);
 			DrawDebugDirectionalArrow(World, RelativeLocation, RelativeLocation + ResultRot.Vector() * 100.f, 10.f, FColor::Magenta, false, 0.f, 0, 2.f);
 		}
 
