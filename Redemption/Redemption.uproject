@@ -168,6 +168,14 @@
 		{
 			"Name": "NearestNeighborModel",
 			"Enabled": true
+		},
+		{
+			"Name": "PCGGeometryScriptInterop",
+			"Enabled": true
+		},
+		{
+			"Name": "PCG",
+			"Enabled": true
 		}
 	]
 }

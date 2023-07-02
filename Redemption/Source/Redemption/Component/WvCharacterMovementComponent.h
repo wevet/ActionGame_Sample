@@ -10,6 +10,7 @@
 #include "UObject/UObjectGlobals.h"
 #include "WvCharacterMovementComponent.generated.h"
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FHandleImpact, const FHitResult&, HitInfo);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FHandleImpactAtStepUpFail, const FVector&, RampVector, const FHitResult&, HitInfo);
 
 class ABaseCharacter;
@@ -44,6 +45,9 @@ public:
 	virtual void SimulateMovement(float DeltaTime) override;
 	virtual bool CanAttemptJump() const override;
 
+	virtual void HandleImpact(const FHitResult& Hit, float TimeSlice = 0.f, const FVector& MoveDelta = FVector::ZeroVector) override;
+	virtual float SlideAlongSurface(const FVector& Delta, float Time, const FVector& InNormal, FHitResult& Hit, bool bHandleImpact) override;
+
 	UFUNCTION(BlueprintCallable, Category = "Wv|CharacterMovement")
 	const FWvCharacterGroundInfo& GetGroundInfo();
 
@@ -52,6 +56,9 @@ public:
 public:
 	UFUNCTION(BlueprintCallable, Category = "Character|Components|CharacterMovement")
 	bool IsVaulting() const;
+
+	UPROPERTY(BlueprintAssignable)
+	FHandleImpact OnHandleImpact;
 
 	UPROPERTY(BlueprintAssignable)
 	FHandleImpactAtStepUpFail OnHandleImpactAtStepUpFail;
@@ -65,6 +72,10 @@ public:
 
 protected:
 	virtual void InitializeComponent() override;
+
+#if WITH_EDITOR
+	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
+#endif
 
 protected:
 	FWvCharacterGroundInfo CachedGroundInfo;
@@ -80,6 +91,12 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Character Movement: Walking", meta = (ClampMin = "0", ClampMax = "1", UIMin = "0", UIMax = "1"))
 	float PerchRadiusThresholdRange = 0.6f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Character Movement: Walking", meta = (ClampMin = "0.0", ClampMax = "90.0", UIMin = "0.0", UIMax = "90.0"))
+	float AllowSlideAngle = 90.f;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Character Movement: Walking")
+	float AllowSlideCosAngle;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Character Movement: State", Transient)
 	FVector PendingPenetrationAdjustment;
@@ -133,6 +150,8 @@ private:
 	UPROPERTY()
 	TWeakObjectPtr<class UWvAbilitySystemComponent> ASC;
 
+	//just in air and try move towards wall
+	float WallSlideXYModify = 1.0f;
 
 #pragma region Vaulting
 	void GetObstacleHeight(const FVector& RefPoint, FHitResult& Hit);

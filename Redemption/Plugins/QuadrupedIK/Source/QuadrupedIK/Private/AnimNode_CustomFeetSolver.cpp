@@ -18,7 +18,7 @@ DECLARE_CYCLE_STAT(TEXT("CustomFeetSolver Eval"), STAT_CustomFeetSolver_Eval, ST
 
 #if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
 static TAutoConsoleVariable<int32> CVarDebugFeetSolver(
-	TEXT("wv.FeetSolver.Debug"),
+	TEXT("inn.FeetSolver.Debug"),
 	0,
 	TEXT("QuadrupedIK FeetSolver Debug .\n")
 	TEXT("<=0: off\n")

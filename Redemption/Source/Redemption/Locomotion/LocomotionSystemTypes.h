@@ -52,34 +52,6 @@ enum class ELSCardinalDirection : uint8
 	South UMETA(DisplayName = "South"),
 };
 
-UENUM(BlueprintType)
-enum class EMantleType : uint8
-{
-	HighMantle   UMETA(DisplayName = "HighMantle"),
-	LowMantle    UMETA(DisplayName = "LowMantle"),
-	FallingCatch UMETA(DisplayName = "FallingCatch"),
-};
-
-USTRUCT(BlueprintType)
-struct REDEMPTION_API FLSComponentAndTransform
-{
-	GENERATED_BODY()
-
-public:
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	FTransform Transform;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	UPrimitiveComponent* Component;
-
-public:
-	FLSComponentAndTransform()
-	{
-		Component = nullptr;
-		Transform = FTransform::Identity;
-	}
-};
-
 USTRUCT(BlueprintType)
 struct REDEMPTION_API FCameraSettings
 {
@@ -168,7 +140,6 @@ public:
 	{}
 };
 
-
 USTRUCT(BlueprintType)
 struct REDEMPTION_API FRequestAbilityAnimationData
 {
@@ -191,40 +162,6 @@ public:
 		AnimMontage = nullptr;
 	}
 };
-
-
-USTRUCT(BlueprintType)
-struct REDEMPTION_API FMantleTraceSettings
-{
-	GENERATED_BODY()
-
-public:
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	float MaxLedgeHeight;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	float MinLedgeHeight;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	float ReachDistance;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	float ForwardTraceRadius;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	float DownwardTraceRadius;
-
-public:
-	FMantleTraceSettings()
-	{
-		MaxLedgeHeight = 0.0f;
-		MinLedgeHeight = 0.0f;
-		ReachDistance = 0.0f;
-		ForwardTraceRadius = 0.0f;
-		DownwardTraceRadius = 0.0f;
-	}
-};
-
 
 USTRUCT(BlueprintType)
 struct REDEMPTION_API FLocomotionEssencialVariables

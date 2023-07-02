@@ -70,14 +70,11 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
 	class UWvCharacterMovementComponent* CharacterMovementComponent;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
-	class UCapsuleComponent* CapsuleComponent;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
-	class ULocomotionComponent* LocomotionComponent;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "CharacterMovement")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "DistanceMatching")
 	float GroundDistance = -1.0f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "DistanceMatching")
+	float GroundDistanceThreshold = 150.0f;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "MotionMatching")
 	FTrajectorySampleRange TrajectorySampleRange;
@@ -92,6 +89,14 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "MotionMatching")
 	FMotionMatchingSettings MotionMatchingSettings;
+
+
+private:
+	UPROPERTY()
+	TWeakObjectPtr<class UCapsuleComponent> CapsuleComponent;
+
+	UPROPERTY()
+	TWeakObjectPtr<class ULocomotionComponent> LocomotionComponent;
 
 };
 

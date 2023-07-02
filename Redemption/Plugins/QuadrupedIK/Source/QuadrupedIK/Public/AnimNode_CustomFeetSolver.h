@@ -19,69 +19,30 @@ public:
 	FAnimNode_CustomFeetSolver();
 
 #pragma region Settings
-	/*
-	* ソルバーが使用する入力ボーンを入力 - pelvis, spine-start and feets
-	* オプションで、ソルバーの中で直接ボーンを入力することもでる。そうすることで、高速なパスが有効になる
-	*/
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Settings, meta = (PinHiddenByDefault))
 	FCustomIKData_MultiInput SolverInputData;
 
-	/*
-	* 足のikの種類を選択します - two bone ik と one bone ik。
-	* 99.9%はデフォルトの2ボーンikを使用するのがベストです。
-	* 1つのボーンikは、動物に膝の骨がない場合のみ有効で、例えばInfinity Blade Spidersのような場合
-	*/
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Settings)
 	EIKType IKType = EIKType::TwoBoneIk;
 
-	/*
-	* Choose Trace type - Line,Sphere and Box.
-	*/
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Settings)
 	EIKRaycastType RayTraceType = EIKRaycastType::LineTrace;
 
-	/*
-	* トレースタイプがボックスまたは球の場合、その半径は、トレース半径
-	*/
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Settings, meta = (PinHiddenByDefault))
 	float Trace_Radius = 20.0f;
 
-	/*
-	* ikの仮想スケール倍率
-	* デフォルトでメッシュが非常に大きく、すべてのパラメータを一つずつ増やすのが面倒な場合は、この値を増やす
-	* トレースに関するすべてのパラメータを一律に増加させる
-	*/
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Settings, meta = (PinHiddenByDefault))
 	float VirtualScale = 1.0f;
 
-	/*
-	* 足の骨の自動検出と手動方法のどちらかを選択するためのパラメータ
-	* 有効な場合、ソルバーは足のボーンのみを使用し、次の2つの親ボーンを膝と太ももとして自動的に仮定
-	* 無効な場合、ソルバーはfeet配列に入力されたfeetボーン、膝ボーン、腿ボーンを使用
-	* 無効にした場合、すべてのボーンは有効である必要があります。無効なボーンは、ikを有効にしない
-	* 特定の動物キャラクターで、太もも-膝-足が直線的な階層になっていない場合、これを無効にしておく
-	*/
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Settings, meta = (PinHiddenByDefault))
 	bool bAutomaticLeg = false;
 
-	/*
-	* 有効な場合、足の回転は現在のアニメーションに対する相対的なもの
-	* 無効な場合は、足の絶対的な基準回転が代わりに使用され、常に足が整列するようになる
-	*/
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Settings, meta = (PinHiddenByDefault))
 	bool bUseOptionalRefFeetRef = false;
 
-	/*
-	* このパラメータを切り替えると、ikのオン/オフが切り替わる
-	* キャラクターがジャンプしているときや、空中を飛んでいるときは無効化
-	*/
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Settings, meta = (PinShownByDefault))
 	bool bEnableSolver = true;
 
-	/*
-	* PIEモードで再生していないときでもIKが動作するようにするためのパラメータです。
-	* シーケンサーに録音するときに使用
-	*/
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Settings, meta = (PinShownByDefault))
 	bool bWorkOutsidePIE = false;
 
@@ -91,38 +52,18 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Settings)
 	TEnumAsByte<ETraceTypeQuery> AntiTraceChannel = ETraceTypeQuery::TraceTypeQuery2;
 
-	/*
-	* ゲームフレームレートがこの値を超えたら、フットソルバの補間を無効
-	* 低いフレームレートでの、足が飛んだり矛盾したりする問題を避けるのに使用
-	*/
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Settings)
 	float FPSLerpTreshold = 25.0f;
 
-	/*
-	* 足の骨から上のライントレースの高さ
-	* 値が高すぎると天井や木に足が反応するようになり、値が低すぎると極端な斜面や段差でikが動作しない原因になる
-	*/
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Settings, meta = (PinHiddenByDefault))
 	float LineTraceUpperHeight = 200.0f;
 
-	/*
-	* 足の骨から下のライントレースの高さ。通常0を維持するのがベスト
-	* 高すぎる値は、望ましくないIKにつながる可能性がある
-	*/
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Settings, meta = (PinHiddenByDefault))
 	float LineTraceDownHeight = 5.0f;
 
-	/*
-	* ソルバーロジックにアンチチャンネルを使用します。
-	* アンチチャンネルを「ブロック」に設定したメッシュを使用すると、トレースが天井や閉じた空間に接触するのをはじくことができる
-	* 階段や狭い多層階の建物の下も有効。天井や階段の下は、アンチチャンネルをブロックしたメッシュで覆う事
-	*/
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Settings, meta = (PinHiddenByDefault))
 	bool bUseAntiTraceChannel = false;
 
-	/*
-	* 無効にすると、足の回転は無視され、デフォルトのアニメーションの回転が使用
-	*/
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Settings, meta = (PinHiddenByDefault))
 	bool bShouldRotateFeet = true;
 
@@ -132,17 +73,9 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Settings, meta = (PinHiddenByDefault))
 	bool bEnableRoll = true;
 
-	/*
-	* 空間における上方向ベクトル
-	* 基本的には変更しないが、標準的なue4 characterの向きに従わないcharacterを変更する場合に必要
-	*/
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Settings, meta = (PinHiddenByDefault))
 	FVector CharacterDirectionVectorCS = FVector(0.0f, 0.0f, 1.0f);
 
-	/*
-	* 空間における前方向ベクトル
-	* 基本的には変更しないが、標準的なue4 characterの向きに従わないcharacterを変更する場合に必要
-	*/
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Settings, meta = (PinHiddenByDefault))
 	FVector CharacterForwardDirectionVector_CS = FVector(0.0f, 1.0f, 0.0f);
 
@@ -166,81 +99,36 @@ public:
 #pragma endregion
 
 #pragma region InterpSetting
-	/*
-	* 足の位置の補間方法を選択します。
-	* デフォルトでは、最適な滑らかさと解答速度を提供する分割位置補間を使用
-	* オプションでレガシー補間法を使用することができる
-	*/
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = InterpSettings)
 	EIKInterpLocationType LocationInterpType = EIKInterpLocationType::LegacyLocation;
 
-	/*
-	* 足の回転の補間方法を選択します。
-	* デフォルトでは、最適な滑らかさと解答速度を提供する分割位置補間を使用
-	* オプションでレガシー補間法を使用することができる
-	*/
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = InterpSettings)
 	EIKInterpRotationType RotationInterpType = EIKInterpRotationType::LegacyRotation;
 
-	/*
-	* Pose and Blend before executing SpineStabilizationNode
-	*/
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = InterpSettings)
 	FComponentSpacePoseLink BlendRefPose;
 
-	/*
-	* 有効な場合、補間はフィートの縦軸に厳密に行われる
-	* 無効の場合、補間は全方向に処理する。ずれる可能性がある
-	*/
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = InterpSettings, meta = (PinHiddenByDefault))
 	bool bInterpolateOnly_Z = true;
 
-	/*
-	* ikの解決と未解決の間の遷移速度（例：キャラクターがジャンプして地面に落ちるとき）
-	* 低い値は遅いが、スムーズな移行をする
-	*/
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = InterpSettings, meta = (PinHiddenByDefault))
 	float ShiftSpeed = 2.0f;
 
-	/*
-	* 足の補間位置の速度を制御
-	* 値が低いほどスムーズだが、処理速度は遅くなる
-	* Ignore location lerpingが有効な場合は無視
-	*/
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = InterpSettings, meta = (PinHiddenByDefault))
 	float LocationLerpSpeed = 1.0f;
 
-	/*
-	* 足の補間の回転速度を制御
-	* 値が低いほど滑らかだが、遅い結果
-	* Ignore rotation lerping" が有効な場合は、無視
-	*/
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = InterpSettings, meta = (PinHiddenByDefault))
 	float FeetRotationSpeed = 2.0f;
 
-	/*
-	* Shift Logic : タッチ状態と非タッチ状態のスムーズな移行を実現
-	* これを無視すると、瞬時に遷移
-	*/
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = InterpSettings, meta = (PinHiddenByDefault))
 	bool bIgnoreShiftSpeed = false;
 
-	/*
-	* この機能を有効にすると、回転補間を完全にバイパスし、デフォルト値を使用
-	*/
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = InterpSettings, meta = (PinHiddenByDefault))
 	bool bIgnoreLerping = false;
 
-	/*
-	* この機能を有効にすると、位置の補間は行われず、デフォルト値が使用
-	*/
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = InterpSettings, meta = (PinHiddenByDefault))
 	bool bIgnoreLocationLerping = false;
 
-	/*
-	* 地形にぴったりと沿うように、フェットを回転させて移動させる回転方式を採用
-	* 無効化した場合は、脚部のみを回転。若干の隙間ができる可能性がある
-	*/
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = InterpSettings, meta = (PinHiddenByDefault))
 	bool bEnableComplexRotationMethod = false;
 

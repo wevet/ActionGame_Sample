@@ -334,3 +334,97 @@ public:
 	}
 };
 
+
+UENUM(BlueprintType)
+enum class EMantleType : uint8
+{
+	HighMantle   UMETA(DisplayName = "HighMantle"),
+	LowMantle    UMETA(DisplayName = "LowMantle"),
+	FallingCatch UMETA(DisplayName = "FallingCatch"),
+};
+
+USTRUCT(BlueprintType)
+struct REDEMPTION_API FLSComponentAndTransform
+{
+	GENERATED_BODY()
+
+public:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FTransform Transform;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPrimitiveComponent* Component;
+
+public:
+	FLSComponentAndTransform()
+	{
+		Component = nullptr;
+		Transform = FTransform::Identity;
+	}
+};
+
+USTRUCT(BlueprintType)
+struct REDEMPTION_API FMantleParams
+{
+	GENERATED_BODY()
+
+public:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UAnimMontage * AnimMontage;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UCurveVector* Position;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float StartingPosition;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float PlayRate;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FVector StartingOffset;
+
+public:
+	FMantleParams()
+	{
+		AnimMontage = nullptr;
+		Position = nullptr;
+		StartingPosition = 0.0f;
+		PlayRate = 1.0f;
+		StartingOffset = FVector::ZeroVector;
+	}
+};
+
+USTRUCT(BlueprintType)
+struct REDEMPTION_API FMantleTraceSettings
+{
+	GENERATED_BODY()
+
+public:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float MaxLedgeHeight;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float MinLedgeHeight;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float ReachDistance;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float ForwardTraceRadius;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float DownwardTraceRadius;
+
+public:
+	FMantleTraceSettings()
+	{
+		MaxLedgeHeight = 0.0f;
+		MinLedgeHeight = 0.0f;
+		ReachDistance = 0.0f;
+		ForwardTraceRadius = 0.0f;
+		DownwardTraceRadius = 0.0f;
+	}
+};
+
+

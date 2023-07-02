@@ -99,12 +99,17 @@ public:
 	FORCEINLINE class UPredictiveIKComponent* GetPredictiveIKComponent() const { return PredictiveIKComponent; }
 	FORCEINLINE class UMotionWarpingComponent* GetMotionWarpingComponent() const { return MotionWarpingComponent; }
 	FORCEINLINE class UCharacterMovementTrajectoryComponent* GetCharacterMovementTrajectoryComponent() const { return CharacterMovementTrajectoryComponent; }
-	UWvCharacterMovementComponent* GetWvCharacterMovementComponent() const;
 	UWvAbilitySystemComponent* GetWvAbilitySystemComponent() const;
 	ULocomotionComponent* GetLocomotionComponent() const;
 
 	UFUNCTION(BlueprintCallable, Category = Movement)
+	UWvCharacterMovementComponent* GetWvCharacterMovementComponent() const;
+
+	UFUNCTION(BlueprintCallable, Category = Movement)
 	FTrajectorySampleRange GetTrajectorySampleRange() const;
+
+	UFUNCTION(BlueprintCallable, Category = Movement)
+	float GetDistanceFromToeToKnee(FName KneeL = TEXT("calf_l"), FName BallL = TEXT("ball_l"), FName KneeR = TEXT("calf_r"), FName BallR = TEXT("ball_r")) const;
 
 	FVector2D GetInputAxis() const;
 	FVector GetLedgeInputVelocity() const;

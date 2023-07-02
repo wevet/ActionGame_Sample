@@ -199,7 +199,7 @@ const FWvCharacterGroundInfo& UWvCharacterMovementComponent::GetGroundInfo()
 		const FVector TraceStart(GetActorLocation());
 		const FVector TraceEnd(TraceStart.X, TraceStart.Y, (TraceStart.Z - WvCharacter::GroundTraceDistance - CapsuleHalfHeight));
 
-		FCollisionQueryParams QueryParams(SCENE_QUERY_STAT(WvCharacterMovementComponent_GetGroundInfo), false, CharacterOwner);
+		FCollisionQueryParams QueryParams(SCENE_QUERY_STAT(GetGroundInfo), false, CharacterOwner);
 		FCollisionResponseParams ResponseParam;
 		InitCollisionParams(QueryParams, ResponseParam);
 
@@ -239,6 +239,21 @@ FRotator UWvCharacterMovementComponent::GetDeltaRotation(float DeltaTime) const
 	}
 	return Super::GetDeltaRotation(DeltaTime);
 }
+
+#if WITH_EDITOR
+void UWvCharacterMovementComponent::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
+{
+	Super::PostEditChangeProperty(PropertyChangedEvent);
+
+	const FName PropertyName = (PropertyChangedEvent.Property != nullptr) ? PropertyChangedEvent.Property->GetFName() : NAME_None;
+
+	if (PropertyName == GET_MEMBER_NAME_CHECKED(UWvCharacterMovementComponent, AllowSlideAngle))
+	{
+		AllowSlideCosAngle = UKismetMathLibrary::DegCos(AllowSlideAngle);
+	}
+}
+#endif
+
 
 void UWvCharacterMovementComponent::TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
@@ -480,9 +495,9 @@ bool UWvCharacterMovementComponent::StepUp(const FVector& GravDir, const FVector
 			return false;
 		}
 
-		// If we hit something above us and also something ahead of us, we should notify about the upward hit as well.
-		// The forward hit will be handled later (in the bSteppedOver case below).
-		// In the case of hitting something above but not forward, we are not blocked from moving so we don't need the notification.
+		// 上方の何かにぶつかり、さらに前方の何かにぶつかった場合、上方へのヒットも通知する。
+		// 前方に当たった場合は後で処理する（後述のbSteppedOverの場合）。
+		// 前方ではなく上方の何かにぶつかった場合、移動はブロックされないので、通知は必要ない。
 		if (SweepUpHit.bBlockingHit && Hit.bBlockingHit)
 		{
 			HandleImpact(SweepUpHit);
@@ -607,6 +622,94 @@ bool UWvCharacterMovementComponent::StepUp(const FVector& GravDir, const FVector
 	// Don't recalculate velocity based on this height adjustment, if considering vertical adjustments.
 	bJustTeleported |= !bMaintainHorizontalGroundVelocity;
 	return true;
+}
+
+
+float UWvCharacterMovementComponent::SlideAlongSurface(const FVector& Delta, float Time, const FVector& InNormal, FHitResult& Hit, bool bHandleImpact)
+{
+	if (!Hit.bBlockingHit)
+	{
+		return 0.f;
+	}
+
+	FVector Normal(InNormal);
+	if (IsMovingOnGround())
+	{
+		// 歩きにくい路面に押し上げられたくない。
+		if (Normal.Z > 0.f)
+		{
+			if (!IsWalkable(Hit))
+			{
+				Normal = Normal.GetSafeNormal2D();
+			}
+		}
+		else if (Normal.Z < -UE_KINDA_SMALL_NUMBER)
+		{
+			// カプセルの上部に衝撃が加わっても、床を押し下げないでください。
+			if (CurrentFloor.FloorDist < MIN_FLOOR_DIST && CurrentFloor.bBlockingHit)
+			{
+				const FVector FloorNormal = CurrentFloor.HitResult.Normal;
+				const bool bFloorOpposedToMovement = (Delta | FloorNormal) < 0.f && (FloorNormal.Z < 1.f - DELTA);
+				if (bFloorOpposedToMovement)
+				{
+					Normal = FloorNormal;
+				}
+				Normal = Normal.GetSafeNormal2D();
+			}
+		}
+	}
+
+	if (!Hit.bBlockingHit)
+	{
+		return 0.0f;
+	}
+
+	float PercentTimeApplied = 0.f;
+	const FVector OldHitNormal = Normal;
+
+	FVector SlideDelta = ComputeSlideVector(Delta, Time, Normal, Hit);
+	const float Dot = SlideDelta.GetSafeNormal() | Delta.GetSafeNormal();
+
+	UE_LOG(LogTemp, Log, TEXT("Dot => %.3f, AllowSlideCosAngle => %.3f"), Dot, AllowSlideCosAngle);
+
+	if (Dot >= AllowSlideCosAngle)
+	{
+		const FQuat Rotation = UpdatedComponent->GetComponentQuat();
+		SafeMoveUpdatedComponent(SlideDelta, Rotation, true, Hit);
+
+		const float FirstHitPercent = Hit.Time;
+		PercentTimeApplied = FirstHitPercent;
+
+		UE_LOG(LogTemp, Log, TEXT("PercentTimeApplied => %.3f"), PercentTimeApplied);
+		if (Hit.IsValidBlockingHit())
+		{
+			// Notify first impact
+			if (bHandleImpact)
+			{
+				HandleImpact(Hit, FirstHitPercent * Time, SlideDelta);
+			}
+
+			// 複数のサーフェスに当たったときの新しいスライド法線を計算する。
+			TwoWallAdjust(SlideDelta, Hit, OldHitNormal);
+
+			// 新しい方向が有意な長さで、最初に試みた動きと逆方向でない場合のみ進む。
+			if (!SlideDelta.IsNearlyZero(1e-3f) && (SlideDelta | Delta) > 0.f)
+			{
+				SafeMoveUpdatedComponent(SlideDelta, Rotation, true, Hit);
+				const float SecondHitPercent = Hit.Time * (1.f - FirstHitPercent);
+				PercentTimeApplied += SecondHitPercent;
+
+				if (bHandleImpact && Hit.bBlockingHit)
+				{
+					HandleImpact(Hit, SecondHitPercent * Time, SlideDelta);
+				}
+			}
+		}
+		return FMath::Clamp(PercentTimeApplied, 0.f, 1.f);
+	}
+
+	return 0.f;
+
 }
 
 void UWvCharacterMovementComponent::PhysWalking(float deltaTime, int32 Iterations)
@@ -847,6 +950,12 @@ void UWvCharacterMovementComponent::PhysWalking(float deltaTime, int32 Iteration
 
 		MaintainHorizontalGroundVelocity();
 	}
+}
+
+void UWvCharacterMovementComponent::HandleImpact(const FHitResult& Hit, float TimeSlice, const FVector& MoveDelta)
+{
+	OnHandleImpact.Broadcast(Hit);
+	Super::HandleImpact(Hit, TimeSlice, MoveDelta);
 }
 
 void UWvCharacterMovementComponent::ComputeFloorDist(const FVector& CapsuleLocation, float LineDistance, float SweepDistance, FFindFloorResult& OutFloorResult, float SweepRadius, const FHitResult* DownwardSweepResult) const

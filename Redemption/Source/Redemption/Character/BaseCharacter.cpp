@@ -469,3 +469,19 @@ void ABaseCharacter::CheckVaultInput(float DeltaTime)
 	}
 }
 
+float ABaseCharacter::GetDistanceFromToeToKnee(FName KneeL, FName BallL, FName KneeR, FName BallR) const
+{
+	const FVector KneeLPosition = GetMesh()->GetSocketLocation(KneeL);
+	const FVector BallLPosition = GetMesh()->GetSocketLocation(BallL);
+
+	const FVector KneeRPosition = GetMesh()->GetSocketLocation(KneeR);
+	const FVector BallRPosition = GetMesh()->GetSocketLocation(BallR);
+
+	const float L = (KneeLPosition - BallLPosition).Size();
+	const float R = (KneeRPosition - BallRPosition).Size();
+
+	const float Result = FMath::Max(FMath::Abs(L), FMath::Abs(R));
+	return FMath::Max(GetWvCharacterMovementComponent()->MaxStepHeight, Result);
+}
+
+

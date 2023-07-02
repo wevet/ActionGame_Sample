@@ -30,22 +30,16 @@ public:
 	float ActualAlpha = 0;
 
 #pragma region Solver
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Solver)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Solver, meta = (PinHiddenByDefault))
 	float Precision = 0.1f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Solver)
-	float MaximumPitch = 1.0f;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Solver, meta = (PinHiddenByDefault))
+	FVector2D PitchRange { -1.0f, 1.0f, };
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Solver)
-	float MinimumPitch = -1.0f;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Solver, meta = (PinHiddenByDefault))
+	FVector2D RollRange { -1.0f, 1.0f, };
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Solver)
-	float MaximumRoll = 1.0f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Solver)
-	float MinimumRoll = -1.0f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Solver)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Solver, meta = (PinHiddenByDefault))
 	int32 MaxIterations = 15;
 #pragma endregion
 
@@ -58,9 +52,6 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = BasicSettings)
 	TEnumAsByte<ETraceTypeQuery> Trace_Channel = ETraceTypeQuery::TraceTypeQuery1;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = BasicSettings)
-	TEnumAsByte<ETraceTypeQuery> AntiTraceChannel = ETraceTypeQuery::TraceTypeQuery2;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = BasicSettings)
 	EIKRaycastType RaycastTraceType = EIKRaycastType::LineTrace;
@@ -78,9 +69,6 @@ public:
 	float LineTraceUpperHeight = 350.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = BasicSettings, meta = (PinHiddenByDefault))
-	bool bUseAntiChannel = false;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = BasicSettings, meta = (PinHiddenByDefault))
 	bool bCalculateToRefPose = false;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = BasicSettings, meta = (PinHiddenByDefault))
@@ -88,7 +76,6 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = BasicSettings, meta = (PinHiddenByDefault))
 	float MinFeetDistance = 45.0f;
-
 #pragma endregion
 
 #pragma region MasterCurveSettings
@@ -239,21 +226,14 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = AdvancedSettings, meta = (PinHiddenByDefault))
 	float TraceLerpSpeed = 10.0f;
 
-	// Predictive LerpSpeed
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = AdvancedSettings, meta = (PinHiddenByDefault))
-	float LocationLerpSpeed = 15.0f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = AdvancedSettings, meta = (PinHiddenByDefault))
-	float MovedLocationLerpSpeed = 5.0f;
+	float LocationLerpSpeed = 2.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = AdvancedSettings, meta = (PinHiddenByDefault))
 	float RotationLerpSpeed = 5.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = AdvancedSettings, meta = (PinShownByDefault))
 	bool bEnableSolver = true;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = AdvancedSettings, meta = (PinHiddenByDefault))
-	bool bPlayingPIE = false;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = AdvancedSettings, meta = (PinHiddenByDefault))
 	float ChestInfluenceAlpha = 1.0f;
@@ -343,10 +323,8 @@ public:
 	float UpwardPushSideRotation = 0.0f;
 	float RootRollValue = 0.0f;
 	float RootPitchValue = 0.0f;
-	//float MaximumSpineLength = 0.0f;
 	float SpineMedianResult = 0.0f;
 	float CharacterSpeed = 0.0f;
-	//float diff_heights[6];
 
 	bool bInitializeAnimationArray = false;
 	bool bAtleastOneHit = false;

@@ -34,9 +34,10 @@ FAnimNode_CustomSpineSolver::FAnimNode_CustomSpineSolver()
 	ChestHeightMultiplierCurveData->AddKey(600.f, 0.5f);
 	FRichCurve* AccurateFootCurveData = AccurateFootCurve.GetRichCurve();
 	AccurateFootCurveData->AddKey(0.f, 1.0f);
-	AccurateFootCurveData->AddKey(300.f, 0.75f);
+	AccurateFootCurveData->AddKey(600.f, 0.5f);
 	FRichCurve* InterpolationMultiplierCurveData = InterpolationMultiplierCurve.GetRichCurve();
-	InterpolationMultiplierCurveData->AddKey(0.f, 1.0f);
+	//InterpolationMultiplierCurveData->AddKey(0.f, 1.0f);
+	InterpolationMultiplierCurveData->AddKey(0.f, 2.5f);
 	InterpolationMultiplierCurveData->AddKey(1500.f, 10.0f);
 }
 
@@ -105,7 +106,8 @@ void FAnimNode_CustomSpineSolver::GetAnimatedPoseInfo(FCSPose<FCompactPose>& Mes
 	OutBoneTransforms.Empty();
 	FTransform PelvisDiffTransform = FTransform::Identity;
 
-	if ((SkeletalMeshComponent->GetWorld()->IsGameWorld() || bPlayingPIE) && TickCounter > 4)
+	constexpr float TIckThrehold = 4;
+	if ((SkeletalMeshComponent->GetWorld()->IsGameWorld()) && TickCounter > TIckThrehold)
 	{
 		for (int32 Index = 0; Index < ExtraSpineIndiceArray.Num(); Index++)
 		{
@@ -245,6 +247,9 @@ void FAnimNode_CustomSpineSolver::GetAnimatedPoseInfo(FCSPose<FCompactPose>& Mes
 			}
 		}
 
+		// @NOTE
+		// Stabilize Chest, Spine 
+		// Relieve bone position changes by IK
 		if ((bStabilizePelvisLegs || bStabilizeChestLegs) && OutBoneTransforms.Num() > 0)
 		{
 			for (int32 SpineIndex = 0; SpineIndex < SpineFeetPair.Num(); SpineIndex++)
@@ -253,25 +258,23 @@ void FAnimNode_CustomSpineSolver::GetAnimatedPoseInfo(FCSPose<FCompactPose>& Mes
 				{
 					if (SpineFeetPair[SpineIndex].ThighArray[FeetIndex].IsValidToEvaluate())
 					{
+						const float DT = SkeletalMeshComponent->GetWorld()->DeltaTimeSeconds;
+
 						if (SpineIndex == 0 && bStabilizePelvisLegs)
 						{
 							FTransform ThighTransform = MeshBases.GetComponentSpaceTransform(SpineFeetPair[SpineIndex].ThighArray[FeetIndex].CachedCompactPoseIndex)
 								* StabilizationPelvis;
-							FQuat const thigh_original_rotation = ThighTransform.GetRotation();
+							FQuat const ThighOrigRotation = ThighTransform.GetRotation();
 							float StabValue = PelvisUpSlopeStabilizationAlpha;
 							if (PelvisSlopeDirection > 0.0f)
 								StabValue = PelvisUpSlopeStabilizationAlpha;
 							else
 								StabValue = PelvisDownSlopeStabilizationAlpha;
 
-							PelvisSlopeStabAlpha = FMath::FInterpTo(
-								PelvisSlopeStabAlpha, 
-								StabValue, 
-								SkeletalMeshComponent->GetWorld()->DeltaTimeSeconds, 
-								LocationLerpSpeed / 10.0f);
+							PelvisSlopeStabAlpha = FMath::FInterpTo(PelvisSlopeStabAlpha, StabValue, DT, LocationLerpSpeed);
 
 							ThighTransform.SetRotation(FQuat::Slerp(
-								thigh_original_rotation, 
+								ThighOrigRotation, 
 								MeshBases.GetComponentSpaceTransform(SpineFeetPair[SpineIndex].ThighArray[FeetIndex].CachedCompactPoseIndex).GetRotation(), 
 								PelvisSlopeStabAlpha));
 
@@ -304,7 +307,8 @@ void FAnimNode_CustomSpineSolver::GetAnimatedPoseInfo(FCSPose<FCompactPose>& Mes
 							else
 								StabValue = ChestUpSlopeStabilizationAlpha;
 
-							ChestSlopeStabAlpha = FMath::FInterpTo(ChestSlopeStabAlpha, StabValue, SkeletalMeshComponent->GetWorld()->DeltaTimeSeconds, LocationLerpSpeed / 10);
+							ChestSlopeStabAlpha = FMath::FInterpTo(ChestSlopeStabAlpha, StabValue, DT, LocationLerpSpeed);
+
 							ThighTransform.SetRotation(FQuat::Slerp(
 								ThighOriginalRotation, 
 								MeshBases.GetComponentSpaceTransform(SpineFeetPair[SpineIndex].ThighArray[FeetIndex].CachedCompactPoseIndex).GetRotation(), 
@@ -578,26 +582,26 @@ void FAnimNode_CustomSpineSolver::UpdateInternal(const FAnimationUpdateContext& 
 
 	if (CharacterOwner)
 	{
-		if (bOverrideCurveVelocity)
-			CharacterSpeed = CustomVelocity;
-		else
-			CharacterSpeed = CharacterOwner->GetVelocity().Size();
+		CharacterSpeed = bOverrideCurveVelocity ? CustomVelocity : CharacterOwner->GetVelocity().Size();
 	}
 
-	if (CharacterSpeed > 0.0f)
-		LocationLerpSpeed = FMath::Clamp<float>(MovedLocationLerpSpeed, 0, MaxSpeed);
-
-	if (TickCounter < MAX_TICK_COUNTER)
-		FormatShiftSpeed = 100.0f;
-	else
-		FormatShiftSpeed = ShiftSpeed;
-
+	FormatShiftSpeed = (TickCounter < MAX_TICK_COUNTER) ? MaxSpeed : ShiftSpeed;
 	MaxFormatedHeight = PelvisHeightMultiplierCurve.GetRichCurve()->Eval(CharacterSpeed) * MaxDipHeight;
 	MaxFormatedDipHeightChest = ChestHeightMultiplierCurve.GetRichCurve()->Eval(CharacterSpeed) * MaxDipHeightChest;
 	FormatLocationLerp = LocationLerpSpeed * InterpolationMultiplierCurve.GetRichCurve()->Eval(CharacterSpeed);
 	FormatRotationLerp = RotationLerpSpeed * InterpolationMultiplierCurve.GetRichCurve()->Eval(CharacterSpeed);
 	FormatTraceLerp = TraceLerpSpeed * InterpolationMultiplierCurve.GetRichCurve()->Eval(CharacterSpeed);
 	FormatSnakeLerp = SnakeJointSpeed * InterpolationMultiplierCurve.GetRichCurve()->Eval(CharacterSpeed);
+
+	//constexpr float SpeedThreshold = 10.0f;
+	//if (CharacterSpeed < SpeedThreshold)
+	//{
+	//	FormatLocationLerp = LocationLerpSpeed;
+	//	FormatRotationLerp = RotationLerpSpeed;
+	//	FormatTraceLerp = TraceLerpSpeed;
+	//	FormatSnakeLerp = SnakeJointSpeed;
+	//}
+
 
 	if (SpineTransformPairArray.Num() > 0)
 	{
@@ -782,7 +786,7 @@ void FAnimNode_CustomSpineSolver::UpdateInternal(const FAnimationUpdateContext& 
 					// spine hit
 					if (SpineHitPairs[i].ParentSpineHit.bBlockingHit)
 					{
-						if (SpineHitPairs[i].ParentSpinePoint == FVector::ZeroVector || TickCounter < 10 || bIgnoreLerping)
+						if (SpineHitPairs[i].ParentSpinePoint == FVector::ZeroVector || TickCounter < MAX_TICK_COUNTER || bIgnoreLerping)
 						{
 							SpineHitPairs[i].ParentSpinePoint = SpineHitPairs[i].ParentSpineHit.ImpactPoint;
 						}
@@ -937,7 +941,7 @@ void FAnimNode_CustomSpineSolver::UpdateInternal(const FAnimationUpdateContext& 
 						// front hit
 						if (SpineHitPairs[i].ParentFrontHit.bBlockingHit)
 						{
-							if (SpineHitPairs[i].ParentFrontPoint == FVector::ZeroVector || TickCounter < 10 || bIgnoreLerping)
+							if (SpineHitPairs[i].ParentFrontPoint == FVector::ZeroVector || TickCounter < MAX_TICK_COUNTER || bIgnoreLerping)
 							{
 								SpineHitPairs[i].ParentFrontPoint = SpineHitPairs[i].ParentFrontHit.ImpactPoint;
 							}
@@ -1225,7 +1229,7 @@ void FAnimNode_CustomSpineSolver::InitializeBoneReferences(FBoneContainer& Requi
 		{
 			if (TickCounter < MAX_TICK_COUNTER)
 			{
-				TotalSpineAlphaArray[i] = 0;
+				TotalSpineAlphaArray[i] = 0.0f;
 			}
 			if (K_FeetPair[i].FeetArray.Num() == 0 && i < K_FeetPair.Num())
 			{
@@ -1588,23 +1592,15 @@ void FAnimNode_CustomSpineSolver::ApplyLineTrace(
 	const FLinearColor DebugColor,
 	const bool bDrawLine)
 {
-	TArray<AActor*> IgnoreActors;
 
 	if (CharacterOwner)
 	{
-		IgnoreActors.Add(CharacterOwner);
+		TArray<AActor*> IgnoreActors({CharacterOwner});
 		const float OwnerScale = ComponentScale;
 
 		FVector UpDirection_WS = SkeletalMeshComponent->GetComponentToWorld().TransformVector(CharacterDirectionVectorCS).GetSafeNormal();
 		FHitResult AntiHitResult;
 		const FVector OriginPoint = StartLocation - UpDirection_WS * LineTraceUpperHeight * OwnerScale;
-
-		if (bUseAntiChannel)
-			UKismetSystemLibrary::LineTraceSingle(
-				CharacterOwner, OriginPoint, StartLocation, AntiTraceChannel, true, 
-				IgnoreActors, EDrawDebugTrace::None, AntiHitResult, true, DebugColor);
-
-		const ECollisionChannel CollisionChannelType = UEngineTypes::ConvertToCollisionChannel(AntiTraceChannel.GetValue());
 
 #if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
 		bDisplayLineTrace = (CVarDebugSpineSolver.GetValueOnAnyThread() > 0);
@@ -1613,56 +1609,20 @@ void FAnimNode_CustomSpineSolver::ApplyLineTrace(
 #endif
 		const EDrawDebugTrace::Type DebugTrace = bDisplayLineTrace ? EDrawDebugTrace::ForOneFrame : EDrawDebugTrace::None;
 
-		if (AntiHitResult.bBlockingHit && bUseAntiChannel)
+		switch (RaycastTraceType)
 		{
-			ECollisionResponse ResponseChannelType = ECollisionResponse::ECR_Ignore;
-
-			if (AntiHitResult.bBlockingHit && AntiHitResult.GetComponent())
-				ResponseChannelType = AntiHitResult.GetComponent()->GetCollisionResponseToChannel(CollisionChannelType);
-
-			const float OriginHitDistance = ((OriginPoint - AntiHitResult.ImpactPoint).Size()) + 1;
-			if (ResponseChannelType == ECollisionResponse::ECR_Block)
-			{
-
-				const FVector NewStartPoint = (AntiHitResult.ImpactPoint - UpDirection_WS * 5);
-				switch (RaycastTraceType)
-				{
-					case EIKRaycastType::LineTrace:
-					UKismetSystemLibrary::LineTraceSingle(
-						CharacterOwner, NewStartPoint, EndLocation, Trace_Channel, true, IgnoreActors, DebugTrace, HitResult, true, DebugColor);
-					break;
-					case EIKRaycastType::SphereTrace:
-					UKismetSystemLibrary::SphereTraceSingle(
-						CharacterOwner,	NewStartPoint, EndLocation, TraceRadiusValue * OwnerScale, Trace_Channel, true, IgnoreActors, DebugTrace,
-						HitResult, true, DebugColor);
-					break;
-					case EIKRaycastType::BoxTrace:
-					UKismetSystemLibrary::BoxTraceSingle(
-						CharacterOwner, NewStartPoint, EndLocation, FVector(1, 1, 0) * TraceRadiusValue * OwnerScale, FRotator(0, 0, 0), 
-						Trace_Channel, true, IgnoreActors, DebugTrace, HitResult, true, DebugColor);
-					break;
-				}
-			}
-		}
-		else
-		{
-			switch (RaycastTraceType)
-			{
-				case EIKRaycastType::LineTrace:
-				UKismetSystemLibrary::LineTraceSingle(
-					CharacterOwner, StartLocation, EndLocation, Trace_Channel, true, IgnoreActors, DebugTrace, HitResult, true, DebugColor);
-				break;
-				case EIKRaycastType::SphereTrace:
-				UKismetSystemLibrary::SphereTraceSingle(
-					CharacterOwner, StartLocation, EndLocation, TraceRadiusValue * OwnerScale,
-					Trace_Channel, true, IgnoreActors, DebugTrace, HitResult, true, DebugColor);
-				break;
-				case EIKRaycastType::BoxTrace:
-				UKismetSystemLibrary::BoxTraceSingle(
-					CharacterOwner, StartLocation, EndLocation, FVector(1, 1, 0) * TraceRadiusValue * OwnerScale, FRotator(0, 0, 0), 
-					Trace_Channel, true, IgnoreActors, DebugTrace, HitResult, true, DebugColor);
-				break;
-			}
+			case EIKRaycastType::LineTrace:
+			UKismetSystemLibrary::LineTraceSingle(CharacterOwner, StartLocation, EndLocation, Trace_Channel, true, IgnoreActors, DebugTrace, 
+				HitResult, true, DebugColor);
+			break;
+			case EIKRaycastType::SphereTrace:
+			UKismetSystemLibrary::SphereTraceSingle(CharacterOwner, StartLocation, EndLocation, TraceRadiusValue * OwnerScale,
+				Trace_Channel, true, IgnoreActors, DebugTrace, HitResult, true, DebugColor);
+			break;
+			case EIKRaycastType::BoxTrace:
+			UKismetSystemLibrary::BoxTraceSingle(CharacterOwner, StartLocation, EndLocation, FVector(1, 1, 0) * TraceRadiusValue * OwnerScale, 
+				FRotator::ZeroRotator, Trace_Channel, true, IgnoreActors, DebugTrace, HitResult, true, DebugColor);
+			break;
 		}
 	}
 
@@ -1910,19 +1870,19 @@ void FAnimNode_CustomSpineSolver::TailImpactRotation(const int32 OriginPointInde
 
 		if (bAtleastOneHit)
 		{
-			if (bAtleastOneHit && PositionBaseRotation.Pitch < MaximumPitch && PositionBaseRotation.Pitch > MinimumPitch)
+			if (bAtleastOneHit && PositionBaseRotation.Pitch < PitchRange.Y && PositionBaseRotation.Pitch > PitchRange.X)
 				SpineRotationDiffArray[OriginPointIndex].Pitch = PositionBaseRotation.Pitch;
-			else if (PositionBaseRotation.Pitch > MaximumPitch)
-				SpineRotationDiffArray[OriginPointIndex].Pitch = MaximumPitch;
-			else if (PositionBaseRotation.Pitch < MinimumPitch)
-				SpineRotationDiffArray[OriginPointIndex].Pitch = MinimumPitch;
+			else if (PositionBaseRotation.Pitch > PitchRange.Y)
+				SpineRotationDiffArray[OriginPointIndex].Pitch = PitchRange.Y;
+			else if (PositionBaseRotation.Pitch < PitchRange.X)
+				SpineRotationDiffArray[OriginPointIndex].Pitch = PitchRange.X;
 
-			if (bAtleastOneHit && PositionBaseRotation.Roll < MaximumRoll && PositionBaseRotation.Roll > MinimumRoll)
+			if (bAtleastOneHit && PositionBaseRotation.Roll < RollRange.Y && PositionBaseRotation.Roll > RollRange.X)
 				SpineRotationDiffArray[OriginPointIndex].Roll = PositionBaseRotation.Roll;
-			else if (PositionBaseRotation.Roll > MaximumRoll)
-				SpineRotationDiffArray[OriginPointIndex].Roll = MaximumRoll;
-			else if (PositionBaseRotation.Roll < MinimumRoll)
-				SpineRotationDiffArray[OriginPointIndex].Roll = MinimumRoll;
+			else if (PositionBaseRotation.Roll > RollRange.Y)
+				SpineRotationDiffArray[OriginPointIndex].Roll = RollRange.Y;
+			else if (PositionBaseRotation.Roll < RollRange.X)
+				SpineRotationDiffArray[OriginPointIndex].Roll = RollRange.X;
 		}
 	}
 	else if (OriginPointIndex == SpineTransformPairArray.Num() - 1)
@@ -2005,19 +1965,19 @@ void FAnimNode_CustomSpineSolver::TailImpactRotation(const int32 OriginPointInde
 
 		if (bAtleastOneHit)
 		{
-			if (bAtleastOneHit && PositionBaseRotation.Pitch < MaximumPitch && PositionBaseRotation.Pitch > MinimumPitch)
+			if (bAtleastOneHit && PositionBaseRotation.Pitch < PitchRange.Y && PositionBaseRotation.Pitch > PitchRange.X)
 				SpineRotationDiffArray[OriginPointIndex].Pitch = PositionBaseRotation.Pitch;
-			else if (PositionBaseRotation.Pitch > MaximumPitch)
-				SpineRotationDiffArray[OriginPointIndex].Pitch = MaximumPitch;
-			else if (PositionBaseRotation.Pitch < MinimumPitch)
-				SpineRotationDiffArray[OriginPointIndex].Pitch = MinimumPitch;
+			else if (PositionBaseRotation.Pitch > PitchRange.Y)
+				SpineRotationDiffArray[OriginPointIndex].Pitch = PitchRange.Y;
+			else if (PositionBaseRotation.Pitch < PitchRange.X)
+				SpineRotationDiffArray[OriginPointIndex].Pitch = PitchRange.X;
 
-			if (bAtleastOneHit && PositionBaseRotation.Roll < MaximumRoll && PositionBaseRotation.Roll > MinimumRoll)
+			if (bAtleastOneHit && PositionBaseRotation.Roll < RollRange.Y && PositionBaseRotation.Roll > RollRange.X)
 				SpineRotationDiffArray[OriginPointIndex].Roll = PositionBaseRotation.Roll;
-			else if (PositionBaseRotation.Roll > MaximumRoll)
-				SpineRotationDiffArray[OriginPointIndex].Roll = MaximumRoll;
-			else if (PositionBaseRotation.Roll < MinimumRoll)
-				SpineRotationDiffArray[OriginPointIndex].Roll = MinimumRoll;
+			else if (PositionBaseRotation.Roll > RollRange.Y)
+				SpineRotationDiffArray[OriginPointIndex].Roll = RollRange.Y;
+			else if (PositionBaseRotation.Roll < RollRange.X)
+				SpineRotationDiffArray[OriginPointIndex].Roll = RollRange.X;
 		}
 	}
 
@@ -2059,7 +2019,7 @@ void FAnimNode_CustomSpineSolver::TailImpactRotation(const int32 OriginPointInde
 		FVector LocationReset = LerpLocation;
 		LocationReset = SkeletalMeshComponent->GetComponentToWorld().TransformPosition(LocationReset);
 
-		if (OutputTransform.GetLocation() == FVector::ZeroVector)
+		if (OutputTransform.GetLocation().IsNearlyZero())
 			OutputTransform.SetLocation(LocationReset);
 
 		{
@@ -2179,7 +2139,9 @@ void FAnimNode_CustomSpineSolver::ImpactRotation(const int32 PointIndex, FTransf
 			FeetMidPoint = ParentSpineHitCS;
 
 			if (bAccurateFeetPlacement)
+			{
 				FeetMidPoint.Z = FMath::Lerp<float>(FeetMidPoint.Z, FeetDiffOffset, AccurateFootCurve.GetRichCurve()->Eval(CharacterSpeed));
+			}
 
 			float FeetDifferenceOffsetOpposite = ParentSpineHitCS.Z;
 			if (SpineHitPairs[OppositeIndex].FeetHitArray.Num() == 2)
@@ -2219,8 +2181,7 @@ void FAnimNode_CustomSpineSolver::ImpactRotation(const int32 PointIndex, FTransf
 
 			FVector NewLocation = FVector::ZeroVector;
 			FVector LocationOutput = FVector::ZeroVector;
-			//bool bExtremeDifference = false;
-			//float DiffSum = 0.0f;
+
 			float SlantedHeightOffset = 0.0f;
 			float ACCrossValue = (SkeletalMeshComponent->GetComponentToWorld().InverseTransformPosition(
 				SpineHitPairs[PointIndex].ParentBackPoint).Z - SkeletalMeshComponent->GetComponentToWorld().InverseTransformPosition(
@@ -2306,7 +2267,6 @@ void FAnimNode_CustomSpineSolver::ImpactRotation(const int32 PointIndex, FTransf
 				{
 					PevlisRotatorIntensity = PelvisForwardRotationIntensity * 0.5;
 				}
-
 				if (!bUseFakeChestRotation && PointIndex != 0)
 				{
 					ChestRotatorIntensity = ChestUpwardForwardRotationIntensity * 0.5;
@@ -2528,19 +2488,19 @@ void FAnimNode_CustomSpineSolver::ImpactRotation(const int32 PointIndex, FTransf
 
 				if (bAtleastOneHit)
 				{
-					if (bAtleastOneHit && PositionBasedRotator.Pitch < MaximumPitch && PositionBasedRotator.Pitch > MinimumPitch)
+					if (bAtleastOneHit && PositionBasedRotator.Pitch < PitchRange.Y && PositionBasedRotator.Pitch > PitchRange.X)
 						SpineRotationDiffArray[PointIndex].Pitch = PositionBasedRotator.Pitch;
-					else if (PositionBasedRotator.Pitch > MaximumPitch)
-						SpineRotationDiffArray[PointIndex].Pitch = MaximumPitch;
-					else if (PositionBasedRotator.Pitch < MinimumPitch)
-						SpineRotationDiffArray[PointIndex].Pitch = MinimumPitch;
+					else if (PositionBasedRotator.Pitch > PitchRange.Y)
+						SpineRotationDiffArray[PointIndex].Pitch = PitchRange.Y;
+					else if (PositionBasedRotator.Pitch < PitchRange.X)
+						SpineRotationDiffArray[PointIndex].Pitch = PitchRange.X;
 
-					if (bAtleastOneHit && PositionBasedRotator.Roll < MaximumRoll && PositionBasedRotator.Roll > MinimumRoll)
+					if (bAtleastOneHit && PositionBasedRotator.Roll < RollRange.Y && PositionBasedRotator.Roll > RollRange.X)
 						SpineRotationDiffArray[PointIndex].Roll = PositionBasedRotator.Roll;
-					else if (PositionBasedRotator.Roll > MaximumRoll)
-						SpineRotationDiffArray[PointIndex].Roll = MaximumRoll;
-					else if (PositionBasedRotator.Roll < MinimumRoll)
-						SpineRotationDiffArray[PointIndex].Roll = MinimumRoll;
+					else if (PositionBasedRotator.Roll > RollRange.Y)
+						SpineRotationDiffArray[PointIndex].Roll = RollRange.Y;
+					else if (PositionBasedRotator.Roll < RollRange.X)
+						SpineRotationDiffArray[PointIndex].Roll = RollRange.X;
 				}
 			}
 			else if (PointIndex == SpineTransformPairArray.Num() - 1)
@@ -2643,19 +2603,19 @@ void FAnimNode_CustomSpineSolver::ImpactRotation(const int32 PointIndex, FTransf
 				SpineRotationDiffArray[PointIndex].Yaw = PositionBasedRotator.Yaw;
 				if (bAtleastOneHit)
 				{
-					if (PositionBasedRotator.Pitch < MaximumPitch && PositionBasedRotator.Pitch > MinimumPitch)
+					if (PositionBasedRotator.Pitch < PitchRange.Y && PositionBasedRotator.Pitch > PitchRange.X)
 						SpineRotationDiffArray[PointIndex].Pitch = PositionBasedRotator.Pitch;
-					else if (PositionBasedRotator.Pitch > MaximumPitch)
-						SpineRotationDiffArray[PointIndex].Pitch = MaximumPitch;
-					else if (PositionBasedRotator.Pitch < MinimumPitch)
-						SpineRotationDiffArray[PointIndex].Pitch = MinimumPitch;
+					else if (PositionBasedRotator.Pitch > PitchRange.Y)
+						SpineRotationDiffArray[PointIndex].Pitch = PitchRange.Y;
+					else if (PositionBasedRotator.Pitch < PitchRange.X)
+						SpineRotationDiffArray[PointIndex].Pitch = PitchRange.X;
 
-					if (PositionBasedRotator.Roll < MaximumRoll && PositionBasedRotator.Roll > MinimumRoll)
+					if (PositionBasedRotator.Roll < RollRange.Y && PositionBasedRotator.Roll > RollRange.X)
 						SpineRotationDiffArray[PointIndex].Roll = PositionBasedRotator.Roll;
-					else if (PositionBasedRotator.Roll > MaximumRoll)
-						SpineRotationDiffArray[PointIndex].Roll = MaximumRoll;
-					else if (PositionBasedRotator.Roll < MinimumRoll)
-						SpineRotationDiffArray[PointIndex].Roll = MinimumRoll;
+					else if (PositionBasedRotator.Roll > RollRange.Y)
+						SpineRotationDiffArray[PointIndex].Roll = RollRange.Y;
+					else if (PositionBasedRotator.Roll < RollRange.X)
+						SpineRotationDiffArray[PointIndex].Roll = RollRange.X;
 				}
 
 			}
@@ -2792,7 +2752,7 @@ void FAnimNode_CustomSpineSolver::ImpactRotation(const int32 PointIndex, FTransf
 					}
 					else
 					{
-						if (!(bIgnoreLerping || TickCounter < 10))
+						if (!(bIgnoreLerping || TickCounter < MAX_TICK_COUNTER))
 						{
 							OutputTransform.SetLocation(UKismetMathLibrary::VInterpTo(
 								FVector(OutputTransform.GetLocation()),

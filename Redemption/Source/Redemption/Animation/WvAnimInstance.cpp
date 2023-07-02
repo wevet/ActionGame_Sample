@@ -3,10 +3,12 @@
 #include "WvAnimInstance.h"
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemGlobals.h"
+#include "Components/CapsuleComponent.h"
 
 #include "Component/WvCharacterMovementComponent.h"
 #include "Component/PredictiveIKComponent.h"
 #include "Locomotion/LocomotionComponent.h"
+
 
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(WvAnimInstance)
@@ -38,6 +40,7 @@ void UWvAnimInstance::NativeInitializeAnimation()
 
 	CharacterMovementComponent = CastChecked<UWvCharacterMovementComponent>(Character->GetCharacterMovement());
 	LocomotionComponent = Character->GetLocomotionComponent();
+	CapsuleComponent = Character->GetCapsuleComponent();
 
 	if (UAbilitySystemComponent* ASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(Character.Get()))
 	{
@@ -65,7 +68,7 @@ void UWvAnimInstance::NativeThreadSafeUpdateAnimation(float DeltaSeconds)
 {
 	Super::NativeThreadSafeUpdateAnimation(DeltaSeconds);
 
-	if (IsValid(LocomotionComponent))
+	if (LocomotionComponent.IsValid())
 	{
 		LocomotionEssencialVariables = LocomotionComponent->GetLocomotionEssencialVariables();
 		LocomotionEssencialVariables.Velocity = LocomotionComponent->ChooseVelocity();

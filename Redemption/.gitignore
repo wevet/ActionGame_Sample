@@ -72,12 +72,10 @@ Plugins/*/Intermediate/*
 DerivedDataCache/*
 
 
-Content/__ExternalObjects__/*
-Content/__ExternalActors__/*
-Content/MetaHumans/*
+Content/UltraDynamicSky/*
 Content/WB_Dresswear/*
-Content/Elite_Landscapes/*
-Content/Downtown_West/*
+Content/Environment_Set/*
+Content/MetaHumans/*
 
 .vsconfig
 
