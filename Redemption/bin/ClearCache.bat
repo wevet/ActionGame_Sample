@@ -14,6 +14,8 @@ rmdir /q /s ..\\Plugins\\RopeCutting\\Binaries
 rmdir /q /s ..\\Plugins\\RopeCutting\\Intermediate
 rmdir /q /s ..\\Plugins\\QuadrupedIK\\Binaries
 rmdir /q /s ..\\Plugins\\QuadrupedIK\\Intermediate
+rmdir /q /s ..\\Plugins\\PredictiveFootIK\\Binaries
+rmdir /q /s ..\\Plugins\\PredictiveFootIK\\Intermediate
 
 del ..\\.vsconfig
 del ..\\Redemption.sln

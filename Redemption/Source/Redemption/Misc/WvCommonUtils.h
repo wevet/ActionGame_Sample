@@ -4,6 +4,8 @@
 
 #include "CoreMinimal.h"
 #include "Kismet/BlueprintFunctionLibrary.h"
+#include "UObject/NoExportTypes.h"
+#include "Component/WvCharacterMovementTypes.h"
 #include "WvCommonUtils.generated.h"
 
 /**
@@ -21,4 +23,18 @@ public:
 
 	static FTransform TransformSubStract(const FTransform& TransformA, const FTransform& TransformB);
 	static FTransform TransformAdd(const FTransform& TransformA, const FTransform& TransformB);
+
+	UFUNCTION(BlueprintPure, Category = "CommonUtils")
+	static FLSComponentAndTransform ComponentWorldToLocal(const FLSComponentAndTransform WorldSpaceComponent);
+
+	UFUNCTION(BlueprintPure, Category = "CommonUtils")
+	static FLSComponentAndTransform ComponentLocalToWorld(const FLSComponentAndTransform LocalSpaceComponent);
+
+	UFUNCTION(BlueprintPure, Category = "CommonUtils")
+	static FTransform TransformMinus(const FTransform A, const FTransform B);
+
+	UFUNCTION(BlueprintPure, Category = "CommonUtils")
+	static FTransform TransformPlus(const FTransform A, const FTransform B);
+
+
 };

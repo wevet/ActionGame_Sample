@@ -38,7 +38,7 @@ struct FWvReplicatedAcceleration
 };
 
 
-class UPredictiveIKComponent;
+class UPredictiveFootIKComponent;
 class UMotionWarpingComponent;
 class UWvCharacterMovementComponent;
 class ULocomotionComponent;
@@ -62,7 +62,6 @@ public:
 protected:
 	virtual void BeginPlay() override;
 	virtual void PossessedBy(AController* NewController) override;
-	virtual void OnMovementModeChanged(EMovementMode PrevMovementMode, uint8 PreviousCustomMode = 0) override;
 	virtual void OnStartCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust) override;
 	virtual void OnEndCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust) override;
 	virtual void Landed(const FHitResult& Hit) override;
@@ -96,10 +95,13 @@ public:
 	*/
 	virtual bool CanBeSeenFrom(const FVector& ObserverLocation, FVector& OutSeenLocation, int32& NumberOfLoSChecksPerformed, float& OutSightStrength, const AActor* IgnoreActor = nullptr, const bool* bWasVisible = nullptr, int32* UserData = nullptr) const override;
 
-	FORCEINLINE class UPredictiveIKComponent* GetPredictiveIKComponent() const { return PredictiveIKComponent; }
 	FORCEINLINE class UMotionWarpingComponent* GetMotionWarpingComponent() const { return MotionWarpingComponent; }
 	FORCEINLINE class UCharacterMovementTrajectoryComponent* GetCharacterMovementTrajectoryComponent() const { return CharacterMovementTrajectoryComponent; }
+
+	UFUNCTION(BlueprintCallable, Category = Abilities)
 	UWvAbilitySystemComponent* GetWvAbilitySystemComponent() const;
+
+	UFUNCTION(BlueprintCallable, Category = Movement)
 	ULocomotionComponent* GetLocomotionComponent() const;
 
 	UFUNCTION(BlueprintCallable, Category = Movement)
@@ -119,16 +121,22 @@ public:
 
 	virtual void DoSprinting();
 	virtual void DoStopSprinting();
+
+	UFUNCTION(BlueprintCallable, Category = Movement)
+	virtual void DoWalking();
+
+	UFUNCTION(BlueprintCallable, Category = Movement)
+	virtual void DoStopWalking();
 	virtual void VelocityModement();
 	virtual void StrafeModement();
-	virtual void CheckVaultInput(float DeltaTime);
 
 protected:
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Component, meta = (AllowPrivateAccess = "true"))
-	class UPredictiveIKComponent* PredictiveIKComponent;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Component, meta = (AllowPrivateAccess = "true"))
 	class ULocomotionComponent* LocomotionComponent;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Component, meta = (AllowPrivateAccess = "true"))
+	class UPredictiveFootIKComponent* PredictiveFootIKComponent;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Component, meta = (AllowPrivateAccess = "true"))
 	class UMotionWarpingComponent* MotionWarpingComponent;
@@ -161,6 +169,7 @@ protected:
 	int32 InputDirVerThreshold = 40;
 	float InputDirVerAngleThres = 40.0f;
 	FVector2D InputAxis = FVector2D::ZeroVector;
-
+	bool bHasMovementInput = false;
+	float MovementInputAmount;
 };
 

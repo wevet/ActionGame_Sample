@@ -23,10 +23,11 @@ enum class ELSMovementMode : uint8
 	None     UMETA(DisplayName = "None"),
 	Grounded UMETA(DisplayName = "Grounded"),
 	Falling  UMETA(DisplayName = "Falling"),
+	Flying   UMETA(DisplayName = "Flying"),
 	Ragdoll  UMETA(DisplayName = "Ragdoll"),
 	Swimming UMETA(DisplayName = "Swimming"),
 	Mantling UMETA(DisplayName = "Mantling"),
-	Vaulting UMETA(DisplayName = "Vaulting"),
+	Climbing UMETA(DisplayName = "Climbing"),
 };
 
 UENUM(BlueprintType)
@@ -255,6 +256,19 @@ public:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
 	ELSCardinalDirection CardinalDirection;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
+	FVector WorldAcceleration2D;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
+	FVector LocalAcceleration2D;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
+	FVector LocalVelocity2D;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
+	bool HasAcceleration = false;
+
 
 	ELSMovementMode LSPrevMovementMode;
 

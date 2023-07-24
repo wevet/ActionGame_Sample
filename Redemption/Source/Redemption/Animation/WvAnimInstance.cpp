@@ -6,7 +6,6 @@
 #include "Components/CapsuleComponent.h"
 
 #include "Component/WvCharacterMovementComponent.h"
-#include "Component/PredictiveIKComponent.h"
 #include "Locomotion/LocomotionComponent.h"
 
 
@@ -71,7 +70,7 @@ void UWvAnimInstance::NativeThreadSafeUpdateAnimation(float DeltaSeconds)
 	if (LocomotionComponent.IsValid())
 	{
 		LocomotionEssencialVariables = LocomotionComponent->GetLocomotionEssencialVariables();
-		LocomotionEssencialVariables.Velocity = LocomotionComponent->ChooseVelocity();
+
 	}
 }
 

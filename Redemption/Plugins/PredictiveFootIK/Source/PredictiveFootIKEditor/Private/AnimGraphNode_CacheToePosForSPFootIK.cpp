@@ -1,0 +1,71 @@
+﻿// Copyright Epic Games, Inc. All Rights Reserved.
+
+#include "AnimGraphNode_CacheToePosForSPFootIK.h"
+#include "UnrealWidget.h"
+#include "AnimNodeEditModes.h"
+#include "Kismet2/CompilerResultsLog.h"
+
+/////////////////////////////////////////////////////
+// UAnimGraphNode_CacheToePosForSPFootIK
+
+#define LOCTEXT_NAMESPACE "CacheToePosForSPFootIK"
+
+void UAnimGraphNode_CacheToePosForSPFootIK::ValidateAnimNodeDuringCompilation(USkeleton* ForSkeleton, FCompilerResultsLog& MessageLog)
+{
+	// Temporary fix where skeleton is not fully loaded during AnimBP compilation and thus virtual bone name check is invalid UE-39499 (NEED FIX) 
+	if (ForSkeleton && !ForSkeleton->HasAnyFlags(RF_NeedPostLoad))
+	{
+		if (ForSkeleton->GetReferenceSkeleton().FindBoneIndex(Node.RightToe.BoneName) == INDEX_NONE)
+		{
+			if (Node.RightToe.BoneName == NAME_None)
+			{
+				MessageLog.Warning(*LOCTEXT("NoBoneSelectedToModify", "@@ - You must pick a bone to modify").ToString(), this);
+			}
+			else
+			{
+				FFormatNamedArguments Args;
+				Args.Add(TEXT("BoneName"), FText::FromName(Node.RightToe.BoneName));
+
+				FText Msg = FText::Format(LOCTEXT("NoBoneFoundToModify", "@@ - Bone {BoneName} not found in Skeleton"), Args);
+
+				MessageLog.Warning(*Msg.ToString(), this);
+			}
+		}
+
+		if (ForSkeleton->GetReferenceSkeleton().FindBoneIndex(Node.LeftToe.BoneName) == INDEX_NONE)
+		{
+			if (Node.LeftToe.BoneName == NAME_None)
+			{
+				MessageLog.Warning(*LOCTEXT("NoBoneSelectedToModify", "@@ - You must pick a bone to modify").ToString(), this);
+			}
+			else
+			{
+				FFormatNamedArguments Args;
+				Args.Add(TEXT("BoneName"), FText::FromName(Node.LeftToe.BoneName));
+
+				FText Msg = FText::Format(LOCTEXT("NoBoneFoundToModify", "@@ - Bone {BoneName} not found in Skeleton"), Args);
+
+				MessageLog.Warning(*Msg.ToString(), this);
+			}
+		}
+	}
+
+	Super::ValidateAnimNodeDuringCompilation(ForSkeleton, MessageLog);
+}
+
+FText UAnimGraphNode_CacheToePosForSPFootIK::GetControllerDescription() const
+{
+	return LOCTEXT("CacheToePosForSPFootIK", "Cache ToePos For SPFootIK");
+}
+
+FText UAnimGraphNode_CacheToePosForSPFootIK::GetNodeTitle(ENodeTitleType::Type TitleType) const
+{
+	return LOCTEXT("AnimGraphNode_CacheToePosForSPFootIK_Title", "Cache ToePos For SPFootIK");
+}
+
+FText UAnimGraphNode_CacheToePosForSPFootIK::GetTooltipText() const
+{
+	return GetNodeTitle(ENodeTitleType::ListView);
+}
+
+#undef LOCTEXT_NAMESPACE

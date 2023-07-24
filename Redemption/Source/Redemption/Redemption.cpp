@@ -3,17 +3,25 @@
 #include "Redemption.h"
 #include "Modules/ModuleManager.h"
 
-UE_DEFINE_GAMEPLAY_TAG(TAG_Gameplay_MovementStopped, "Gameplay.MovementStopped");
+
 UE_DEFINE_GAMEPLAY_TAG(TAG_Character_CombatReady, "Character.Combat.Ready");
+
+// foot step
 UE_DEFINE_GAMEPLAY_TAG(TAG_Character_Footstep_Left, "Character.Locomotion.Footstep.Left");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Character_Footstep_Right, "Character.Locomotion.Footstep.Right");
 
+// climbing 
 UE_DEFINE_GAMEPLAY_TAG(TAG_Locomotion_ClimbingJump, "Locomotion.Climbing.Jump");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Locomotion_ClimbingMovement, "Locomotion.Climbing.Movement");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Locomotion_ClimbingStop, "Locomotion.Climbing.Stop");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Locomotion_ClimbingLedgeEnd, "Locomotion.Climbing.LedgeEnd");
-UE_DEFINE_GAMEPLAY_TAG(TAG_Locomotion_ClimbingForbid, "Locomotion.Climbing.Forbid");
-UE_DEFINE_GAMEPLAY_TAG(TAG_Locomotion_Vaulting, "Locomotion.Vaulting");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Locomotion_Mantling, "Locomotion.Mantling");
+
+// forbid 
+UE_DEFINE_GAMEPLAY_TAG(TAG_Locomotion_ForbidClimbing, "Locomotion.Forbid.Climbing");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Locomotion_ForbidMantling, "Locomotion.Forbid.Mantling");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Locomotion_ForbidMovement, "Locomotion.Forbid.Movement");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Locomotion_ForbidJump, "Locomotion.Forbid.Jump");
 
 
 IMPLEMENT_PRIMARY_GAME_MODULE( FDefaultGameModuleImpl, Redemption, "Redemption" );

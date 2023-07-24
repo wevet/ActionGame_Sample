@@ -55,7 +55,7 @@ public:
 
 public:
 	UFUNCTION(BlueprintCallable, Category = "Character|Components|CharacterMovement")
-	bool IsVaulting() const;
+	bool IsMantling() const;
 
 	UPROPERTY(BlueprintAssignable)
 	FHandleImpact OnHandleImpact;
@@ -65,10 +65,11 @@ public:
 
 	bool HasFallEdge() const { return bHasFallEdge; }
 
-	bool DoVault(bool bReplayingMoves);
-	void SetVaultSystemEnable(const bool InEnableVaultUp);
-	void FinishVaulting();
-	FVaultParams GetVaultParams() const;
+	const bool GroundMantling();
+	const bool FallingMantling();
+	void MantleEnd();
+
+	FMantleParams GetMantleParams() const;
 
 protected:
 	virtual void InitializeComponent() override;
@@ -107,8 +108,9 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Character Movement: State", Transient)
 	bool bPrePenetrationAdjustmentVelocityValid;
 
-	UPROPERTY(EditDefaultsOnly, Category = "Character Movement: Vaulting")
-	class UVaultAnimationDataAsset* VaultDataAsset;
+	UPROPERTY(EditDefaultsOnly, Category = "Character Movement: Mantle")
+	class UMantleAnimationDataAsset* MantleDataAsset;
+
 
 	////////////////
 	/// LEDGE END
@@ -152,30 +154,10 @@ private:
 
 	//just in air and try move towards wall
 	float WallSlideXYModify = 1.0f;
-
-#pragma region Vaulting
-	void GetObstacleHeight(const FVector& RefPoint, FHitResult& Hit);
-	bool CheckForwardObstacle(ETraceTypeQuery TraceChannel, float Distance, FHitResult& OutHit, const FHitResult* InHit = nullptr);
-	void PhysVaulting(float deltaTime, int32 Iterations);
-	bool TryEnterVault();
-	bool TryVaultThrough(const FHitResult* ForwardHit);
-	bool TryVaultUp(const FHitResult* ForwardHit);
-	bool TryVaultUpInternal(const FHitResult* ForwardHit, FHitResult& CurrentHit);
-	void BeginVaulting();
-	bool TryEnterVaultCheckAngle() const;
-	bool CheckValidVaultDepth(const FHitResult FrontEdge);
-	bool ValidVaultSpeedThreshold() const;
-	float GetVaultDistance() const;
-	const bool TryVaultUpLandingPoint(const FHitResult& CurrentHit, FVector& OutImpactPoint);
-
-	UPROPERTY()
-	FVaultParams VaultParams;
-	FTimerHandle VaultRepeatTimer;
-	float VaultTimeline = 0.0f;
-	float EnterVaultDistance = 0.0f;
-	FTransform VaultingTarget;
-	FTransform ActualVaultingOffset;
-#pragma endregion
+	float InitUnScaledCapsuleHalfHeight;
+	void SavePenetrationAdjustment(const FHitResult& Hit);
+	void ApplyPendingPenetrationAdjustment();
+	float GetSlopeAngle(const FHitResult& InHitResult) const;
 
 #pragma region LedgeEnd
 	FVector GetLedgeInputVelocity() const;
@@ -192,8 +174,32 @@ private:
 	FVector LastFallEdgeInput = FVector::ZeroVector;
 #pragma endregion
 
-	float InitUnScaledCapsuleHalfHeight;
-	void SavePenetrationAdjustment(const FHitResult& Hit);
-	void ApplyPendingPenetrationAdjustment();
-	float GetSlopeAngle(const FHitResult& InHitResult) const;
+#pragma region Mantling
+	UPROPERTY()
+	FMantleParams MantleParams;
+
+	UPROPERTY()
+	FLSComponentAndTransform MantleLedgeLS;
+
+	UPROPERTY()
+	FTransform MantleTarget;
+
+	const bool MantleCheck(const FMantleTraceSettings InTraceSetting);
+	// Mantle Utils
+	FMantleAsset GetMantleAsset(const EMantleType InMantleType) const;
+	FVector GetCapsuleBaseLocation(const float ZOffset) const;
+	FVector GetCapsuleLocationFromBase(const FVector BaseLocation, const float ZOffset) const;
+	bool CapsuleHasRoomCheck(const FVector TargetLocation, const float HeightOffset, const float RadiusOffset) const;
+
+	// MantleCheck Details
+	void TraceForwardToFindWall(const FMantleTraceSettings InTraceSetting, FVector& OutInitialTraceImpactPoint, FVector& OutInitialTraceNormal, bool& OutHitResult);
+	void SphereTraceByMantleCheck(const FMantleTraceSettings TraceSetting, const FVector InitialTraceImpactPoint, const FVector InitialTraceNormal, bool& OutHitResult, FVector& OutDownTraceLocation, UPrimitiveComponent*& OutPrimitiveComponent);
+	void ConvertMantleHeight(const FVector DownTraceLocation, const FVector InitialTraceNormal, bool& OutRoomCheck, FTransform& OutTargetTransform, float& OutMantleHeight);
+	EMantleType GetMantleType(const float InMantleHeight) const;
+
+	// MantleStart Details
+	void MantleStart(const float InMantleHeight, const FLSComponentAndTransform MantleLedgeWorldSpace, const EMantleType InMantleType);
+	void PhysMantling(float deltaTime, int32 Iterations);
+#pragma endregion
+
 };

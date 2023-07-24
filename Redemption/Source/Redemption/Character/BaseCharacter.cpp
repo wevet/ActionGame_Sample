@@ -3,6 +3,11 @@
 
 #include "BaseCharacter.h"
 #include "Redemption.h"
+#include "Misc/WvCommonUtils.h"
+#include "Component/WvCharacterMovementComponent.h"
+#include "Locomotion/LocomotionComponent.h"
+#include "PredictiveFootIKComponent.h"
+
 #include "Components/CapsuleComponent.h"
 #include "Components/InputComponent.h"
 #include "MotionWarpingComponent.h"
@@ -26,14 +31,9 @@
 #include "UObject/UObjectBaseUtility.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "Kismet/KismetSystemLibrary.h"
-#include "Misc/WvCommonUtils.h"
 
 // Misc
 #include "Engine/SkeletalMeshSocket.h"
-
-#include "Component/WvCharacterMovementComponent.h"
-#include "Component/PredictiveIKComponent.h"
-#include "Locomotion/LocomotionComponent.h"
 
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(BaseCharacter)
@@ -75,13 +75,13 @@ ABaseCharacter::ABaseCharacter(const FObjectInitializer& ObjectInitializer)
 	WvMoveComp->MinAnalogWalkSpeed = 20.f;
 
 
-	PredictiveIKComponent = CreateDefaultSubobject<UPredictiveIKComponent>(TEXT("PredictiveIKComponent"));
-	PredictiveIKComponent->bAutoActivate = 1;
-
 	MotionWarpingComponent = CreateDefaultSubobject<UMotionWarpingComponent>(TEXT("MotionWarpingComponent"));
 	MotionWarpingComponent->bSearchForWindowsInAnimsWithinMontages = true;
 
 	CharacterMovementTrajectoryComponent = CreateDefaultSubobject<UCharacterMovementTrajectoryComponent>(TEXT("CharacterMovementTrajectoryComponent"));
+
+	PredictiveFootIKComponent = CreateDefaultSubobject<UPredictiveFootIKComponent>(TEXT("PredictiveFootIKComponent"));
+	PredictiveFootIKComponent->bAutoActivate = 1;
 
 	WvAbilitySystemComponent = CreateDefaultSubobject<UWvAbilitySystemComponent>(TEXT("WvAbilitySystemComponent"));
 	WvAbilitySystemComponent->bAutoActivate = 1;
@@ -131,6 +131,14 @@ void ABaseCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+	if (IsValid(GetCharacterMovement()))
+	{
+		const float Acc = GetCharacterMovement()->GetCurrentAcceleration().Length();
+		const float MaxAcc = GetCharacterMovement()->GetMaxAcceleration();
+		MovementInputAmount = Acc / MaxAcc;
+		bHasMovementInput = (MovementInputAmount > 0.0f);
+	}
+
 	if (IsValid(CharacterMovementTrajectoryComponent))
 	{
 		TrajectorySampleRange = CharacterMovementTrajectoryComponent->GetTrajectory();
@@ -142,41 +150,22 @@ void ABaseCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompo
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
 }
 
-void ABaseCharacter::OnMovementModeChanged(EMovementMode PrevMovementMode, uint8 PreviousCustomMode)
-{
-	Super::OnMovementModeChanged(PrevMovementMode, PreviousCustomMode);
-	if (IsValid(LocomotionComponent))
-	{
-		const auto MovementMode = LocomotionComponent->GetPawnMovementModeChanged(PrevMovementMode, PreviousCustomMode);
-		ILocomotionInterface::Execute_SetLSMovementMode(LocomotionComponent, MovementMode);
-	}
-}
-
 void ABaseCharacter::OnStartCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust)
 {
 	Super::OnStartCrouch(HalfHeightAdjust, ScaledHalfHeightAdjust);
-	if (IsValid(LocomotionComponent))
-	{
-		ILocomotionInterface::Execute_SetLSStanceMode(LocomotionComponent, ELSStance::Crouching);
-	}
+	ILocomotionInterface::Execute_SetLSStanceMode(LocomotionComponent, ELSStance::Crouching);
 }
 
 void ABaseCharacter::OnEndCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust)
 {
 	Super::OnEndCrouch(HalfHeightAdjust, ScaledHalfHeightAdjust);
-	if (IsValid(LocomotionComponent))
-	{
-		ILocomotionInterface::Execute_SetLSStanceMode(LocomotionComponent, ELSStance::Standing);
-	}
+	ILocomotionInterface::Execute_SetLSStanceMode(LocomotionComponent, ELSStance::Standing);
 }
 
 void ABaseCharacter::Landed(const FHitResult& Hit)
 {
 	Super::Landed(Hit);
-	if (IsValid(LocomotionComponent))
-	{
-		LocomotionComponent->OnLanded();
-	}
+	LocomotionComponent->OnLanded();
 }
 
 void ABaseCharacter::Jump()
@@ -187,21 +176,47 @@ void ABaseCharacter::Jump()
 	}
 	else
 	{
-		Super::Jump();
+		const EMovementMode MovementMode = GetWvCharacterMovementComponent()->MovementMode;
+		switch (MovementMode)
+		{
+			case MOVE_None:
+			break;
+			case MOVE_Walking:
+			case MOVE_NavWalking:
+			{
+				if (bHasMovementInput)
+				{
+					const bool bResult = GetWvCharacterMovementComponent()->GroundMantling();
+					if (!bResult)
+					{
+						Super::Jump();
+					}
+				}
+				else
+				{
+					Super::Jump();
+				}
+			}
+			break;
+			case MOVE_Falling:
+			{
+				GetWvCharacterMovementComponent()->FallingMantling();
+			}
+			break;
+			case MOVE_Flying:
+			break;
+			case MOVE_Swimming:
+			break;
+		}
+
 	}
-	if (IsValid(LocomotionComponent))
-	{
-		LocomotionComponent->StartJumping();
-	}
+	LocomotionComponent->StartJumping();
 }
 
 void ABaseCharacter::StopJumping()
 {
 	Super::StopJumping();
-	if (IsValid(LocomotionComponent))
-	{
-		LocomotionComponent->StopJumping();
-	}
+	LocomotionComponent->StopJumping();
 }
 
 void ABaseCharacter::PreInitializeComponents()
@@ -309,10 +324,7 @@ void ABaseCharacter::VelocityModement()
 		GetCharacterMovement()->bOrientRotationToMovement = true;
 	}
 
-	if (IsValid(LocomotionComponent))
-	{
-		ILocomotionInterface::Execute_SetLSRotationMode(LocomotionComponent, ELSRotationMode::VelocityDirection);
-	}
+	ILocomotionInterface::Execute_SetLSRotationMode(LocomotionComponent, ELSRotationMode::VelocityDirection);
 }
 
 void ABaseCharacter::StrafeModement()
@@ -323,26 +335,27 @@ void ABaseCharacter::StrafeModement()
 		GetCharacterMovement()->bOrientRotationToMovement = false;
 	}
 
-	if (IsValid(LocomotionComponent))
-	{
-		ILocomotionInterface::Execute_SetLSRotationMode(LocomotionComponent, ELSRotationMode::LookingDirection);
-	}
+	ILocomotionInterface::Execute_SetLSRotationMode(LocomotionComponent, ELSRotationMode::LookingDirection);
 }
 
 void ABaseCharacter::DoSprinting()
 {
-	if (IsValid(LocomotionComponent))
-	{
-		LocomotionComponent->SetSprintPressed(true);
-	}
+	LocomotionComponent->SetSprintPressed(true);
 }
 
 void ABaseCharacter::DoStopSprinting()
 {
-	if (IsValid(LocomotionComponent))
-	{
-		LocomotionComponent->SetSprintPressed(false);
-	}
+	LocomotionComponent->SetSprintPressed(false);
+}
+
+void ABaseCharacter::DoWalking()
+{
+	LocomotionComponent->SetLSGaitMode_Implementation(ELSGait::Walking);
+}
+
+void ABaseCharacter::DoStopWalking()
+{
+	LocomotionComponent->SetLSGaitMode_Implementation(ELSGait::Running);
 }
 
 // AI Perception
@@ -453,22 +466,6 @@ FVector ABaseCharacter::GetCharacterFeetLocation() const
 	return Position;
 }
 
-void ABaseCharacter::CheckVaultInput(float DeltaTime)
-{
-	UWvCharacterMovementComponent* MovementComp = GetWvCharacterMovementComponent();
-	if (!MovementComp)
-		return;
-
-	if (LocomotionComponent && LocomotionComponent->HasMoving_Implementation())
-	{
-		const bool bDidVault = MovementComp->DoVault(bClientUpdating);
-		if (bDidVault)
-		{
-			// do something
-		}
-	}
-}
-
 float ABaseCharacter::GetDistanceFromToeToKnee(FName KneeL, FName BallL, FName KneeR, FName BallR) const
 {
 	const FVector KneeLPosition = GetMesh()->GetSocketLocation(KneeL);
@@ -483,5 +480,4 @@ float ABaseCharacter::GetDistanceFromToeToKnee(FName KneeL, FName BallL, FName K
 	const float Result = FMath::Max(FMath::Abs(L), FMath::Abs(R));
 	return FMath::Max(GetWvCharacterMovementComponent()->MaxStepHeight, Result);
 }
-
 

@@ -201,14 +201,6 @@ public:
 	FLocomotionStateChangeDelegate OnAimingChangeDelegate;
 
 protected:
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
-	class UWvCharacterMovementComponent* CharacterMovementComponent;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
-	class USkeletalMeshComponent* SkeletalMeshComponent;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
-	class UWvAbilitySystemComponent* AbilitySystemComponent;
 
 #pragma region LS_Property_Edit
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion")
@@ -314,7 +306,6 @@ public:
 private:
 	const bool CanSprint();
 	void ManageCharacterRotation();
-	void AddCharacterRotation(const FRotator AddAmount);
 	void OnLandedCallback();
 
 	void DoWhileGrounded();
@@ -339,13 +330,23 @@ private:
 	void SetForwardOrRightVector(FVector& OutForwardVector, FVector& OutRightVector);
 	const float CalculateRotationRate(const float SlowSpeed, const float SlowSpeedRate, const float FastSpeed, const float FastSpeedRate);
 	const FRotator LookingDirectionWithOffset(const float OffsetInterpSpeed, const float NEAngle, const float NWAngle, const float SEAngle, const float SWAngle, const float Buffer);
-	bool CardinalDirectionAngles(const float Value, const float Min, const float Max, const float Buffer, const ELSCardinalDirection InCardinalDirection) const;
+	bool CardinalDirectionAngles(const float Value, const float Min, const float Max, const float Buffer, const ELSCardinalDirection Direction) const;
 	void CustomAcceleration();
 
 	void DrawDebugDirectionArrow();
 
 	UPROPERTY()
 	TWeakObjectPtr<class ABaseCharacter> Character;
+
+	UPROPERTY()
+	TWeakObjectPtr<class UWvCharacterMovementComponent> CharacterMovementComponent;
+
+	UPROPERTY()
+	TWeakObjectPtr<class USkeletalMeshComponent> SkeletalMeshComponent;
+
+	UPROPERTY()
+	TWeakObjectPtr<class UWvAbilitySystemComponent> AbilitySystemComponent;
+
 
 	UPROPERTY()
 	FRequestAbilityAnimationData RequestAbilityAnimationData;
