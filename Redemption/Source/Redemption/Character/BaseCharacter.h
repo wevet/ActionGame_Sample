@@ -121,14 +121,17 @@ public:
 
 	virtual void DoSprinting();
 	virtual void DoStopSprinting();
+	virtual void VelocityModement();
+	virtual void StrafeModement();
+	void DoStartCrouch();
+	void DoStopCrouch();
+
 
 	UFUNCTION(BlueprintCallable, Category = Movement)
 	virtual void DoWalking();
 
 	UFUNCTION(BlueprintCallable, Category = Movement)
 	virtual void DoStopWalking();
-	virtual void VelocityModement();
-	virtual void StrafeModement();
 
 protected:
 

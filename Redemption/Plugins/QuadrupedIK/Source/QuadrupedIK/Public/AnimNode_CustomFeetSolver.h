@@ -43,14 +43,8 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Settings, meta = (PinShownByDefault))
 	bool bEnableSolver = true;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Settings, meta = (PinShownByDefault))
-	bool bWorkOutsidePIE = false;
-
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Settings)
 	TEnumAsByte<ETraceTypeQuery> TraceChannel = ETraceTypeQuery::TraceTypeQuery1;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Settings)
-	TEnumAsByte<ETraceTypeQuery> AntiTraceChannel = ETraceTypeQuery::TraceTypeQuery2;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Settings)
 	float FPSLerpTreshold = 25.0f;
@@ -60,9 +54,6 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Settings, meta = (PinHiddenByDefault))
 	float LineTraceDownHeight = 5.0f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Settings, meta = (PinHiddenByDefault))
-	bool bUseAntiTraceChannel = false;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Settings, meta = (PinHiddenByDefault))
 	bool bShouldRotateFeet = true;
@@ -96,6 +87,9 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Settings, meta = (PinHiddenByDefault))
 	float MaxLegIKAngle = 65.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Settings)
+	bool bDisplayLineTrace = false;
 #pragma endregion
 
 #pragma region InterpSetting
@@ -120,8 +114,8 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = InterpSettings, meta = (PinHiddenByDefault))
 	float FeetRotationSpeed = 2.0f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = InterpSettings, meta = (PinHiddenByDefault))
-	bool bIgnoreShiftSpeed = false;
+	//UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = InterpSettings, meta = (PinHiddenByDefault))
+	//bool bIgnoreShiftSpeed = false;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = InterpSettings, meta = (PinHiddenByDefault))
 	bool bIgnoreLerping = false;
@@ -154,7 +148,6 @@ public:
 	bool bSolveShouldFail = false;
 	bool bIsInitialized = false;
 	bool bFirstTimeSetup = true;
-	bool bShowTraceInGame = false;
 
 	TArray<FVector> TraceStartList = TArray<FVector>();
 	TArray<FVector> TraceEndList = TArray<FVector>();
@@ -202,40 +195,11 @@ public:
 	TArray<FCompactPoseBoneIndex> CombinedIndices;
 
 public:
-	void ApplyLegFull(
-		const FName FootName, 
-		const int32 SpineIndex,
-		const int32 FeetIndex,
-		FComponentSpacePoseContext& MeshBasesSaved, 
-		TArray<FBoneTransform>& OutBoneTransforms);
+	void ApplyLegFull(const FName FootName, const int32 SpineIndex, const int32 FeetIndex, FComponentSpacePoseContext& MeshBasesSaved, TArray<FBoneTransform>& OutBoneTransforms);
+	void ApplyTwoBoneIK(const FBoneReference IKFootBone, const int32 SpineIndex, const int32 FeetIndex, const TEnumAsByte<enum EBoneControlSpace> EffectorLocationSpace, TEnumAsByte<enum EBoneControlSpace> JointTargetLocationSpace, FComponentSpacePoseContext& MeshBasesSaved, TArray<FBoneTransform>& OutBoneTransforms);
+	void ApplySingleBoneIK(const FBoneReference IKFootBone, const int32 SpineIndex, const int32 FeetIndex, TEnumAsByte<enum EBoneControlSpace> EffectorLocationSpace, TEnumAsByte<enum EBoneControlSpace> JointTargetLocationSpace, FComponentSpacePoseContext& MeshBasesSaved, TArray<FBoneTransform>& OutBoneTransforms);
 
-	void ApplyTwoBoneIK(
-		const FBoneReference IKFootBone, 
-		const int32 SpineIndex,
-		const int32 FeetIndex,
-		const TEnumAsByte<enum EBoneControlSpace> EffectorLocationSpace, 
-		TEnumAsByte<enum EBoneControlSpace> JointTargetLocationSpace, 
-		FComponentSpacePoseContext& MeshBasesSaved, 
-		TArray<FBoneTransform>& OutBoneTransforms);
-
-	void ApplySingleBoneIK(
-		const FBoneReference IKFootBone,
-		const int32 SpineIndex,
-		const int32 FeetIndex,
-		TEnumAsByte<enum EBoneControlSpace> EffectorLocationSpace,
-		TEnumAsByte<enum EBoneControlSpace> JointTargetLocationSpace,
-		FComponentSpacePoseContext& MeshBasesSaved,
-		TArray<FBoneTransform>& OutBoneTransforms);
-
-	FVector ClampRotateVector(
-		const FVector InputPosition,
-		const FVector ForwardVectorDir,
-		const FVector Origin,
-		const float MinClampDegrees,
-		const float MaxClampDegrees,
-		const float HClampMin,
-		const float HClampMax) const;
-
+	FVector ClampRotateVector(const FVector InputPosition, const FVector ForwardVectorDir, const FVector Origin, const float MinClampDegrees, const float MaxClampDegrees, const float HClampMin, const float HClampMax) const;
 	FName GetChildBone(const FName BoneName) const;
 	
 	TArray<FName> BoneArrayMachine(int32 Index, FName StartBoneName, FName EndBoneName, const bool bWasFootBone);
@@ -259,22 +223,9 @@ public:
 		const TArray<FName> TotalSpineBones);
 
 	TArray<FCustomBone_SpineFeetPair> SwapSpinePairs(TArray<FCustomBone_SpineFeetPair>& OutSpineFeetArray);
+	FVector AnimationLocationLerp(const bool bIsHit, const int32 SpineIndex, const int32 FeetIndex, const FVector StartPosition, const FVector EndPosition, const float DeltaSeconds) const;
 
-	FVector AnimationLocationLerp(
-		const bool bIsHit, 
-		const int32 SpineIndex,
-		const int32 FeetIndex,
-		const FVector StartPosition,
-		const FVector EndPosition, 
-		const float DeltaSeconds) const;
-
-	FQuat AnimationQuatSlerp(
-		const bool bIsHit,
-		const int32 SpineIndex,
-		const int32 FeetIndex,
-		const FQuat StartRotation,
-		const FQuat EndRotation,
-		const float DeltaSeconds) const;
+	FQuat AnimationQuatSlerp(const bool bIsHit, const int32 SpineIndex, const int32 FeetIndex, const FQuat StartRotation, const FQuat EndRotation, const float DeltaSeconds) const;
 
 	FRotator RotationFromImpactNormal(
 		const int32 SpineIndex,
@@ -301,26 +252,10 @@ public:
 		const bool bRenderTrace,
 		const bool bDrawLine);
 
-	FRotator BoneRelativeConversion(
-		const FRotator FeetData, 
-		const FCompactPoseBoneIndex ModifyBoneIndex,
-		const FRotator TargetRotation, 
-		const FBoneContainer& BoneContainer, 
-		FCSPose<FCompactPose>& MeshBases) const;
-
-	FRotator BoneInverseConversion(
-		const FCompactPoseBoneIndex ModifyBoneIndex,
-		const FRotator TargetRotation, 
-		const FBoneContainer& BoneContainer, 
-		FCSPose<FCompactPose>& MeshBases) const;
-
+	FRotator BoneRelativeConversion(const FRotator FeetData, const FCompactPoseBoneIndex ModifyBoneIndex, const FRotator TargetRotation, const FBoneContainer& BoneContainer, FCSPose<FCompactPose>& MeshBases) const;
+	FRotator BoneInverseConversion(const FCompactPoseBoneIndex ModifyBoneIndex, const FRotator TargetRotation, const FBoneContainer& BoneContainer, FCSPose<FCompactPose>& MeshBases) const;
 	FVector GetCurrentLocation(FCSPose<FCompactPose>& MeshBases, const FCompactPoseBoneIndex& BoneIndex) const;
-
-	FVector RotateAroundPoint(
-		const FVector InputPoint, 
-		const FVector ForwardVector, 
-		const FVector Origin, 
-		const float Angle) const;
+	FVector RotateAroundPoint(const FVector InputPoint, const FVector ForwardVector, const FVector Origin, const float Angle) const;
 
 public:
 	virtual void Initialize_AnyThread(const FAnimationInitializeContext& Context) override;

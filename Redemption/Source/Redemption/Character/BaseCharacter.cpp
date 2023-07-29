@@ -358,6 +358,24 @@ void ABaseCharacter::DoStopWalking()
 	LocomotionComponent->SetLSGaitMode_Implementation(ELSGait::Running);
 }
 
+void ABaseCharacter::DoStartCrouch()
+{
+	if (bIsCrouched)
+	{
+		Super::UnCrouch();
+		return;
+	}
+	Super::Crouch();
+}
+
+void ABaseCharacter::DoStopCrouch()
+{
+	if (bIsCrouched)
+	{
+		Super::UnCrouch();
+	}
+}
+
 // AI Perception
 // ttps://blog.gamedev.tv/ai-sight-perception-to-custom-points/
 bool ABaseCharacter::CanBeSeenFrom(const FVector& ObserverLocation,	FVector& OutSeenLocation, int32& NumberOfLoSChecksPerformed, float& OutSightStrength, const AActor* IgnoreActor, const bool* bWasVisible, int32* UserData) const

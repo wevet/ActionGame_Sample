@@ -53,6 +53,24 @@ enum class ELSCardinalDirection : uint8
 	South UMETA(DisplayName = "South"),
 };
 
+UENUM(BlueprintType)
+enum class ELSOverlayState : uint8
+{
+	None UMETA(DisplayName = "None"),
+	Masculine  UMETA(DisplayName = "Masculine"),
+	Feminine  UMETA(DisplayName = "Feminine"),
+	Injured UMETA(DisplayName = "Injured"),
+	HandsTied  UMETA(DisplayName = "HandsTied"),
+	Rifle  UMETA(DisplayName = "Rifle"),
+	Pistol1H UMETA(DisplayName = "Pistol1H"),
+	Pistol2H  UMETA(DisplayName = "Pistol2H"),
+	Bow  UMETA(DisplayName = "Bow"),
+	Torch UMETA(DisplayName = "Torch"),
+	Binoculars  UMETA(DisplayName = "Binoculars"),
+	Box UMETA(DisplayName = "Box"),
+	Barrel  UMETA(DisplayName = "Barrel"),
+};
+
 USTRUCT(BlueprintType)
 struct REDEMPTION_API FCameraSettings
 {
@@ -256,6 +274,9 @@ public:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
 	ELSCardinalDirection CardinalDirection;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
+	ELSOverlayState OverlayState;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
 	FVector WorldAcceleration2D;

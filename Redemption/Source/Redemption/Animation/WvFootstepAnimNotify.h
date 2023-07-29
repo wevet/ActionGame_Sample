@@ -7,18 +7,21 @@
 #include "NiagaraSystem.h"
 #include "Sound/SoundBase.h"
 #include "GameplayTagContainer.h"
+#include "Engine/DataTable.h"
+#include "Locomotion/LocomotionSystemTypes.h"
 #include "WvFootstepAnimNotify.generated.h"
 
 USTRUCT(BlueprintType)
-struct FEffectAssets
+struct FFootStepTableRow : public FTableRowBase
 {
 	GENERATED_BODY()
 
+public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
-	TArray<class UNiagaraSystem*> NiagaraSystems;
+	class UNiagaraSystem* NiagaraSystems;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
-	TArray<class USoundBase*> Sounds;
+	class USoundBase* FootStepSound;
 };
 
 /**
@@ -31,19 +34,22 @@ class REDEMPTION_API UWvFootstepAnimNotify : public UAnimNotify
 
 protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+	UDataTable* FootStepDT;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
 	FName SocketName = FName(TEXT("foot_l"));
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
 	TEnumAsByte<EPhysicalSurface> SurfaceTypeInEditor;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
-	FVector TraceEndOffset = FVector::ZeroVector;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
 	float TraceBeginDistance = 10.0f;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
 	float TraceEndDistance = 10.0f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+	float Volume = 1.0f;
 
 protected:
 	virtual void Notify(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, const FAnimNotifyEventReference& EventReference) override;
@@ -55,5 +61,5 @@ private:
 	void TraceFootDone(const FTraceHandle& TraceHandle, FTraceDatum& TraceDatum, USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation);
 	void TriggerEffect(AActor* Owner, UAnimSequenceBase* Animation, const FVector Location, const TEnumAsByte<EPhysicalSurface> SurfaceType);
 
-	FVector GetTraceOffset() const;
+	const ELSGait GetGaitMode(AActor* Owner);
 };

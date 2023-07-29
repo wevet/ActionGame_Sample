@@ -297,6 +297,9 @@ public:
 	FMantleAsset DefaultHighMantleAsset;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FVector LandingLocationOffset = FVector::ZeroVector;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	TEnumAsByte<ETraceTypeQuery> MantleTraceChannel;
 
 	UMantleAnimationDataAsset()

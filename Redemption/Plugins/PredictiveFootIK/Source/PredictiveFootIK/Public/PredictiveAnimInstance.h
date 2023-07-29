@@ -81,7 +81,6 @@ public:
 
 	static float INVALID_TOE_DISTANCE;
 	static float DEFAULT_TOE_HEIGHT_LIMIT;
-	static float TOE_LEAVE_FLOOR_OFFSET;
 
 	/// <summary>
 	/// Predictive Step
@@ -116,15 +115,6 @@ private:
 	void DebugDrawPelvisPath();
 
 public:
-	UPROPERTY(EditAnywhere, Category = "Debug")
-	uint8 bDrawDebug : 1;
-
-	UPROPERTY(EditAnywhere, Category = "Debug")
-	uint8 bDrawDebugForToe : 1;
-
-	UPROPERTY(EditAnywhere, Category = "Debug")
-	uint8 bDrawDebugForPelvis : 1;
-
 	UPROPERTY(EditAnywhere, Category = "Debug")
 	uint8 bDrawTrace : 1;
 
@@ -165,6 +155,9 @@ public:
 	float ToeHeightLimitInterpSpeed = 15.f;
 
 	UPROPERTY(EditAnywhere, Category = "Config")
+	float ToeLeaveFloorOffset = 5.0f;
+
+	UPROPERTY(EditAnywhere, Category = "Config")
 	FName RightToeName;
 
 	UPROPERTY(EditAnywhere, Category = "Config")
@@ -195,9 +188,6 @@ public:
 
 	UPROPERTY()
 	class ACharacter* Character;
-
-	UPROPERTY()
-	class USkeletalMeshComponent* SkeletalMeshComponent;
 
 	UPROPERTY()
 	class UCharacterMovementComponent* CharacterMovementComponent;

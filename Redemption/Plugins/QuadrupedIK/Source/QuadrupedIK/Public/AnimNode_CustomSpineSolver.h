@@ -76,6 +76,9 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = BasicSettings, meta = (PinHiddenByDefault))
 	float MinFeetDistance = 45.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = BasicSettings)
+	bool bDisplayLineTrace = false;
 #pragma endregion
 
 #pragma region MasterCurveSettings
@@ -226,8 +229,12 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = AdvancedSettings, meta = (PinHiddenByDefault))
 	float TraceLerpSpeed = 10.0f;
 
+	// Predictive LerpSpeed
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = AdvancedSettings, meta = (PinHiddenByDefault))
-	float LocationLerpSpeed = 2.0f;
+	float LocationLerpSpeed = 15.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = AdvancedSettings, meta = (PinHiddenByDefault))
+	float MovedLocationLerpSpeed = 5.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = AdvancedSettings, meta = (PinHiddenByDefault))
 	float RotationLerpSpeed = 5.0f;
@@ -323,8 +330,10 @@ public:
 	float UpwardPushSideRotation = 0.0f;
 	float RootRollValue = 0.0f;
 	float RootPitchValue = 0.0f;
+	//float MaximumSpineLength = 0.0f;
 	float SpineMedianResult = 0.0f;
 	float CharacterSpeed = 0.0f;
+	//float diff_heights[6];
 
 	bool bInitializeAnimationArray = false;
 	bool bAtleastOneHit = false;
@@ -385,31 +394,9 @@ public:
 	void ImpactRotation(const int32 PointIndex, FTransform& OutputTransform, FCSPose<FCompactPose>& MeshBases, const bool bIsReverse);
 	FName GetChildBone(const FName BoneName);
 
-	const TArray<FName> BoneArrayMachine(
-		const int32 Index,
-		const FName StartBoneName,
-		const FName EndBoneName,
-		const FName ThighBoneName,
-		const bool bIsFoot);
-
-	const bool CheckLoopExist(
-		const FVector FeetTraceOffset, 
-		const float FeetHeight, 
-		const FName StartBoneName, 
-		const FName InputBoneName, 
-		const FName ThighBoneName,
-		TArray<FName>& OutTotalSpineBoneArray);
-
-	
-	void ApplyLineTrace(
-		const FVector StartLocation,
-		const FVector EndLocation,
-		FHitResult HitResult,
-		const FName BoneText,
-		const FName TraceTag,
-		FHitResult& OutHitResult,
-		const FLinearColor DebugColor,
-		const bool bDrawLine);
+	const TArray<FName> BoneArrayMachine(const int32 Index, const FName StartBoneName, const FName EndBoneName, const FName ThighBoneName, const bool bIsFoot);
+	const bool CheckLoopExist(const FVector FeetTraceOffset, const float FeetHeight, const FName StartBoneName, const FName InputBoneName, const FName ThighBoneName, TArray<FName>& OutTotalSpineBoneArray);
+	void ApplyLineTrace(const FVector StartLocation, const FVector EndLocation, FHitResult HitResult, const FName BoneText, const FName TraceTag, FHitResult& OutHitResult, const FLinearColor DebugColor, const bool bDrawLine);
 
 	TArray<FCustomBone_SpineFeetPair> Swap_SpineFeetPairArray(TArray<FCustomBone_SpineFeetPair>& OutSpineFeetPair);
 	const FCustomBoneSpineOutput BoneSpineProcessor(FTransform& EffectorTransform, FCSPose<FCompactPose>& MeshBases, TArray<FBoneTransform>& OutBoneTransforms);
@@ -417,12 +404,7 @@ public:
 	const FCustomBoneSpineOutput BoneSpineProcessor_Snake(FTransform& EffectorTransform, FCSPose<FCompactPose>& MeshBases, TArray<FBoneTransform>& OutBoneTransforms);
 	const FCustomBoneSpineOutput BoneSpineProcessor_Transform(FCustomBoneSpineOutput& BoneSpine, FCSPose<FCompactPose>& MeshBases, TArray<FBoneTransform>& OutBoneTransforms);
 
-	FRotator BoneRelativeConversion(
-		const FCompactPoseBoneIndex ModifyBoneIndex,
-		const FRotator TargetRotation,
-		const FBoneContainer& BoneContainer,
-		FCSPose<FCompactPose>& MeshBases) const;
-
+	FRotator BoneRelativeConversion(const FCompactPoseBoneIndex ModifyBoneIndex, const FRotator TargetRotation, const FBoneContainer& BoneContainer, FCSPose<FCompactPose>& MeshBases) const;
 	FVector GetCurrentLocation(FCSPose<FCompactPose>& MeshBases, const FCompactPoseBoneIndex& BoneIndex) const;
 
 	void FABRIK_BodySystem(FComponentSpacePoseContext& Output, FBoneReference TipBone, FCSPose<FCompactPose>& MeshBases, TArray<FBoneTransform>& OutBoneTransforms);
@@ -451,6 +433,5 @@ protected:
 
 private:
 	bool LineTraceInitialized = false;
-	bool bDisplayLineTrace = false;
 };
 

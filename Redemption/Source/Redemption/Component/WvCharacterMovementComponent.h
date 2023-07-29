@@ -181,9 +181,6 @@ private:
 	UPROPERTY()
 	FLSComponentAndTransform MantleLedgeLS;
 
-	UPROPERTY()
-	FTransform MantleTarget;
-
 	const bool MantleCheck(const FMantleTraceSettings InTraceSetting);
 	// Mantle Utils
 	FMantleAsset GetMantleAsset(const EMantleType InMantleType) const;

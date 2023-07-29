@@ -79,9 +79,9 @@ ULocomotionComponent::ULocomotionComponent(const FObjectInitializer& ObjectIniti
 	WalkingDeceleration = 400.f;
 	RunningDeceleration = 600.f;
 	SprintingDeceleration = 800.0f;
-	WalkingGroundFriction = 6.0f;
-	RunningGroundFriction = 4.0f;
-	SprintingGroundFriction = 2.0f;
+	WalkingGroundFriction = 12.0f;
+	RunningGroundFriction = 6.0f;
+	SprintingGroundFriction = 4.0f;
 
 	LocomotionEssencialVariables.bRightShoulder = true;
 	LocomotionEssencialVariables.bAiming = false;
@@ -261,6 +261,16 @@ void ULocomotionComponent::SetLSRotationMode_Implementation(const ELSRotationMod
 	OnLSRotationModeChange_Implementation();
 }
 
+void ULocomotionComponent::SetLSOverlayState_Implementation(const ELSOverlayState NewLSOverlayState)
+{
+	if (LocomotionEssencialVariables.OverlayState == NewLSOverlayState)
+	{
+		return;
+	}
+
+	LocomotionEssencialVariables.OverlayState = NewLSOverlayState;
+}
+
 void ULocomotionComponent::OnMovementModeChange_Implementation()
 {
 	switch (LocomotionEssencialVariables.LSPrevMovementMode)
@@ -400,6 +410,11 @@ ELSRotationMode ULocomotionComponent::GetLSRotationMode_Implementation() const
 ELSCardinalDirection ULocomotionComponent::GetCardinalDirection_Implementation() const
 {
 	return LocomotionEssencialVariables.CardinalDirection;
+}
+
+ELSOverlayState ULocomotionComponent::GetLSOverlayState_Implementation() const
+{
+	return LocomotionEssencialVariables.OverlayState;
 }
 
 bool ULocomotionComponent::HasMovementInput_Implementation() const

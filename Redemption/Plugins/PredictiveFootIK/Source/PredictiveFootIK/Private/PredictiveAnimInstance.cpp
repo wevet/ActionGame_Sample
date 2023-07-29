@@ -10,8 +10,20 @@
 
 float UPredictiveAnimInstance::INVALID_TOE_DISTANCE = -9999.f;
 float UPredictiveAnimInstance::DEFAULT_TOE_HEIGHT_LIMIT = -999.f;
-float UPredictiveAnimInstance::TOE_LEAVE_FLOOR_OFFSET = 5.f;
 
+
+#include UE_INLINE_GENERATED_CPP_BY_NAME(PredictiveAnimInstance)
+
+
+#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
+static TAutoConsoleVariable<int32> CVarDebugPredictiveFootIK(
+	TEXT("wv.DebugPredictiveFootIK"),
+	0,
+	TEXT("DebugPredictiveFootIK ledge end\n")
+	TEXT("<=0: Debug off\n")
+	TEXT(">=1: Debug on\n"),
+	ECVF_Default);
+#endif
 
 #pragma region ToePathInfo
 void FToePathInfo::SetToeContactFloorHeight(float InHeight)
@@ -103,9 +115,6 @@ bool FToePathInfo::IsContacStart() const
 
 UPredictiveAnimInstance::UPredictiveAnimInstance()
 {
-	bDrawDebug = false;
-	bDrawDebugForToe = false;
-	bDrawDebugForPelvis = false;
 	bDrawTrace = false;
 
 	bEnableCurvePredictive = false;
@@ -118,34 +127,30 @@ UPredictiveAnimInstance::UPredictiveAnimInstance()
 
 void UPredictiveAnimInstance::NativeInitializeAnimation()
 {
+	Super::NativeInitializeAnimation();
 }
 
 void UPredictiveAnimInstance::NativeBeginPlay()
 {
-	if (TryGetPawnOwner())
+	Super::NativeBeginPlay();
+
+	Character = Cast<ACharacter>(TryGetPawnOwner());
+
+	if (Character)
 	{
-		Character = Cast<ACharacter>(TryGetPawnOwner());
-		if (Character)
+		CharacterMovementComponent = Character->GetCharacterMovement();
+
+		UActorComponent* Component = Character->GetComponentByClass(UPredictiveFootIKComponent::StaticClass());
+		if (Component)
 		{
-			CharacterMovementComponent = Character->GetCharacterMovement();
-			SkeletalMeshComponent = Character->GetMesh();
-
-			//CharacterMaxStepHeight = MovementComp->MaxStepHeight;
-			//CharacterWalkableFloorZ = MovementComp->GetWalkableFloorZ();
-
-			const FVector RightInitialToePos = SkeletalMeshComponent->GetSkinnedAsset()->GetComposedRefPoseMatrix(RightToeName).GetOrigin();
-			const FVector LeftInitialToePos = SkeletalMeshComponent->GetSkinnedAsset()->GetComposedRefPoseMatrix(LeftToeName).GetOrigin();
-
-			RightToePathInfo.SetToeContactFloorHeight(RightInitialToePos.Z + TOE_LEAVE_FLOOR_OFFSET);
-			LeftToePathInfo.SetToeContactFloorHeight(LeftInitialToePos.Z + TOE_LEAVE_FLOOR_OFFSET);
-
-			UActorComponent* Comp = Character->GetComponentByClass(UPredictiveFootIKComponent::StaticClass());
-			if (Comp)
-			{
-				PredictiveFootIKComponent = Cast<UPredictiveFootIKComponent>(Comp);
-			}
+			PredictiveFootIKComponent = Cast<UPredictiveFootIKComponent>(Component);
 		}
 	}
+
+	const FVector RightInitialToePos = GetOwningComponent()->GetSkinnedAsset()->GetComposedRefPoseMatrix(RightToeName).GetOrigin();
+	const FVector LeftInitialToePos = GetOwningComponent()->GetSkinnedAsset()->GetComposedRefPoseMatrix(LeftToeName).GetOrigin();
+	RightToePathInfo.SetToeContactFloorHeight(RightInitialToePos.Z + ToeLeaveFloorOffset);
+	LeftToePathInfo.SetToeContactFloorHeight(LeftInitialToePos.Z + ToeLeaveFloorOffset);
 }
 
 void UPredictiveAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
@@ -166,11 +171,11 @@ void UPredictiveAnimInstance::TickPredictive(float DeltaSeconds)
 {
 	Step0_Prepare();
 
-	if (!CharacterMovementComponent->GetCurrentAcceleration().IsNearlyZero() && ValidPredictiveWeight)
+	if (CharacterMovementComponent->IsMovingOnGround() && !CharacterMovementComponent->GetCurrentAcceleration().IsNearlyZero() && ValidPredictiveWeight)
 	{
 		// tick contact state and path
-		RightToePathInfo.Update(SkeletalMeshComponent, RightToeCSPos, LeftToeCSPos, EMotionFoot::Right, RightToeName);
-		LeftToePathInfo.Update(SkeletalMeshComponent, RightToeCSPos, LeftToeCSPos, EMotionFoot::Left, LeftToeName);
+		RightToePathInfo.Update(GetOwningComponent(), RightToeCSPos, LeftToeCSPos, EMotionFoot::Right, RightToeName);
+		LeftToePathInfo.Update(GetOwningComponent(), RightToeCSPos, LeftToeCSPos, EMotionFoot::Left, LeftToeName);
 
 		// r toe contact pos predictive, and compare with last pos
 		bool RightEndPosChanged = false;
@@ -191,9 +196,8 @@ void UPredictiveAnimInstance::TickPredictive(float DeltaSeconds)
 		bool IsValidForRightEndPos = false;
 		if (IsValidForRightPredictive)
 		{
-			IsValidForRightEndPos = Step2_TraceToePath(RightToePath, RightToeHeightLimit, RigthtToeEndDistance,
-				RightEndPosChanged, RightToePathInfo.LeaveFloorPos, RightToePathInfo.CurToePos, RightToeEndPos,
-				RightToeName, DeltaSeconds);
+			IsValidForRightEndPos = Step2_TraceToePath(RightToePath, RightToeHeightLimit, RigthtToeEndDistance, RightEndPosChanged, 
+				RightToePathInfo.LeaveFloorPos, RightToePathInfo.CurToePos, RightToeEndPos, RightToeName, DeltaSeconds);
 		}
 		else
 		{
@@ -205,9 +209,8 @@ void UPredictiveAnimInstance::TickPredictive(float DeltaSeconds)
 		bool IsValidForLeftEndPos = false;
 		if (IsValidForLeftPredictive)
 		{
-			IsValidForLeftEndPos = Step2_TraceToePath(LeftToePath, LeftToeHeightLimit, LeftToeEndDistance,
-				LeftEndPosChanged, LeftToePathInfo.LeaveFloorPos, LeftToePathInfo.CurToePos, LeftToeEndPos,
-				LeftToeName, DeltaSeconds);
+			IsValidForLeftEndPos = Step2_TraceToePath(LeftToePath, LeftToeHeightLimit, LeftToeEndDistance, LeftEndPosChanged, 
+				LeftToePathInfo.LeaveFloorPos, LeftToePathInfo.CurToePos, LeftToeEndPos, LeftToeName, DeltaSeconds);
 		}
 		else
 		{
@@ -219,7 +222,8 @@ void UPredictiveAnimInstance::TickPredictive(float DeltaSeconds)
 		{
 			//UE_LOG(LogPredictiveFootIK, Log, TEXT("HeightLimit R: %f L: %f"), RightToeHeightLimit, LeftToeHeightLimit);
 
-			if (bDrawDebug && bDrawDebugForToe)
+#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
+			if (CVarDebugPredictiveFootIK.GetValueOnAnyThread() > 0)
 			{
 				if (IsValidForRightEndPos)
 				{
@@ -230,15 +234,18 @@ void UPredictiveAnimInstance::TickPredictive(float DeltaSeconds)
 					DebugDrawToePath(LeftToePath, LeftToePathInfo.CurToePos, FLinearColor::Green);
 				}
 			}
+#endif
 
 			RightToePredictivePos = IsValidForRightEndPos ? RightToePath[RightToePath.Num() - 1] : FVector::ZeroVector;
 			LeftToePredictivePos = IsValidForLeftEndPos ? LeftToePath[LeftToePath.Num() - 1] : FVector::ZeroVector;
 			Step3_CorrectPelvisHegiht(RigthtToeEndDistance, LeftToeEndDistance, RightToePredictivePos, LeftToePredictivePos, DeltaSeconds);
 
-			if (bDrawDebug && bDrawDebugForPelvis)
+#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
+			if (CVarDebugPredictiveFootIK.GetValueOnAnyThread() > 0)
 			{
 				DebugDrawPelvisPath();
 			}
+#endif
 		}
 		else
 		{
@@ -324,7 +331,7 @@ bool UPredictiveAnimInstance::Step2_TraceToePath(TArray<FVector>& OutToePath, fl
 
 	if (OutToePath.Num() > 1)
 	{
-		FVector ToeEndCSPos = SkeletalMeshComponent->GetComponentToWorld().InverseTransformPositionNoScale(OutToePath[OutToePath.Num() - 1]);
+		FVector ToeEndCSPos = GetOwningComponent()->GetComponentToWorld().InverseTransformPositionNoScale(OutToePath[OutToePath.Num() - 1]);
 		OutToeEndDistance = ToeEndCSPos.Y;
 
 		//UE_LOG(LogPredictiveFootIK, Log, TEXT("%s Predictive CSPos Dist: %f"), *InToeName.ToString(), ToeEndCSPos.Y);
@@ -375,8 +382,8 @@ void UPredictiveAnimInstance::Step3_CorrectPelvisHegiht(const float& InRightEndD
 	}
 
 	//UE_LOG(LogPredictiveFootIK, Log, TEXT("FootStart Height: %f FootEnd Height: %f |%s"), FootStartPos.Z, FootEndPos.Z, *MotionToeName.ToString());
-	FVector FootStartPosCSPos = SkeletalMeshComponent->GetComponentToWorld().InverseTransformPositionNoScale(FootStartPos);
-	FVector FootEndPosCSPos = SkeletalMeshComponent->GetComponentToWorld().InverseTransformPositionNoScale(FootEndPos);
+	FVector FootStartPosCSPos = GetOwningComponent()->GetComponentToWorld().InverseTransformPositionNoScale(FootStartPos);
+	FVector FootEndPosCSPos = GetOwningComponent()->GetComponentToWorld().InverseTransformPositionNoScale(FootEndPos);
 
 	//UE_LOG(LogPredictiveFootIK, Log, TEXT("FootStart Dist: %f FootEnd Dist: %f |%s"), FootStartPosCSPos.Y, FootEndPosCSPos.Y, *MotionToeName.ToString());
 	PelvisOriginOffset = FootStartPos.Z - CurCharacterBottomLocation.Z;
@@ -638,14 +645,15 @@ float UPredictiveAnimInstance::GetToeHeightLimitByPathCurve(const FVector& InToe
 		float Traslation2DSize = Traslation2D.Size();
 		float ProjectLength = UKismetMathLibrary::Dot_VectorVector(Traslation2D, CurPos2D - StartPos2D) / Traslation2DSize;
 
-		for (int32 i = 1; i < Num; ++i)
+		for (int32 Index = 1; Index < Num; ++Index)
 		{
-			if (ProjectLength * ProjectLength <= (InToePath[i] - StartPos2D).SizeSquared2D())
+			if (ProjectLength * ProjectLength <= (InToePath[Index] - StartPos2D).SizeSquared2D())
 			{
-				float BeforeSize = (InToePath[i - 1] - StartPos2D).Size2D();
-				float AfterSize = (InToePath[i] - StartPos2D).Size2D();
-				UE_LOG(LogPredictiveFootIK, Log, TEXT("ToeHeight Index i: %d"), i);
-				return UKismetMathLibrary::MapRangeClamped(ProjectLength - BeforeSize, 0.f, AfterSize - BeforeSize, InToePath[i - 1].Z, InToePath[i].Z);
+				const float BeforeSize = (InToePath[Index - 1] - StartPos2D).Size2D();
+				const float AfterSize = (InToePath[Index] - StartPos2D).Size2D();
+				//UE_LOG(LogPredictiveFootIK, Log, TEXT("ToeHeight Index i: %d"), i);
+				return UKismetMathLibrary::MapRangeClamped(ProjectLength - BeforeSize, 0.f, AfterSize - BeforeSize, 
+					InToePath[Index - 1].Z, InToePath[Index].Z);
 			}
 		}
 

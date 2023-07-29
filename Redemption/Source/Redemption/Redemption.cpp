@@ -4,12 +4,6 @@
 #include "Modules/ModuleManager.h"
 
 
-UE_DEFINE_GAMEPLAY_TAG(TAG_Character_CombatReady, "Character.Combat.Ready");
-
-// foot step
-UE_DEFINE_GAMEPLAY_TAG(TAG_Character_Footstep_Left, "Character.Locomotion.Footstep.Left");
-UE_DEFINE_GAMEPLAY_TAG(TAG_Character_Footstep_Right, "Character.Locomotion.Footstep.Right");
-
 // climbing 
 UE_DEFINE_GAMEPLAY_TAG(TAG_Locomotion_ClimbingJump, "Locomotion.Climbing.Jump");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Locomotion_ClimbingMovement, "Locomotion.Climbing.Movement");

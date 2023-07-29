@@ -89,6 +89,10 @@ public:
 	virtual void SetLSRotationMode_Implementation(const ELSRotationMode NewLSRotationMode) override;
 
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Component|LocomotionInterface")
+	void SetLSOverlayState(const ELSOverlayState NewLSOverlayState);
+	virtual void SetLSOverlayState_Implementation(const ELSOverlayState NewLSOverlayState) override;
+
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Component|LocomotionInterface")
 	ELSMovementMode GetLSMovementMode() const;
 	virtual ELSMovementMode GetLSMovementMode_Implementation() const override;
 
@@ -107,6 +111,10 @@ public:
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Component|LocomotionInterface")
 	ELSCardinalDirection GetCardinalDirection() const;
 	virtual ELSCardinalDirection GetCardinalDirection_Implementation() const override;
+
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Component|LocomotionInterface")
+	ELSOverlayState GetLSOverlayState() const;
+	virtual ELSOverlayState GetLSOverlayState_Implementation() const override;
 
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Component|LocomotionInterface")
 	void OnMovementModeChange();

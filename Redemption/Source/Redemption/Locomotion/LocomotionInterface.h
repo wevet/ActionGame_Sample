@@ -36,6 +36,9 @@ public:
 	void SetLSRotationMode(const ELSRotationMode NewLSRotationMode);
 
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "LocomotionInterface")
+	void SetLSOverlayState(const ELSOverlayState NewLSOverlayState);
+
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "LocomotionInterface")
 	ELSMovementMode GetLSMovementMode() const;
 
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "LocomotionInterface")
@@ -49,6 +52,9 @@ public:
 
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "LocomotionInterface")
 	ELSCardinalDirection GetCardinalDirection() const;
+
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "LocomotionInterface")
+	ELSOverlayState GetLSOverlayState() const;
 
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "LocomotionInterface")
 	void OnMovementModeChange();

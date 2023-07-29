@@ -1796,11 +1796,12 @@ void UWvCharacterMovementComponent::MantleStart(const float InMantleHeight, cons
 	MantleParams.StartingPosition = UKismetMathLibrary::MapRangeClamped(InMantleHeight, LowHeight, HighHeight, LowStartPosition, HighStartPosition);
 
 	MantleLedgeLS = UWvCommonUtils::ComponentWorldToLocal(MantleLedgeWorldSpace);
-	MantleTarget = MantleLedgeWorldSpace.Transform;
+	const FTransform MantleTarget = MantleLedgeWorldSpace.Transform;
 
 	const float CapsuleHeight = BaseCharacter->GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
 	FVector MantleLocation = MantleTarget.GetLocation();
 	MantleLocation.Z -= CapsuleHeight;
+	MantleLocation += MantleDataAsset->LandingLocationOffset;
 
 	if (!MantleParams.AnimMontage)
 	{

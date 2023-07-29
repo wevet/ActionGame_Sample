@@ -74,6 +74,12 @@ void APlayerCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerIn
 			EnhancedInputComponent->BindAction(StrafeAction, ETriggerEvent::Triggered, this, &ABaseCharacter::StrafeModement);
 			EnhancedInputComponent->BindAction(StrafeAction, ETriggerEvent::Completed, this, &ABaseCharacter::VelocityModement);
 		}
+
+		if (CrouchAction)
+		{
+			EnhancedInputComponent->BindAction(CrouchAction, ETriggerEvent::Triggered, this, &ABaseCharacter::DoStartCrouch);
+			EnhancedInputComponent->BindAction(CrouchAction, ETriggerEvent::Completed, this, &ABaseCharacter::DoStopCrouch);
+		}
 	}
 }
 
