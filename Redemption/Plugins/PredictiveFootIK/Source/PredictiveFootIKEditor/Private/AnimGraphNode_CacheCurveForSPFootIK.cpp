@@ -1,4 +1,4 @@
-﻿// Copyright Epic Games, Inc. All Rights Reserved.
+﻿// Copyright 2022 wevet works All Rights Reserved.
 
 #include "AnimGraphNode_CacheCurveForSPFootIK.h"
 #include "Textures/SlateIcon.h"

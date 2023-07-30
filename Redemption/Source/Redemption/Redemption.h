@@ -1,4 +1,4 @@
-// Copyright Epic Games, Inc. All Rights Reserved.
+// Copyright 2022 wevet works All Rights Reserved.
 
 #pragma once
 
@@ -6,7 +6,7 @@
 #include "NativeGameplayTags.h"
 
 
-REDEMPTION_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Gameplay_MovementStopped);
+REDEMPTION_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Character_StateMelee);
 
 
 REDEMPTION_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Locomotion_ClimbingJump);

@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+// Copyright 2022 wevet works All Rights Reserved.
 
 #pragma once
 
@@ -301,6 +301,9 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	TEnumAsByte<ETraceTypeQuery> MantleTraceChannel;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	bool bDebugDrawTrace = false;
 
 	UMantleAnimationDataAsset()
 	{

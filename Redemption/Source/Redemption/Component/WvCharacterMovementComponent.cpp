@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+// Copyright 2022 wevet works All Rights Reserved.
 
 #include "WvCharacterMovementComponent.h"
 #include "Redemption.h"
@@ -1603,7 +1603,7 @@ bool UWvCharacterMovementComponent::CapsuleHasRoomCheck(const FVector TargetLoca
 		ProfileName,
 		false,
 		Ignore,
-		EDrawDebugTrace::Type::ForDuration,
+		MantleDataAsset->bDebugDrawTrace ? EDrawDebugTrace::Type::ForDuration : EDrawDebugTrace::Type::None,
 		HitData,
 		true,
 		FLinearColor::Green,
@@ -1647,7 +1647,7 @@ void UWvCharacterMovementComponent::TraceForwardToFindWall(const FMantleTraceSet
 		MantleDataAsset->MantleTraceChannel,
 		false,
 		Ignore,
-		EDrawDebugTrace::Type::None,
+		MantleDataAsset->bDebugDrawTrace ? EDrawDebugTrace::Type::ForOneFrame : EDrawDebugTrace::Type::None,
 		HitData,
 		true,
 		FLinearColor::Black,
@@ -1700,7 +1700,7 @@ void UWvCharacterMovementComponent::SphereTraceByMantleCheck(const FMantleTraceS
 		MantleDataAsset->MantleTraceChannel,
 		false,
 		Ignore,
-		EDrawDebugTrace::Type::ForDuration,
+		MantleDataAsset->bDebugDrawTrace ? EDrawDebugTrace::Type::ForDuration : EDrawDebugTrace::Type::None,
 		HitData,
 		true,
 		FLinearColor::Yellow,
@@ -1735,8 +1735,11 @@ void UWvCharacterMovementComponent::ConvertMantleHeight(const FVector DownTraceL
 	const FVector Diff = (RelativeLocation - GetActorLocation());
 	OutMantleHeight = Diff.Z;
 
-	DrawDebugPoint(GetWorld(), RelativeLocation, 30.0f, FColor::Blue, false, 5.0f);
-	DrawDebugPoint(GetWorld(), DownTraceLocation, 30.0f, FColor::Cyan, false, 5.0f);
+	if (MantleDataAsset->bDebugDrawTrace)
+	{
+		DrawDebugPoint(GetWorld(), RelativeLocation, 30.0f, FColor::Blue, false, 5.0f);
+		DrawDebugPoint(GetWorld(), DownTraceLocation, 30.0f, FColor::Cyan, false, 5.0f);
+	}
 }
 
 // step4 Determine the Mantle Type by checking the movement mode and Mantle Height.
@@ -1819,7 +1822,10 @@ void UWvCharacterMovementComponent::MantleStart(const float InMantleHeight, cons
 		MotionWarpingComponent->AddOrUpdateWarpTarget(WarpingTarget);
 	}
 
-	DrawDebugLine(GetWorld(), UpdatedComponent->GetComponentLocation(), MantleTarget.GetLocation(), FColor::Blue, false, 5.0f);
+	if (MantleDataAsset->bDebugDrawTrace)
+	{
+		DrawDebugLine(GetWorld(), UpdatedComponent->GetComponentLocation(), MantleTarget.GetLocation(), FColor::Blue, false, 5.0f);
+	}
 
 	UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(CharacterOwner, TAG_Locomotion_Mantling, FGameplayEventData());
 	SetMovementMode(MOVE_Custom, CUSTOM_MOVE_Mantling);
@@ -1895,9 +1901,9 @@ void UWvCharacterMovementComponent::PhysMantling(float deltaTime, int32 Iteratio
 
 		if (!bSteppedUp)
 		{
-			//adjust and try again
 			HandleImpact(Hit, deltaTime, Adjusted);
-			SlideAlongSurface(Adjusted, (1.f - Hit.Time), Hit.Normal, Hit, true);
+			Super::SlideAlongSurface(Adjusted, (1.f - Hit.Time), Hit.Normal, Hit, true);
+			UE_LOG(LogTemp, Log, TEXT("adjust and try again => %s"), *FString(__FUNCTION__));
 		}
 	}
 

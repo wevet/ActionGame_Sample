@@ -1,4 +1,4 @@
-﻿// Copyright Epic Games, Inc. All Rights Reserved.
+﻿// Copyright 2022 wevet works All Rights Reserved.
 
 #include "AnimNode_CacheCurveForSPFootIK.h"
 #include "AnimationRuntime.h"

@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+// Copyright 2022 wevet works All Rights Reserved.
 
 
 #include "BaseCharacter.h"
@@ -68,7 +68,7 @@ ABaseCharacter::ABaseCharacter(const FObjectInitializer& ObjectInitializer)
 	WvMoveComp->bAllowPhysicsRotationDuringAnimRootMotion = false;
 	WvMoveComp->GetNavAgentPropertiesRef().bCanCrouch = true;
 	WvMoveComp->bCanWalkOffLedgesWhenCrouching = true;
-	WvMoveComp->SetCrouchedHalfHeight(65.0f);
+	WvMoveComp->SetCrouchedHalfHeight(55.0f);
 
 	WvMoveComp->JumpZVelocity = 500.f;
 	WvMoveComp->AirControl = 0.35f;
@@ -374,6 +374,18 @@ void ABaseCharacter::DoStopCrouch()
 	{
 		Super::UnCrouch();
 	}
+}
+
+void ABaseCharacter::DoStartAiming()
+{
+	StrafeModement();
+	DoWalking();
+	LocomotionComponent->SetLSAiming_Implementation(true);
+}
+
+void ABaseCharacter::DoStopAiming()
+{
+	LocomotionComponent->SetLSAiming_Implementation(false);
 }
 
 // AI Perception

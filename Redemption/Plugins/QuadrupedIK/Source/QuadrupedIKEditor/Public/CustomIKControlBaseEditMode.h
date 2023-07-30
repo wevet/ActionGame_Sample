@@ -4,7 +4,7 @@
 #if	ENGINE_MAJOR_VERSION == 4
 
 
-// Fill out your copyright notice in the Description page of Project Settings.
+// Copyright 2022 wevet works All Rights Reserved.
 #pragma once
 
 #include "CoreMinimal.h"

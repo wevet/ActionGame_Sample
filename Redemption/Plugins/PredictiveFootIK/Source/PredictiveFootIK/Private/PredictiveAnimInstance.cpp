@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+// Copyright 2022 wevet works All Rights Reserved.
 
 #include "PredictiveAnimInstance.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -171,7 +171,7 @@ void UPredictiveAnimInstance::TickPredictive(float DeltaSeconds)
 {
 	Step0_Prepare();
 
-	if (CharacterMovementComponent->IsMovingOnGround() && !CharacterMovementComponent->GetCurrentAcceleration().IsNearlyZero() && ValidPredictiveWeight)
+	if (!CharacterMovementComponent->GetCurrentAcceleration().IsNearlyZero() && ValidPredictiveWeight)
 	{
 		// tick contact state and path
 		RightToePathInfo.Update(GetOwningComponent(), RightToeCSPos, LeftToeCSPos, EMotionFoot::Right, RightToeName);

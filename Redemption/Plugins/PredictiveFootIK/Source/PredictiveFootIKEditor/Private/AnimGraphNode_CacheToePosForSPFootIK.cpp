@@ -1,18 +1,15 @@
-﻿// Copyright Epic Games, Inc. All Rights Reserved.
+﻿// Copyright 2022 wevet works All Rights Reserved.
 
 #include "AnimGraphNode_CacheToePosForSPFootIK.h"
 #include "UnrealWidget.h"
 #include "AnimNodeEditModes.h"
 #include "Kismet2/CompilerResultsLog.h"
 
-/////////////////////////////////////////////////////
-// UAnimGraphNode_CacheToePosForSPFootIK
 
 #define LOCTEXT_NAMESPACE "CacheToePosForSPFootIK"
 
 void UAnimGraphNode_CacheToePosForSPFootIK::ValidateAnimNodeDuringCompilation(USkeleton* ForSkeleton, FCompilerResultsLog& MessageLog)
 {
-	// Temporary fix where skeleton is not fully loaded during AnimBP compilation and thus virtual bone name check is invalid UE-39499 (NEED FIX) 
 	if (ForSkeleton && !ForSkeleton->HasAnyFlags(RF_NeedPostLoad))
 	{
 		if (ForSkeleton->GetReferenceSkeleton().FindBoneIndex(Node.RightToe.BoneName) == INDEX_NONE)

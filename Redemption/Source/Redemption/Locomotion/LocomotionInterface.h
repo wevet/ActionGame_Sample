@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+// Copyright 2022 wevet works All Rights Reserved.
 
 #pragma once
 
@@ -112,5 +112,8 @@ public:
 
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "LocomotionInterface")
 	void SetRightShoulder(const bool NewRightShoulder);
+
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "LocomotionInterface")
+	const FTransform GetPivotOverlayTansform();
 
 };

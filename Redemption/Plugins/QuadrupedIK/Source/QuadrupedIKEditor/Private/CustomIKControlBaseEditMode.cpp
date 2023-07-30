@@ -1,9 +1,8 @@
+// Copyright 2022 wevet works All Rights Reserved.
 
 // In UE4, FAnimNodeEditMode didn't have a module API, so I had to copy-paste the contents of FAnimNodeEditMode to an external module
 // I will remove this class in the future when I turn off UE4 support.
 #if	ENGINE_MAJOR_VERSION == 4
-
-// Fill out your copyright notice in the Description page of Project Settings.
 
 #include "CustomIKControlBaseEditMode.h"
 #include "EditorViewportClient.h"

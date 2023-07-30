@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+// Copyright 2022 wevet works All Rights Reserved.
 
 
 #include "WvFootstepAnimNotify.h"
@@ -127,7 +127,7 @@ void UWvFootstepAnimNotify::TriggerEffect(AActor* Owner, UAnimSequenceBase* Anim
 		}
 	}
 
-	UE_LOG(LogTemp, Log, TEXT("SurfaceName => %s"), *SurfaceName);
+	//UE_LOG(LogTemp, Log, TEXT("SurfaceName => %s"), *SurfaceName);
 }
 
 

@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+// Copyright 2022 wevet works All Rights Reserved.
 
 #pragma once
 
@@ -57,14 +57,9 @@ UENUM(BlueprintType)
 enum class ELSOverlayState : uint8
 {
 	None UMETA(DisplayName = "None"),
-	Masculine  UMETA(DisplayName = "Masculine"),
-	Feminine  UMETA(DisplayName = "Feminine"),
 	Injured UMETA(DisplayName = "Injured"),
-	HandsTied  UMETA(DisplayName = "HandsTied"),
 	Rifle  UMETA(DisplayName = "Rifle"),
-	Pistol1H UMETA(DisplayName = "Pistol1H"),
-	Pistol2H  UMETA(DisplayName = "Pistol2H"),
-	Bow  UMETA(DisplayName = "Bow"),
+	Pistol UMETA(DisplayName = "Pistol"),
 	Torch UMETA(DisplayName = "Torch"),
 	Binoculars  UMETA(DisplayName = "Binoculars"),
 	Box UMETA(DisplayName = "Box"),
@@ -148,11 +143,11 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	struct FCameraSettings Aiming;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	struct FCameraSettings FPS;
-	
 	//UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	//struct FCameraSettings Ragdoll;
+	//struct FCameraSettings FPS;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	struct FCameraSettings Ragdoll;
 
 public:
 	FCameraSettingsTarget()

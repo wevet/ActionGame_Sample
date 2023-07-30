@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+// Copyright 2022 wevet works All Rights Reserved.
 
 #pragma once
 
@@ -36,12 +36,6 @@ protected:
 	TMap<ELSGait, FGameplayTag> GaitTagMap;
 
 public:
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	FGameplayTag StanceControlTag;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	FGameplayTag AimingControlTag;
-
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FGameplayTag AimingTag;
 
@@ -191,6 +185,10 @@ public:
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Component|LocomotionInterface")
 	void SetRightShoulder(const bool NewRightShoulder);
 	virtual void SetRightShoulder_Implementation(const bool NewRightShoulder) override;
+
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Component|LocomotionInterface")
+	const FTransform GetPivotOverlayTansform();
+	virtual const FTransform GetPivotOverlayTansform_Implementation() override;
 #pragma endregion
 
 	UPROPERTY(BlueprintAssignable, Category = "Locomotion")
@@ -307,8 +305,6 @@ public:
 	const UWvAbilitySystemComponent* FindAbilitySystemComponent();
 	FRequestAbilityAnimationData GetRequestAbilityAnimationData() const;
 	UAnimMontage* GetCurrentMontage() const;
-	void HandleCrouchAction();
-	void AimingAction();
 
 
 private:

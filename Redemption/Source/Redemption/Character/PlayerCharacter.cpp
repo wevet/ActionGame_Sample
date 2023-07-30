@@ -1,16 +1,18 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+// Copyright 2022 wevet works All Rights Reserved.
 
 #include "PlayerCharacter.h"
+#include "Component/WvSpringArmComponent.h"
+#include "Component/WvCameraFollowComponent.h"
+#include "Locomotion/LocomotionComponent.h"
+
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/InputComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/Controller.h"
-//#include "GameFramework/SpringArmComponent.h"
-#include "Component/WvSpringArmComponent.h"
-#include "Locomotion/LocomotionComponent.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
+
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(PlayerCharacter)
 
@@ -29,6 +31,9 @@ APlayerCharacter::APlayerCharacter(const FObjectInitializer& ObjectInitializer) 
 	FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
 	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName);
 	FollowCamera->bUsePawnControlRotation = false;
+
+	WvCameraFollowComponent = CreateDefaultSubobject<UWvCameraFollowComponent>(TEXT("WvCameraFollowComponent"));
+
 }
 
 void APlayerCharacter::BeginPlay()
@@ -71,14 +76,16 @@ void APlayerCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerIn
 
 		if (StrafeAction)
 		{
-			EnhancedInputComponent->BindAction(StrafeAction, ETriggerEvent::Triggered, this, &ABaseCharacter::StrafeModement);
-			EnhancedInputComponent->BindAction(StrafeAction, ETriggerEvent::Completed, this, &ABaseCharacter::VelocityModement);
+			EnhancedInputComponent->BindAction(StrafeAction, ETriggerEvent::Canceled, this, &APlayerCharacter::ToggleRotationMode);
+			EnhancedInputComponent->BindAction(StrafeAction, ETriggerEvent::Completed, this, &APlayerCharacter::ToggleAimMode);
+			//EnhancedInputComponent->BindAction(StrafeAction, ETriggerEvent::Ongoing, this, &APlayerCharacter::ToggleAimMode);
+			//EnhancedInputComponent->BindAction(StrafeAction, ETriggerEvent::Completed, this, &ABaseCharacter::VelocityModement);
 		}
 
 		if (CrouchAction)
 		{
-			EnhancedInputComponent->BindAction(CrouchAction, ETriggerEvent::Triggered, this, &ABaseCharacter::DoStartCrouch);
-			EnhancedInputComponent->BindAction(CrouchAction, ETriggerEvent::Completed, this, &ABaseCharacter::DoStopCrouch);
+			EnhancedInputComponent->BindAction(CrouchAction, ETriggerEvent::Completed, this, &APlayerCharacter::ToggleStanceMode);
+			//EnhancedInputComponent->BindAction(CrouchAction, ETriggerEvent::Triggered, this, &ABaseCharacter::DoStartCrouch);
 		}
 	}
 }
@@ -110,6 +117,68 @@ void APlayerCharacter::Move(const FInputActionValue& Value)
 #endif
 
 }
+
+void APlayerCharacter::ToggleRotationMode(const FInputActionValue& Value)
+{
+	float HoldValue = Value.Get<float>();
+
+	if (LocomotionComponent)
+	{
+		const auto LocomotionEssencialVariables = LocomotionComponent->GetLocomotionEssencialVariables();
+		const ELSRotationMode LSRotationMode = LocomotionEssencialVariables.LSRotationMode;
+		if (LSRotationMode == ELSRotationMode::VelocityDirection)
+		{
+			StrafeModement();
+		}
+		else
+		{
+			VelocityModement();
+
+			if (LocomotionEssencialVariables.bAiming)
+			{
+				LocomotionComponent->SetLSAiming_Implementation(false);
+			}
+		}
+	}
+
+}
+
+void APlayerCharacter::ToggleAimMode(const FInputActionValue& Value)
+{
+	float HoldValue = Value.Get<float>();
+
+	if (LocomotionComponent)
+	{
+		const auto LocomotionEssencialVariables = LocomotionComponent->GetLocomotionEssencialVariables();
+		DoStartAiming();
+		//if (!LocomotionEssencialVariables.bAiming)
+		//{
+		//	DoStartAiming();
+		//}
+		//else
+		//{
+		//	DoStopAiming();
+		//}
+	}
+}
+
+void APlayerCharacter::ToggleStanceMode()
+{
+	if (LocomotionComponent)
+	{
+		const auto LocomotionEssencialVariables = LocomotionComponent->GetLocomotionEssencialVariables();
+		const ELSStance LSStance = LocomotionEssencialVariables.LSStance;
+		if (LSStance == ELSStance::Standing)
+		{
+			DoStartCrouch();
+		}
+		else
+		{
+			DoStopCrouch();
+		}
+	}
+}
+
 
 void APlayerCharacter::Look(const FInputActionValue& Value)
 {

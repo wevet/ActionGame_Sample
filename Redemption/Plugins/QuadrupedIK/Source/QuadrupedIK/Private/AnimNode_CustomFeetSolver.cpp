@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+// Copyright 2022 wevet works All Rights Reserved.
 
 #include "AnimNode_CustomFeetSolver.h"
 #include "Animation/AnimInstanceProxy.h"

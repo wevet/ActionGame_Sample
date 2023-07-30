@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+// Copyright 2022 wevet works All Rights Reserved.
 
 #pragma once
 
@@ -8,6 +8,7 @@
 #include "PlayerCharacter.generated.h"
 
 class UWvSpringArmComponent;
+class UWvCameraFollowComponent;
 
 /**
  * 
@@ -30,6 +31,9 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 	class UCameraComponent* FollowCamera;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
+	class UWvCameraFollowComponent* WvCameraFollowComponent;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	class UInputMappingContext* DefaultMappingContext;
@@ -67,6 +71,11 @@ private:
 	void TurnAtRate(float Rate);
 	void LookUpAtRate(float Rate);
 	void Look(const FInputActionValue& Value);
+
+	void ToggleRotationMode(const FInputActionValue& Value);
+	void ToggleAimMode(const FInputActionValue& Value);
+
+	void ToggleStanceMode();
 
 
 public:

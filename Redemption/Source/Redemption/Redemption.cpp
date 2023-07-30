@@ -1,8 +1,11 @@
-// Copyright Epic Games, Inc. All Rights Reserved.
+// Copyright 2022 wevet works All Rights Reserved.
 
 #include "Redemption.h"
 #include "Modules/ModuleManager.h"
 
+
+// Attack
+UE_DEFINE_GAMEPLAY_TAG(TAG_Character_StateMelee, "Character.State.Melee");
 
 // climbing 
 UE_DEFINE_GAMEPLAY_TAG(TAG_Locomotion_ClimbingJump, "Locomotion.Climbing.Jump");

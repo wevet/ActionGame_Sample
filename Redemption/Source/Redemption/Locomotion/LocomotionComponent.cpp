@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+// Copyright 2022 wevet works All Rights Reserved.
 
 #include "LocomotionComponent.h"
 #include "Character/BaseCharacter.h"
@@ -470,6 +470,19 @@ void ULocomotionComponent::SetRightShoulder_Implementation(const bool NewRightSh
 
 	LocomotionEssencialVariables.bRightShoulder = NewRightShoulder;
 }
+
+const FTransform ULocomotionComponent::GetPivotOverlayTansform_Implementation()
+{
+	if (Character.IsValid())
+	{
+		auto RootPos = Character->GetMesh()->GetSocketLocation(TEXT("root"));
+		auto HeadPos = Character->GetMesh()->GetSocketLocation(TEXT("head"));
+		TArray<FVector> Points({RootPos, HeadPos, });
+		auto AveragePoint = UKismetMathLibrary::GetVectorArrayAverage(Points);
+		return FTransform(Character->GetActorRotation(), AveragePoint, FVector::OneVector);
+	}
+	return FTransform::Identity;
+}
 #pragma endregion
 
 #pragma region Ability
@@ -500,39 +513,6 @@ UAnimMontage* ULocomotionComponent::GetCurrentMontage() const
 		return AbilitySystemComponent->GetCurrentMontage();
 	}
 	return nullptr;
-}
-
-void ULocomotionComponent::HandleCrouchAction()
-{
-	if (FindAbilitySystemComponent() && LocomotionStateDataAsset)
-	{
-		const FGameplayTag GameplayTag = LocomotionStateDataAsset->StanceControlTag;
-		if (AbilitySystemComponent->HasActivatingAbilitiesWithTag(GameplayTag))
-		{
-			UE_LOG(LogTemp, Log, TEXT("already activating => %s"), *GameplayTag.GetTagName().ToString());
-			return;
-		}
-		UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(Character.Get(), GameplayTag, FGameplayEventData());
-	}
-}
-
-void ULocomotionComponent::AimingAction()
-{
-	if (FindAbilitySystemComponent() && LocomotionStateDataAsset)
-	{
-		if (AbilitySystemComponent->HasMatchingGameplayTag(LocomotionStateDataAsset->FindRotationModeTag(ELSRotationMode::VelocityDirection)))
-		{
-			SetLSRotationMode_Implementation(ELSRotationMode::LookingDirection);
-		}
-
-		const FGameplayTag GameplayTag = LocomotionStateDataAsset->AimingControlTag;
-		if (AbilitySystemComponent->HasActivatingAbilitiesWithTag(GameplayTag))
-		{
-			UE_LOG(LogTemp, Log, TEXT("already activating => %s"), *GameplayTag.GetTagName().ToString());
-			return;
-		}
-		UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(Character.Get(), GameplayTag, FGameplayEventData());
-	}
 }
 #pragma endregion
 
@@ -684,7 +664,9 @@ void ULocomotionComponent::ManageCharacterRotation()
 
 const bool ULocomotionComponent::CanSprint()
 {
-	if (LocomotionEssencialVariables.LSMovementMode == ELSMovementMode::Ragdoll || !LocomotionEssencialVariables.bWasMoving)
+	if (LocomotionEssencialVariables.LSMovementMode == ELSMovementMode::Ragdoll || 
+		!LocomotionEssencialVariables.bWasMoving ||
+		LocomotionEssencialVariables.bAiming)
 	{
 		return false;
 	}
@@ -1252,6 +1234,9 @@ void ULocomotionComponent::SetSprintPressed(const bool NewSprintPressed)
 		return;
 	}
 
+	if (LocomotionEssencialVariables.bAiming)
+		return;
+
 	bShouldSprint = NewSprintPressed;
 
 	if (FindAbilitySystemComponent() && LocomotionStateDataAsset && CharacterMovementComponent.IsValid())
@@ -1267,13 +1252,6 @@ void ULocomotionComponent::SetSprintPressed(const bool NewSprintPressed)
 			}
 		}
 	}
-
-#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
-	if (CVarDebugLocomotionSystem.GetValueOnGameThread() > 0)
-	{
-		UE_LOG(LogTemp, Log, TEXT("bShouldSprint ? %s"), bShouldSprint ? TEXT("true") : TEXT("false"));
-	}
-#endif
 }
 
 bool ULocomotionComponent::GetSprintPressed() const
