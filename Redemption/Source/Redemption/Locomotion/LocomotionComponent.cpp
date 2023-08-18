@@ -268,7 +268,12 @@ void ULocomotionComponent::SetLSOverlayState_Implementation(const ELSOverlayStat
 		return;
 	}
 
+	const ELSOverlayState PrevOverlay = LocomotionEssencialVariables.OverlayState;
 	LocomotionEssencialVariables.OverlayState = NewLSOverlayState;
+	if (OnOverlayChangeDelegate.IsBound())
+	{
+		OnOverlayChangeDelegate.Broadcast(PrevOverlay, NewLSOverlayState);
+	}
 }
 
 void ULocomotionComponent::OnMovementModeChange_Implementation()

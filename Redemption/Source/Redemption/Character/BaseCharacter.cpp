@@ -7,6 +7,7 @@
 #include "Component/WvCharacterMovementComponent.h"
 #include "Locomotion/LocomotionComponent.h"
 #include "PredictiveFootIKComponent.h"
+#include "Component/InventoryComponent.h"
 
 #include "Components/CapsuleComponent.h"
 #include "Components/InputComponent.h"
@@ -89,6 +90,13 @@ ABaseCharacter::ABaseCharacter(const FObjectInitializer& ObjectInitializer)
 	LocomotionComponent = CreateDefaultSubobject<ULocomotionComponent>(TEXT("LocomotionComponent"));
 	LocomotionComponent->bAutoActivate = 1;
 
+	InventoryComponent = CreateDefaultSubobject<UInventoryComponent>(TEXT("InventoryComponent"));
+	InventoryComponent->bAutoActivate = 1;
+
+	HeldObjectRoot = CreateDefaultSubobject<USceneComponent>(TEXT("HeldObjectRoot"));
+	HeldObjectRoot->bAutoActivate = 1;
+	HeldObjectRoot->SetupAttachment(GetMesh());
+
 	MyTeamID = FGenericTeamId(0);
 }
 
@@ -116,6 +124,11 @@ void ABaseCharacter::BeginPlay()
 		}
 		WvAbilitySystemComponent->InitAbilityActorInfo(this, this);
 	}
+}
+
+void ABaseCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	Super::EndPlay(EndPlayReason);
 }
 
 void ABaseCharacter::PossessedBy(AController* NewController)
@@ -509,5 +522,10 @@ float ABaseCharacter::GetDistanceFromToeToKnee(FName KneeL, FName BallL, FName K
 
 	const float Result = FMath::Max(FMath::Abs(L), FMath::Abs(R));
 	return FMath::Max(GetWvCharacterMovementComponent()->MaxStepHeight, Result);
+}
+
+USceneComponent* ABaseCharacter::GetHeldObjectRoot() const
+{
+	return HeldObjectRoot;
 }
 

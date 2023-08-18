@@ -3,3 +3,8 @@
 
 #include "Item/WeaponBaseActor.h"
 
+
+void AWeaponBaseActor::DoFire()
+{
+
+}

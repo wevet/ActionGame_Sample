@@ -14,4 +14,6 @@ class REDEMPTION_API AWeaponBaseActor : public AItemBaseActor
 {
 	GENERATED_BODY()
 	
+public:
+	virtual void DoFire();
 };

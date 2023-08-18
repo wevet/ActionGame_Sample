@@ -421,6 +421,9 @@ void UPredictiveAnimInstance::CalcToeEndPosByCurve(FVector& OutToeEndPos, const 
 	if (CurMoveSpeedCurveValue > SMALL_NUMBER)
 	{
 		MoveVelocity = MoveVelocity.GetSafeNormal() * CurMoveSpeedCurveValue;
+		if (CharacterMovementComponent->bUseControllerDesiredRotation)
+		{
+		}
 	}
 
 	OutToeEndPos = CurCharacterBottomLocation + MoveVelocity * InCurToeCurveValue;
@@ -429,6 +432,10 @@ void UPredictiveAnimInstance::CalcToeEndPosByCurve(FVector& OutToeEndPos, const 
 void UPredictiveAnimInstance::CalcToeEndPosByDefaultDistance(FVector& OutToeEndPos, const FToePathInfo& InPastPath)
 {
 	FVector MoveVelocity = CharacterMovementComponent->Velocity;
+	if (CharacterMovementComponent->bUseControllerDesiredRotation)
+	{
+
+	}
 	OutToeEndPos = InPastPath.LeaveFloorPos + MoveVelocity.GetSafeNormal() * DefaultToeFirstPathDistance;
 }
 

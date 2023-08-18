@@ -19,7 +19,8 @@ class REDEMPTION_API APlayerCharacter : public ABaseCharacter
 	GENERATED_BODY()
 	
 public:
-	APlayerCharacter(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
+	APlayerCharacter(const FObjectInitializer& ObjectInitializer);
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 protected:
 	virtual void BeginPlay() override;
@@ -77,6 +78,8 @@ private:
 
 	void ToggleStanceMode();
 
+	UFUNCTION()
+	void OverlayStateChange_Callback(const ELSOverlayState PrevOverlay, const ELSOverlayState CurrentOverlay);
 
 public:
 	FORCEINLINE class UWvSpringArmComponent* GetCameraBoom() const { return CameraBoom; }

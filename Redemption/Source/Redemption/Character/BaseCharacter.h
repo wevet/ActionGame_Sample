@@ -42,6 +42,7 @@ class UPredictiveFootIKComponent;
 class UMotionWarpingComponent;
 class UWvCharacterMovementComponent;
 class ULocomotionComponent;
+class UInventoryComponent;
 
 
 UCLASS(Abstract)
@@ -58,6 +59,7 @@ public:
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 	virtual void Jump() override;
 	virtual void StopJumping() override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 protected:
 	virtual void BeginPlay() override;
@@ -110,6 +112,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category = Movement)
 	FTrajectorySampleRange GetTrajectorySampleRange() const;
 
+	USceneComponent* GetHeldObjectRoot() const;
+
 	UFUNCTION(BlueprintCallable, Category = Movement)
 	float GetDistanceFromToeToKnee(FName KneeL = TEXT("calf_l"), FName BallL = TEXT("ball_l"), FName KneeR = TEXT("calf_r"), FName BallR = TEXT("ball_r")) const;
 
@@ -151,6 +155,12 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Component, meta = (AllowPrivateAccess = "true"))
 	class UWvAbilitySystemComponent* WvAbilitySystemComponent;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Component, meta = (AllowPrivateAccess = "true"))
+	class UInventoryComponent* InventoryComponent;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Component, meta = (AllowPrivateAccess = "true"))
+	class USceneComponent* HeldObjectRoot;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Abilities)
 	TArray<TSubclassOf<class UGameplayAbility>> AbilityList;

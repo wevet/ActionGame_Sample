@@ -16,6 +16,7 @@ class UWvAbilitySystemComponent;
 class ABaseCharacter;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FLocomotionStateChangeDelegate);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FLocomotionOverlayChangeDelegate, const ELSOverlayState, PrevOverlay, const ELSOverlayState, CurrentOverlay);
 
 UCLASS(BlueprintType)
 class REDEMPTION_API ULocomotionStateDataAsset : public UDataAsset
@@ -205,6 +206,9 @@ public:
 
 	UPROPERTY(BlueprintAssignable, Category = "Locomotion")
 	FLocomotionStateChangeDelegate OnAimingChangeDelegate;
+
+	UPROPERTY(BlueprintAssignable, Category = "Locomotion")
+	FLocomotionOverlayChangeDelegate OnOverlayChangeDelegate;
 
 protected:
 

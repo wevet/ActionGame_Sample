@@ -3,6 +3,7 @@
 #include "PlayerCharacter.h"
 #include "Component/WvSpringArmComponent.h"
 #include "Component/WvCameraFollowComponent.h"
+#include "Component/InventoryComponent.h"
 #include "Locomotion/LocomotionComponent.h"
 
 #include "Camera/CameraComponent.h"
@@ -48,6 +49,14 @@ void APlayerCharacter::BeginPlay()
 			Subsystem->AddMappingContext(DefaultMappingContext, 0);
 		}
 	}
+
+	LocomotionComponent->OnOverlayChangeDelegate.AddDynamic(this, &APlayerCharacter::OverlayStateChange_Callback);
+}
+
+void APlayerCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	LocomotionComponent->OnOverlayChangeDelegate.RemoveDynamic(this, &APlayerCharacter::OverlayStateChange_Callback);
+	Super::EndPlay(EndPlayReason);
 }
 
 void APlayerCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent)
@@ -59,10 +68,12 @@ void APlayerCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerIn
 			EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Triggered, this, &ABaseCharacter::Jump);
 			EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Completed, this, &ABaseCharacter::StopJumping);
 		}
+
 		if (MoveAction)
 		{
 			EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &APlayerCharacter::Move);
 		}
+
 		if (LookAction)
 		{
 			EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &APlayerCharacter::Look);
@@ -94,11 +105,7 @@ void APlayerCharacter::Move(const FInputActionValue& Value)
 {
 	// input is a Vector2D
 	InputAxis = Value.Get<FVector2D>();
-
-	if (IsValid(LocomotionComponent))
-	{
-		LocomotionComponent->Move(InputAxis);
-	}
+	LocomotionComponent->Move(InputAxis);
 
 #if false
 	if (Controller != nullptr)
@@ -122,24 +129,22 @@ void APlayerCharacter::ToggleRotationMode(const FInputActionValue& Value)
 {
 	float HoldValue = Value.Get<float>();
 
-	if (LocomotionComponent)
+	const auto LocomotionEssencialVariables = LocomotionComponent->GetLocomotionEssencialVariables();
+	const ELSRotationMode LSRotationMode = LocomotionEssencialVariables.LSRotationMode;
+	if (LSRotationMode == ELSRotationMode::VelocityDirection)
 	{
-		const auto LocomotionEssencialVariables = LocomotionComponent->GetLocomotionEssencialVariables();
-		const ELSRotationMode LSRotationMode = LocomotionEssencialVariables.LSRotationMode;
-		if (LSRotationMode == ELSRotationMode::VelocityDirection)
-		{
-			StrafeModement();
-		}
-		else
-		{
-			VelocityModement();
+		StrafeModement();
+	}
+	else
+	{
+		VelocityModement();
 
-			if (LocomotionEssencialVariables.bAiming)
-			{
-				LocomotionComponent->SetLSAiming_Implementation(false);
-			}
+		if (LocomotionEssencialVariables.bAiming)
+		{
+			LocomotionComponent->SetLSAiming_Implementation(false);
 		}
 	}
+
 
 }
 
@@ -147,35 +152,29 @@ void APlayerCharacter::ToggleAimMode(const FInputActionValue& Value)
 {
 	float HoldValue = Value.Get<float>();
 
-	if (LocomotionComponent)
-	{
-		const auto LocomotionEssencialVariables = LocomotionComponent->GetLocomotionEssencialVariables();
-		DoStartAiming();
-		//if (!LocomotionEssencialVariables.bAiming)
-		//{
-		//	DoStartAiming();
-		//}
-		//else
-		//{
-		//	DoStopAiming();
-		//}
-	}
+	const auto LocomotionEssencialVariables = LocomotionComponent->GetLocomotionEssencialVariables();
+	DoStartAiming();
+	//if (!LocomotionEssencialVariables.bAiming)
+	//{
+	//	DoStartAiming();
+	//}
+	//else
+	//{
+	//	DoStopAiming();
+	//}
 }
 
 void APlayerCharacter::ToggleStanceMode()
 {
-	if (LocomotionComponent)
+	const auto LocomotionEssencialVariables = LocomotionComponent->GetLocomotionEssencialVariables();
+	const ELSStance LSStance = LocomotionEssencialVariables.LSStance;
+	if (LSStance == ELSStance::Standing)
 	{
-		const auto LocomotionEssencialVariables = LocomotionComponent->GetLocomotionEssencialVariables();
-		const ELSStance LSStance = LocomotionEssencialVariables.LSStance;
-		if (LSStance == ELSStance::Standing)
-		{
-			DoStartCrouch();
-		}
-		else
-		{
-			DoStopCrouch();
-		}
+		DoStartCrouch();
+	}
+	else
+	{
+		DoStopCrouch();
 	}
 }
 
@@ -197,4 +196,20 @@ void APlayerCharacter::LookUpAtRate(float Rate)
 	AddControllerPitchInput(Rate * BaseLookUpRate * GetWorld()->GetDeltaSeconds());
 }
 
+void APlayerCharacter::OverlayStateChange_Callback(const ELSOverlayState PrevOverlay, const ELSOverlayState CurrentOverlay)
+{
+	auto PrevItem = InventoryComponent->FindItem(PrevOverlay);
+	if (PrevItem)
+	{
+		PrevItem->Notify_UnEquip();
+		PrevItem->SetActorHiddenInGame(true);
+	}
+
+	auto CurrentItem = InventoryComponent->FindItem(CurrentOverlay);
+	if (CurrentItem)
+	{
+		CurrentItem->Notify_Equip();
+		CurrentItem->SetActorHiddenInGame(false);
+	}
+}
 

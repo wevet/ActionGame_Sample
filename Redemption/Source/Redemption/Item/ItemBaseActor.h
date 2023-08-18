@@ -4,20 +4,42 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "Locomotion/LocomotionSystemTypes.h"
 #include "ItemBaseActor.generated.h"
 
-UCLASS()
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FItemEquipDelegate, const bool, bWasEquip);
+
+UCLASS(Abstract)
 class REDEMPTION_API AItemBaseActor : public AActor
 {
 	GENERATED_BODY()
 	
 public:	
-	AItemBaseActor();
+	AItemBaseActor(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
+	virtual void Tick(float DeltaTime) override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 protected:
 	virtual void BeginPlay() override;
 
 public:	
-	virtual void Tick(float DeltaTime) override;
+	UPROPERTY(BlueprintAssignable)
+	FItemEquipDelegate ItemEquipCallback;
 
+	virtual void Notify_Equip();
+	virtual void Notify_UnEquip();
+
+	virtual bool CanEquip() const;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Settings", meta = (EditCondition = bCanEquip))
+	FName AttachSocketName;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Settings")
+	ELSOverlayState OverlayState;
+
+protected:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Settings")
+	bool bCanEquip;
+
+	bool bIsEquip = false;
 };
