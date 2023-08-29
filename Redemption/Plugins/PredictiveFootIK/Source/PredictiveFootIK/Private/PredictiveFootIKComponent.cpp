@@ -4,6 +4,103 @@
 
 DEFINE_LOG_CATEGORY(LogPredictiveFootIK);
 
+#pragma region ToePathInfo
+void FToePathInfo::SetToeContactFloorHeight(float InHeight)
+{
+	ToeContactFloorHeight = InHeight;
+}
+
+void FToePathInfo::Reset()
+{
+	IsPathValid = false;
+	IsPathStarted = false;
+	ToeFloorState = EToeFloorState::None;
+}
+
+void FToePathInfo::Update(const USkeletalMeshComponent* InSkMeshComp, const FVector& InRightToeCSPos, const FVector& InLeftToeCSPos, const EMotionFoot& InFoot, const FName& InToeName)
+{
+	CurToeCSPos = InFoot == EMotionFoot::Right ? InRightToeCSPos : InLeftToeCSPos;
+
+	if (CurToeCSPos.IsNearlyZero())
+	{
+		Reset();
+		return;
+	}
+
+	CurToePos = InSkMeshComp->GetComponentTransform().ToMatrixWithScale().TransformPosition(CurToeCSPos);
+	EToeFloorState LocalToeFloorState = CurToeCSPos.Z < ToeContactFloorHeight ? EToeFloorState::Contacting : EToeFloorState::Leaving;
+
+	if (IsContacting() && LocalToeFloorState == EToeFloorState::Leaving)
+	{
+		LeaveFloorPos = CurToePos;
+		LocalToeFloorState = EToeFloorState::LeaveStart;
+	}
+
+	if (IsLeaving() && LocalToeFloorState == EToeFloorState::Contacting)
+	{
+		ContactFloorPos = CurToePos;
+		LocalToeFloorState = EToeFloorState::ContactStart;
+	}
+
+	ToeFloorState = LocalToeFloorState;
+	SetupPath(InToeName);
+}
+
+void FToePathInfo::SetupPath(const FName& InToeName)
+{
+	if (IsLeaveStart())
+	{
+		IsPathStarted = true;
+	}
+
+	if (IsContacStart())
+	{
+		FVector ToePathTranslation = ContactFloorPos - LeaveFloorPos;
+		float TranslationSizeSquared = ToePathTranslation.SizeSquared();
+		if (100.f * 100.f <= TranslationSizeSquared && TranslationSizeSquared <= 2000.f * 2000.f) // magic num
+		{
+			IsPathValid = true;
+			PathTranslation = FVector(ToePathTranslation.X, ToePathTranslation.Y, 0.f);
+			UE_LOG(LogPredictiveFootIK, Log, TEXT("%s Path: %s PathSize: %f"), *InToeName.ToString(), *PathTranslation.ToString(), PathTranslation.Size2D());
+		}
+	}
+}
+
+bool FToePathInfo::IsInvalidState() const
+{
+	return ToeFloorState == EToeFloorState::None;
+}
+
+bool FToePathInfo::IsContacting() const
+{
+	return ToeFloorState == EToeFloorState::ContactStart || ToeFloorState == EToeFloorState::Contacting;
+}
+
+bool FToePathInfo::IsLeaving() const
+{
+	return ToeFloorState == EToeFloorState::LeaveStart || ToeFloorState == EToeFloorState::Leaving;
+}
+
+bool FToePathInfo::IsLeaveStart() const
+{
+	return ToeFloorState == EToeFloorState::LeaveStart;
+}
+
+bool FToePathInfo::IsContacStart() const
+{
+	return ToeFloorState == EToeFloorState::ContactStart;
+}
+
+void FToePathInfo::SetDefaultPathDistance(float InDist)
+{
+	DefaultPathDistance = InDist;
+}
+
+float FToePathInfo::GetDefaultPathDistance() const
+{
+	return DefaultPathDistance;
+}
+#pragma endregion
 
 UPredictiveFootIKComponent::UPredictiveFootIKComponent()
 {
@@ -85,7 +182,6 @@ void UPredictiveFootIKComponent::GetCurveValues(float& OutLeftCurveValue, float&
 	CurGait = (EPredictiveGait)MaxWeightIndex;
 }
 
-
 void UPredictiveFootIKComponent::GetToeCSPos(FVector& OutRightToeCSPos, FVector& OutLeftToeCSPos, bool& ValidWeight)
 {
 	ValidWeight = ToeWeight > SMALL_NUMBER;
@@ -113,3 +209,4 @@ void UPredictiveFootIKComponent::ClearToeCSPos()
 	RightToeCSPos = FVector::ZeroVector;
 	LeftToeCSPos = FVector::ZeroVector;
 }
+

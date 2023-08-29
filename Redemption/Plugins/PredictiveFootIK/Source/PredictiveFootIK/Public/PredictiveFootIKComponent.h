@@ -8,6 +8,24 @@
 
 DECLARE_LOG_CATEGORY_EXTERN(LogPredictiveFootIK, Log, All);
 
+UENUM(BlueprintType)
+enum class EToeFloorState : uint8
+{
+	None,
+	ContactStart,
+	Contacting,
+	LeaveStart,
+	Leaving,
+};
+
+UENUM(BlueprintType)
+enum class EMotionFoot : uint8
+{
+	None,
+	Right,
+	Left,
+};
+
 UENUM()
 enum class EPredictiveGait : uint8
 {
@@ -17,8 +35,46 @@ enum class EPredictiveGait : uint8
 	Max
 };
 
+USTRUCT()
+struct PREDICTIVEFOOTIK_API FToePathInfo
+{
+	GENERATED_BODY()
+
+public:
+	void SetToeContactFloorHeight(float InHeight);
+
+	void Reset();
+	void Update(const USkeletalMeshComponent* InSkMeshComp, const FVector& InRightToeCSPos, const FVector& InLeftToeCSPos, const EMotionFoot& InFoot, const FName& InToeName);
+	void SetupPath(const FName& InToeName);
+
+	bool IsInvalidState() const;
+	bool IsContacting() const;
+	bool IsLeaving() const;
+	bool IsLeaveStart() const;
+	bool IsContacStart() const;
+
+	void SetDefaultPathDistance(float InDist);
+	float GetDefaultPathDistance() const;
+
+public:
+	FVector CurToePos;
+	FVector CurToeCSPos;
+
+	FVector LeaveFloorPos;
+	FVector ContactFloorPos;
+
+	bool IsPathValid = false;
+	bool IsPathStarted = false;
+	FVector PathTranslation;
+
+private:
+	EToeFloorState ToeFloorState = EToeFloorState::None;
+	float ToeContactFloorHeight = 5.f;
+	float DefaultPathDistance = 100.f;
+};
+
 USTRUCT(BlueprintType)
-struct FFootIKGaitCurveInfo
+struct PREDICTIVEFOOTIK_API FFootIKGaitCurveInfo
 {
 	GENERATED_BODY()
 

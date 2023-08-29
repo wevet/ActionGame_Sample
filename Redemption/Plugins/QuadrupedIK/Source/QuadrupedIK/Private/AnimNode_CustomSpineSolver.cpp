@@ -365,10 +365,7 @@ void FAnimNode_CustomSpineSolver::EvaluateComponentSpace_AnyThread(FComponentSpa
 
 					FAnimationRuntime::ConvertCSTransformToBoneSpace(
 						SkeletalMeshComponent->GetComponentTransform(),
-						Output.Pose,
-						RootTraceTransform,
-						ModifyBoneIndex_Local_i,
-						EBoneControlSpace::BCS_WorldSpace);
+						Output.Pose, RootTraceTransform, ModifyBoneIndex_Local_i, EBoneControlSpace::BCS_WorldSpace);
 
 					const float ChestDistance = FMath::Abs(SpineBetweenTransformArray[Index - 1].Z - RootTraceTransform.GetLocation().Z);
 					SpineBetweenHeightArray[Index - 1] = ChestDistance;
@@ -1539,14 +1536,8 @@ const bool FAnimNode_CustomSpineSolver::CheckLoopExist(
 }
 
 void FAnimNode_CustomSpineSolver::ApplyLineTrace(
-	const FVector StartLocation, 
-	const FVector EndLocation, 
-	FHitResult HitResult, 
-	const FName BoneText, 
-	const FName TraceTag, 
-	FHitResult& OutHitResult, 
-	const FLinearColor DebugColor, 
-	const bool bDrawLine)
+	const FVector StartLocation, const FVector EndLocation, 
+	FHitResult HitResult, const FName BoneText, const FName TraceTag, FHitResult& OutHitResult, const FLinearColor DebugColor, const bool bDrawLine)
 {
 
 	if (CharacterOwner)
