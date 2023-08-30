@@ -38,7 +38,7 @@ struct FWvReplicatedAcceleration
 };
 
 
-class UPredictiveFootIKComponent;
+class UPredictionFootIKComponent;
 class UMotionWarpingComponent;
 class UWvCharacterMovementComponent;
 class ULocomotionComponent;
@@ -145,7 +145,7 @@ protected:
 	class ULocomotionComponent* LocomotionComponent;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Component, meta = (AllowPrivateAccess = "true"))
-	class UPredictiveFootIKComponent* PredictiveFootIKComponent;
+	class UPredictionFootIKComponent* PredictionFootIKComponent;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Component, meta = (AllowPrivateAccess = "true"))
 	class UMotionWarpingComponent* MotionWarpingComponent;

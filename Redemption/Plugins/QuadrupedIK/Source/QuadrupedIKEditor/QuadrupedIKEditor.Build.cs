@@ -44,8 +44,11 @@ public class QuadrupedIKEditor : ModuleRules
 				"BlueprintGraph", 
 				"Persona", 
 				"UnrealEd", 
-				"AnimGraphRuntime", 
-				"SlateCore"
+				"AnimGraphRuntime",
+				"Slate",
+				"SlateCore",
+				"ToolMenus",
+
 			}
 		);
 

@@ -4,12 +4,12 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
-#include "PredictiveFootIKComponent.generated.h"
+#include "PredictionFootIKComponent.generated.h"
 
-DECLARE_LOG_CATEGORY_EXTERN(LogPredictiveFootIK, Log, All);
+DECLARE_LOG_CATEGORY_EXTERN(LogPredictionFootIK, Log, All);
 
-UENUM(BlueprintType)
-enum class EToeFloorState : uint8
+UENUM()
+enum class EPredictionToeFloorState : uint8
 {
 	None,
 	ContactStart,
@@ -18,8 +18,8 @@ enum class EToeFloorState : uint8
 	Leaving,
 };
 
-UENUM(BlueprintType)
-enum class EMotionFoot : uint8
+UENUM()
+enum class EPredictionMotionFoot : uint8
 {
 	None,
 	Right,
@@ -27,7 +27,7 @@ enum class EMotionFoot : uint8
 };
 
 UENUM()
-enum class EPredictiveGait : uint8
+enum class EPredictionGait : uint8
 {
 	Walk,
 	Run,
@@ -36,7 +36,7 @@ enum class EPredictiveGait : uint8
 };
 
 USTRUCT()
-struct PREDICTIVEFOOTIK_API FToePathInfo
+struct QUADRUPEDIK_API FPredictionToePathInfo
 {
 	GENERATED_BODY()
 
@@ -44,7 +44,7 @@ public:
 	void SetToeContactFloorHeight(float InHeight);
 
 	void Reset();
-	void Update(const USkeletalMeshComponent* InSkMeshComp, const FVector& InRightToeCSPos, const FVector& InLeftToeCSPos, const EMotionFoot& InFoot, const FName& InToeName);
+	void Update(const USkeletalMeshComponent* InSkMeshComp, const FVector& InRightToeCSPos, const FVector& InLeftToeCSPos, const EPredictionMotionFoot& InFoot, const FName& InToeName);
 	void SetupPath(const FName& InToeName);
 
 	bool IsInvalidState() const;
@@ -68,13 +68,13 @@ public:
 	FVector PathTranslation;
 
 private:
-	EToeFloorState ToeFloorState = EToeFloorState::None;
+	EPredictionToeFloorState ToeFloorState = EPredictionToeFloorState::None;
 	float ToeContactFloorHeight = 5.f;
 	float DefaultPathDistance = 100.f;
 };
 
-USTRUCT(BlueprintType)
-struct PREDICTIVEFOOTIK_API FFootIKGaitCurveInfo
+USTRUCT()
+struct QUADRUPEDIK_API FFootGaitCurveInfo
 {
 	GENERATED_BODY()
 
@@ -84,18 +84,18 @@ struct PREDICTIVEFOOTIK_API FFootIKGaitCurveInfo
 
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
-class PREDICTIVEFOOTIK_API UPredictiveFootIKComponent : public UActorComponent
+class QUADRUPEDIK_API UPredictionFootIKComponent : public UActorComponent
 {
 	GENERATED_BODY()
 
 public:
-	UPredictiveFootIKComponent();
+	UPredictionFootIKComponent();
 
 	virtual void BeginPlay() override;
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
 public:
-	void SetCurveValue(EPredictiveGait InGait, float InWeight, FName InCurveName, float InCurveValue);
+	void SetCurveValue(EPredictionGait InGait, float InWeight, FName InCurveName, float InCurveValue);
 	void SetToeCSPos(const FVector& InRightToeCSPos, const FVector& InLeftToeCSPos, const float& InWeight);
 	void GetCurveValues(float& OutLeftCurveValue, float& OutRightCurveValue, float& OutMoveSpeedCurveValue, bool& OutIsSwitchGait);
 	void GetToeCSPos(FVector& OutRightToeCSPos, FVector& OutLeftToeCSPos, bool& ValidWeight);
@@ -113,8 +113,8 @@ public:
 	FName MoveSpeedCurveName;
 
 private:
-	EPredictiveGait CurGait = EPredictiveGait::Walk;
-	TArray<FFootIKGaitCurveInfo> GaitCurveArray;
+	EPredictionGait CurGait = EPredictionGait::Walk;
+	TArray<FFootGaitCurveInfo> GaitCurveArray;
 
 	float ToeWeight = 0.f;
 	FVector RightToeCSPos;

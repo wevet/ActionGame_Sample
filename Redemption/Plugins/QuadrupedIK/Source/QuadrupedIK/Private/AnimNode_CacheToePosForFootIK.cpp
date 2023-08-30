@@ -1,11 +1,11 @@
 ﻿// Copyright 2022 wevet works All Rights Reserved.
 
-#include "AnimNode_CacheToePosForSPFootIK.h"
+#include "AnimNode_CacheToePosForFootIK.h"
 #include "AnimationRuntime.h"
 #include "Animation/AnimInstanceProxy.h"
 
 
-void FAnimNode_CacheToePosForSPFootIK::GatherDebugData(FNodeDebugData& DebugData)
+void FAnimNode_CacheToePosForFootIK::GatherDebugData(FNodeDebugData& DebugData)
 {
 	DECLARE_SCOPE_HIERARCHICAL_COUNTER_ANIMNODE(GatherDebugData)
 	FString DebugLine = DebugData.GetNodeName(this);
@@ -14,18 +14,16 @@ void FAnimNode_CacheToePosForSPFootIK::GatherDebugData(FNodeDebugData& DebugData
 	AddDebugNodeData(DebugLine);
 	DebugLine += FString::Printf(TEXT(" Target: %s)"), *LeftToe.BoneName.ToString());
 	DebugData.AddDebugItem(DebugLine);
-
 	ComponentPose.GatherDebugData(DebugData);
 }
 
-void FAnimNode_CacheToePosForSPFootIK::UpdateInternal(const FAnimationUpdateContext& Context)
+void FAnimNode_CacheToePosForFootIK::UpdateInternal(const FAnimationUpdateContext& Context)
 {
 	Super::UpdateInternal(Context);
-
 	FinalWeight = Context.GetFinalBlendWeight();
 }
 
-void FAnimNode_CacheToePosForSPFootIK::EvaluateSkeletalControl_AnyThread(FComponentSpacePoseContext& Output, TArray<FBoneTransform>& OutBoneTransforms)
+void FAnimNode_CacheToePosForFootIK::EvaluateSkeletalControl_AnyThread(FComponentSpacePoseContext& Output, TArray<FBoneTransform>& OutBoneTransforms)
 {
 	DECLARE_SCOPE_HIERARCHICAL_COUNTER_ANIMNODE(EvaluateSkeletalControl_AnyThread)
 	check(OutBoneTransforms.Num() == 0);
@@ -35,31 +33,30 @@ void FAnimNode_CacheToePosForSPFootIK::EvaluateSkeletalControl_AnyThread(FCompon
 	// 最初に平行移動したい場合は、2つのノードが必要で、1つ目のノードは平行移動、2つ目のノードは回転を行う。
 	const FBoneContainer& BoneContainer = Output.Pose.GetPose().GetBoneContainer();
 
-	if (PredictiveFootIKComponent)
+	if (PredictionFootIKComponent)
 	{
 		FCompactPoseBoneIndex RightToeCompactPoseBone = RightToe.GetCompactPoseIndex(BoneContainer);
 		FCompactPoseBoneIndex LeftToeCompactPoseBone = LeftToe.GetCompactPoseIndex(BoneContainer);
 		FTransform RightBoneTM = Output.Pose.GetComponentSpaceTransform(RightToeCompactPoseBone);
 		FTransform LeftBoneTM = Output.Pose.GetComponentSpaceTransform(LeftToeCompactPoseBone);
-		
-		PredictiveFootIKComponent->SetToeCSPos(RightBoneTM.GetLocation(), LeftBoneTM.GetLocation(), FinalWeight);
+
+		PredictionFootIKComponent->SetToeCSPos(RightBoneTM.GetLocation(), LeftBoneTM.GetLocation(), FinalWeight);
 	}	
 }
 
-bool FAnimNode_CacheToePosForSPFootIK::IsValidToEvaluate(const USkeleton* Skeleton, const FBoneContainer& RequiredBones)
+bool FAnimNode_CacheToePosForFootIK::IsValidToEvaluate(const USkeleton* Skeleton, const FBoneContainer& RequiredBones)
 {
-	// if both bones are valid
 	return LeftToe.IsValidToEvaluate(RequiredBones) && RightToe.IsValidToEvaluate(RequiredBones);
 }
 
-void FAnimNode_CacheToePosForSPFootIK::InitializeBoneReferences(const FBoneContainer& RequiredBones)
+void FAnimNode_CacheToePosForFootIK::InitializeBoneReferences(const FBoneContainer& RequiredBones)
 {
 	DECLARE_SCOPE_HIERARCHICAL_COUNTER_ANIMNODE(InitializeBoneReferences)
 	LeftToe.Initialize(RequiredBones);
 	RightToe.Initialize(RequiredBones);
 }
 
-void FAnimNode_CacheToePosForSPFootIK::Initialize_AnyThread(const FAnimationInitializeContext& Context)
+void FAnimNode_CacheToePosForFootIK::Initialize_AnyThread(const FAnimationInitializeContext& Context)
 {
 	DECLARE_SCOPE_HIERARCHICAL_COUNTER_ANIMNODE(Initialize_AnyThread)
 	Super::Initialize_AnyThread(Context);
@@ -68,9 +65,9 @@ void FAnimNode_CacheToePosForSPFootIK::Initialize_AnyThread(const FAnimationInit
 	{
 		if (APawn* Pawn = AnimInstance->TryGetPawnOwner())
 		{
-			if (UActorComponent* Comp = Pawn->GetComponentByClass(UPredictiveFootIKComponent::StaticClass()))
+			if (UActorComponent* Comp = Pawn->GetComponentByClass(UPredictionFootIKComponent::StaticClass()))
 			{
-				PredictiveFootIKComponent = Cast<UPredictiveFootIKComponent>(Comp);
+				PredictionFootIKComponent = Cast<UPredictionFootIKComponent>(Comp);
 			}
 		}
 	}

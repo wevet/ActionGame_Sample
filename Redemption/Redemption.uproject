@@ -16,14 +16,6 @@
 	],
 	"Plugins": [
 		{
-			"Name": "RopeCutting",
-			"Enabled": true
-		},
-		{
-			"Name": "QuadrupedIK",
-			"Enabled": true
-		},
-		{
 			"Name": "ChaosCarGlass",
 			"Enabled": true
 		},
@@ -163,6 +155,14 @@
 		},
 		{
 			"Name": "PCG",
+			"Enabled": true
+		},
+		{
+			"Name": "QuadrupedIK",
+			"Enabled": true
+		},
+		{
+			"Name": "RopeCutting",
 			"Enabled": true
 		}
 	]

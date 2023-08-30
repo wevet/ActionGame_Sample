@@ -1,15 +1,15 @@
 ﻿// Copyright 2022 wevet works All Rights Reserved.
 
-#include "AnimNode_CacheCurveForSPFootIK.h"
+#include "AnimNode_CacheCurveForFootIK.h"
 #include "AnimationRuntime.h"
 #include "Animation/AnimInstanceProxy.h"
 
-FAnimNode_CacheCurveForSPFootIK::FAnimNode_CacheCurveForSPFootIK()
+FAnimNode_CacheCurveForFootIK::FAnimNode_CacheCurveForFootIK()
 {
 }
 
 
-void FAnimNode_CacheCurveForSPFootIK::Initialize_AnyThread(const FAnimationInitializeContext& Context)
+void FAnimNode_CacheCurveForFootIK::Initialize_AnyThread(const FAnimationInitializeContext& Context)
 {
 	DECLARE_SCOPE_HIERARCHICAL_COUNTER_ANIMNODE(Initialize_AnyThread)
 	FAnimNode_Base::Initialize_AnyThread(Context);
@@ -20,21 +20,21 @@ void FAnimNode_CacheCurveForSPFootIK::Initialize_AnyThread(const FAnimationIniti
 	{
 		if (APawn* Pawn = AnimInstance->TryGetPawnOwner())
 		{
-			if (UActorComponent* Comp = Pawn->GetComponentByClass(UPredictiveFootIKComponent::StaticClass()))
+			if (UActorComponent* Comp = Pawn->GetComponentByClass(UPredictionFootIKComponent::StaticClass()))
 			{
-				PredictiveFootIKComponent = Cast<UPredictiveFootIKComponent>(Comp);
+				PredictionFootIKComponent = Cast<UPredictionFootIKComponent>(Comp);
 			}
 		}
 	}
 }
 
-void FAnimNode_CacheCurveForSPFootIK::CacheBones_AnyThread(const FAnimationCacheBonesContext& Context)
+void FAnimNode_CacheCurveForFootIK::CacheBones_AnyThread(const FAnimationCacheBonesContext& Context)
 {
 	DECLARE_SCOPE_HIERARCHICAL_COUNTER_ANIMNODE(CacheBones_AnyThread)
 	SourcePose.CacheBones(Context);
 }
 
-void FAnimNode_CacheCurveForSPFootIK::Update_AnyThread(const FAnimationUpdateContext& Context)
+void FAnimNode_CacheCurveForFootIK::Update_AnyThread(const FAnimationUpdateContext& Context)
 {
 	DECLARE_SCOPE_HIERARCHICAL_COUNTER_ANIMNODE(Update_AnyThread)
 	SourcePose.Update(Context);
@@ -42,12 +42,12 @@ void FAnimNode_CacheCurveForSPFootIK::Update_AnyThread(const FAnimationUpdateCon
 	FinalWeight = Context.GetFinalBlendWeight();
 }
 
-void FAnimNode_CacheCurveForSPFootIK::Evaluate_AnyThread(FPoseContext& Output)
+void FAnimNode_CacheCurveForFootIK::Evaluate_AnyThread(FPoseContext& Output)
 {
 	DECLARE_SCOPE_HIERARCHICAL_COUNTER_ANIMNODE(Evaluate_AnyThread)
 	SourcePose.Evaluate(Output);
 
-	if (!PredictiveFootIKComponent)
+	if (!PredictionFootIKComponent)
 	{
 		return;
 	}
@@ -62,14 +62,12 @@ void FAnimNode_CacheCurveForSPFootIK::Evaluate_AnyThread(FPoseContext& Output)
 		if (NameUID != SmartName::MaxUID)
 		{
 			float CurrentValue = Output.Curve.Get(NameUID);
-
-			//UE_LOG(LogTemp, Log, TEXT("CurveName:%s Value:%f"), *CurveName.ToString(), CurrentValue);
-			PredictiveFootIKComponent->SetCurveValue(Gait, FinalWeight, CurveName, CurrentValue);
+			PredictionFootIKComponent->SetCurveValue(Gait, FinalWeight, CurveName, CurrentValue);
 		}
 	}
 }
 
-void FAnimNode_CacheCurveForSPFootIK::GatherDebugData(FNodeDebugData& DebugData)
+void FAnimNode_CacheCurveForFootIK::GatherDebugData(FNodeDebugData& DebugData)
 {
 	DECLARE_SCOPE_HIERARCHICAL_COUNTER_ANIMNODE(GatherDebugData)
 	FString DebugLine = DebugData.GetNodeName(this);
@@ -79,13 +77,13 @@ void FAnimNode_CacheCurveForSPFootIK::GatherDebugData(FNodeDebugData& DebugData)
 
 #if WITH_EDITOR
 
-void FAnimNode_CacheCurveForSPFootIK::AddCurve(const FName& InName, float InValue)
+void FAnimNode_CacheCurveForFootIK::AddCurve(const FName& InName, float InValue)
 {
 	CurveValues.Add(InValue);
 	CurveNames.Add(InName);
 }
 
-void FAnimNode_CacheCurveForSPFootIK::RemoveCurve(int32 PoseIndex)
+void FAnimNode_CacheCurveForFootIK::RemoveCurve(int32 PoseIndex)
 {
 	CurveValues.RemoveAt(PoseIndex);
 	CurveNames.RemoveAt(PoseIndex);

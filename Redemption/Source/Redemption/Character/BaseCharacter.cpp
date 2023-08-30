@@ -6,7 +6,7 @@
 #include "Misc/WvCommonUtils.h"
 #include "Component/WvCharacterMovementComponent.h"
 #include "Locomotion/LocomotionComponent.h"
-#include "PredictiveFootIKComponent.h"
+#include "PredictionFootIKComponent.h"
 #include "Component/InventoryComponent.h"
 
 #include "Components/CapsuleComponent.h"
@@ -81,8 +81,8 @@ ABaseCharacter::ABaseCharacter(const FObjectInitializer& ObjectInitializer)
 
 	CharacterMovementTrajectoryComponent = CreateDefaultSubobject<UCharacterMovementTrajectoryComponent>(TEXT("CharacterMovementTrajectoryComponent"));
 
-	PredictiveFootIKComponent = CreateDefaultSubobject<UPredictiveFootIKComponent>(TEXT("PredictiveFootIKComponent"));
-	PredictiveFootIKComponent->bAutoActivate = 1;
+	PredictionFootIKComponent = CreateDefaultSubobject<UPredictionFootIKComponent>(TEXT("PredictionFootIKComponent"));
+	PredictionFootIKComponent->bAutoActivate = 1;
 
 	WvAbilitySystemComponent = CreateDefaultSubobject<UWvAbilitySystemComponent>(TEXT("WvAbilitySystemComponent"));
 	WvAbilitySystemComponent->bAutoActivate = 1;

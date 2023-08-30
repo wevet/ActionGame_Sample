@@ -1,14 +1,14 @@
 ﻿// Copyright 2022 wevet works All Rights Reserved.
 
-#include "AnimGraphNode_CacheToePosForSPFootIK.h"
+#include "AnimGraphNode_CacheToePosForFootIK.h"
 #include "UnrealWidget.h"
 #include "AnimNodeEditModes.h"
 #include "Kismet2/CompilerResultsLog.h"
 
 
-#define LOCTEXT_NAMESPACE "CacheToePosForSPFootIK"
+#define LOCTEXT_NAMESPACE "CacheToePosForFootIK"
 
-void UAnimGraphNode_CacheToePosForSPFootIK::ValidateAnimNodeDuringCompilation(USkeleton* ForSkeleton, FCompilerResultsLog& MessageLog)
+void UAnimGraphNode_CacheToePosForFootIK::ValidateAnimNodeDuringCompilation(USkeleton* ForSkeleton, FCompilerResultsLog& MessageLog)
 {
 	if (ForSkeleton && !ForSkeleton->HasAnyFlags(RF_NeedPostLoad))
 	{
@@ -22,9 +22,7 @@ void UAnimGraphNode_CacheToePosForSPFootIK::ValidateAnimNodeDuringCompilation(US
 			{
 				FFormatNamedArguments Args;
 				Args.Add(TEXT("BoneName"), FText::FromName(Node.RightToe.BoneName));
-
 				FText Msg = FText::Format(LOCTEXT("NoBoneFoundToModify", "@@ - Bone {BoneName} not found in Skeleton"), Args);
-
 				MessageLog.Warning(*Msg.ToString(), this);
 			}
 		}
@@ -39,9 +37,7 @@ void UAnimGraphNode_CacheToePosForSPFootIK::ValidateAnimNodeDuringCompilation(US
 			{
 				FFormatNamedArguments Args;
 				Args.Add(TEXT("BoneName"), FText::FromName(Node.LeftToe.BoneName));
-
 				FText Msg = FText::Format(LOCTEXT("NoBoneFoundToModify", "@@ - Bone {BoneName} not found in Skeleton"), Args);
-
 				MessageLog.Warning(*Msg.ToString(), this);
 			}
 		}
@@ -50,17 +46,17 @@ void UAnimGraphNode_CacheToePosForSPFootIK::ValidateAnimNodeDuringCompilation(US
 	Super::ValidateAnimNodeDuringCompilation(ForSkeleton, MessageLog);
 }
 
-FText UAnimGraphNode_CacheToePosForSPFootIK::GetControllerDescription() const
+FText UAnimGraphNode_CacheToePosForFootIK::GetControllerDescription() const
 {
-	return LOCTEXT("CacheToePosForSPFootIK", "Cache ToePos For SPFootIK");
+	return LOCTEXT("CacheToePosForFootIK", "Cache ToePos For FootIK");
 }
 
-FText UAnimGraphNode_CacheToePosForSPFootIK::GetNodeTitle(ENodeTitleType::Type TitleType) const
+FText UAnimGraphNode_CacheToePosForFootIK::GetNodeTitle(ENodeTitleType::Type TitleType) const
 {
-	return LOCTEXT("AnimGraphNode_CacheToePosForSPFootIK_Title", "Cache ToePos For SPFootIK");
+	return LOCTEXT("AnimGraphNode_CacheToePosForFootIK_Title", "Cache ToePos For FootIK");
 }
 
-FText UAnimGraphNode_CacheToePosForSPFootIK::GetTooltipText() const
+FText UAnimGraphNode_CacheToePosForFootIK::GetTooltipText() const
 {
 	return GetNodeTitle(ENodeTitleType::ListView);
 }

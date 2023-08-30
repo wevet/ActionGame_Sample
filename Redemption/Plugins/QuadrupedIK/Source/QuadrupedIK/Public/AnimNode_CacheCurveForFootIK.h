@@ -5,12 +5,12 @@
 #include "CoreMinimal.h"
 #include "UObject/ObjectMacros.h"
 #include "Animation/AnimNodeBase.h"
-#include "PredictiveFootIKComponent.h"
-#include "AnimNode_CacheCurveForSPFootIK.generated.h"
+#include "PredictionFootIKComponent.h"
+#include "AnimNode_CacheCurveForFootIK.generated.h"
 
 
 USTRUCT(BlueprintInternalUseOnly)
-struct PREDICTIVEFOOTIK_API FAnimNode_CacheCurveForSPFootIK : public FAnimNode_Base
+struct QUADRUPEDIK_API FAnimNode_CacheCurveForFootIK : public FAnimNode_Base
 {
 	GENERATED_BODY()
 
@@ -22,17 +22,17 @@ public:
 	TArray<float> CurveValues;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = CacheCurve)
-	EPredictiveGait Gait = EPredictiveGait::Walk;
+	EPredictionGait Gait = EPredictionGait::Walk;
 
 	UPROPERTY()
 	TArray<FName> CurveNames;
 
 private:
-	UPredictiveFootIKComponent* PredictiveFootIKComponent = nullptr;
+	UPredictionFootIKComponent* PredictionFootIKComponent = nullptr;
 	float FinalWeight = 0.f;
 
 public:	
-	FAnimNode_CacheCurveForSPFootIK();
+	FAnimNode_CacheCurveForFootIK();
 
 	virtual void Initialize_AnyThread(const FAnimationInitializeContext& Context) override;
 	virtual void CacheBones_AnyThread(const FAnimationCacheBonesContext& Context) override;

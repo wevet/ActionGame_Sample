@@ -47,7 +47,8 @@ public class Redemption : ModuleRules
 				"Gauntlet",
 				"MassZoneGraphNavigation",
 				"Niagara",
-				"PredictiveFootIK",
+				"QuadrupedIK",
+				"RopeCutting",
 			}
 		);
 

@@ -4,20 +4,20 @@
 
 #include "CoreMinimal.h"
 #include "Animation/AnimInstance.h"
-#include "PredictiveFootIKComponent.h"
-#include "PredictiveAnimInstance_Old.generated.h"
+#include "PredictionFootIKComponent.h"
+#include "PredictionAnimInstance_Old.generated.h"
 
 /**
  * 
  */
 UCLASS()
-class PREDICTIVEFOOTIK_API UPredictiveAnimInstance_Old : public UAnimInstance
+class QUADRUPEDIK_API UPredictionAnimInstance_Old : public UAnimInstance
 {
 	GENERATED_BODY()
 
 public:
-	UPredictiveAnimInstance_Old();
-	virtual ~UPredictiveAnimInstance_Old() {}
+	UPredictionAnimInstance_Old();
+	virtual ~UPredictionAnimInstance_Old() {}
 
 	virtual void NativeInitializeAnimation() override;
 	virtual void NativeBeginPlay() override;
@@ -37,7 +37,7 @@ public:
 private:
 	void TickPredictive(float DeltaSeconds);
 	void Step0_Prepare();
-	bool Step1_PredictiveToeEndPos(bool& OutEndPosChanged, FVector& OutToeEndPos, const FVector& InLastToeEndPos, const FToePathInfo& InPastPath, const float& InCurToeCurveValue, const FName& InToeName);
+	bool Step1_PredictiveToeEndPos(bool& OutEndPosChanged, FVector& OutToeEndPos, const FVector& InLastToeEndPos, const FPredictionToePathInfo& InPastPath, const float& InCurToeCurveValue, const FName& InToeName);
 	bool Step2_TraceToePath(TArray<FVector>& OutToePath, float& OutToeHeightLimit, float& OutToeEndDistance, const bool& InEndPosChanged, const FVector& InToeStartPos, const FVector& InToeCurPos, const FVector& InToeEndPos, const FName& InToeName, const float& DeltaSeconds);
 	void Step3_CorrectPelvisHegiht(const float& InRightEndDist, const float& InLeftEndDist, const FVector& InRightEndPos, const FVector& InLeftEndPos, const float& DeltaSeconds);
 	void Step4_Completed();
@@ -45,9 +45,9 @@ private:
 private:
 	void CurveSampling();
 	void ToePosSampling();
-	void CalcToeEndPosByPastPath(FVector& OutToeEndPos, const FToePathInfo& InPastPath);
+	void CalcToeEndPosByPastPath(FVector& OutToeEndPos, const FPredictionToePathInfo& InPastPath);
 	void CalcToeEndPosByCurve(FVector& OutToeEndPos, const float& InCurToeCurveValue);
-	void CalcToeEndPosByDefaultDistance(FVector& OutToeEndPos, const FToePathInfo& InPastPath);
+	void CalcToeEndPosByDefaultDistance(FVector& OutToeEndPos, const FPredictionToePathInfo& InPastPath);
 	void CheckEndPosByTrace(bool& OutEndPosChanged, FVector& OutToeEndPos, const FVector& InLastToeEndPos);
 	void LineTracePath(bool& OutEndPosValid, TArray<FVector>& OutToePath, const FVector& InToeStartPos, const FVector& InToeEndPos);
 	void LineTracePath2(bool& OutEndPosValid, TArray<FVector>& OutToePath, const FVector& InToeStartPos, const FVector& InToeEndPos);
@@ -137,7 +137,7 @@ public:
 	class UCharacterMovementComponent* CharacterMovementComponent;
 
 	UPROPERTY(BlueprintReadOnly, Category = "FootIK")
-	class UPredictiveFootIKComponent* PredictiveFootIKComponent;
+	class UPredictionFootIKComponent* PredictionFootIKComponent;
 
 private:
 	float CurRightToeCurveValue = 0.0f;
@@ -149,8 +149,8 @@ private:
 	FVector LeftToeCSPos;
 
 private:
-	FToePathInfo RightToePathInfo;
-	FToePathInfo LeftToePathInfo;
+	FPredictionToePathInfo RightToePathInfo;
+	FPredictionToePathInfo LeftToePathInfo;
 
 	FVector RightToePredictivePos;
 	FVector LeftToePredictivePos;
@@ -161,7 +161,7 @@ private:
 private:
 	FVector FootStartPos;
 	FVector FootEndPos;
-	EMotionFoot CurMotionFoot = EMotionFoot::None;
+	EPredictionMotionFoot CurMotionFoot = EPredictionMotionFoot::None;
 	float PelvisOriginOffset = 0.f;
 	float PelvisAdditiveOffset = 0.f;
 	float TargetPelvisAdditiveOffset = 0.f;

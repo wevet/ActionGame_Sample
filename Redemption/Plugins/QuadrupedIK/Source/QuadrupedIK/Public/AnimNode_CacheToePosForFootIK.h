@@ -6,11 +6,11 @@
 #include "UObject/ObjectMacros.h"
 #include "BonePose.h"
 #include "BoneControllers/AnimNode_SkeletalControlBase.h"
-#include "PredictiveFootIKComponent.h"
-#include "AnimNode_CacheToePosForSPFootIK.generated.h"
+#include "PredictionFootIKComponent.h"
+#include "AnimNode_CacheToePosForFootIK.generated.h"
 
 USTRUCT(BlueprintInternalUseOnly)
-struct PREDICTIVEFOOTIK_API FAnimNode_CacheToePosForSPFootIK : public FAnimNode_SkeletalControlBase
+struct QUADRUPEDIK_API FAnimNode_CacheToePosForFootIK : public FAnimNode_SkeletalControlBase
 {
 	GENERATED_BODY()
 
@@ -20,7 +20,7 @@ struct PREDICTIVEFOOTIK_API FAnimNode_CacheToePosForSPFootIK : public FAnimNode_
 	UPROPERTY(EditAnywhere, Category = CacheToePos)
 	FBoneReference LeftToe;
 
-	UPredictiveFootIKComponent* PredictiveFootIKComponent = nullptr;
+	UPredictionFootIKComponent* PredictionFootIKComponent = nullptr;
 	float FinalWeight = 0.f;
 
 	virtual void Initialize_AnyThread(const FAnimationInitializeContext& Context) override;

@@ -1,19 +1,19 @@
 // Copyright 2022 wevet works All Rights Reserved.
 
 
-#include "PredictiveAnimInstance_Old.h"
+#include "PredictionAnimInstance_Old.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "GameFramework/Character.h"
 #include "Components/CapsuleComponent.h"
-#include "PredictiveFootIKComponent.h"
+#include "PredictionFootIKComponent.h"
 
-float UPredictiveAnimInstance_Old::INVALID_TOE_DISTANCE = -9999.f;
-float UPredictiveAnimInstance_Old::DEFAULT_TOE_HEIGHT_LIMIT = -999.f;
+float UPredictionAnimInstance_Old::INVALID_TOE_DISTANCE = -9999.f;
+float UPredictionAnimInstance_Old::DEFAULT_TOE_HEIGHT_LIMIT = -999.f;
 
 
-#include UE_INLINE_GENERATED_CPP_BY_NAME(PredictiveAnimInstance_Old)
+#include UE_INLINE_GENERATED_CPP_BY_NAME(PredictionAnimInstance_Old)
 
 
 #if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
@@ -27,7 +27,7 @@ static TAutoConsoleVariable<int32> CVarDebugPredictiveFootIK(
 #endif
 
 
-UPredictiveAnimInstance_Old::UPredictiveAnimInstance_Old()
+UPredictionAnimInstance_Old::UPredictionAnimInstance_Old()
 {
 	bDrawTrace = false;
 
@@ -39,12 +39,12 @@ UPredictiveAnimInstance_Old::UPredictiveAnimInstance_Old()
 	LeftToeName = FName(TEXT("ball_l"));
 }
 
-void UPredictiveAnimInstance_Old::NativeInitializeAnimation()
+void UPredictionAnimInstance_Old::NativeInitializeAnimation()
 {
 	Super::NativeInitializeAnimation();
 }
 
-void UPredictiveAnimInstance_Old::NativeBeginPlay()
+void UPredictionAnimInstance_Old::NativeBeginPlay()
 {
 	Super::NativeBeginPlay();
 
@@ -54,10 +54,10 @@ void UPredictiveAnimInstance_Old::NativeBeginPlay()
 	{
 		CharacterMovementComponent = Character->GetCharacterMovement();
 
-		UActorComponent* Component = Character->GetComponentByClass(UPredictiveFootIKComponent::StaticClass());
+		UActorComponent* Component = Character->GetComponentByClass(UPredictionFootIKComponent::StaticClass());
 		if (Component)
 		{
-			PredictiveFootIKComponent = Cast<UPredictiveFootIKComponent>(Component);
+			PredictionFootIKComponent = Cast<UPredictionFootIKComponent>(Component);
 		}
 	}
 
@@ -67,9 +67,9 @@ void UPredictiveAnimInstance_Old::NativeBeginPlay()
 	LeftToePathInfo.SetToeContactFloorHeight(LeftInitialToePos.Z + ToeLeaveFloorOffset);
 }
 
-void UPredictiveAnimInstance_Old::NativeUpdateAnimation(float DeltaSeconds)
+void UPredictionAnimInstance_Old::NativeUpdateAnimation(float DeltaSeconds)
 {
-	if (Character && CharacterMovementComponent && PredictiveFootIKComponent)
+	if (Character && CharacterMovementComponent && PredictionFootIKComponent)
 	{
 		CharacterMaxStepHeight = CharacterMovementComponent->MaxStepHeight;
 		CharacterWalkableFloorZ = CharacterMovementComponent->GetWalkableFloorZ();
@@ -81,15 +81,15 @@ void UPredictiveAnimInstance_Old::NativeUpdateAnimation(float DeltaSeconds)
 	}
 }
 
-void UPredictiveAnimInstance_Old::TickPredictive(float DeltaSeconds)
+void UPredictionAnimInstance_Old::TickPredictive(float DeltaSeconds)
 {
 	Step0_Prepare();
 
 	if (!CharacterMovementComponent->GetCurrentAcceleration().IsNearlyZero() && ValidPredictiveWeight)
 	{
 		// tick contact state and path
-		RightToePathInfo.Update(GetOwningComponent(), RightToeCSPos, LeftToeCSPos, EMotionFoot::Right, RightToeName);
-		LeftToePathInfo.Update(GetOwningComponent(), RightToeCSPos, LeftToeCSPos, EMotionFoot::Left, LeftToeName);
+		RightToePathInfo.Update(GetOwningComponent(), RightToeCSPos, LeftToeCSPos, EPredictionMotionFoot::Right, RightToeName);
+		LeftToePathInfo.Update(GetOwningComponent(), RightToeCSPos, LeftToeCSPos, EPredictionMotionFoot::Left, LeftToeName);
 
 		// r toe contact pos predictive, and compare with last pos
 		bool RightEndPosChanged = false;
@@ -134,7 +134,7 @@ void UPredictiveAnimInstance_Old::TickPredictive(float DeltaSeconds)
 		// to end pos path is walkable
 		if (IsValidForRightEndPos || IsValidForLeftEndPos)
 		{
-			//UE_LOG(LogPredictiveFootIK, Log, TEXT("HeightLimit R: %f L: %f"), RightToeHeightLimit, LeftToeHeightLimit);
+			//UE_LOG(LogPredictionFootIK, Log, TEXT("HeightLimit R: %f L: %f"), RightToeHeightLimit, LeftToeHeightLimit);
 
 #if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
 			if (CVarDebugPredictiveFootIK.GetValueOnAnyThread() > 0)
@@ -163,12 +163,12 @@ void UPredictiveAnimInstance_Old::TickPredictive(float DeltaSeconds)
 		}
 		else
 		{
-			CurMotionFoot = EMotionFoot::None;
+			CurMotionFoot = EPredictionMotionFoot::None;
 		}
 	}
 	else
 	{
-		CurMotionFoot = EMotionFoot::None;
+		CurMotionFoot = EPredictionMotionFoot::None;
 		RightToeHeightLimit = DEFAULT_TOE_HEIGHT_LIMIT;
 		LeftToeHeightLimit = DEFAULT_TOE_HEIGHT_LIMIT;
 		RightToePathInfo.Reset();
@@ -176,16 +176,16 @@ void UPredictiveAnimInstance_Old::TickPredictive(float DeltaSeconds)
 	}
 
 	Step4_Completed();
-	ValidPredictiveFootIK = CurMotionFoot != EMotionFoot::None;
+	ValidPredictiveFootIK = CurMotionFoot != EPredictionMotionFoot::None;
 }
 
-void UPredictiveAnimInstance_Old::Step0_Prepare()
+void UPredictionAnimInstance_Old::Step0_Prepare()
 {
 	CurveSampling();
 	ToePosSampling();
 }
 
-bool UPredictiveAnimInstance_Old::Step1_PredictiveToeEndPos(bool& OutEndPosChanged, FVector& OutToeEndPos, const FVector& InLastToeEndPos, const FToePathInfo& InPastPath, const float& InCurToeCurveValue, const FName& InToeName)
+bool UPredictionAnimInstance_Old::Step1_PredictiveToeEndPos(bool& OutEndPosChanged, FVector& OutToeEndPos, const FVector& InLastToeEndPos, const FPredictionToePathInfo& InPastPath, const float& InCurToeCurveValue, const FName& InToeName)
 {
 	bool ValidPredictive = false;
 	OutEndPosChanged = false;
@@ -223,7 +223,7 @@ bool UPredictiveAnimInstance_Old::Step1_PredictiveToeEndPos(bool& OutEndPosChang
 	return ValidPredictive;
 }
 
-bool UPredictiveAnimInstance_Old::Step2_TraceToePath(TArray<FVector>& OutToePath, float& OutToeHeightLimit, float& OutToeEndDistance, const bool& InEndPosChanged, const FVector& InToeStartPos, const FVector& InToeCurPos, const FVector& InToeEndPos, const FName& InToeName, const float& DeltaSeconds)
+bool UPredictionAnimInstance_Old::Step2_TraceToePath(TArray<FVector>& OutToePath, float& OutToeHeightLimit, float& OutToeEndDistance, const bool& InEndPosChanged, const FVector& InToeStartPos, const FVector& InToeCurPos, const FVector& InToeEndPos, const FName& InToeName, const float& DeltaSeconds)
 {
 	// will cause cur toe endpos not same with trace end pos.
 	if (InEndPosChanged || OutToePath.IsEmpty())
@@ -231,7 +231,7 @@ bool UPredictiveAnimInstance_Old::Step2_TraceToePath(TArray<FVector>& OutToePath
 		TArray<FVector> ToePath;
 		bool ValidEndPos = true;
 		LineTracePath2(ValidEndPos, ToePath, InToeCurPos, InToeEndPos);
-		//UE_LOG(LogPredictiveFootIK, Log, TEXT("%s End Pos Changed, Valid %d"), *InToeName.ToString(), ValidEndPos);
+		//UE_LOG(LogPredictionFootIK, Log, TEXT("%s End Pos Changed, Valid %d"), *InToeName.ToString(), ValidEndPos);
 
 		if (ValidEndPos)
 		{
@@ -248,7 +248,7 @@ bool UPredictiveAnimInstance_Old::Step2_TraceToePath(TArray<FVector>& OutToePath
 		FVector ToeEndCSPos = GetOwningComponent()->GetComponentToWorld().InverseTransformPositionNoScale(OutToePath[OutToePath.Num() - 1]);
 		OutToeEndDistance = ToeEndCSPos.Y;
 
-		//UE_LOG(LogPredictiveFootIK, Log, TEXT("%s Predictive CSPos Dist: %f"), *InToeName.ToString(), ToeEndCSPos.Y);
+		//UE_LOG(LogPredictionFootIK, Log, TEXT("%s Predictive CSPos Dist: %f"), *InToeName.ToString(), ToeEndCSPos.Y);
 
 		float CurHeightLimit = OutToeHeightLimit;
 		float TargetHeightLimit = GetToeHeightLimitByPathCurve(InToeCurPos, OutToePath) - CurCharacterBottomLocation.Z;
@@ -267,69 +267,69 @@ bool UPredictiveAnimInstance_Old::Step2_TraceToePath(TArray<FVector>& OutToePath
 	return false;
 }
 
-void UPredictiveAnimInstance_Old::Step3_CorrectPelvisHegiht(const float& InRightEndDist, const float& InLeftEndDist, const FVector& InRightEndPos, const FVector& InLeftEndPos, const float& DeltaSeconds)
+void UPredictionAnimInstance_Old::Step3_CorrectPelvisHegiht(const float& InRightEndDist, const float& InLeftEndDist, const FVector& InRightEndPos, const FVector& InLeftEndPos, const float& DeltaSeconds)
 {
 	// switch motion foot
-	EMotionFoot LstMotionFoot = CurMotionFoot;
+	EPredictionMotionFoot LstMotionFoot = CurMotionFoot;
 	FName MotionToeName;
 
 	// maybe double dist all < 0.f
 	if (InRightEndDist * InLeftEndDist > 0.f)
 	{
-		CurMotionFoot = FMath::Abs(InRightEndDist) < FMath::Abs(InLeftEndDist) ? EMotionFoot::Right : EMotionFoot::Left;
+		CurMotionFoot = FMath::Abs(InRightEndDist) < FMath::Abs(InLeftEndDist) ? EPredictionMotionFoot::Right : EPredictionMotionFoot::Left;
 	}
 	else
 	{
-		CurMotionFoot = InRightEndDist > InLeftEndDist ? EMotionFoot::Right : EMotionFoot::Left;
+		CurMotionFoot = InRightEndDist > InLeftEndDist ? EPredictionMotionFoot::Right : EPredictionMotionFoot::Left;
 	}
-	FootEndPos = CurMotionFoot == EMotionFoot::Right ? InRightEndPos : InLeftEndPos;
-	MotionToeName = CurMotionFoot == EMotionFoot::Right ? RightToeName : LeftToeName;
+	FootEndPos = CurMotionFoot == EPredictionMotionFoot::Right ? InRightEndPos : InLeftEndPos;
+	MotionToeName = CurMotionFoot == EPredictionMotionFoot::Right ? RightToeName : LeftToeName;
 
 	FootEndPos += FVector(0.f, 0.f, 1.5f); // magic num
 	if (LstMotionFoot != CurMotionFoot)
 	{
-		float Offset = LstMotionFoot == EMotionFoot::None ? PelvisOffsetWhenDisablePredictive : FootStartPos.Z - CurCharacterBottomLocation.Z + PelvisAdditiveOffset;
-		//UE_LOG(LogPredictiveFootIK, Log, TEXT("SwitchFoot IsStartFoot: %d Offset: %f"), LstMotionFoot == EMotionFoot::None, Offset);
+		float Offset = LstMotionFoot == EPredictionMotionFoot::None ? PelvisOffsetWhenDisablePredictive : FootStartPos.Z - CurCharacterBottomLocation.Z + PelvisAdditiveOffset;
+		//UE_LOG(LogPredictionFootIK, Log, TEXT("SwitchFoot IsStartFoot: %d Offset: %f"), LstMotionFoot == EPredictionMotionFoot::None, Offset);
 
 		FootStartPos = FVector(CurCharacterBottomLocation.X, CurCharacterBottomLocation.Y, CurCharacterBottomLocation.Z + Offset);
 		PelvisAdditiveOffset = 0.f;
 	}
 
-	//UE_LOG(LogPredictiveFootIK, Log, TEXT("FootStart Height: %f FootEnd Height: %f |%s"), FootStartPos.Z, FootEndPos.Z, *MotionToeName.ToString());
+	//UE_LOG(LogPredictionFootIK, Log, TEXT("FootStart Height: %f FootEnd Height: %f |%s"), FootStartPos.Z, FootEndPos.Z, *MotionToeName.ToString());
 	FVector FootStartPosCSPos = GetOwningComponent()->GetComponentToWorld().InverseTransformPositionNoScale(FootStartPos);
 	FVector FootEndPosCSPos = GetOwningComponent()->GetComponentToWorld().InverseTransformPositionNoScale(FootEndPos);
 
-	//UE_LOG(LogPredictiveFootIK, Log, TEXT("FootStart Dist: %f FootEnd Dist: %f |%s"), FootStartPosCSPos.Y, FootEndPosCSPos.Y, *MotionToeName.ToString());
+	//UE_LOG(LogPredictionFootIK, Log, TEXT("FootStart Dist: %f FootEnd Dist: %f |%s"), FootStartPosCSPos.Y, FootEndPosCSPos.Y, *MotionToeName.ToString());
 	PelvisOriginOffset = FootStartPos.Z - CurCharacterBottomLocation.Z;
 	TargetPelvisAdditiveOffset = UKismetMathLibrary::MapRangeClamped(0.f, FootStartPosCSPos.Y, FootEndPosCSPos.Y, 0.f, (FootEndPos.Z - FootStartPos.Z));
 	PelvisAdditiveOffset = UKismetMathLibrary::FInterpTo(PelvisAdditiveOffset, TargetPelvisAdditiveOffset, DeltaSeconds, PelvisOffsetInterpSpeed);
 	PelvisFinalOffset = UKismetMathLibrary::FClamp(PelvisAdditiveOffset + PelvisOriginOffset, -1.f * PelvisHeightThreshold, PelvisHeightThreshold);
-	//UE_LOG(LogPredictiveFootIK, Log, TEXT("Ori: %f Add: %f TarAdd: %f Final: %f"), PelvisOriginOffset, PelvisAdditiveOffset, TargetPelvisAdditiveOffset, PelvisFinalOffset);
+	//UE_LOG(LogPredictionFootIK, Log, TEXT("Ori: %f Add: %f TarAdd: %f Final: %f"), PelvisOriginOffset, PelvisAdditiveOffset, TargetPelvisAdditiveOffset, PelvisFinalOffset);
 }
 
-void UPredictiveAnimInstance_Old::Step4_Completed()
+void UPredictionAnimInstance_Old::Step4_Completed()
 {
-	PredictiveFootIKComponent->ClearCurveValues();
-	PredictiveFootIKComponent->ClearToeCSPos();
+	PredictionFootIKComponent->ClearCurveValues();
+	PredictionFootIKComponent->ClearToeCSPos();
 }
 
-void UPredictiveAnimInstance_Old::CurveSampling()
+void UPredictionAnimInstance_Old::CurveSampling()
 {
 	bool SwitchGait = false;
-	PredictiveFootIKComponent->GetCurveValues(CurLeftToeCurveValue, CurRightToeCurveValue, CurMoveSpeedCurveValue, SwitchGait);
+	PredictionFootIKComponent->GetCurveValues(CurLeftToeCurveValue, CurRightToeCurveValue, CurMoveSpeedCurveValue, SwitchGait);
 }
 
-void UPredictiveAnimInstance_Old::ToePosSampling()
+void UPredictionAnimInstance_Old::ToePosSampling()
 {
-	PredictiveFootIKComponent->GetToeCSPos(RightToeCSPos, LeftToeCSPos, ValidPredictiveWeight);
+	PredictionFootIKComponent->GetToeCSPos(RightToeCSPos, LeftToeCSPos, ValidPredictiveWeight);
 }
 
-void UPredictiveAnimInstance_Old::CalcToeEndPosByPastPath(FVector& OutToeEndPos, const FToePathInfo& InPastPath)
+void UPredictionAnimInstance_Old::CalcToeEndPosByPastPath(FVector& OutToeEndPos, const FPredictionToePathInfo& InPastPath)
 {
 	OutToeEndPos = InPastPath.LeaveFloorPos + InPastPath.PathTranslation;
 }
 
-void UPredictiveAnimInstance_Old::CalcToeEndPosByCurve(FVector& OutToeEndPos, const float& InCurToeCurveValue)
+void UPredictionAnimInstance_Old::CalcToeEndPosByCurve(FVector& OutToeEndPos, const float& InCurToeCurveValue)
 {
 	FVector MoveVelocity = CharacterMovementComponent->Velocity;
 	if (CurMoveSpeedCurveValue > SMALL_NUMBER)
@@ -340,13 +340,13 @@ void UPredictiveAnimInstance_Old::CalcToeEndPosByCurve(FVector& OutToeEndPos, co
 	OutToeEndPos = CurCharacterBottomLocation + MoveVelocity * InCurToeCurveValue;
 }
 
-void UPredictiveAnimInstance_Old::CalcToeEndPosByDefaultDistance(FVector& OutToeEndPos, const FToePathInfo& InPastPath)
+void UPredictionAnimInstance_Old::CalcToeEndPosByDefaultDistance(FVector& OutToeEndPos, const FPredictionToePathInfo& InPastPath)
 {
 	FVector MoveVelocity = CharacterMovementComponent->Velocity;
 	OutToeEndPos = InPastPath.LeaveFloorPos + MoveVelocity.GetSafeNormal() * DefaultToeFirstPathDistance;
 }
 
-void UPredictiveAnimInstance_Old::CheckEndPosByTrace(bool& OutEndPosChanged, FVector& OutToeEndPos, const FVector& InLastToeEndPos)
+void UPredictionAnimInstance_Old::CheckEndPosByTrace(bool& OutEndPosChanged, FVector& OutToeEndPos, const FVector& InLastToeEndPos)
 {
 	FVector LocalToeTracePos = OutToeEndPos;
 	FVector LocalToeHitPos = LocalToeTracePos;
@@ -381,7 +381,7 @@ void UPredictiveAnimInstance_Old::CheckEndPosByTrace(bool& OutEndPosChanged, FVe
 	}
 }
 
-void UPredictiveAnimInstance_Old::LineTracePath(bool& OutEndPosValid, TArray<FVector>& OutToePath, const FVector& InToeStartPos, const FVector& InToeEndPos)
+void UPredictionAnimInstance_Old::LineTracePath(bool& OutEndPosValid, TArray<FVector>& OutToePath, const FVector& InToeStartPos, const FVector& InToeEndPos)
 {
 	OutToePath.Empty();
 
@@ -460,7 +460,7 @@ void UPredictiveAnimInstance_Old::LineTracePath(bool& OutEndPosValid, TArray<FVe
 	OutEndPosValid = IsValidHit;
 }
 
-void UPredictiveAnimInstance_Old::LineTracePath2(bool& OutEndPosValid, TArray<FVector>& OutToePath, const FVector& InToeStartPos, const FVector& InToeEndPos)
+void UPredictionAnimInstance_Old::LineTracePath2(bool& OutEndPosValid, TArray<FVector>& OutToePath, const FVector& InToeStartPos, const FVector& InToeEndPos)
 {
 	OutToePath.Empty();
 
@@ -546,7 +546,7 @@ void UPredictiveAnimInstance_Old::LineTracePath2(bool& OutEndPosValid, TArray<FV
 	OutEndPosValid = true;
 }
 
-float UPredictiveAnimInstance_Old::GetToeHeightLimitByPathCurve(const FVector& InToeCurPos, const TArray<FVector>& InToePath)
+float UPredictionAnimInstance_Old::GetToeHeightLimitByPathCurve(const FVector& InToeCurPos, const TArray<FVector>& InToePath)
 {
 	int32 Num = InToePath.Num();
 	if (Num >= 2)
@@ -565,7 +565,7 @@ float UPredictiveAnimInstance_Old::GetToeHeightLimitByPathCurve(const FVector& I
 			{
 				const float BeforeSize = (InToePath[Index - 1] - StartPos2D).Size2D();
 				const float AfterSize = (InToePath[Index] - StartPos2D).Size2D();
-				//UE_LOG(LogPredictiveFootIK, Log, TEXT("ToeHeight Index i: %d"), i);
+				//UE_LOG(LogPredictionFootIK, Log, TEXT("ToeHeight Index i: %d"), i);
 				return UKismetMathLibrary::MapRangeClamped(ProjectLength - BeforeSize, 0.f, AfterSize - BeforeSize,
 					InToePath[Index - 1].Z, InToePath[Index].Z);
 			}
@@ -577,7 +577,7 @@ float UPredictiveAnimInstance_Old::GetToeHeightLimitByPathCurve(const FVector& I
 	return -100.f; // magic num
 }
 
-void UPredictiveAnimInstance_Old::DebugDrawToePath(const TArray<FVector>& InToePath, const FVector& InToePos, FLinearColor InColor)
+void UPredictionAnimInstance_Old::DebugDrawToePath(const TArray<FVector>& InToePath, const FVector& InToePos, FLinearColor InColor)
 {
 	if (InToePath.Num() == 0)
 	{
@@ -603,7 +603,7 @@ void UPredictiveAnimInstance_Old::DebugDrawToePath(const TArray<FVector>& InToeP
 		bDrawTrace ? EDrawDebugTrace::ForOneFrame : EDrawDebugTrace::None, Hit, true, InColor, FLinearColor::Red);
 }
 
-void UPredictiveAnimInstance_Old::DebugDrawPelvisPath()
+void UPredictionAnimInstance_Old::DebugDrawPelvisPath()
 {
 	UKismetSystemLibrary::DrawDebugLine(GetWorld(), FootStartPos, FootEndPos, FLinearColor::Red, 0.f, 2.f);
 	UKismetSystemLibrary::DrawDebugBox(GetWorld(), FootStartPos, FVector(5.f, 5.f, 5.f), FLinearColor::Black, FRotator::ZeroRotator, 0.f, 1.f);
@@ -611,7 +611,7 @@ void UPredictiveAnimInstance_Old::DebugDrawPelvisPath()
 	UKismetSystemLibrary::DrawDebugBox(GetWorld(), CurCharacterBottomLocation, FVector(5.f, 5.f, 5.f), FLinearColor::White, FRotator::ZeroRotator, 0.f, 1.f);
 }
 
-const FVector UPredictiveAnimInstance_Old::CalcurateCharacterLocation()
+const FVector UPredictionAnimInstance_Old::CalcurateCharacterLocation()
 {
 	FVector Pos = Character->GetActorForwardVector();
 	if (!CharacterMovementComponent->bOrientRotationToMovement)

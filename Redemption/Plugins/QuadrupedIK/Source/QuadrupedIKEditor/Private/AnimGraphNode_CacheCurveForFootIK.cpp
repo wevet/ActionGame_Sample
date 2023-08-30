@@ -1,6 +1,6 @@
 ﻿// Copyright 2022 wevet works All Rights Reserved.
 
-#include "AnimGraphNode_CacheCurveForSPFootIK.h"
+#include "AnimGraphNode_CacheCurveForFootIK.h"
 #include "Textures/SlateIcon.h"
 #include "GraphEditorActions.h"
 #include "ScopedTransaction.h"
@@ -11,30 +11,30 @@
 #include "ToolMenus.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 
-#define LOCTEXT_NAMESPACE "CacheCurveForSPFootIK"
+#define LOCTEXT_NAMESPACE "CacheCurveForFootIK"
 
 
-UAnimGraphNode_CacheCurveForSPFootIK::UAnimGraphNode_CacheCurveForSPFootIK() 
+UAnimGraphNode_CacheCurveForFootIK::UAnimGraphNode_CacheCurveForFootIK() 
 {
 }
 
-FString UAnimGraphNode_CacheCurveForSPFootIK::GetNodeCategory() const
+FString UAnimGraphNode_CacheCurveForFootIK::GetNodeCategory() const
 {
-	return TEXT("SPFootIK");
+	return TEXT("FootIK");
 }
 
-FText UAnimGraphNode_CacheCurveForSPFootIK::GetTooltipText() const
+FText UAnimGraphNode_CacheCurveForFootIK::GetTooltipText() const
 {
 	return GetNodeTitle(ENodeTitleType::ListView);
 }
 
-FText UAnimGraphNode_CacheCurveForSPFootIK::GetNodeTitle(ENodeTitleType::Type TitleType) const
+FText UAnimGraphNode_CacheCurveForFootIK::GetNodeTitle(ENodeTitleType::Type TitleType) const
 {
-	return LOCTEXT("AnimGraphNode_CacheCurveForSPFootIK_Title", "Cache Curve For SPFootIK");
+	return LOCTEXT("AnimGraphNode_CacheCurveForFootIK_Title", "Cache Curve For FootIK");
 }
 
 
-TArray<FName> UAnimGraphNode_CacheCurveForSPFootIK::GetCurvesToAdd() const
+TArray<FName> UAnimGraphNode_CacheCurveForFootIK::GetCurvesToAdd() const
 {
 	TArray<FName> CurvesToAdd;
 
@@ -54,31 +54,31 @@ TArray<FName> UAnimGraphNode_CacheCurveForSPFootIK::GetCurvesToAdd() const
 	return CurvesToAdd;
 }
 
-void UAnimGraphNode_CacheCurveForSPFootIK::GetAddCurveMenuActions(FMenuBuilder& MenuBuilder) const
+void UAnimGraphNode_CacheCurveForFootIK::GetAddCurveMenuActions(FMenuBuilder& MenuBuilder) const
 {
 	TArray<FName> CurvesToAdd = GetCurvesToAdd();
 	for (FName CurveName : CurvesToAdd)
 	{
-		FUIAction Action = FUIAction(FExecuteAction::CreateUObject(const_cast<UAnimGraphNode_CacheCurveForSPFootIK*>(this), &UAnimGraphNode_CacheCurveForSPFootIK::AddCurvePin, CurveName));
+		FUIAction Action = FUIAction(FExecuteAction::CreateUObject(const_cast<UAnimGraphNode_CacheCurveForFootIK*>(this), &UAnimGraphNode_CacheCurveForFootIK::AddCurvePin, CurveName));
 		MenuBuilder.AddMenuEntry(FText::FromName(CurveName), FText::GetEmpty(), FSlateIcon(), Action);
 	}
 }
 
-void UAnimGraphNode_CacheCurveForSPFootIK::GetRemoveCurveMenuActions(FMenuBuilder& MenuBuilder) const
+void UAnimGraphNode_CacheCurveForFootIK::GetRemoveCurveMenuActions(FMenuBuilder& MenuBuilder) const
 {
 	for (FName CurveName : Node.CurveNames)
 	{
-		FUIAction Action = FUIAction(FExecuteAction::CreateUObject(const_cast<UAnimGraphNode_CacheCurveForSPFootIK*>(this), &UAnimGraphNode_CacheCurveForSPFootIK::RemoveCurvePin, CurveName));
+		FUIAction Action = FUIAction(FExecuteAction::CreateUObject(const_cast<UAnimGraphNode_CacheCurveForFootIK*>(this), &UAnimGraphNode_CacheCurveForFootIK::RemoveCurvePin, CurveName));
 		MenuBuilder.AddMenuEntry(FText::FromName(CurveName), FText::GetEmpty(), FSlateIcon(), Action);
 	}
 }
 
 
-void UAnimGraphNode_CacheCurveForSPFootIK::GetNodeContextMenuActions(UToolMenu* Menu, UGraphNodeContextMenuContext* Context) const
+void UAnimGraphNode_CacheCurveForFootIK::GetNodeContextMenuActions(UToolMenu* Menu, UGraphNodeContextMenuContext* Context) const
 {
 	if (!Context->bIsDebugging)
 	{
-		FToolMenuSection& Section = Menu->AddSection("AnimGraphNodeCacheCurveForSPFootIK", LOCTEXT("CacheCurveForSPFootIK", "Cache Curve"));
+		FToolMenuSection& Section = Menu->AddSection("AnimGraphNodeCacheCurveForFootIK", LOCTEXT("CacheCurveForFootIK", "Cache Curve"));
 
 		// Clicked pin
 		if (Context->Pin != NULL)
@@ -89,10 +89,10 @@ void UAnimGraphNode_CacheCurveForSPFootIK::GetNodeContextMenuActions(UToolMenu* 
 			GetPinAssociatedProperty(GetFNodeType(), Context->Pin, /*out*/ AssociatedProperty, /*out*/ ArrayIndex);
 			FName PinPropertyName = AssociatedProperty->GetFName();
 
-			if (PinPropertyName  == GET_MEMBER_NAME_CHECKED(FAnimNode_CacheCurveForSPFootIK, CurveValues) && Context->Pin->Direction == EGPD_Input)
+			if (PinPropertyName  == GET_MEMBER_NAME_CHECKED(FAnimNode_CacheCurveForFootIK, CurveValues) && Context->Pin->Direction == EGPD_Input)
 			{
 				FString PinName = Context->Pin->PinFriendlyName.ToString();
-				FUIAction Action = FUIAction( FExecuteAction::CreateUObject(const_cast<UAnimGraphNode_CacheCurveForSPFootIK*>(this), &UAnimGraphNode_CacheCurveForSPFootIK::RemoveCurvePin, FName(*PinName)) );
+				FUIAction Action = FUIAction( FExecuteAction::CreateUObject(const_cast<UAnimGraphNode_CacheCurveForFootIK*>(this), &UAnimGraphNode_CacheCurveForFootIK::RemoveCurvePin, FName(*PinName)) );
 				FText RemovePinLabelText = FText::Format(LOCTEXT("RemoveThisPin", "Remove This Curve Pin: {0}"), FText::FromString(PinName));
 				Section.AddMenuEntry("RemoveThisPin", RemovePinLabelText, LOCTEXT("RemoveThisPinTooltip", "Remove this curve pin from this node"), FSlateIcon(), Action);
 			}
@@ -105,7 +105,7 @@ void UAnimGraphNode_CacheCurveForSPFootIK::GetNodeContextMenuActions(UToolMenu* 
 				"AddCurvePin",
 				LOCTEXT("AddCurvePin", "Add Curve Pin"),
 				LOCTEXT("AddCurvePinTooltip", "Add a new pin to drive a curve"),
-				FNewMenuDelegate::CreateUObject(this, &UAnimGraphNode_CacheCurveForSPFootIK::GetAddCurveMenuActions));
+				FNewMenuDelegate::CreateUObject(this, &UAnimGraphNode_CacheCurveForFootIK::GetAddCurveMenuActions));
 		}
 
 		// If we have curves to remove, create submenu to offer them
@@ -115,12 +115,12 @@ void UAnimGraphNode_CacheCurveForSPFootIK::GetNodeContextMenuActions(UToolMenu* 
 				"RemoveCurvePin",
 				LOCTEXT("RemoveCurvePin", "Remove Curve Pin"),
 				LOCTEXT("RemoveCurvePinTooltip", "Remove a pin driving a curve"),
-				FNewMenuDelegate::CreateUObject(this, &UAnimGraphNode_CacheCurveForSPFootIK::GetRemoveCurveMenuActions));
+				FNewMenuDelegate::CreateUObject(this, &UAnimGraphNode_CacheCurveForFootIK::GetRemoveCurveMenuActions));
 		}
 	}
 }
 
-void UAnimGraphNode_CacheCurveForSPFootIK::RemoveCurvePin(FName CurveName)
+void UAnimGraphNode_CacheCurveForFootIK::RemoveCurvePin(FName CurveName)
 {
 	// Make sure we have a curve pin with that name
 	int32 CurveIndex = Node.CurveNames.Find(CurveName);
@@ -136,7 +136,7 @@ void UAnimGraphNode_CacheCurveForSPFootIK::RemoveCurvePin(FName CurveName)
 	}
 }
 
-void UAnimGraphNode_CacheCurveForSPFootIK::AddCurvePin(FName CurveName)
+void UAnimGraphNode_CacheCurveForFootIK::AddCurvePin(FName CurveName)
 {
 	// Make sure it doesn't already exist
 	int32 CurveIndex = Node.CurveNames.Find(CurveName);
@@ -153,9 +153,9 @@ void UAnimGraphNode_CacheCurveForSPFootIK::AddCurvePin(FName CurveName)
 }
 
 
-void UAnimGraphNode_CacheCurveForSPFootIK::CustomizePinData(UEdGraphPin* Pin, FName SourcePropertyName, int32 ArrayIndex) const
+void UAnimGraphNode_CacheCurveForFootIK::CustomizePinData(UEdGraphPin* Pin, FName SourcePropertyName, int32 ArrayIndex) const
 {
-	if (SourcePropertyName == GET_MEMBER_NAME_CHECKED(FAnimNode_CacheCurveForSPFootIK, CurveValues))
+	if (SourcePropertyName == GET_MEMBER_NAME_CHECKED(FAnimNode_CacheCurveForFootIK, CurveValues))
 	{
 		if (Node.CurveNames.IsValidIndex(ArrayIndex))
 		{
