@@ -8,6 +8,10 @@
 #include "Component/WvCharacterMovementTypes.h"
 #include "WvCommonUtils.generated.h"
 
+class USkeletalMeshComponent;
+class UFXSystemComponent;
+class UFXSystemAsset;
+
 /**
  * 
  */
@@ -36,5 +40,27 @@ public:
 	UFUNCTION(BlueprintPure, Category = "CommonUtils")
 	static FTransform TransformPlus(const FTransform A, const FTransform B);
 
+	template<typename T>
+	static FORCEINLINE void SpawnActorDeferred(AActor* PlayerActor, UClass* ItemClass, const FTransform InTransform, AActor* InOwner, TFunction<void(T* Context)> Callback)
+	{
+		T* SpawningObject = PlayerActor->GetWorld()->SpawnActorDeferred<T>(ItemClass, InTransform, InOwner, nullptr, ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
+		Callback(SpawningObject);
+		SpawningObject->FinishSpawning(InTransform);
+	}
 
+	template<typename T>
+	static FORCEINLINE T* SpawnActorDeferred(AActor* PlayerActor, UClass* ItemClass, const FTransform InTransform, AActor* InOwner)
+	{
+		return PlayerActor->GetWorld()->SpawnActorDeferred<T>(ItemClass, InTransform, InOwner, nullptr, ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
+	}
+
+	static UFXSystemComponent* SpawnParticleAtLocation(const UObject* WorldContextObject, UFXSystemAsset* Particle, FVector Location, FRotator Rotation, FVector Scale);
+	static UFXSystemComponent* SpawnParticleAttached(UFXSystemAsset* Particle, USceneComponent* Component, FName BoneName, FVector Location, FRotator Rotation, FVector Scale, EAttachLocation::Type LocationType);
+	static bool GetBoneTransForm(const USkeletalMeshComponent* MeshComp, const FName BoneName, FTransform& OutBoneTransform);
+
+	UFUNCTION(BlueprintPure, Category = "CommonUtils")
+	static bool IsHost(const AController* Controller);
+
+	UFUNCTION(BlueprintPure, Category = "CommonUtils")
+	static bool IsBot(const AController* Controller);
 };

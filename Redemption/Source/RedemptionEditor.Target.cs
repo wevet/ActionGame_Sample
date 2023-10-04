@@ -10,6 +10,6 @@ public class RedemptionEditorTarget : TargetRules
 		Type = TargetType.Editor;
 		DefaultBuildSettings = BuildSettingsVersion.V2;
 		IncludeOrderVersion = EngineIncludeOrderVersion.Unreal5_1;
-		ExtraModuleNames.Add("Redemption");
+		ExtraModuleNames.AddRange(new string[] { "Redemption", "RedemptionEditor" });
 	}
 }

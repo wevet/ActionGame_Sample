@@ -66,6 +66,15 @@ enum class ELSOverlayState : uint8
 	Barrel  UMETA(DisplayName = "Barrel"),
 };
 
+UENUM(BlueprintType)
+enum class EAttackWeaponState : uint8
+{
+	EmptyWeapon UMETA(DisplayName = "EmptyWeapon"),
+	Gun UMETA(DisplayName = "Gun"),
+	Rifle UMETA(DisplayName = "Rifle"),
+	Knife UMETA(DisplayName = "Knife"),
+};
+
 USTRUCT(BlueprintType)
 struct REDEMPTION_API FCameraSettings
 {
@@ -294,3 +303,56 @@ public:
 
 	void Init(const FRotator Rotation);
 };
+
+USTRUCT(BlueprintType)
+struct REDEMPTION_API FPawnAttackParam
+{
+	GENERATED_BODY()
+
+public:
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+	FName WeaponName;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+	float BaseDamage = 10.0f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+	EAttackWeaponState AttackWeaponState;
+
+	// is gun?
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+	bool bHasAmmo = false;
+
+	// ç≈ëÂíeêîíl
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, meta = (EditCondition = "bHasAmmo"))
+	int32 BaseMaxAmmo;
+
+	// reloadÇ∑ÇÈèÍçáÇÃíeêîíl
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, meta = (EditCondition = "bHasAmmo"))
+	int32 ClipType;
+
+	// not gun maybe knife?
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+	bool bHasItem = false;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, meta = (EditCondition = "bHasAmmo|bHasItem"))
+	FName EquipSocketName;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, meta = (EditCondition = "bHasAmmo|bHasItem"))
+	FName UnEquipSocketName;
+
+	int32 NeededAmmo;
+	// åªç›íeêî
+	int32 CurrentAmmo;
+	int32 MaxAmmo;
+
+	FPawnAttackParam();
+
+	bool IsEmptyCurrentAmmo() const;
+	bool IsEmptyAmmo() const;
+	bool IsCurrentFullAmmo() const;
+
+	void DecrementAmmos();
+	void Replenishment();
+};
+

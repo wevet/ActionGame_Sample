@@ -98,21 +98,10 @@ void UWvAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 {
 	Super::NativeUpdateAnimation(DeltaSeconds);
 
-	if (IsValid(CharacterMovementComponent))
-	{
-		const FWvCharacterGroundInfo& GroundInfo = CharacterMovementComponent->GetGroundInfo();
-		GroundDistance = GroundInfo.GroundDistance;
-	}
-
 	if (Character.IsValid())
 	{
 		TrajectorySampleRange = Character->GetTrajectorySampleRange();
 	}
-}
-
-void UWvAnimInstance::NativeThreadSafeUpdateAnimation(float DeltaSeconds)
-{
-	Super::NativeThreadSafeUpdateAnimation(DeltaSeconds);
 
 	if (LocomotionComponent.IsValid())
 	{
@@ -120,26 +109,30 @@ void UWvAnimInstance::NativeThreadSafeUpdateAnimation(float DeltaSeconds)
 
 		CharacterOverlayInfo.ChooseStanceMode(LocomotionEssencialVariables.LSStance == ELSStance::Standing);
 		CharacterOverlayInfo.ModifyAnimCurveValue(this);
-
 		Speed = LocomotionEssencialVariables.Velocity.Size();
 		bHasVelocity = LocomotionEssencialVariables.bWasMoving;
 		OverlayState = LocomotionEssencialVariables.OverlayState;
-
 		WalkingSpeed = LocomotionComponent->GetWalkingSpeed_Implementation();
 		RunningSpeed = LocomotionComponent->GetRunningSpeed_Implementation();
 		SprintingSpeed = LocomotionComponent->GetSprintingSpeed_Implementation();
-
-		switch (LocomotionEssencialVariables.LSMovementMode)
-		{
-			case ELSMovementMode::Grounded:
-			CalculateGaitValue();
-			break;
-			case ELSMovementMode::Falling:
-			CalculateLandPredictionAlpha();
-			break;
-		}
-
 	}
+
+	switch (LocomotionEssencialVariables.LSMovementMode)
+	{
+		case ELSMovementMode::Grounded:
+		DoWhileGrounded();
+		break;
+		case ELSMovementMode::Falling:
+		DoWhileFalling();
+		break;
+	}
+
+}
+
+void UWvAnimInstance::NativeThreadSafeUpdateAnimation(float DeltaSeconds)
+{
+	Super::NativeThreadSafeUpdateAnimation(DeltaSeconds);
+
 }
 
 void UWvAnimInstance::NativePostEvaluateAnimation()
@@ -177,6 +170,11 @@ EDataValidationResult UWvAnimInstance::IsDataValid(TArray<FText>& ValidationErro
 }
 #endif
 
+void UWvAnimInstance::DoWhileGrounded()
+{
+	CalculateGaitValue();
+}
+
 void UWvAnimInstance::CalculateGaitValue()
 {
 	const float MoveSpeed = UKismetMathLibrary::MapRangeClamped(Speed, 0.0f, WalkingSpeed, 0.0f, 1.0f);
@@ -187,6 +185,21 @@ void UWvAnimInstance::CalculateGaitValue()
 
 	const float CurrentSpeed = bRunnedGreater ? RunSpeed : bWalkedGreater ? WalkSpeed : MoveSpeed;
 	GaitValue = CurrentSpeed;
+}
+
+void UWvAnimInstance::DoWhileFalling()
+{
+	//CalculateLandPredictionAlpha();
+
+	if (IsValid(CharacterMovementComponent))
+	{
+		const FWvCharacterGroundInfo& GroundInfo = CharacterMovementComponent->GetGroundInfo();
+		GroundDistance = GroundInfo.GroundDistance;
+		LandPredictionAlpha = GroundInfo.LandPredictionAlpha;
+
+		//UE_LOG(LogTemp, Log, TEXT("GroundDistance => %.3f, LandPredictionAlpha => %.3f"), GroundDistance, LandPredictionAlpha);
+	}
+
 }
 
 void UWvAnimInstance::CalculateLandPredictionAlpha()
@@ -237,8 +250,7 @@ void UWvAnimInstance::CalculateLandPredictionAlpha()
 		FLinearColor::Green,
 		DrawTime);
 
-	const float FloorZ = CharacterMovementComponent->GetWalkableFloorZ();
-	const bool bWasHitNormalGreater = (HitData.ImpactNormal.Z >= FloorZ);
+	const bool bWasHitNormalGreater = (HitData.ImpactNormal.Z >= CharacterMovementComponent->GetWalkableFloorZ());
 	if (HitData.bBlockingHit && bWasHitNormalGreater)
 	{
 		InterpSpeed = 20.f;

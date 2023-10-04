@@ -31,6 +31,8 @@
 
 DEFINE_LOG_CATEGORY_STATIC(LogCharacterMovement, Log, All);
 
+// log LogCharacterMovement Verbose
+
 #include UE_INLINE_GENERATED_CPP_BY_NAME(WvCharacterMovementComponent)
 
 DECLARE_CYCLE_STAT(TEXT("Char Update Acceleration"), STAT_CharUpdateAcceleration, STATGROUP_Character);
@@ -130,18 +132,16 @@ void UWvCharacterMovementComponent::BeginPlay()
 	BaseCharacter = CastChecked<ABaseCharacter>(CharacterOwner);
 	ASC = CastChecked<UWvAbilitySystemComponent>(UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(CharacterOwner));
 
-	if (IsValid(CharacterOwner))
-	{
-		UCapsuleComponent* Capsule = CharacterOwner->GetCapsuleComponent();
-		const float CapsuleRadius = Capsule->GetUnscaledCapsuleRadius() * PerchRadiusThresholdRange;
-		PerchRadiusThreshold = FMath::Abs(CapsuleRadius);
-		AnimInstance = CharacterOwner->GetMesh()->GetAnimInstance();
-		InitUnScaledCapsuleHalfHeight = Capsule->GetUnscaledCapsuleHalfHeight();
-	}
-
 	if (IsValid(BaseCharacter))
 	{
 		LocomotionComponent = BaseCharacter->GetLocomotionComponent();
+
+		UCapsuleComponent* Capsule = BaseCharacter->GetCapsuleComponent();
+		const float CapsuleRadius = Capsule->GetUnscaledCapsuleRadius() * PerchRadiusThresholdRange;
+		PerchRadiusThreshold = FMath::Abs(CapsuleRadius);
+		AnimInstance = BaseCharacter->GetMesh()->GetAnimInstance();
+		InitUnScaledCapsuleHalfHeight = Capsule->GetUnscaledCapsuleHalfHeight();
+
 	}
 }
 
@@ -162,8 +162,18 @@ void UWvCharacterMovementComponent::SimulateMovement(float DeltaTime)
 
 bool UWvCharacterMovementComponent::CanAttemptJump() const
 {
-	// Same as UCharacterMovementComponent's implementation but without the crouch check
-	// Falling included for double-jump and non-zero jump hold time, but validated by character.
+	if (ASC.IsValid())
+	{
+		if (ASC->HasMatchingGameplayTag(TAG_Locomotion_ForbidMovement) || 
+			ASC->HasMatchingGameplayTag(TAG_Locomotion_ForbidJump) ||
+			ASC->HasMatchingGameplayTag(TAG_Character_StateMelee))
+		{
+			UE_LOG(LogCharacterMovement, Verbose, TEXT("forbid movement or forbid jump => %s"), *FString(__FUNCTION__));
+			return false;
+		}
+	}
+	// UCharacterMovementComponentの実装と同じですが、しゃがみチェックはありません。
+	// 二重ジャンプとジャンプ保持時間が0でない場合は落下が含まれるが、キャラクターによって検証される。
 	return IsJumpAllowed() && (IsMovingOnGround() || IsFalling());
 }
 
@@ -179,10 +189,15 @@ const FWvCharacterGroundInfo& UWvCharacterMovementComponent::GetGroundInfo()
 		return CachedGroundInfo;
 	}
 
-	if (MovementMode == MOVE_Walking)
+	//
+	constexpr float InterpSpeed = 20.f;
+	const float DeltaSeconds = GetWorld()->GetDeltaSeconds();
+
+	if (!IsFalling())
 	{
 		CachedGroundInfo.GroundHitResult = CurrentFloor.HitResult;
 		CachedGroundInfo.GroundDistance = 0.0f;
+		CachedGroundInfo.LandPredictionAlpha = 0.f;
 	}
 	else
 	{
@@ -204,13 +219,25 @@ const FWvCharacterGroundInfo& UWvCharacterMovementComponent::GetGroundInfo()
 		CachedGroundInfo.GroundHitResult = HitResult;
 		CachedGroundInfo.GroundDistance = WvCharacter::GroundTraceDistance;
 
-		if (MovementMode == MOVE_NavWalking)
-		{
-			CachedGroundInfo.GroundDistance = 0.0f;
-		}
-		else if (HitResult.bBlockingHit)
+		if (HitResult.bBlockingHit)
 		{
 			CachedGroundInfo.GroundDistance = FMath::Max((HitResult.Distance - CapsuleHalfHeight), 0.0f);
+			float LandingValue = 0.f;
+			if (Velocity.Z < 0.0f && HitResult.ImpactNormal.Z >= GetWalkableFloorZ())
+			{
+				const float Value = UKismetMathLibrary::MapRangeClamped(HitResult.Time, 0.0f, 1.0f, 1.0f, 0.0f);
+				LandingValue = UKismetMathLibrary::FInterpTo(CachedGroundInfo.LandPredictionAlpha, Value, DeltaSeconds, InterpSpeed);
+			}
+			CachedGroundInfo.LandPredictionAlpha = UKismetMathLibrary::FInterpTo(CachedGroundInfo.LandPredictionAlpha, LandingValue, DeltaSeconds, InterpSpeed);
+
+			if (bIsDrawGroundTrace)
+			{
+#if WITH_EDITOR
+				auto Color = UKismetMathLibrary::LinearColorLerp(FLinearColor::Red, FLinearColor::Blue, CachedGroundInfo.LandPredictionAlpha);
+				UKismetSystemLibrary::DrawDebugLine(GetWorld(), TraceStart, TraceEnd, Color, 1.0f, 1.0f);
+#endif
+			}
+
 		}
 	}
 	CachedGroundInfo.LastUpdateFrame = GFrameCounter;
@@ -666,7 +693,7 @@ float UWvCharacterMovementComponent::SlideAlongSurface(const FVector& Delta, flo
 	FVector SlideDelta = ComputeSlideVector(Delta, Time, Normal, Hit);
 	const float Dot = SlideDelta.GetSafeNormal() | Delta.GetSafeNormal();
 
-	UE_LOG(LogTemp, Log, TEXT("Dot => %.3f, AllowSlideCosAngle => %.3f"), Dot, AllowSlideCosAngle);
+	//UE_LOG(LogTemp, Log, TEXT("Dot => %.3f, AllowSlideCosAngle => %.3f"), Dot, AllowSlideCosAngle);
 
 	if (Dot >= AllowSlideCosAngle)
 	{
@@ -676,7 +703,7 @@ float UWvCharacterMovementComponent::SlideAlongSurface(const FVector& Delta, flo
 		const float FirstHitPercent = Hit.Time;
 		PercentTimeApplied = FirstHitPercent;
 
-		UE_LOG(LogTemp, Log, TEXT("PercentTimeApplied => %.3f"), PercentTimeApplied);
+		//UE_LOG(LogTemp, Log, TEXT("PercentTimeApplied => %.3f"), PercentTimeApplied);
 		if (Hit.IsValidBlockingHit())
 		{
 			// Notify first impact
@@ -960,7 +987,7 @@ void UWvCharacterMovementComponent::ComputeFloorDist(const FVector& CapsuleLocat
 	// TODO Copied with modifications from UCharacterMovementComponent::ComputeFloorDist().
 	// TODO After the release of a new engine version, this code should be updated to match the source code.
 
-	UE_LOG(LogTemp, VeryVerbose, TEXT("[Role:%d] ComputeFloorDist: %s at location %s"), (int32)CharacterOwner->GetLocalRole(), *GetNameSafe(CharacterOwner), *CapsuleLocation.ToString());
+	UE_LOG(LogCharacterMovement, VeryVerbose, TEXT("[Role:%d] ComputeFloorDist: %s at location %s"), (int32)CharacterOwner->GetLocalRole(), *GetNameSafe(CharacterOwner), *CapsuleLocation.ToString());
 	OutFloorResult.Clear();
 
 	float PawnRadius, PawnHalfHeight;
@@ -1536,18 +1563,30 @@ const bool UWvCharacterMovementComponent::MantleCheck(const FMantleTraceSettings
 	TraceForwardToFindWall(InTraceSetting, TracePoint, TraceNormal, OutHitResult);
 	if (!OutHitResult)
 	{
+		if (MantleDataAsset->bDebugDrawTrace)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("TraceForwardToFindWall => false"));
+		}
 		return false;
 	}
 
 	SphereTraceByMantleCheck(InTraceSetting, TracePoint, TraceNormal, OutHitResult, DownTraceLocation, HitComponent);
 	if (!OutHitResult)
 	{
+		if (MantleDataAsset->bDebugDrawTrace)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("SphereTraceByMantleCheck => false"));
+		}
 		return false;
 	}
 
 	ConvertMantleHeight(DownTraceLocation, TraceNormal, OutHitResult, TargetTransform, MantleHeight);
 	if (!OutHitResult)
 	{
+		if (MantleDataAsset->bDebugDrawTrace)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("ConvertMantleHeight => false"));
+		}
 		return false;
 	}
 
@@ -1636,7 +1675,7 @@ void UWvCharacterMovementComponent::TraceForwardToFindWall(const FMantleTraceSet
 	FHitResult HitData(ForceInit);
 
 	TArray<AActor*> Ignore;
-	const float DrawTime = 1.0f;
+	const float DrawTime = 5.0f;
 
 	const bool bWasHitResult = UKismetSystemLibrary::CapsuleTraceSingle(
 		CharacterOwner->GetWorld(),
@@ -1647,18 +1686,18 @@ void UWvCharacterMovementComponent::TraceForwardToFindWall(const FMantleTraceSet
 		MantleDataAsset->MantleTraceChannel,
 		false,
 		Ignore,
-		MantleDataAsset->bDebugDrawTrace ? EDrawDebugTrace::Type::ForOneFrame : EDrawDebugTrace::Type::None,
+		MantleDataAsset->bDebugDrawTrace ? EDrawDebugTrace::Type::ForDuration : EDrawDebugTrace::Type::None,
 		HitData,
 		true,
-		FLinearColor::Black,
-		FLinearColor::Black,
+		FLinearColor::Red,
+		FLinearColor::Green,
 		DrawTime);
 
-	const bool bWalkableHit = !IsWalkable(HitData);
+	const bool bNotWalkableHit = !IsWalkable(HitData);
 	const bool bBlockingHit = HitData.bBlockingHit;
-	const bool bInitialOverlap = !(HitData.bStartPenetrating);
+	const bool bNotInitialOverlap = !(HitData.bStartPenetrating);
 
-	OutHitResult = (bWalkableHit && bBlockingHit && bInitialOverlap);
+	OutHitResult = (bNotWalkableHit && bBlockingHit && bNotInitialOverlap);
 
 	if (OutHitResult)
 	{
@@ -1690,7 +1729,7 @@ void UWvCharacterMovementComponent::SphereTraceByMantleCheck(const FMantleTraceS
 	// Access For LedgeTrace 
 	FHitResult HitData(ForceInit);
 	TArray<AActor*> Ignore;
-	const float DrawTime = 1.0f;
+	const float DrawTime = 5.0f;
 
 	const bool bWasHitResult = UKismetSystemLibrary::SphereTraceSingle(
 		CharacterOwner->GetWorld(),
@@ -1703,8 +1742,8 @@ void UWvCharacterMovementComponent::SphereTraceByMantleCheck(const FMantleTraceS
 		MantleDataAsset->bDebugDrawTrace ? EDrawDebugTrace::Type::ForDuration : EDrawDebugTrace::Type::None,
 		HitData,
 		true,
-		FLinearColor::Yellow,
 		FLinearColor::Red,
+		FLinearColor::Yellow,
 		DrawTime);
 
 	const bool bWalkableHit = IsWalkable(HitData);
@@ -1903,7 +1942,7 @@ void UWvCharacterMovementComponent::PhysMantling(float deltaTime, int32 Iteratio
 		{
 			HandleImpact(Hit, deltaTime, Adjusted);
 			Super::SlideAlongSurface(Adjusted, (1.f - Hit.Time), Hit.Normal, Hit, true);
-			UE_LOG(LogTemp, Log, TEXT("adjust and try again => %s"), *FString(__FUNCTION__));
+			UE_LOG(LogCharacterMovement, Verbose, TEXT("adjust and try again => %s"), *FString(__FUNCTION__));
 		}
 	}
 

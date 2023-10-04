@@ -5,6 +5,7 @@
 #include "Ability/WvAbilitySystemComponent.h"
 #include "Component/WvCharacterMovementComponent.h"
 
+#include "Components/CapsuleComponent.h"
 #include "AbilitySystemInterface.h"
 #include "Engine.h"
 #include "Kismet/GameplayStatics.h"
@@ -105,6 +106,7 @@ void ULocomotionComponent::BeginPlay()
 	Character = Cast<ABaseCharacter>(GetOwner());
 	CharacterMovementComponent = Cast<UWvCharacterMovementComponent>(Character->GetCharacterMovement());
 	SkeletalMeshComponent = Character->GetMesh();
+	CapsuleComponent = Character->GetCapsuleComponent();
 
 	ILocomotionInterface::Execute_OnLSRotationModeChange(this);
 	ILocomotionInterface::Execute_OnLSStanceChange(this);
@@ -744,8 +746,50 @@ void ULocomotionComponent::SprintCheck()
 }
 
 #pragma region Ragdolling
+void ULocomotionComponent::StartRagdollAction()
+{
+	Character->SetReplicateMovement(false);
+	CharacterMovementComponent->SetMovementMode(EMovementMode::MOVE_None);
+	CapsuleComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+	SkeletalMeshComponent->SetCollisionEnabled(ECollisionEnabled::PhysicsOnly);
+	SkeletalMeshComponent->SetCollisionProfileName(FName(TEXT("Ragdoll")));
+	//SkeletalMeshComponent->SetAllBodiesSimulatePhysics(true);
+	SkeletalMeshComponent->SetAllBodiesBelowSimulatePhysics(PelvisBoneName, true, true);
+	//SkeletalMeshComponent->WakeAllRigidBodies();
+	//SkeletalMeshComponent->bBlendPhysics = 1;
+	//SkeletalMeshComponent->bIgnoreRadialForce = 1;
+	//SkeletalMeshComponent->bIgnoreRadialImpulse = 1;
+}
+
+void ULocomotionComponent::StopRagdollAction()
+{
+	Character->SetReplicateMovement(true);
+
+	CharacterMovementComponent->SetMovementMode(LocomotionEssencialVariables.bRagdollOnGround ? EMovementMode::MOVE_Walking : EMovementMode::MOVE_Falling);
+	CharacterMovementComponent->Velocity = LocomotionEssencialVariables.RagdollVelocity;
+	//ILocomotionSystemPawn::Execute_PoseSnapShot(GetAnimInstance(), RagdollPoseSnapshot);
+
+	if (LocomotionEssencialVariables.bRagdollOnGround)
+	{
+		const FRotator Rotation = SkeletalMeshComponent->GetSocketRotation(PelvisBoneName);
+		const bool bGetUpFront = (Rotation.Roll > 0.0f) ? true : false;
+		UE_LOG(LogTemp, Log, TEXT("Rotation %s"), *Rotation.ToString());
+		//ILocomotionSystemPawn::Execute_SetGetup(GetAnimInstance(), bGetUpFront);
+	}
+
+	CapsuleComponent->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+	SkeletalMeshComponent->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+	SkeletalMeshComponent->SetAllBodiesSimulatePhysics(false);
+}
+
 void ULocomotionComponent::DoWhileRagdolling()
 {
+	if (Character->IsBotControlled())
+	{
+		return;
+	}
+
 	FRotator ActorRotation = FRotator::ZeroRotator;
 	FVector ActorLocation = FVector::ZeroVector;
 	UpdateRagdollTransform(ActorRotation, ActorLocation);
@@ -779,16 +823,46 @@ void ULocomotionComponent::UpdateRagdollTransform(FRotator& OutActorRotation, FV
 	LocomotionEssencialVariables.RagdollLocation = SkeletalMeshComponent->GetSocketLocation(PelvisBoneName);
 	const FRotator BoneRotation = SkeletalMeshComponent->GetSocketRotation(PelvisBoneName);
 	CalculateActorTransformRagdoll(BoneRotation, LocomotionEssencialVariables.RagdollLocation, OutActorRotation, OutActorLocation);
-	//Character->SetActorLocation(OutActorLocation);
+	Character->SetActorLocation(OutActorLocation);
 
 	LocomotionEssencialVariables.TargetRotation = OutActorRotation;
 	LocomotionEssencialVariables.RotationDifference = UKismetMathLibrary::NormalizedDeltaRotator(LocomotionEssencialVariables.TargetRotation,
 		LocomotionEssencialVariables.CharacterRotation).Yaw;
 	LocomotionEssencialVariables.CharacterRotation = OutActorRotation;
-	//Character->SetActorRotation(CharacterRotation);
+	Character->SetActorRotation(OutActorRotation);
 
-	// @TODO
-	//Character->SetActorLocationAndRotation(OutActorLocation, CharacterRotation);
+}
+
+void ULocomotionComponent::CalculateActorTransformRagdoll(const FRotator InRagdollRotation, const FVector InRagdollLocation, FRotator& OutActorRotation, FVector& OutActorLocation)
+{
+	if (!Character.IsValid())
+		return;
+
+	const float CapsuleHalfHeight = Character->GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
+	const FVector StartLocation(InRagdollLocation);
+	const FVector EndLocation(InRagdollLocation.X, InRagdollLocation.Y, InRagdollLocation.Z - CapsuleHalfHeight);
+
+	TArray<AActor*> ActorsToIgnore;
+	FHitResult HitResult;
+	const bool bResult = UKismetSystemLibrary::LineTraceSingle(
+		GetWorld(),
+		StartLocation,
+		EndLocation,
+		UEngineTypes::ConvertToTraceType(ECC_Visibility),
+		false,
+		ActorsToIgnore,
+		bDebugTrace ? EDrawDebugTrace::ForOneFrame : EDrawDebugTrace::None,
+		HitResult,
+		true);
+
+	LocomotionEssencialVariables.bRagdollOnGround = HitResult.bBlockingHit;
+	const float Offset = 2.0f;
+	const float Diff = FMath::Abs(HitResult.ImpactPoint.Z - HitResult.TraceStart.Z);
+	const float Value = LocomotionEssencialVariables.bRagdollOnGround ? (CapsuleHalfHeight - Diff) + Offset : 0.0f;
+	OutActorLocation = FVector(InRagdollLocation.X, InRagdollLocation.Y, InRagdollLocation.Z + Value);
+
+	const float Yaw = (OutActorRotation.Roll > 0.0f) ? OutActorRotation.Yaw : OutActorRotation.Yaw - 180.f;
+	OutActorRotation = FRotator(0.0f, Yaw, 0.0f);
 }
 
 void ULocomotionComponent::CalcurateRagdollParams(const FVector InRagdollVelocity, const FVector InRagdollLocation, const FRotator InActorRotation, const FVector InActorLocation)
@@ -800,8 +874,7 @@ void ULocomotionComponent::CalcurateRagdollParams(const FVector InRagdollVelocit
 
 	if (Character.IsValid())
 	{
-		// @TODO
-		//Character->SetActorLocationAndRotation(InActorLocation, CharacterRotation);
+		Character->SetActorLocationAndRotation(InActorLocation, InActorRotation);
 	}
 }
 
@@ -851,6 +924,8 @@ void ULocomotionComponent::DoCharacterFalling()
 		}
 		break;
 	}
+
+	//
 }
 
 void ULocomotionComponent::DoCharacterGrounded()
@@ -953,38 +1028,6 @@ void ULocomotionComponent::GroundMovementInput(const bool bForwardAxis)
 	{
 		Character->AddMovementInput(OutRightVector, RightAxisValue);
 	}
-}
-
-void ULocomotionComponent::CalculateActorTransformRagdoll(const FRotator InRagdollRotation, const FVector InRagdollLocation, FRotator& OutActorRotation, FVector& OutActorLocation)
-{
-	if (!Character.IsValid())
-		return;
-
-	const float CapsuleHalfHeight = Character->GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
-	const FVector StartLocation(InRagdollLocation);
-	const FVector EndLocation(InRagdollLocation.X, InRagdollLocation.Y, InRagdollLocation.Z - CapsuleHalfHeight);
-
-	TArray<AActor*> ActorsToIgnore;
-	FHitResult HitResult;
-	const bool bResult = UKismetSystemLibrary::LineTraceSingle(
-		GetWorld(),
-		StartLocation,
-		EndLocation,
-		UEngineTypes::ConvertToTraceType(ECC_Visibility),
-		false,
-		ActorsToIgnore,
-		bDebugTrace ? EDrawDebugTrace::ForOneFrame : EDrawDebugTrace::None,
-		HitResult,
-		true);
-
-	LocomotionEssencialVariables.bRagdollOnGround = HitResult.bBlockingHit;
-	const float Offset = 2.0f;
-	const float Diff = FMath::Abs(HitResult.ImpactPoint.Z - HitResult.TraceStart.Z);
-	const float Value = LocomotionEssencialVariables.bRagdollOnGround ? (CapsuleHalfHeight - Diff) + Offset : 0.0f;
-	OutActorLocation = FVector(InRagdollLocation.X, InRagdollLocation.Y, InRagdollLocation.Z + Value);
-
-	const float Yaw = (OutActorRotation.Roll > 0.0f) ? OutActorRotation.Yaw : OutActorRotation.Yaw - 180.f;
-	OutActorRotation = FRotator(0.0f, Yaw, 0.0f);
 }
 
 void ULocomotionComponent::CalculateEssentialVariables()
@@ -1272,30 +1315,6 @@ void ULocomotionComponent::SetLockUpdatingRotation(const bool NewLockUpdatingRot
 bool ULocomotionComponent::GetLockUpdatingRotation() const
 {
 	return bLockUpdatingRotation;
-}
-
-void ULocomotionComponent::StartJumping()
-{
-	if (!Character.IsValid())
-		return;
-
-	switch (LocomotionEssencialVariables.LSMovementMode)
-	{
-		case ELSMovementMode::None:
-		break;
-		case ELSMovementMode::Grounded:
-		{
-			//
-		}
-		break;
-		case ELSMovementMode::Falling:
-		break;
-	}
-}
-
-void ULocomotionComponent::StopJumping()
-{
-	//
 }
 
 void ULocomotionComponent::SetLookAtAimTransform(const bool NewLookAtAimOffset, const FTransform NewLookAtTransform)

@@ -7,6 +7,7 @@
 #include "LocomotionInterface.h"
 #include "Components/ActorComponent.h"
 #include "GameplayTagContainer.h"
+#include "Engine/DataAsset.h"
 #include "LocomotionComponent.generated.h"
 
 class UWvCharacterMovementComponent;
@@ -14,6 +15,7 @@ class USkeletalMeshComponent;
 class UAnimInstance;
 class UWvAbilitySystemComponent;
 class ABaseCharacter;
+class UCapsuleComponent;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FLocomotionStateChangeDelegate);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FLocomotionOverlayChangeDelegate, const ELSOverlayState, PrevOverlay, const ELSOverlayState, CurrentOverlay);
@@ -292,8 +294,6 @@ public:
 	void ToggleRightShoulder();
 	FVector ChooseVelocity() const;
 
-	void StartJumping();
-	void StopJumping();
 	void OnLanded();
 	void LimitRotation(const float AimYawLimit, const float InterpSpeed);
 	ELSMovementMode GetPawnMovementModeChanged(const EMovementMode PrevMovementMode, const uint8 PrevCustomMode) const;
@@ -310,6 +310,8 @@ public:
 	FRequestAbilityAnimationData GetRequestAbilityAnimationData() const;
 	UAnimMontage* GetCurrentMontage() const;
 
+	void StartRagdollAction();
+	void StopRagdollAction();
 
 private:
 	const bool CanSprint();
@@ -354,6 +356,9 @@ private:
 
 	UPROPERTY()
 	TWeakObjectPtr<class UWvAbilitySystemComponent> AbilitySystemComponent;
+
+	UPROPERTY()
+	TWeakObjectPtr<class UCapsuleComponent> CapsuleComponent;
 
 
 	UPROPERTY()

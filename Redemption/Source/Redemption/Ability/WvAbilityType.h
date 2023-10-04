@@ -3,60 +3,183 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "GameplayTagContainer.h"
+#include "WvAbilitySystemTypes.h"
+#include "NiagaraSystem.h"
 #include "WvAbilityType.generated.h"
 
 
 USTRUCT(BlueprintType)
-struct FWvHitReact
+struct FCustomWvAbilitySystemAvatarData : public FWvAbilitySystemAvatarData
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "AbilitySystem")
+	TSoftObjectPtr<UDataTable> LocomotionAbilityTable;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "AbilitySystem")
+	TSoftObjectPtr<UDataTable> FieldAbilityTable;
+
+	//UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "AbilitySystem")
+	//TSoftObjectPtr<UDataTable> BattleAbilityTable;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "AbilitySystem")
+	TArray<TSoftObjectPtr<UDataTable>> FunctionAbilityTables;
+
+public:
+
+	FCustomWvAbilitySystemAvatarData()
+	{
+		LocomotionAbilityTable = nullptr;
+		FieldAbilityTable = nullptr;
+		//BattleAbilityTable = nullptr;
+	}
+};
+
+USTRUCT(Blueprintable)
+struct FCharacterBaseParameter
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+	float Health = 0.0f;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+	float HealthMax = 0.0f;
+
+	void Init()
+	{
+		Health = 0.0f;
+		HealthMax = 0.0f;
+	}
+};
+
+
+#pragma region GameplayCue
+UENUM(BlueprintType)
+enum class EParticleRotationMode : uint8
+{
+	// 設定された回転値を直接使用する
+	None,
+	// 衝突点の法線に重ねた回転値
+	AddToNormal,
+	// ダメージが発生した場所に向かって
+	HitDirection,
+	// エフェクトが攻撃側を向いた後の回転値をスタックする。
+	FaceToAttacker,
+	// 攻撃側の正面を突く
+	AttackerForward,
+	// 被弾者の逆向き
+	BeHitedBackward,
+};
+
+USTRUCT(BlueprintType)
+struct FParticleCueConfig
 {
 	GENERATED_BODY()
 
 public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
-	FGameplayTag FeatureTag;
-};
+	class UNiagaraSystem* NiagaraSystem{ nullptr };
 
-UENUM(BlueprintType)
-enum class EHitDirection : uint8
-{
-	None UMETA(DisplayName = "None"),
-	Left UMETA(DisplayName = "Right to left"),
-	Right UMETA(DisplayName = "Left to right"),
-	Up UMETA(DisplayName = "Bottom to top"),
-	Down UMETA(DisplayName = "Top to bottom"),
-	LeftDown_RightUp UMETA(DisplayName = "Lower left to upper right"),
-	LeftUp_RightDown UMETA(DisplayName = "Upper left to lower right"),
-	RightDown_LeftUp UMETA(DisplayName = "Lower right to upper left"),
-	RightUp_LeftDown UMETA(DisplayName = "Upper right to lower left"),
-	Back_Front UMETA(DisplayName = "Back to front"),
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+	FVector PositionOffset;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+	FRotator RotationOffset;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+	FVector ParticleScale {
+		FVector::OneVector
+	};
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+	bool IsAttachInBone{ false };
 };
 
 USTRUCT(BlueprintType)
-struct FWvAbilityData
+struct FWvAttackCueConfig
 {
 	GENERATED_BODY()
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	FVector SourceCollisionCenter;
+	UPROPERTY(EditDefaultsOnly)
+	FParticleCueConfig Particle;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	FRotator CollisionVelocity;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+	FName FixedAttachBoneName;
+
+	UPROPERTY(EditDefaultsOnly)
+	EParticleRotationMode RotationMode {
+		EParticleRotationMode::AttackerForward
+	};
+
+	UPROPERTY(EditDefaultsOnly)
+	bool OnlyYaw{ true };
 };
 
-//UCLASS()
-//class UWvEffectExData : public UApplyEffectExData
-//{
-//	GENERATED_BODY()
-//
-//public:
-//
-//	UPROPERTY(EditDefaultsOnly)
-//	FWvHitReact TargetHitReact;
-//
-//	UPROPERTY(EditDefaultsOnly)
-//	EHitDirection HitDirection;
-//
-//};
+USTRUCT(BlueprintType)
+struct FWvDamageCueConfig
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditDefaultsOnly)
+	FParticleCueConfig Particle;
+
+	UPROPERTY(EditDefaultsOnly)
+	EParticleRotationMode RotationMode;
+
+	UPROPERTY(EditDefaultsOnly)
+	bool OnlyYaw{ true };
+};
+
+USTRUCT(BlueprintType)
+struct FWvAttackCueConfigRow : public FTableRowBase
+{
+	GENERATED_BODY()
+
+public:
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	FGameplayTag AvatarTag;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	FGameplayTag CueTag;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	FWvAttackCueConfig CueConfig;
+};
+
+USTRUCT(BlueprintType)
+struct FWvDamageCueConfigRow : public FTableRowBase
+{
+	GENERATED_BODY()
+
+public:
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	FGameplayTag AvatarTag;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	FGameplayTag CueTag;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	FWvDamageCueConfig CueConfig;
+};
+
+UCLASS()
+class UWvCueConfigDataAssest : public UDataAsset
+{
+	GENERATED_BODY()
+
+public:
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+	UDataTable* AttackCueConfigTable;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+	UDataTable* DamageCueConfigTable;
+
+public:
+	bool GetAttackCueConfigRow(const FGameplayTag& AvatarTag, const FGameplayTag& CueTag, FWvAttackCueConfigRow& CueConfigRow);
+	bool GetDamageCueConfigRow(const FGameplayTag& AvatarTag, const FGameplayTag& CueTag, FWvDamageCueConfigRow& CueConfigRow);
+
+};
+#pragma endregion
 
 

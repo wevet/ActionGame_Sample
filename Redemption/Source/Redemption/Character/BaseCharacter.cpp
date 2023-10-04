@@ -8,6 +8,9 @@
 #include "Locomotion/LocomotionComponent.h"
 #include "PredictionFootIKComponent.h"
 #include "Component/InventoryComponent.h"
+#include "Component/CombatComponent.h"
+#include "Component/StatusComponent.h"
+#include "WvPlayerController.h"
 
 #include "Components/CapsuleComponent.h"
 #include "Components/InputComponent.h"
@@ -76,6 +79,8 @@ ABaseCharacter::ABaseCharacter(const FObjectInitializer& ObjectInitializer)
 	WvMoveComp->MinAnalogWalkSpeed = 20.f;
 
 
+	SetReplicateMovement(true);
+
 	MotionWarpingComponent = CreateDefaultSubobject<UMotionWarpingComponent>(TEXT("MotionWarpingComponent"));
 	MotionWarpingComponent->bSearchForWindowsInAnimsWithinMontages = true;
 
@@ -90,14 +95,33 @@ ABaseCharacter::ABaseCharacter(const FObjectInitializer& ObjectInitializer)
 	LocomotionComponent = CreateDefaultSubobject<ULocomotionComponent>(TEXT("LocomotionComponent"));
 	LocomotionComponent->bAutoActivate = 1;
 
+	// managed itemÇä«óùÇ∑ÇÈclass
 	InventoryComponent = CreateDefaultSubobject<UInventoryComponent>(TEXT("InventoryComponent"));
 	InventoryComponent->bAutoActivate = 1;
+
+	// managed weapon class
+	CombatComponent = CreateDefaultSubobject<UCombatComponent>(TEXT("CombatComponent"));
+	CombatComponent->bAutoActivate = 1;
+
+	// managed character health and more
+	StatusComponent = CreateDefaultSubobject<UStatusComponent>(TEXT("StatusComponent"));
+	StatusComponent->bAutoActivate = 1;
 
 	HeldObjectRoot = CreateDefaultSubobject<USceneComponent>(TEXT("HeldObjectRoot"));
 	HeldObjectRoot->bAutoActivate = 1;
 	HeldObjectRoot->SetupAttachment(GetMesh());
 
 	MyTeamID = FGenericTeamId(0);
+	CharacterTag = FGameplayTag::RequestGameplayTag(TAG_Character_Default.GetTag().GetTagName());
+	CharacterRelation = ECharacterRelation::Friend;
+
+	GetCapsuleComponent()->SetCollisionResponseToChannel(ECollisionChannel::ECC_GameTraceChannel1, ECollisionResponse::ECR_Ignore);
+	GetCapsuleComponent()->SetCollisionResponseToChannel(ECollisionChannel::ECC_GameTraceChannel2, ECollisionResponse::ECR_Ignore);
+	GetCapsuleComponent()->SetCollisionResponseToChannel(ECollisionChannel::ECC_GameTraceChannel3, ECollisionResponse::ECR_Ignore);
+	GetMesh()->SetCollisionResponseToChannel(ECollisionChannel::ECC_GameTraceChannel1, ECollisionResponse::ECR_Ignore);
+	GetMesh()->SetCollisionResponseToChannel(ECollisionChannel::ECC_GameTraceChannel2, ECollisionResponse::ECR_Ignore);
+	// sets Damage
+	GetMesh()->SetCollisionResponseToChannel(ECollisionChannel::ECC_GameTraceChannel3, ECollisionResponse::ECR_Overlap);
 }
 
 void ABaseCharacter::BeginPlay()
@@ -106,24 +130,8 @@ void ABaseCharacter::BeginPlay()
 
 	USkeletalMeshComponent* SkelMesh = GetMesh();
 	SkelMesh->AddTickPrerequisiteActor(this);
+	InitAbilitySystemComponent();
 
-	if (WvAbilitySystemComponent)
-	{
-		if (!HasAuthority())
-		{
-			return;
-		}
-
-		int32 inputID(0);
-		for (auto Ability : AbilityList)
-		{
-			if (Ability)
-			{
-				WvAbilitySystemComponent->GiveAbility(FGameplayAbilitySpec(Ability.GetDefaultObject(), 1, inputID++));
-			}
-		}
-		WvAbilitySystemComponent->InitAbilityActorInfo(this, this);
-	}
 }
 
 void ABaseCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -134,10 +142,12 @@ void ABaseCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
 void ABaseCharacter::PossessedBy(AController* NewController)
 {
 	Super::PossessedBy(NewController);
+
 	if (WvAbilitySystemComponent)
 	{
 		WvAbilitySystemComponent->RefreshAbilityActorInfo();
 	}
+
 }
 
 void ABaseCharacter::Tick(float DeltaTime)
@@ -158,11 +168,6 @@ void ABaseCharacter::Tick(float DeltaTime)
 	}
 }
 
-void ABaseCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
-{
-	Super::SetupPlayerInputComponent(PlayerInputComponent);
-}
-
 void ABaseCharacter::OnStartCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust)
 {
 	Super::OnStartCrouch(HalfHeightAdjust, ScaledHalfHeightAdjust);
@@ -175,61 +180,21 @@ void ABaseCharacter::OnEndCrouch(float HalfHeightAdjust, float ScaledHalfHeightA
 	ILocomotionInterface::Execute_SetLSStanceMode(LocomotionComponent, ELSStance::Standing);
 }
 
-void ABaseCharacter::Landed(const FHitResult& Hit)
+void ABaseCharacter::InitAbilitySystemComponent()
 {
-	Super::Landed(Hit);
-	LocomotionComponent->OnLanded();
-}
+	WvAbilitySystemComponent->InitAbilityActorInfo(this, this);
 
-void ABaseCharacter::Jump()
-{
-	if (GetCharacterMovement()->IsCrouching())
+	if (GetLocalRole() == ROLE_Authority)
 	{
-		UnCrouch();
+		WvAbilitySystemComponent->AddStartupGameplayAbilities();
 	}
-	else
+
+	auto* PC = Cast<AWvPlayerController>(Controller);
+	if (PC && IsLocallyControlled())
 	{
-		const EMovementMode MovementMode = GetWvCharacterMovementComponent()->MovementMode;
-		switch (MovementMode)
-		{
-			case MOVE_None:
-			break;
-			case MOVE_Walking:
-			case MOVE_NavWalking:
-			{
-				if (bHasMovementInput)
-				{
-					const bool bResult = GetWvCharacterMovementComponent()->GroundMantling();
-					if (!bResult)
-					{
-						Super::Jump();
-					}
-				}
-				else
-				{
-					Super::Jump();
-				}
-			}
-			break;
-			case MOVE_Falling:
-			{
-				GetWvCharacterMovementComponent()->FallingMantling();
-			}
-			break;
-			case MOVE_Flying:
-			break;
-			case MOVE_Swimming:
-			break;
-		}
-
+		PC->PostAscInitialize(WvAbilitySystemComponent);
 	}
-	LocomotionComponent->StartJumping();
-}
 
-void ABaseCharacter::StopJumping()
-{
-	Super::StopJumping();
-	LocomotionComponent->StopJumping();
 }
 
 void ABaseCharacter::PreInitializeComponents()
@@ -309,9 +274,134 @@ void ABaseCharacter::SetGenericTeamId(const FGenericTeamId& NewTeamID)
 	}
 }
 
+const FWvAbilitySystemAvatarData& ABaseCharacter::GetAbilitySystemData()
+{
+	return AbilitySystemData;
+}
+
+const FCustomWvAbilitySystemAvatarData& ABaseCharacter::GetCustomWvAbilitySystemData()
+{
+	return AbilitySystemData;
+}
+
+void ABaseCharacter::InitAbilitySystemComponentByData(class UWvAbilitySystemComponentBase* ASC)
+{
+	IWvAbilitySystemAvatarInterface::InitAbilitySystemComponentByData(ASC);
+
+	// Read DataTable of locomotion system
+	const FCustomWvAbilitySystemAvatarData& Data = GetCustomWvAbilitySystemData();
+
+	TArray<TSoftObjectPtr<UDataTable>> AbilityTables;
+	AbilityTables.Add(Data.LocomotionAbilityTable);
+	AbilityTables.Add(Data.FieldAbilityTable);
+	AbilityTables += Data.FunctionAbilityTables;
+
+	for (int32 Index = 0; Index < AbilityTables.Num(); Index++)
+	{
+		TSoftObjectPtr<UDataTable> SoftAbilityTable = AbilityTables[Index];
+
+		if (SoftAbilityTable.IsNull())
+		{
+			continue;
+		}
+
+		const FSoftObjectPath TablePath = SoftAbilityTable.ToSoftObjectPath();
+		const FString TablePathString = TablePath.ToString();
+
+		UDataTable* AbilityTable = Cast<UDataTable>(StaticLoadObject(UDataTable::StaticClass(), nullptr, *TablePathString));
+		if (!AbilityTable)
+		{
+			continue;
+		}
+
+		TArray<FWvAbilityRow*> Rows;
+		AbilityTable->GetAllRows(SoftAbilityTable.GetAssetName(), Rows);
+
+		for (int32 JIndex = 0; JIndex < Rows.Num(); ++JIndex)
+		{
+			const FWvAbilityRow* AbilityRow = Rows[JIndex];
+			UWvAbilityDataAsset* AbilityData = AbilityRow->AbilityData;
+			WvAbilitySystemComponent->AddRegisterAbilityDA(AbilityData);
+		}
+	}
+
+	WvAbilitySystemComponent->GiveAllRegisterAbility();
+	UE_LOG(LogTemp, Warning, TEXT("%s"), *FString(__FUNCTION__));
+}
+
+#pragma region IWvAbilityTargetInterface
+ECharacterRelation ABaseCharacter::GetRelationWithSelfImpl(const IWvAbilityTargetInterface* Other) const
+{
+	return CharacterRelation;
+}
+
+int32 ABaseCharacter::GetTeamNumImpl() const
+{
+	return INDEX_NONE;
+}
+
+int32 ABaseCharacter::GetTeamNum_Implementation() const
+{
+	return GetTeamNumImpl();
+}
+
+FGameplayTag ABaseCharacter::GetAvatarTag() const
+{
+	return CharacterTag;
+}
+
+USceneComponent* ABaseCharacter::GetOverlapBaseComponent()
+{
+	return GetMesh();
+}
+
+void ABaseCharacter::OnSendWeaknessAttack_Implementation(AActor* Actor, const FName WeaknessName, const float Damage)
+{
+}
+
+void ABaseCharacter::OnReceiveWeaknessAttack_Implementation(AActor* Actor, const FName WeaknessName, const float Damage)
+{
+}
+
+void ABaseCharacter::OnSendAbilityAttack_Implementation(AActor* Actor, const FWvBattleDamageAttackSourceInfo SourceInfo, const float Damage)
+{
+	UE_LOG(LogTemp, Log, TEXT("Owner => %s, Actor => %s, function => %s"), *this->GetName(), *Actor->GetName(), *FString(__FUNCTION__));
+}
+
+void ABaseCharacter::OnReceiveAbilityAttack_Implementation(AActor* Actor, const FWvBattleDamageAttackSourceInfo SourceInfo, const float Damage)
+{
+}
+
+void ABaseCharacter::OnSendKillTarget_Implementation(AActor* Actor, const float Damage)
+{
+	UE_LOG(LogTemp, Log, TEXT("Owner => %s, Actor => %s, function => %s"), *this->GetName(), *Actor->GetName(), *FString(__FUNCTION__));
+}
+
+void ABaseCharacter::OnReceiveKillTarget_Implementation(AActor* Actor, const float Damage)
+{
+	if (!IsDead())
+	{
+		WvAbilitySystemComponent->AddGameplayTag(TAG_Character_StateDead, 1);
+		ILocomotionInterface::Execute_SetLSMovementMode(LocomotionComponent, ELSMovementMode::Ragdoll);
+		LocomotionComponent->StartRagdollAction();
+		UE_LOG(LogTemp, Log, TEXT("Owner => %s, Actor => %s, function => %s"), *this->GetName(), *Actor->GetName(), *FString(__FUNCTION__));
+	}
+}
+#pragma endregion
+
 UAbilitySystemComponent* ABaseCharacter::GetAbilitySystemComponent() const
 {
 	return WvAbilitySystemComponent;
+}
+
+UMotionWarpingComponent* ABaseCharacter::GetMotionWarpingComponent() const
+{
+	return MotionWarpingComponent; 
+}
+
+UCharacterMovementTrajectoryComponent* ABaseCharacter::GetCharacterMovementTrajectoryComponent() const
+{
+	return CharacterMovementTrajectoryComponent; 
 }
 
 UWvCharacterMovementComponent* ABaseCharacter::GetWvCharacterMovementComponent() const
@@ -327,6 +417,86 @@ UWvAbilitySystemComponent* ABaseCharacter::GetWvAbilitySystemComponent() const
 ULocomotionComponent* ABaseCharacter::GetLocomotionComponent() const
 {
 	return LocomotionComponent;
+}
+
+USceneComponent* ABaseCharacter::GetHeldObjectRoot() const
+{
+	return HeldObjectRoot;
+}
+
+#pragma region Action
+void ABaseCharacter::Landed(const FHitResult& Hit)
+{
+	Super::Landed(Hit);
+	LocomotionComponent->OnLanded();
+}
+
+void ABaseCharacter::Jump()
+{
+	if (GetCharacterMovement()->IsCrouching())
+	{
+		UnCrouch();
+	}
+	else
+	{
+		const EMovementMode MovementMode = GetWvCharacterMovementComponent()->MovementMode;
+		switch (MovementMode)
+		{
+			case MOVE_None:
+			break;
+			case MOVE_Walking:
+			case MOVE_NavWalking:
+			{
+				if (bHasMovementInput)
+				{
+					const bool bResult = GetWvCharacterMovementComponent()->GroundMantling();
+					if (!bResult)
+					{
+						Super::Jump();
+					}
+				}
+				else
+				{
+					Super::Jump();
+				}
+			}
+			break;
+			case MOVE_Falling:
+			{
+				GetWvCharacterMovementComponent()->FallingMantling();
+			}
+			break;
+			case MOVE_Flying:
+			break;
+			case MOVE_Swimming:
+			break;
+		}
+	}
+}
+
+void ABaseCharacter::StopJumping()
+{
+	Super::StopJumping();
+}
+
+void ABaseCharacter::DoAttack()
+{
+	if (WvAbilitySystemComponent->HasMatchingGameplayTag(TAG_Character_ActionMelee_Forbid))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("has tag TAG_Character_StateMelee_Forbid => %s"), *FString(__FUNCTION__));
+		return;
+	}
+	//
+}
+
+void ABaseCharacter::DoResumeAttack()
+{
+	WvAbilitySystemComponent->RemoveGameplayTag(TAG_Character_ActionMelee_Forbid, 1);
+}
+
+void ABaseCharacter::DoStopAttack()
+{
+	WvAbilitySystemComponent->AddGameplayTag(TAG_Character_ActionMelee_Forbid, 1);
 }
 
 void ABaseCharacter::VelocityModement()
@@ -400,6 +570,7 @@ void ABaseCharacter::DoStopAiming()
 {
 	LocomotionComponent->SetLSAiming_Implementation(false);
 }
+#pragma endregion
 
 // AI Perception
 // ttps://blog.gamedev.tv/ai-sight-perception-to-custom-points/
@@ -524,8 +695,13 @@ float ABaseCharacter::GetDistanceFromToeToKnee(FName KneeL, FName BallL, FName K
 	return FMath::Max(GetWvCharacterMovementComponent()->MaxStepHeight, Result);
 }
 
-USceneComponent* ABaseCharacter::GetHeldObjectRoot() const
+bool ABaseCharacter::IsDead() const
 {
-	return HeldObjectRoot;
+	return WvAbilitySystemComponent->HasMatchingGameplayTag(TAG_Character_StateDead);
 }
+
+void ABaseCharacter::OnHitBone(class USceneComponent* AttackerComp, const FHitResult& HitResult, const bool IsShakeAngle)
+{
+}
+
 

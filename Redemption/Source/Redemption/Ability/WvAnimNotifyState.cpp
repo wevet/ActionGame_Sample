@@ -10,70 +10,64 @@ UWvAnimNotifyState::UWvAnimNotifyState(const FObjectInitializer& ObjectInitializ
 {
 }
 
-void UWvAnimNotifyState::NotifyBegin(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, float TotalDuration)
+void UWvAnimNotifyState::NotifyBegin(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, float TotalDuration, const FAnimNotifyEventReference& EventReference)
 {
 	if (!IsValid(MeshComp->GetOwner()))
 		return;
 
 	if (IAbilitySystemInterface* AbilitySystemInterface = Cast<IAbilitySystemInterface>(MeshComp->GetOwner()))
 	{
-		UWvAbilitySystemComponent* AbilitySystemComponent = Cast<UWvAbilitySystemComponent>(AbilitySystemInterface->GetAbilitySystemComponent());
+		AbilitySystemComponent = Cast<UWvAbilitySystemComponent>(AbilitySystemInterface->GetAbilitySystemComponent());
 		if (AbilitySystemComponent)
 		{
-			if (UWvGameplayAbility* AnimatingAbility = Cast<UWvGameplayAbility>(AbilitySystemComponent->GetAnimatingAbility()))
+			Ability = Cast<UWvAbilityBase>(AbilitySystemComponent->GetAnimatingAbility());
+			if (IsValid(Ability))
 			{
-				if (AnimatingAbility->IsActive())
+				if (Ability->IsActive())
 				{
 					AbilitySystemComponent->AbilityNotifyBegin(this);
-					AbilityNotifyBegin(AbilitySystemComponent, TotalDuration, MeshComp, AnimatingAbility);
 				}
+			}
+			else
+			{
+				UE_LOG(LogTemp, Error, TEXT("not valid GetAnimatingAbility %s"), *FString(__FUNCTION__));
 			}
 		}
 	}
-}
 
-void UWvAnimNotifyState::NotifyTick(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, float FrameDeltaTime)
-{
-	if (!IsValid(MeshComp->GetOwner()))
-		return;
-
-	if (IAbilitySystemInterface* AbilitySystemInterface = Cast<IAbilitySystemInterface>(MeshComp->GetOwner()))
+	if (AbilitySystemComponent && Ability)
 	{
-		UWvAbilitySystemComponent* AbilitySystemComponent = Cast<UWvAbilitySystemComponent>(AbilitySystemInterface->GetAbilitySystemComponent());
-		if (AbilitySystemComponent)
-		{
-			AbilitySystemComponent->AbilityNotifyTick(this, MeshComp, FrameDeltaTime);
-		}
+		AbilityNotifyBegin(MeshComp, Animation, TotalDuration, EventReference);
 	}
 }
 
-void UWvAnimNotifyState::NotifyEnd(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation)
+void UWvAnimNotifyState::NotifyTick(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, float FrameDeltaTime, const FAnimNotifyEventReference& EventReference)
 {
-	if (!IsValid(MeshComp->GetOwner()))
-		return;
-
-	if (IAbilitySystemInterface* AbilitySystemInterface = Cast<IAbilitySystemInterface>(MeshComp->GetOwner()))
+	if (AbilitySystemComponent && Ability)
 	{
-		UWvAbilitySystemComponent* AbilitySystemComponent = Cast<UWvAbilitySystemComponent>(AbilitySystemInterface->GetAbilitySystemComponent());
-		if (AbilitySystemComponent)
-		{
-			AbilitySystemComponent->AbilityNotifyEnd(this, MeshComp);
-		}
+		AbilityNotifyTick(MeshComp, Animation, FrameDeltaTime, EventReference);
 	}
 }
 
-void UWvAnimNotifyState::AbilityNotifyBegin(class UWvAbilitySystemComponent* AbilitySystemComponent, float TotalDuration, USkeletalMeshComponent* Mesh, UGameplayAbility* Ability)
+void UWvAnimNotifyState::NotifyEnd(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, const FAnimNotifyEventReference& EventReference)
 {
-	K2_AbilityNotifyBegin(AbilitySystemComponent, TotalDuration, Mesh, Ability);
+	if (AbilitySystemComponent && Ability)
+	{
+		AbilitySystemComponent->AbilityNotifyEnd(this);
+		AbilityNotifyEnd(MeshComp, Animation, EventReference);
+	}
 }
 
-void UWvAnimNotifyState::AbilityNotifyTick(class UWvAbilitySystemComponent* AbilitySystemComponent, float FrameDeltaTime, USkeletalMeshComponent* Mesh, UGameplayAbility* Ability)
+void UWvAnimNotifyState::AbilityNotifyBegin(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, float TotalDuration, const FAnimNotifyEventReference& EventReference)
 {
-	K2_AbilityNotifyTick(AbilitySystemComponent, FrameDeltaTime, Mesh, Ability);
 }
 
-void UWvAnimNotifyState::AbilityNotifyEnd(class UWvAbilitySystemComponent* AbilitySystemComponent, USkeletalMeshComponent* Mesh, UGameplayAbility* Ability)
+void UWvAnimNotifyState::AbilityNotifyTick(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, float FrameDeltaTime, const FAnimNotifyEventReference& EventReference)
 {
-	K2_AbilityNotifyEnd(AbilitySystemComponent, Mesh, Ability);
 }
+
+void UWvAnimNotifyState::AbilityNotifyEnd(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, const FAnimNotifyEventReference& EventReference)
+{
+}
+
 

@@ -1,4 +1,4 @@
-# Visual Studio 2017 user specific files
+# Visual Studio 2019 user specific files
 .vs/
 
 # Compiled Object files
@@ -67,6 +67,7 @@ Saved/*
 # Compiled source files for the engine to use
 Intermediate/*
 Plugins/*/Intermediate/*
+Plugins/MotoricaStudio/*
 
 # Cache files for the editor to use
 DerivedDataCache/*

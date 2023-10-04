@@ -2,8 +2,16 @@
 
 #include "WvAbilitySystemComponent.h"
 #include "WvAnimNotifyState.h"
+
+// plugin
+#include "WvGameplayTargetData.h"
+#include "WvGameplayEffectContext.h"
+#include "Interface/WvAbilitySystemAvatarInterface.h"
+
+// builtin
 #include "AbilitySystemGlobals.h"
 #include "Character/BaseCharacter.h"
+#include "Character/WvPlayerController.h"
 
 
 UWvAbilitySystemComponent::UWvAbilitySystemComponent() : Super()
@@ -114,29 +122,149 @@ void UWvAbilitySystemComponent::AbilityNotifyBegin(class UWvAnimNotifyState* Not
 	NewNotify.Notify = Notify;
 }
 
-void UWvAbilitySystemComponent::AbilityNotifyTick(class UWvAnimNotifyState* Notify, USkeletalMeshComponent* MeshComp, float FrameDeltaTime)
-{
-	const FAnimatingAbilityNotify* Res = AnimatingAbilityNotifys.FindByPredicate([Notify](const FAnimatingAbilityNotify& N) 
-	{
-		return N.Notify == Notify;
-	});
-	
-	if (Res)
-	{
-		Res->Notify->AbilityNotifyTick(this, FrameDeltaTime, MeshComp, Cast<UGameplayAbility>(Res->Ability.Get()));
-	}
-}
-
-void UWvAbilitySystemComponent::AbilityNotifyEnd(class UWvAnimNotifyState* Notify, USkeletalMeshComponent* MeshComp)
+void UWvAbilitySystemComponent::AbilityNotifyEnd(class UWvAnimNotifyState* Notify)
 {
 	AnimatingAbilityNotifys.RemoveAll([&](const FAnimatingAbilityNotify& N) 
 	{
 		if (N.Notify == Notify)
 		{
-			Notify->AbilityNotifyEnd(this, MeshComp, Cast<class UGameplayAbility>(N.Ability.Get()));
 			return true;
 		}
 		return false;
 	});
 }
+
+ABaseCharacter* UWvAbilitySystemComponent::GetAvatarCharacter() const
+{
+	AActor* Avatar = GetAvatarActor();
+	if (Avatar)
+	{
+		ABaseCharacter* Character = Cast<ABaseCharacter>(Avatar);
+		return Character;
+	}
+	return nullptr;
+}
+
+void UWvAbilitySystemComponent::AddStartupGameplayAbilities()
+{
+	if (!IsOwnerActorAuthoritative())
+	{
+		UE_LOG(LogTemp, Error, TEXT("not IsOwnerActorAuthoritative => %s"), *FString(__FUNCTION__));
+		return;
+	}
+
+	ClearAllAbilities();
+	SetSpawnedAttributes({});
+
+	AActor* Avatar = GetAvatarActor();
+	if (!Avatar)
+	{
+		UE_LOG(LogTemp, Error, TEXT("not Valid Avatar => %s"), *FString(__FUNCTION__));
+		return;
+	}
+
+	IWvAbilitySystemAvatarInterface* AvatarInterface = Cast<IWvAbilitySystemAvatarInterface>(Avatar);
+	if (AvatarInterface)
+	{
+		AvatarInterface->InitAbilitySystemComponentByData(this);
+	}
+}
+
+void UWvAbilitySystemComponent::AddRegisterAbilityDA(class UWvAbilityDataAsset* InDA)
+{
+	if (!InDA)
+	{
+		return;
+	}
+
+	RegisterAbilityDAs.Add(InDA);
+}
+
+void UWvAbilitySystemComponent::GiveAllRegisterAbility()
+{
+	for (int32 Index = 0; Index < RegisterAbilityDAs.Num(); ++Index)
+	{
+		TObjectPtr<class UWvAbilityDataAsset> DA = RegisterAbilityDAs[Index];
+		if (DA->AbilityClass)
+		{
+			ApplyGiveAbility(DA, 1.0f);
+		}
+	}
+}
+
+void UWvAbilitySystemComponent::ApplyEffectToSelf(UWvAbilitySystemComponent* InstigatorASC, UWvAbilityEffectDataAsset* EffectData, const int32 EffectGroupIndex)
+{
+	if (!InstigatorASC)
+	{
+		return;
+	}
+
+	FGameplayAbilityTargetDataHandle TargetDataHandle;
+
+	FWvOverlapResult Overlap;
+	Overlap.Actor = GetAvatarActor();
+
+	FWvGameplayAbilityTargetData_SingleTarget* NewData = new FWvGameplayAbilityTargetData_SingleTarget();
+	NewData->Overlap = Overlap;
+	NewData->SourceLocation = FVector::ZeroVector;
+	TargetDataHandle.Add(NewData);
+
+	FGameplayEffectContextHandle EffectContexHandle = InstigatorASC->MakeEffectContext();
+	FWvGameplayEffectContext* EffectContext = (FWvGameplayEffectContext*)EffectContexHandle.Get();
+	if (EffectContext)
+	{
+		EffectContext->SetEffectDataAsset(EffectData, EffectGroupIndex);
+	}
+	MakeEffectToTargetData(EffectContexHandle, TargetDataHandle, FGameplayEffectQuery());
+}
+
+bool UWvAbilitySystemComponent::IsAnimatingCombo() const
+{
+	if (const auto PlayingAbility = Cast<UWvAbilityBase>(LocalAnimMontageInfo.AnimatingAbility))
+	{
+		const int32 ComboNum = PlayingAbility->GetComboRequiredTag().Num();
+		return (ComboNum > 0);
+	}
+	return false;
+}
+
+const bool UWvAbilitySystemComponent::TryActivateAbilityByClassPressing(TSubclassOf<UGameplayAbility> InAbilityToActivate, bool bAllowRemoteActivation)
+{
+	FGameplayAbilitySpec* Spec = FindAbilitySpecFromClass(InAbilityToActivate);
+	bool bIsPressing = true;
+	if (GetAvatarCharacter())
+	{
+		if (AWvPlayerController* CTRL = Cast<AWvPlayerController>(GetAvatarCharacter()->GetController()))
+		{
+			FGameplayTag TriggerTag;
+			for (FGameplayAbilitySpec& ActiveSpec : ActivatableAbilities.Items)
+			{
+				UWvAbilityDataAsset* AbilityData = CastChecked<UWvAbilityDataAsset>(ActiveSpec.SourceObject);
+
+				if (ActiveSpec.Handle == Spec->Handle)
+				{
+					TriggerTag = AbilityData->ActiveTriggerTag;
+					break;
+				}
+			}
+
+			if (TriggerTag != FGameplayTag::EmptyTag)
+			{
+				bIsPressing = CTRL->GetInputEventComponent()->InputKeyDownControl(TriggerTag);
+			}
+		}
+	}
+
+	Spec->InputPressed = bIsPressing;
+
+	if (Spec->IsActive())
+	{
+		InvokeReplicatedEvent(EAbilityGenericReplicatedEvent::InputPressed, Spec->Handle, Spec->ActivationInfo.GetActivationPredictionKey());
+	}
+
+	const bool bIsSucceed = TryActivateAbilityByClass(InAbilityToActivate, bAllowRemoteActivation);
+	return bIsSucceed;
+}
+
+
 

@@ -10,6 +10,7 @@ public class Redemption : ModuleRules
 		bLegacyPublicIncludePaths = true;
 		bUseUnity = false;
 		bEnableUndefinedIdentifierWarnings = false;
+		IncludeOrderVersion = EngineIncludeOrderVersion.Latest;
 
 		PublicDependencyModuleNames.AddRange(
 			new string[]
@@ -47,6 +48,7 @@ public class Redemption : ModuleRules
 				"Gauntlet",
 				"MassZoneGraphNavigation",
 				"Niagara",
+				"WvAbilitySystem",
 				"QuadrupedIK",
 				"RopeCutting",
 			}

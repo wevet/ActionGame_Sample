@@ -19,7 +19,10 @@ struct FWvCharacterGroundInfo
 {
 	GENERATED_BODY()
 
-	FWvCharacterGroundInfo() : LastUpdateFrame(0), GroundDistance(0.0f)
+	FWvCharacterGroundInfo() : 
+		LastUpdateFrame(0), 
+		GroundDistance(0.0f), 
+		LandPredictionAlpha(0.f)
 	{}
 
 	uint64 LastUpdateFrame;
@@ -29,6 +32,9 @@ struct FWvCharacterGroundInfo
 
 	UPROPERTY(BlueprintReadOnly)
 	float GroundDistance;
+
+	UPROPERTY(BlueprintReadOnly)
+	float LandPredictionAlpha;
 };
 
 USTRUCT(BlueprintType)

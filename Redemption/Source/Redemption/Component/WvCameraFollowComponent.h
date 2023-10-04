@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "Locomotion/LocomotionSystemTypes.h"
 #include "Components/ActorComponent.h"
+#include "Engine/DataAsset.h"
 #include "WvCameraFollowComponent.generated.h"
 
 class APlayerCharacter;

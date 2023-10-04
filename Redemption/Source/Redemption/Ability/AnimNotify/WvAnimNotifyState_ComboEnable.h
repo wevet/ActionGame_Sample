@@ -1,0 +1,55 @@
+// Copyright 2022 wevet works All Rights Reserved.
+
+#pragma once
+
+#include "CoreMinimal.h"
+#include "Ability/WvAnimNotifyState.h"
+#include "WvAbilityDataAsset.h"
+#include "Ability/Task/WvAT_WaitKeyPress.h"
+#include "WvAnimNotifyState_ComboEnable.generated.h"
+
+/**
+ * 
+ */
+UCLASS()
+class REDEMPTION_API UWvAnimNotifyState_ComboEnable : public UWvAnimNotifyState
+{
+	GENERATED_UCLASS_BODY()
+	
+protected:
+	virtual void AbilityNotifyBegin(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, float TotalDuration, const FAnimNotifyEventReference& EventReference) override;
+	virtual void AbilityNotifyTick(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, float FrameDeltaTime, const FAnimNotifyEventReference& EventReference) override;
+	virtual void AbilityNotifyEnd(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, const FAnimNotifyEventReference& EventReference) override;
+
+protected:
+	//コンボに要する時間（相対値）
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	float ExecuteTime;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	FGameplayTagContainer RequiredGameplayTags;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	UWvAbilityDataAsset* NextAbilityDA;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	TMap<FGameplayTag, UWvAbilityDataAsset*> OtherComboDA;
+
+private:
+	FGameplayTag GetInputCombo(class UWvAbilityDataAsset* AbilityData);
+
+	UFUNCTION()
+	void OnRelease(const FGameplayTag InTag, const bool bIsPressed);
+
+	void TryCombo();
+
+	void PressedToCombo();
+
+private:
+	FGameplayTag TriggerTag;
+	UWvAT_WaitKeyPress* WaitReleaseTask;
+	FGameplayTag LastPressedTag;
+	float CurTime;
+	bool IsImmediatelyExecute;
+};
+

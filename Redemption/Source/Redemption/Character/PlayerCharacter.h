@@ -40,22 +40,13 @@ protected:
 	class UInputMappingContext* DefaultMappingContext;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
-	class UInputAction* JumpAction;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	class UInputAction* MoveAction;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	class UInputAction* LookAction;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
-	class UInputAction* SprintAction;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	class UInputAction* StrafeAction;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
-	class UInputAction* CrouchAction;
 
 	/** Base turn rate, in deg/sec. Other scaling may affect final turn rate. */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera)
@@ -67,16 +58,24 @@ protected:
 
 protected:
 	void Move(const FInputActionValue& Value);
+	virtual void DoAttack() override;
 
 private:
 	void TurnAtRate(float Rate);
 	void LookUpAtRate(float Rate);
 	void Look(const FInputActionValue& Value);
-
 	void ToggleRotationMode(const FInputActionValue& Value);
 	void ToggleAimMode(const FInputActionValue& Value);
-
 	void ToggleStanceMode();
+
+	void HandleJump(const bool bIsPress);
+	void HandleSprinting(const bool bIsPress);
+
+	UFUNCTION()
+	void GameplayTagTrigger_Callback(const FGameplayTag Tag, const bool bIsPress);
+
+	UFUNCTION()
+	void OnPluralInputEventTrigger_Callback(const FGameplayTag Tag, const bool bIsPress);
 
 	UFUNCTION()
 	void OverlayStateChange_Callback(const ELSOverlayState PrevOverlay, const ELSOverlayState CurrentOverlay);

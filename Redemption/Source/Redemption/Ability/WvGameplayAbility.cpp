@@ -7,12 +7,23 @@
 #include "WvAbilitySystemComponent.h"
 #include "Character/BaseCharacter.h"
 #include "WvAbilityTask.h"
-
+#include "WvAbilitySystemBlueprintFunctionLibrary.h"
 
 UWvGameplayAbility::UWvGameplayAbility(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
 	ASC = nullptr;
 	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
+}
+
+void UWvGameplayAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
+{
+	if (ABaseCharacter* BaseCharacter = GetBaseCharacter())
+	{
+		//BaseCharacter->OnHitFromAbilityType.AddUFunction(this, "OnHitFromAbilityTypeCallback");
+		//BaseCharacter->OnHitTarget.AddUFunction(this, "OnHitTargetEventCallback");
+		//BaseCharacter->BeHitBy.AddUFunction(this, "BeHitByEventCallback");
+	}
+	Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
 }
 
 void UWvGameplayAbility::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled)
@@ -36,7 +47,8 @@ void UWvGameplayAbility::OnGameplayTaskInitialized(UGameplayTask& Task)
 
 	if (UWvAbilityTask* AbilityTask = Cast<UWvAbilityTask>(&Task))
 	{
-		//
+		AbilityTask->WvAbilitySystemComponent = GetWvAbilitySystemComponent();
+		AbilityTask->WvAbility = this;
 	}
 }
 
@@ -61,9 +73,23 @@ class ABaseCharacter* UWvGameplayAbility::GetBaseCharacter()
 	return Cast<ABaseCharacter>(Avatar);
 }
 
-
 void UWvGameplayAbility::ApplyEffectToSelf(int32 EffectGroupIdx)
 {
+	do {
+		UWvAbilityDataAsset* AbilityData = GetWvAbilityDataNoChecked();
+		if (!AbilityData)
+		{
+			break;
+		}
+		UWvAbilityEffectDataAsset* EffectDataAsset = AbilityData->EffectDataAsset;
+
+		if (!EffectDataAsset)
+		{
+			break;
+		}
+		ASC->ApplyEffectToSelf(ASC, EffectDataAsset, EffectGroupIdx);
+
+	} while (false);
 }
 
 void UWvGameplayAbility::ApplyEffectToTarget(FVector InOrigin, const TArray<FHitResult>& Hits, FWvAbilityData EffectData, int32 EffectGroupIdx /*= 0*/, bool DoFilter /*= true*/, AActor* OptionalExternalSource /*= nullptr*/)
@@ -72,7 +98,7 @@ void UWvGameplayAbility::ApplyEffectToTarget(FVector InOrigin, const TArray<FHit
 	AActor* HitActor = OptionalExternalSource ? OptionalExternalSource : GetAvatarActorFromActorInfo();
 	if (DoFilter)
 	{
-		//
+		UWvAbilitySystemBlueprintFunctionLibrary::FilterHitResults(Hits, Res, HitActor, AbilityTargetFilter);
 	}
 	else
 	{
@@ -81,12 +107,20 @@ void UWvGameplayAbility::ApplyEffectToTarget(FVector InOrigin, const TArray<FHit
 
 	if (Res.Num() > 0)
 	{
-		//
+		FGameplayAbilityTargetDataHandle DataHandle = UWvAbilitySystemBlueprintFunctionLibrary::MakeTargetDataHandleFromHitResults(Res, InOrigin, GetBaseCharacter(), EffectData, HitActor);
+		CommitTargetDataHandle(DataHandle, EffectGroupIdx, FGameplayEffectQuery());
 	}
 }
 
 void UWvGameplayAbility::CommitTargetDataHandle(FGameplayAbilityTargetDataHandle TDH, int32 EffectGroupIdx, const FGameplayEffectQuery& Query)
 {
+	UWvAbilityDataAsset* AbilityData = GetWvAbilityDataNoChecked();
+	FGameplayEffectContextHandle EffectContextHandle = MakeEffectContext(CurrentSpecHandle, CurrentActorInfo);
+
+	UWvAbilitySystemBlueprintFunctionLibrary::EffectContextSetEffectDataAsset(EffectContextHandle, AbilityData->EffectDataAsset, EffectGroupIdx);
+	
+	UWvAbilitySystemComponent* AbilitySystemComponent = GetWvAbilitySystemComponent();
+	AbilitySystemComponent->MakeEffectToTargetData(EffectContextHandle, TDH, Query);
 }
 
 bool UWvGameplayAbility::DoesAbilitySatisfyTagRequirements(const UAbilitySystemComponent& AbilitySystemComponent, const FGameplayTagContainer* SourceTags, const FGameplayTagContainer* TargetTags, OUT FGameplayTagContainer* OptionalRelevantTags) const
@@ -187,4 +221,16 @@ bool UWvGameplayAbility::DoesAbilitySatisfyTagRequirements(const UAbilitySystemC
 
 	return true;
 }
+
+bool UWvGameplayAbility::AbilityTagsHasAny(const FGameplayTagContainer TagContainer) const
+{
+	UWvAbilityDataAsset* DA = GetWvAbilityDataNoChecked();
+	if (!DA)
+	{
+		return false;
+	}
+	const bool bHasAny = DA->AbilityTags.HasAny(TagContainer);
+	return bHasAny;
+}
+
 

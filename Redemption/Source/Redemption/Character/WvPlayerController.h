@@ -3,8 +3,14 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "GameplayTagContainer.h"
+#include "Component/WvInputEventComponent.h"
 #include "GameFramework/PlayerController.h"
 #include "WvPlayerController.generated.h"
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FInputEventGameplayTagDelegate, FGameplayTag, GameplayTag, bool, IsPressed);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FPluralInputEventTriggerDelegate, FGameplayTag, GameplayTag, bool, IsPressed);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FInputEventGameplayTagExtendDelegate, FString, GameplayTagWithExtend, bool, IsPressed);
 
 class APlayerCharacter;
 /**
@@ -23,6 +29,32 @@ protected:
 	virtual void BeginPlay() override;
 	virtual void OnPossess(APawn* InPawn) override;
 	virtual void OnUnPossess() override;
+	virtual void InitInputSystem() override;
+	virtual bool InputKey(const FInputKeyParams& Params) override;
+
+public:
+	class UWvInputEventComponent* GetInputEventComponent() const;
+	void PostAscInitialize(UAbilitySystemComponent* ASC);
+
+public:
+	UPROPERTY(BlueprintAssignable)
+	FInputEventGameplayTagDelegate OnInputEventGameplayTagTrigger_All; //All keys pressed will be notified
+
+	UPROPERTY(BlueprintAssignable)
+	FInputEventGameplayTagDelegate OnInputEventGameplayTagTrigger_Game; //In-game button press event notification
+
+	UPROPERTY(BlueprintAssignable)
+	FInputEventGameplayTagDelegate OnInputEventGameplayTagTrigger_UI; //Event notification when the UI button is pressed
+
+	UPROPERTY(BlueprintAssignable)
+	FPluralInputEventTriggerDelegate OnPluralInputEventTrigger;
+
+	UPROPERTY(BlueprintAssignable)
+	FInputEventGameplayTagExtendDelegate InputEventGameplayTagExtendDelegate_All;
+
+protected:
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Component, meta = (AllowPrivateAccess = "true"))
+	class UWvInputEventComponent* InputEventComponent;
 
 private:
 	class APlayerCharacter* PC;

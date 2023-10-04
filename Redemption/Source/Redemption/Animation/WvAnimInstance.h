@@ -177,8 +177,10 @@ private:
 	UPROPERTY()
 	TWeakObjectPtr<class ULocomotionComponent> LocomotionComponent;
 
-
+	void DoWhileGrounded();
 	void CalculateGaitValue();
+
+	void DoWhileFalling();
 	void CalculateLandPredictionAlpha();
 };
 

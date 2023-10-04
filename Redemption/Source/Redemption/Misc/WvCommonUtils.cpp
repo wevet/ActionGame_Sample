@@ -2,7 +2,17 @@
 
 
 #include "Misc/WvCommonUtils.h"
+
+
 #include "Kismet/KismetMathLibrary.h"
+#include "Kismet/GameplayStatics.h"
+#include "NiagaraFunctionLibrary.h"
+#include "NiagaraComponent.h"
+#include "Components/SkeletalMeshComponent.h"
+#include "Particles/ParticleSystem.h"
+#include "Particles/ParticleSystemComponent.h"
+#include "AIController.h"
+
 
 
 float UWvCommonUtils::GetAngleBetweenVector(FVector Vec1, FVector Vec2)
@@ -83,3 +93,80 @@ FTransform UWvCommonUtils::TransformPlus(const FTransform A, const FTransform B)
 	Out.SetRotation(FQuat(FRotator(Pitch, Yaw, Roll)));
 	return Out;
 }
+
+UFXSystemComponent* UWvCommonUtils::SpawnParticleAtLocation(const UObject* WorldContextObject, UFXSystemAsset* Particle, FVector Location, FRotator Rotation, FVector Scale)
+{
+	if (Particle)
+	{
+		if (Particle->IsA(UNiagaraSystem::StaticClass()))
+		{
+			return UNiagaraFunctionLibrary::SpawnSystemAtLocation(WorldContextObject, Cast<UNiagaraSystem>(Particle), Location, Rotation, Scale);
+		}
+	}
+	return nullptr;
+}
+
+UFXSystemComponent* UWvCommonUtils::SpawnParticleAttached(UFXSystemAsset* Particle, USceneComponent* Component, FName BoneName, FVector Location, FRotator Rotation, FVector Scale, EAttachLocation::Type LocationType)
+{
+	if (Particle)
+	{
+		if (Particle->IsA(UNiagaraSystem::StaticClass()))
+		{
+			return UNiagaraFunctionLibrary::SpawnSystemAttached(Cast<UNiagaraSystem>(Particle), Component, BoneName, Location, Rotation, Scale, LocationType, true, ENCPoolMethod::None);
+		}
+	}
+
+	return nullptr;
+}
+
+bool UWvCommonUtils::GetBoneTransForm(const USkeletalMeshComponent* MeshComp, const FName BoneName, FTransform& OutBoneTransform)
+{
+	const int32 BoneIndex = MeshComp->GetBoneIndex(BoneName);
+	if (BoneIndex != INDEX_NONE)
+	{
+		OutBoneTransform = MeshComp->GetBoneTransform(BoneIndex);
+		return true;
+	}
+	else
+	{
+		USkeletalMeshSocket const* socket = MeshComp->GetSocketByName(BoneName);
+		if (socket)
+		{
+			OutBoneTransform = MeshComp->GetSocketTransform(BoneName);
+			return true;
+		}
+	}
+	return false;
+}
+
+bool UWvCommonUtils::IsHost(const AController* Controller)
+{
+	if (!IsValid(Controller))
+	{
+		UE_LOG(LogTemp, Error, TEXT("UWvCommonUtils::IsHost->Controller is nullptr"));
+		return false;
+	}
+	return (Controller->HasAuthority() && Controller->IsLocalController() && !IsBot(Controller));
+}
+
+bool UWvCommonUtils::IsBot(const AController* Controller)
+{
+	if (!IsValid(Controller))
+	{
+		UE_LOG(LogTemp, Error, TEXT("UWvCommonUtils::IsBot -> Controller is nullptr"));
+		return false;
+	}
+
+	const UClass* Class = Controller->GetClass();
+	if (!IsValid(Class))
+	{
+		UE_LOG(LogTemp, Error, TEXT("UWvCommonUtils::IsBot -> Class is nullptr"));
+		return false;
+	}
+	//Is a BOT
+	if (!Class->IsChildOf(AAIController::StaticClass())) 
+		return false;
+	return true;
+}
+
+

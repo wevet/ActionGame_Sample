@@ -1,11 +1,14 @@
 // Copyright 2022 wevet works All Rights Reserved.
 
 #include "PlayerCharacter.h"
+#include "Redemption.h"
+#include "WvPlayerController.h"
 #include "Component/WvSpringArmComponent.h"
 #include "Component/WvCameraFollowComponent.h"
 #include "Component/InventoryComponent.h"
 #include "Locomotion/LocomotionComponent.h"
 
+// built in
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/InputComponent.h"
@@ -13,6 +16,11 @@
 #include "GameFramework/Controller.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
+#include "Engine.h"
+#include "Kismet/GameplayStatics.h"
+#include "Kismet/KismetMathLibrary.h"
+#include "Kismet/KismetSystemLibrary.h"
+#include "AbilitySystemBlueprintLibrary.h"
 
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(PlayerCharacter)
@@ -34,7 +42,7 @@ APlayerCharacter::APlayerCharacter(const FObjectInitializer& ObjectInitializer) 
 	FollowCamera->bUsePawnControlRotation = false;
 
 	WvCameraFollowComponent = CreateDefaultSubobject<UWvCameraFollowComponent>(TEXT("WvCameraFollowComponent"));
-
+	WvCameraFollowComponent->bAutoActivate = 1;
 }
 
 void APlayerCharacter::BeginPlay()
@@ -42,12 +50,15 @@ void APlayerCharacter::BeginPlay()
 	Super::BeginPlay();
 
 	//Add Input Mapping Context
-	if (APlayerController* PlayerController = Cast<APlayerController>(Controller))
+	if (AWvPlayerController* PC = Cast<AWvPlayerController>(Controller))
 	{
-		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer()))
+		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PC->GetLocalPlayer()))
 		{
 			Subsystem->AddMappingContext(DefaultMappingContext, 0);
 		}
+
+		PC->OnInputEventGameplayTagTrigger_Game.AddDynamic(this, &APlayerCharacter::GameplayTagTrigger_Callback);
+		PC->OnPluralInputEventTrigger.AddDynamic(this, &APlayerCharacter::OnPluralInputEventTrigger_Callback);
 	}
 
 	LocomotionComponent->OnOverlayChangeDelegate.AddDynamic(this, &APlayerCharacter::OverlayStateChange_Callback);
@@ -55,6 +66,12 @@ void APlayerCharacter::BeginPlay()
 
 void APlayerCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
+	if (AWvPlayerController* PC = Cast<AWvPlayerController>(Controller))
+	{
+		PC->OnInputEventGameplayTagTrigger_Game.RemoveDynamic(this, &APlayerCharacter::GameplayTagTrigger_Callback);
+		PC->OnPluralInputEventTrigger.RemoveDynamic(this, &APlayerCharacter::OnPluralInputEventTrigger_Callback);
+	}
+
 	LocomotionComponent->OnOverlayChangeDelegate.RemoveDynamic(this, &APlayerCharacter::OverlayStateChange_Callback);
 	Super::EndPlay(EndPlayReason);
 }
@@ -63,12 +80,6 @@ void APlayerCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerIn
 {
 	if (UEnhancedInputComponent* EnhancedInputComponent = CastChecked<UEnhancedInputComponent>(PlayerInputComponent))
 	{
-		if (JumpAction)
-		{
-			EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Triggered, this, &ABaseCharacter::Jump);
-			EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Completed, this, &ABaseCharacter::StopJumping);
-		}
-
 		if (MoveAction)
 		{
 			EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &APlayerCharacter::Move);
@@ -79,24 +90,10 @@ void APlayerCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerIn
 			EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &APlayerCharacter::Look);
 		}
 
-		if (SprintAction)
-		{
-			EnhancedInputComponent->BindAction(SprintAction, ETriggerEvent::Triggered, this, &ABaseCharacter::DoSprinting);
-			EnhancedInputComponent->BindAction(SprintAction, ETriggerEvent::Completed, this, &ABaseCharacter::DoStopSprinting);
-		}
-
 		if (StrafeAction)
 		{
 			EnhancedInputComponent->BindAction(StrafeAction, ETriggerEvent::Canceled, this, &APlayerCharacter::ToggleRotationMode);
 			EnhancedInputComponent->BindAction(StrafeAction, ETriggerEvent::Completed, this, &APlayerCharacter::ToggleAimMode);
-			//EnhancedInputComponent->BindAction(StrafeAction, ETriggerEvent::Ongoing, this, &APlayerCharacter::ToggleAimMode);
-			//EnhancedInputComponent->BindAction(StrafeAction, ETriggerEvent::Completed, this, &ABaseCharacter::VelocityModement);
-		}
-
-		if (CrouchAction)
-		{
-			EnhancedInputComponent->BindAction(CrouchAction, ETriggerEvent::Completed, this, &APlayerCharacter::ToggleStanceMode);
-			//EnhancedInputComponent->BindAction(CrouchAction, ETriggerEvent::Triggered, this, &ABaseCharacter::DoStartCrouch);
 		}
 	}
 }
@@ -178,6 +175,24 @@ void APlayerCharacter::ToggleStanceMode()
 	}
 }
 
+void APlayerCharacter::DoAttack()
+{
+	if (WvAbilitySystemComponent->HasMatchingGameplayTag(TAG_Character_ActionMelee_Forbid))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("has tag TAG_Character_ActionMelee_Forbid => %s"), *FString(__FUNCTION__));
+		return;
+	}
+
+	if (WvAbilitySystemComponent->HasActivatingAbilitiesWithTag(TAG_Character_StateMelee))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("already activating StateMelee"));
+		return;
+	}
+
+
+	UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(this, TAG_Character_ActionMelee, FGameplayEventData());
+	//UE_LOG(LogTemp, Warning, TEXT("%s"), *FString(__FUNCTION__));
+}
 
 void APlayerCharacter::Look(const FInputActionValue& Value)
 {
@@ -196,6 +211,35 @@ void APlayerCharacter::LookUpAtRate(float Rate)
 	AddControllerPitchInput(Rate * BaseLookUpRate * GetWorld()->GetDeltaSeconds());
 }
 
+void APlayerCharacter::GameplayTagTrigger_Callback(const FGameplayTag Tag, const bool bIsPress)
+{
+	if (Tag == TAG_Character_ActionJump)
+	{
+		HandleJump(bIsPress);
+	}
+	else if (Tag == TAG_Character_ActionDash)
+	{
+		HandleSprinting(bIsPress);
+	}
+	//else if (Tag == TAG_Character_ActionMelee)
+	//{
+	//	if (bIsPress)
+	//	{
+	//		DoAttack();
+	//	}
+	//}
+}
+
+void APlayerCharacter::OnPluralInputEventTrigger_Callback(const FGameplayTag Tag, const bool bIsPress)
+{
+	if (Tag == TAG_Character_ActionCrouch)
+	{
+		ToggleStanceMode();
+	}
+
+	//UE_LOG(LogTemp, Log, TEXT("Tag => %s, Pressed => %s"), *Tag.ToString(), bIsPress ? TEXT("true") : TEXT("false"));
+}
+
 void APlayerCharacter::OverlayStateChange_Callback(const ELSOverlayState PrevOverlay, const ELSOverlayState CurrentOverlay)
 {
 	auto PrevItem = InventoryComponent->FindItem(PrevOverlay);
@@ -210,6 +254,30 @@ void APlayerCharacter::OverlayStateChange_Callback(const ELSOverlayState PrevOve
 	{
 		CurrentItem->Notify_Equip();
 		CurrentItem->SetActorHiddenInGame(false);
+	}
+}
+
+void APlayerCharacter::HandleJump(const bool bIsPress)
+{
+	if (bIsPress)
+	{
+		Super::Jump();
+	}
+	else
+	{
+		Super::StopJumping();
+	}
+}
+
+void APlayerCharacter::HandleSprinting(const bool bIsPress)
+{
+	if (bIsPress)
+	{
+		Super::DoSprinting();
+	}
+	else
+	{
+		Super::DoStopSprinting();
 	}
 }
 

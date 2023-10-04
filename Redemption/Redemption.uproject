@@ -10,7 +10,17 @@
 			"LoadingPhase": "Default",
 			"AdditionalDependencies": [
 				"Engine",
-				"GameplayAbilities"
+				"GameplayAbilities",
+				"WvAbilitySystem"
+			]
+		},
+		{
+			"Name": "RedemptionEditor",
+			"Type": "Editor",
+			"LoadingPhase": "Default",
+			"AdditionalDependencies": [
+				"Engine",
+				"UnrealEd"
 			]
 		}
 	],
@@ -164,6 +174,13 @@
 		{
 			"Name": "RopeCutting",
 			"Enabled": true
+		},
+		{
+			"Name": "MotoricaStudio",
+			"Enabled": true,
+			"SupportedTargetPlatforms": [
+				"Win64"
+			]
 		}
 	]
 }

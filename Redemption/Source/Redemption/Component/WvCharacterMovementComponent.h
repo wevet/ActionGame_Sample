@@ -112,6 +112,10 @@ protected:
 	class UMantleAnimationDataAsset* MantleDataAsset;
 
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Character Movement: Falling")
+	bool bIsDrawGroundTrace = false;
+
+
 	////////////////
 	/// LEDGE END
 	////////////////	

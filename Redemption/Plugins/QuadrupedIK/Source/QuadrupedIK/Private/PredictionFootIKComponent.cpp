@@ -61,7 +61,7 @@ void FPredictionToePathInfo::SetupPath(const FName& InToeName)
 		{
 			IsPathValid = true;
 			PathTranslation = FVector(ToePathTranslation.X, ToePathTranslation.Y, 0.f);
-			UE_LOG(LogPredictionFootIK, Log, TEXT("%s Path: %s PathSize: %f"), *InToeName.ToString(), *PathTranslation.ToString(), PathTranslation.Size2D());
+			UE_LOG(LogPredictionFootIK, Verbose, TEXT("%s Path: %s PathSize: %f"), *InToeName.ToString(), *PathTranslation.ToString(), PathTranslation.Size2D());
 		}
 	}
 }

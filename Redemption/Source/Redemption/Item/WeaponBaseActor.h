@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Item/ItemBaseActor.h"
+#include "Locomotion/LocomotionSystemTypes.h"
 #include "WeaponBaseActor.generated.h"
 
 /**
@@ -16,4 +17,14 @@ class REDEMPTION_API AWeaponBaseActor : public AItemBaseActor
 	
 public:
 	virtual void DoFire();
+
+protected:
+	UPROPERTY(EditAnywhere, Category = "Config")
+	FPawnAttackParam PawnAttackParam;
+
+public:
+	EAttackWeaponState GetAttackWeaponState() const 
+	{
+		return PawnAttackParam.AttackWeaponState;
+	}
 };

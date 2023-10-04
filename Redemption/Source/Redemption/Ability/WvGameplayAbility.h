@@ -3,8 +3,10 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Abilities/GameplayAbility.h"
-#include "Abilities/GameplayAbilityTypes.h"
+#include "WvAbilityBase.h"
+#include "WvTargetDataFilter.h"
+//#include "Abilities/GameplayAbility.h"
+//#include "Abilities/GameplayAbilityTypes.h"
 #include "WvAbilityType.h"
 #include "GameplayEffectTypes.h"
 #include "WvGameplayAbility.generated.h"
@@ -18,14 +20,18 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FWvAbilityEndDelegate, UWvGameplayAb
  * 
  */
 UCLASS()
-class REDEMPTION_API UWvGameplayAbility : public UGameplayAbility
+class REDEMPTION_API UWvGameplayAbility : public UWvAbilityBase
 {
 	GENERATED_UCLASS_BODY()
 	
 public:
+	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
 	virtual void EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled) override;
 
 public:
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = Targeting)
+	FWvTargetDataFilter AbilityTargetFilter;
+
 	UPROPERTY(BlueprintAssignable)
 	FWvAbilityEndDelegate OnEndDelegate;
 
@@ -51,6 +57,7 @@ public:
 
 	void CommitTargetDataHandle(FGameplayAbilityTargetDataHandle TDH, int32 EffectGroupIdx, const FGameplayEffectQuery& Query);
 
+	bool AbilityTagsHasAny(const FGameplayTagContainer TagContainer) const;
 
 protected:
 	virtual void SetCurrentActorInfo(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo) const override;
