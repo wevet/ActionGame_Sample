@@ -21,19 +21,10 @@
 #define SPRINT_SPEED 800.f
 
 #if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
-static TAutoConsoleVariable<int32> CVarDebugLocomotionSystem(
-	TEXT("wv.LocomotionSystem.Debug"),
-	0,
-	TEXT("LocomotionSystem Debug .\n")
-	TEXT("<=0: off\n")
-	TEXT("  1: on\n"),
-	ECVF_Default);
-
+static TAutoConsoleVariable<int32> CVarDebugLocomotionSystem(TEXT("wv.LocomotionSystem.Debug"), 0, TEXT("LocomotionSystem Debug .\n") TEXT("<=0: off\n") TEXT("  1: on\n"), ECVF_Default);
 #endif
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(LocomotionComponent)
-
-#define DISABLE_MOVEMENT_COMP 0
 
 #pragma region LocomotionDA
 FGameplayTag ULocomotionStateDataAsset::FindStanceTag(const ELSStance LSStance) const
@@ -73,16 +64,16 @@ ULocomotionComponent::ULocomotionComponent(const FObjectInitializer& ObjectIniti
 	// LS
 	WalkingSpeed = 200.f;
 	RunningSpeed = 400.f;
-	SprintingSpeed = 600.f;
-	WalkingAcceleration = 600.f;
-	RunningAcceleration = 800.f;
-	SprintingAcceleration = 1000.0f;
+	SprintingSpeed = 700.f;
+	CrouchingSpeed = 250.0f;
+	WalkingAcceleration = 800.f;
+	RunningAcceleration = 1000.f;
 	WalkingDeceleration = 400.f;
 	RunningDeceleration = 600.f;
-	SprintingDeceleration = 800.0f;
-	WalkingGroundFriction = 12.0f;
-	RunningGroundFriction = 6.0f;
-	SprintingGroundFriction = 4.0f;
+	WalkingGroundFriction = 6.0f;
+	RunningGroundFriction = 3.0f;
+	WalkingBrakingFriction = 1.0f;
+	RunningBrakingFriction = 0.5f;
 
 	LocomotionEssencialVariables.bRightShoulder = true;
 	LocomotionEssencialVariables.bAiming = false;
@@ -108,20 +99,32 @@ void ULocomotionComponent::BeginPlay()
 	SkeletalMeshComponent = Character->GetMesh();
 	CapsuleComponent = Character->GetCapsuleComponent();
 
+	if (Character.IsValid())
+	{
+		bIsOwnerPlayerController = bool(Cast<APlayerController>(Character->GetController()));
+	}
+
 	ILocomotionInterface::Execute_OnLSRotationModeChange(this);
 	ILocomotionInterface::Execute_OnLSStanceChange(this);
+	ILocomotionInterface::Execute_OnLSGaitChange(this);
 
 	if (FindAbilitySystemComponent() && LocomotionStateDataAsset)
 	{
 		AbilitySystemComponent->AddGameplayTag(LocomotionStateDataAsset->FindMovementModeTag(LocomotionEssencialVariables.LSMovementMode));
 		AbilitySystemComponent->AddGameplayTag(LocomotionStateDataAsset->FindRotationModeTag(LocomotionEssencialVariables.LSRotationMode));
 		AbilitySystemComponent->AddGameplayTag(LocomotionStateDataAsset->FindStanceTag(LocomotionEssencialVariables.LSStance));
+		AbilitySystemComponent->AddGameplayTag(LocomotionStateDataAsset->FindGaitTag(LocomotionEssencialVariables.LSGait));
 	}
 
 }
 
 void ULocomotionComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
+	FTimerManager& TM = GetWorld()->GetTimerManager();
+	if (TM.IsTimerActive(Landing_CallbackHandle))
+	{
+		TM.ClearTimer(Landing_CallbackHandle);
+	}
 	Character.Reset();
 	Super::EndPlay(EndPlayReason);
 }
@@ -150,6 +153,7 @@ void ULocomotionComponent::TickComponent(float DeltaTime, ELevelTick TickType, F
 
 	SprintCheck();
 	ManageCharacterRotation();
+
 
 #if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
 	DrawDebugDirectionArrow();
@@ -320,28 +324,32 @@ void ULocomotionComponent::OnMovementModeChange_Implementation()
 void ULocomotionComponent::OnLSRotationModeChange_Implementation()
 {
 	if (LocomotionEssencialVariables.bWasMoving)
+	{
 		LocomotionEssencialVariables.RotationRateMultiplier = 0.0f;
+	}
 
 	if (OnRotationModeChangeDelegate.IsBound())
+	{
 		OnRotationModeChangeDelegate.Broadcast();
+	}
 }
 
 void ULocomotionComponent::OnLSStanceChange_Implementation()
 {
 	UpdateCharacterMovementSettings();
-
 	if (OnStanceChangeDelegate.IsBound())
+	{
 		OnStanceChangeDelegate.Broadcast();
-
+	}
 }
 
 void ULocomotionComponent::OnLSGaitChange_Implementation()
 {
 	UpdateCharacterMovementSettings();
-
 	if (OnGaitChangeDelegate.IsBound())
+	{
 		OnGaitChangeDelegate.Broadcast();
-
+	}
 }
 
 void ULocomotionComponent::SetLSAiming_Implementation(const bool NewLSAiming)
@@ -355,15 +363,19 @@ void ULocomotionComponent::SetLSAiming_Implementation(const bool NewLSAiming)
 	if (FindAbilitySystemComponent() && LocomotionStateDataAsset)
 	{
 		if (LocomotionEssencialVariables.bAiming)
+		{
 			AbilitySystemComponent->RemoveGameplayTag(LocomotionStateDataAsset->AimingTag);
+		}
 		else
+		{
 			AbilitySystemComponent->AddGameplayTag(LocomotionStateDataAsset->AimingTag);
+		}
 	}
 
-	UpdateCharacterMovementSettings();
-
 	if (OnAimingChangeDelegate.IsBound())
+	{
 		OnAimingChangeDelegate.Broadcast();
+	}
 }
 
 void ULocomotionComponent::SetWalkingSpeed_Implementation(const float InWalkingSpeed)
@@ -383,15 +395,15 @@ void ULocomotionComponent::SetSprintingSpeed_Implementation(const float InSprint
 
 void ULocomotionComponent::SetCrouchingSpeed_Implementation(const float InCrouchingSpeed)
 {
-	if (CharacterMovementComponent.IsValid())
-		CharacterMovementComponent->MaxWalkSpeedCrouched = InCrouchingSpeed;
+	CrouchingSpeed = InCrouchingSpeed;
 }
 
 void ULocomotionComponent::SetSwimmingSpeed_Implementation(const float InSwimmingSpeed)
 {
 	if (CharacterMovementComponent.IsValid())
+	{
 		CharacterMovementComponent->MaxSwimSpeed = InSwimmingSpeed;
-
+	}
 }
 
 ELSMovementMode ULocomotionComponent::GetLSMovementMode_Implementation() const
@@ -456,16 +468,12 @@ float ULocomotionComponent::GetSprintingSpeed_Implementation() const
 
 float ULocomotionComponent::GetCrouchingSpeed_Implementation() const
 {
-	if (CharacterMovementComponent.IsValid())
-		return CharacterMovementComponent->MaxWalkSpeedCrouched;
-	return 0.0f;
+	return CrouchingSpeed;
 }
 
 float ULocomotionComponent::GetSwimmingSpeed_Implementation() const
 {
-	if (CharacterMovementComponent.IsValid())
-		return CharacterMovementComponent->MaxSwimSpeed;
-	return 0.0f;
+	return CharacterMovementComponent->MaxSwimSpeed;
 }
 
 void ULocomotionComponent::SetRightShoulder_Implementation(const bool NewRightShoulder)
@@ -525,30 +533,25 @@ UAnimMontage* ULocomotionComponent::GetCurrentMontage() const
 
 void ULocomotionComponent::OnLanded()
 {
-	if (CharacterMovementComponent.IsValid())
-		CharacterMovementComponent->BrakingFrictionFactor = HasMovementInput_Implementation() ? 0.5f : 3.0f;
-
-	FLatentActionInfo ActionInfo;
-	ActionInfo.CallbackTarget = this;
-	ActionInfo.ExecutionFunction = "OnLandedCallback";
-	UKismetSystemLibrary::Delay(GetWorld(), 0.2f, ActionInfo);
+	FTimerManager& TM = GetWorld()->GetTimerManager();
+	if (TM.IsTimerActive(Landing_CallbackHandle))
+	{
+		TM.ClearTimer(Landing_CallbackHandle);
+	}
+	TM.SetTimer(Landing_CallbackHandle, this, &ULocomotionComponent::OnLandedCallback, 0.2f, false);
 
 	if (Character.IsValid())
+	{
 		LandingLocation = Character->GetActorLocation();
+	}
 }
 
 void ULocomotionComponent::OnLandedCallback()
 {
-	CharacterMovementComponent->BrakingFrictionFactor = 0.0f;
-
-#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
-	if (CVarDebugLocomotionSystem.GetValueOnGameThread() > 0)
-	{
-		UE_LOG(LogTemp, Log, TEXT("Fire Landed Callback"));
-	}
-#endif
+	UE_LOG(LogTemp, Log, TEXT("%s"), *FString(__FUNCTION__));
 }
 
+#pragma region CharacterSpeed
 FVector ULocomotionComponent::ChooseVelocity() const
 {
 	if (LocomotionEssencialVariables.LSMovementMode == ELSMovementMode::Ragdoll)
@@ -567,6 +570,12 @@ FVector ULocomotionComponent::ChooseVelocity() const
 
 float ULocomotionComponent::ChooseMaxWalkSpeed() const
 {
+	const bool bHasCrouching = (LocomotionEssencialVariables.LSStance != ELSStance::Standing);
+	if (bHasCrouching)
+	{
+		return ChooseMaxWalkSpeedCrouched();
+	}
+
 	float Speed = 0.0f;
 	if (LocomotionEssencialVariables.bAiming)
 	{
@@ -601,57 +610,78 @@ float ULocomotionComponent::ChooseMaxWalkSpeed() const
 
 float ULocomotionComponent::ChooseMaxWalkSpeedCrouched() const
 {
-	//float Speed = CrouchingSpeed;
+	float Speed = CrouchingSpeed;
 	switch (LocomotionEssencialVariables.LSGait)
 	{
 		case ELSGait::Walking:
 		case ELSGait::Running:
 		const float CrouchOffset = 50.f;
-		//Speed -= CrouchOffset;
+		Speed -= CrouchOffset;
 		break;
 	}
-	if (CharacterMovementComponent.IsValid())
-		return CharacterMovementComponent->MaxWalkSpeedCrouched;
-	return 0.0f;
+	return Speed;
 }
 
 float ULocomotionComponent::ChooseMaxAcceleration() const
 {
-	if (LocomotionEssencialVariables.LSGait == ELSGait::Sprinting)
-		return SprintingAcceleration;
-
 	return (LocomotionEssencialVariables.LSGait == ELSGait::Walking) ? WalkingAcceleration : RunningAcceleration;
 }
 
 float ULocomotionComponent::ChooseBrakingDeceleration() const
 {
-	if (LocomotionEssencialVariables.LSGait == ELSGait::Sprinting)
-		return SprintingDeceleration;
-
 	return (LocomotionEssencialVariables.LSGait == ELSGait::Walking) ? WalkingDeceleration : RunningDeceleration;
 }
 
 float ULocomotionComponent::ChooseGroundFriction() const
 {
-	if (LocomotionEssencialVariables.LSGait == ELSGait::Sprinting)
-		return SprintingGroundFriction;
-
 	return (LocomotionEssencialVariables.LSGait == ELSGait::Walking) ? WalkingGroundFriction : RunningGroundFriction;
+}
+
+float ULocomotionComponent::ChooseBrakingFrictionFactor() const
+{
+	return (LocomotionEssencialVariables.LSGait == ELSGait::Sprinting) ? RunningBrakingFriction : WalkingBrakingFriction;
 }
 
 void ULocomotionComponent::UpdateCharacterMovementSettings()
 {
-#if !DISABLE_MOVEMENT_COMP
 	if (CharacterMovementComponent.IsValid())
 	{
-		CharacterMovementComponent->MaxWalkSpeed = CharacterMovementComponent->GetMaxSpeed();
-		//CharacterMovementComponent->MaxWalkSpeedCrouched = ChooseMaxWalkSpeedCrouched();
-		CharacterMovementComponent->BrakingDecelerationWalking = ChooseBrakingDeceleration();
-		CharacterMovementComponent->MaxAcceleration = ChooseMaxAcceleration();
-		CharacterMovementComponent->GroundFriction = ChooseGroundFriction();
+		const bool bHasStanding = (LocomotionEssencialVariables.LSStance == ELSStance::Standing);
+		CharacterMovementComponent->UpdateCharacterMovementSettings(bHasStanding);
+
+		if (bAllowCustomAcceleration)
+		{
+			CharacterMovementComponent->BrakingDecelerationWalking = ChooseBrakingDeceleration();
+			CharacterMovementComponent->MaxAcceleration = ChooseMaxAcceleration();
+			CharacterMovementComponent->GroundFriction = ChooseGroundFriction();
+			CharacterMovementComponent->BrakingFrictionFactor = ChooseBrakingFrictionFactor();
+		}
+
+		//UE_LOG(LogTemp, Log, TEXT("%s"), *FString(__FUNCTION__));
 	}
-#endif
 }
+
+bool ULocomotionComponent::GetGaitModeFromVelocity(ELSGait& OutGaitMode) const
+{
+	if (!LocomotionEssencialVariables.HasAcceleration || !CharacterMovementComponent.IsValid())
+		return false;
+
+	const float Speed = CharacterMovementComponent->Velocity.Size2D();
+	if (Speed >= SprintingSpeed)
+	{
+		OutGaitMode = ELSGait::Sprinting;
+	}
+	else if (SprintingSpeed > Speed && Speed >= RunningSpeed)
+	{
+		OutGaitMode = ELSGait::Running;
+	}
+	else
+	{
+		OutGaitMode = ELSGait::Walking;
+	}
+	return true;
+}
+#pragma endregion
 
 void ULocomotionComponent::ManageCharacterRotation()
 {
@@ -1260,19 +1290,22 @@ ELSMovementMode ULocomotionComponent::GetPawnMovementModeChanged(const EMovement
 
 void ULocomotionComponent::CustomAcceleration()
 {
-#if !DISABLE_MOVEMENT_COMP
-	if (!CharacterMovementComponent.IsValid())
+	if (!bAllowCustomAcceleration)
+	{
 		return;
+	}
 
-	const auto Velocity = FMath::Abs(LocomotionEssencialVariables.VelocityDifference);
-	const float RangeA = 45.f;
-	const float RangeB = 130.f;
+	if (CharacterMovementComponent.IsValid())
+	{
+		const float VelocityDiff = FMath::Abs(LocomotionEssencialVariables.VelocityDifference);
+		const FVector2D Ranges{ 45.0f, 130.0f };
 
-	const float MaxAccelerationValue = UKismetMathLibrary::MapRangeClamped(Velocity, RangeA, RangeB, 1.0f, 0.2f);
-	const float GroundFrictionValue = UKismetMathLibrary::MapRangeClamped(Velocity, RangeA, RangeB, 1.0f, 0.4f);
-	CharacterMovementComponent->MaxAcceleration = RunningAcceleration * MaxAccelerationValue;
-	CharacterMovementComponent->GroundFriction = RunningGroundFriction * GroundFrictionValue;
-#endif
+		const float MaxAccelerationValue = UKismetMathLibrary::MapRangeClamped(VelocityDiff, Ranges.X, Ranges.Y, AccelerationRange.Y, AccelerationRange.X);
+		const float GroundFrictionValue = UKismetMathLibrary::MapRangeClamped(VelocityDiff, Ranges.X, Ranges.Y, GroundFrictionRange.Y, GroundFrictionRange.X);
+		CharacterMovementComponent->MaxAcceleration = RunningAcceleration * MaxAccelerationValue;
+		CharacterMovementComponent->GroundFriction = RunningGroundFriction * GroundFrictionValue;
+	}
+
 }
 
 void ULocomotionComponent::SetSprintPressed(const bool NewSprintPressed)
@@ -1283,10 +1316,11 @@ void ULocomotionComponent::SetSprintPressed(const bool NewSprintPressed)
 	}
 
 	if (LocomotionEssencialVariables.bAiming)
+	{
 		return;
+	}
 
 	bShouldSprint = NewSprintPressed;
-
 	if (FindAbilitySystemComponent() && LocomotionStateDataAsset && CharacterMovementComponent.IsValid())
 	{
 		CharacterMovementComponent->RotationRate = bShouldSprint ? SprintingRotationRate : RunningRotationRate;
@@ -1332,8 +1366,8 @@ FVector ULocomotionComponent::GetLandingLocation() const
 
 void ULocomotionComponent::ToggleRightShoulder()
 {
-	LocomotionEssencialVariables.bRightShoulder = !LocomotionEssencialVariables.bRightShoulder;
-	SetRightShoulder_Implementation(LocomotionEssencialVariables.bRightShoulder);
+	const bool bHasRightShoulder = !LocomotionEssencialVariables.bRightShoulder;
+	SetRightShoulder_Implementation(bHasRightShoulder);
 }
 
 void ULocomotionComponent::DrawDebugDirectionArrow()

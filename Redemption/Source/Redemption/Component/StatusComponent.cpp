@@ -45,15 +45,11 @@ void UStatusComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActo
 
 void UStatusComponent::HealthChange_Callback(const FOnAttributeChangeData& Data)
 {
-	if (Data.NewValue > 0.f)
+	auto Attr = ASC->GetStatusAttributeSet(UWvAbilityAttributeSet::StaticClass());
+	if (Attr)
 	{
-		UE_LOG(LogTemp, Log, TEXT("Health => %.3f, function => %s"), Data.NewValue, *FString(__FUNCTION__));
-
-		auto Attr = Cast<UWvInheritanceAttributeSet>(ASC->GetAttributeSet(UWvInheritanceAttributeSet::StaticClass()));
-		if (Attr)
-		{
-			auto Health = Attr->GetHP();
-		}
+		auto Health = Attr->GetHP();
+		UE_LOG(LogTemp, Log, TEXT("Health => %.3f, function => %s"), Health, *FString(__FUNCTION__));
 	}
 }
 

@@ -70,6 +70,7 @@ public:
 	void MantleEnd();
 
 	FMantleParams GetMantleParams() const;
+	void UpdateCharacterMovementSettings(const bool bHasStanding);
 
 protected:
 	virtual void InitializeComponent() override;
@@ -162,6 +163,7 @@ private:
 	void SavePenetrationAdjustment(const FHitResult& Hit);
 	void ApplyPendingPenetrationAdjustment();
 	float GetSlopeAngle(const FHitResult& InHitResult) const;
+	float GetMaxWalkSpeedCrouched() const;
 
 #pragma region LedgeEnd
 	FVector GetLedgeInputVelocity() const;

@@ -164,7 +164,7 @@ void UWvGameplayCue_HitImpact::HandleBeHit(ABaseCharacter* BeHitActor, ABaseChar
 		}
 	}
 
-	BeHitActor->OnHitBone(Attacker->GetMesh(), *HitResult, true);
+	//BeHitActor->OnHitBone(Attacker->GetMesh(), *HitResult, true);
 }
 
 void UWvGameplayCue_HitImpact::GetHitImpactParticleLocation(ABaseCharacter* BeHitActor, ABaseCharacter* Attacker, const FHitResult* HitResult, FName FixedAttachBoneName, FVector locationOffset, FVector& OutLocation)

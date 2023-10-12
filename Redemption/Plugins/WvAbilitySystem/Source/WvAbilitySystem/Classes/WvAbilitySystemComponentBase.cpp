@@ -4,13 +4,16 @@
 #include "WvGameplayCueManager.h"
 #include "WvAbilitySystemGlobals.h"
 #include "WvAbilityDataAsset.h"
-#include "AbilitySystemInterface.h"
 #include "WvGameplayEffectContext.h"
+#include "WvAbilityAttributeSet.h"
+
+#include "AbilitySystemInterface.h"
 #include "GameFramework/Controller.h"
 
 //#include "GameFramework/Character.h"
 //#include "GameFramework/PlayerController.h"
 
+#include UE_INLINE_GENERATED_CPP_BY_NAME(WvAbilitySystemComponentBase)
 
 FGameplayAbilitySpecHandle UWvAbilitySystemComponentBase::ApplyGiveAbility(class UWvAbilityDataAsset* AbilityData, float DamageMotion)
 {
@@ -680,4 +683,9 @@ float UWvAbilitySystemComponentBase::GetNumericAttributeBaseByName(const FString
 	return 0;
 }
 
+UWvAbilityAttributeSet* UWvAbilitySystemComponentBase::GetStatusAttributeSet(TSubclassOf<UAttributeSet> AttributeSetClass) const
+{
+	const auto Attr = Cast<UWvAbilityAttributeSet>(GetAttributeSet(AttributeSetClass));
+	return const_cast<UWvAbilityAttributeSet*>(Attr);
+}
 

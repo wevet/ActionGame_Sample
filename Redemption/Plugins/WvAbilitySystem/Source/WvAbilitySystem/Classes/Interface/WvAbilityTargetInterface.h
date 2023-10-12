@@ -62,6 +62,9 @@ public:
 
 public:
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "AbilityTarget")
+	void OnReceiveHitReact(FGameplayEffectContextHandle Context, const bool IsInDead, const float Damage);
+
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "AbilityTarget")
 	void OnSendWeaknessAttack(AActor* Actor, const FName WeaknessName,  const float Damage);
 
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "AbilityTarget")

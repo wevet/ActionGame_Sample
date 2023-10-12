@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "Item/ItemBaseActor.h"
 #include "Locomotion/LocomotionSystemTypes.h"
+#include "GameplayTagContainer.h"
 #include "WeaponBaseActor.generated.h"
 
 /**
@@ -22,9 +23,14 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Config")
 	FPawnAttackParam PawnAttackParam;
 
+	UPROPERTY(EditAnywhere, Category = "Config")
+	FGameplayTag Itemtag;
+
 public:
 	EAttackWeaponState GetAttackWeaponState() const 
 	{
 		return PawnAttackParam.AttackWeaponState;
 	}
+
+	FGameplayTag GetItemtag() const { return Itemtag; }
 };

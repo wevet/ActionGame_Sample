@@ -48,6 +48,8 @@ void FWvInputEvent::SetAttachExtendToEventTag(const FString InExtend)
 }
 #pragma endregion
 
+#include UE_INLINE_GENERATED_CPP_BY_NAME(WvInputEventComponent)
+
 UWvInputEventComponent::UWvInputEventComponent()
 {
 	PrimaryComponentTick.bCanEverTick = true;

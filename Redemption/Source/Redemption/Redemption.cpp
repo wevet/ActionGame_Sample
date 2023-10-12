@@ -48,6 +48,12 @@ UE_DEFINE_GAMEPLAY_TAG(TAG_Locomotion_ForbidMantling, "Locomotion.Forbid.Mantlin
 UE_DEFINE_GAMEPLAY_TAG(TAG_Locomotion_ForbidMovement, "Locomotion.Forbid.Movement");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Locomotion_ForbidJump, "Locomotion.Forbid.Jump");
 
+// weapon type tag
+UE_DEFINE_GAMEPLAY_TAG(TAG_Weapon_Melee_Default, "Weapon.Melee.Default");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Weapon_Melee_Pistol, "Weapon.Melee.Pistol");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Weapon_Melee_Rifle, "Weapon.Melee.Rifle");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Weapon_Melee_Knife, "Weapon.Melee.Knife");
+
 
 IMPLEMENT_PRIMARY_GAME_MODULE( FDefaultGameModuleImpl, Redemption, "Redemption" );
 

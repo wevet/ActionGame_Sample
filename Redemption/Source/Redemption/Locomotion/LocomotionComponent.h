@@ -219,31 +219,37 @@ protected:
 	FLocomotionEssencialVariables LocomotionEssencialVariables;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion")
+	bool bAllowCustomAcceleration = true;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion", meta = (EditCondition = "bAllowCustomAcceleration"))
 	float WalkingAcceleration;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion", meta = (EditCondition = "bAllowCustomAcceleration"))
 	float RunningAcceleration;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion")
-	float SprintingAcceleration;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion", meta = (EditCondition = "bAllowCustomAcceleration"))
 	float WalkingDeceleration;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion", meta = (EditCondition = "bAllowCustomAcceleration"))
 	float RunningDeceleration;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion")
-	float SprintingDeceleration;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion", meta = (EditCondition = "bAllowCustomAcceleration"))
 	float WalkingGroundFriction;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion", meta = (EditCondition = "bAllowCustomAcceleration"))
 	float RunningGroundFriction;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion")
-	float SprintingGroundFriction;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion", meta = (EditCondition = "bAllowCustomAcceleration"))
+	float WalkingBrakingFriction;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion", meta = (EditCondition = "bAllowCustomAcceleration"))
+	float RunningBrakingFriction;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion", meta = (EditCondition = "bAllowCustomAcceleration"))
+	FVector2D AccelerationRange = FVector2D(0.5f, 1.0f);
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion", meta = (EditCondition = "bAllowCustomAcceleration"))
+	FVector2D GroundFrictionRange = FVector2D(0.7f, 1.0f);
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion")
 	FVector2D SpeedRate = FVector2D(160.f, 380.f);
@@ -276,6 +282,9 @@ protected:
 	float SprintingSpeed;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion")
+	float CrouchingSpeed;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion")
 	ULocomotionStateDataAsset* LocomotionStateDataAsset;
 #pragma endregion
 
@@ -303,6 +312,8 @@ public:
 	float ChooseMaxAcceleration() const;
 	float ChooseBrakingDeceleration() const;
 	float ChooseGroundFriction() const;
+	float ChooseBrakingFrictionFactor() const;
+	bool GetGaitModeFromVelocity(ELSGait& OutGaitMode) const;
 
 	FLocomotionEssencialVariables GetLocomotionEssencialVariables() const { return LocomotionEssencialVariables; }
 
@@ -370,8 +381,9 @@ private:
 	bool bDebugTrace;
 	bool bShouldSprint;
 	bool bLockUpdatingRotation;
-
+	bool bIsOwnerPlayerController = false;
 	float ForwardAxisValue;
 	float RightAxisValue;
 
+	FTimerHandle Landing_CallbackHandle;
 };

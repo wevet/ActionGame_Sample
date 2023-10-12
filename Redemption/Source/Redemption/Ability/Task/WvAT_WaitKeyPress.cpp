@@ -25,6 +25,7 @@ void UWvAT_WaitKeyPress::SingleInputOnCallback(FGameplayTag GameplayTag, bool Is
 	if (KeyTags.HasTag(GameplayTag))
 	{
 		OnActive.Broadcast(GameplayTag, IsPressed);
+		UE_LOG(LogTemp, Log, TEXT("GameplayTag => %s, function => %s"), *GameplayTag.GetTagName().ToString(), *FString(__FUNCTION__));
 	}
 }
 

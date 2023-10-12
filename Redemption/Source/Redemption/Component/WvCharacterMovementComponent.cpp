@@ -391,6 +391,27 @@ float UWvCharacterMovementComponent::GetMaxSpeed() const
 	return Super::GetMaxSpeed();
 }
 
+float UWvCharacterMovementComponent::GetMaxWalkSpeedCrouched() const
+{
+	if (ASC.IsValid())
+	{
+		if (ASC->HasMatchingGameplayTag(TAG_Locomotion_ForbidMovement))
+		{
+			return 0.0f;
+		}
+	}
+
+	const float Temp = MaxWalkSpeedCrouched;
+	if (LocomotionComponent.IsValid())
+	{
+		if (IsMovingOnGround())
+		{
+			return LocomotionComponent->ChooseMaxWalkSpeedCrouched();
+		}
+	}
+	return Temp;
+}
+
 float UWvCharacterMovementComponent::GetMaxAcceleration() const
 {
 	return Super::GetMaxAcceleration();
@@ -1173,6 +1194,14 @@ float UWvCharacterMovementComponent::GetSlopeAngle(const FHitResult& InHitResult
 	return UKismetMathLibrary::DegAcos(FVector::DotProduct(InHitResult.Normal, FVector(0.0f, 0.0f, 1.0f)));
 }
 
+void UWvCharacterMovementComponent::UpdateCharacterMovementSettings(const bool bHasStanding)
+{
+	const float MaxSpeed = GetMaxSpeed();
+	const float CrouchSpeed = GetMaxWalkSpeedCrouched();
+	MaxWalkSpeed = bHasStanding ? MaxSpeed : CrouchSpeed;
+	MaxWalkSpeedCrouched = CrouchSpeed;
+}
+
 #pragma region LedgeEnd
 FVector UWvCharacterMovementComponent::GetLedgeInputVelocity() const
 {
@@ -1894,7 +1923,11 @@ FMantleParams UWvCharacterMovementComponent::GetMantleParams() const
 
 void UWvCharacterMovementComponent::MantleEnd()
 {
-	SetMovementMode(CharacterOwner->IsBotControlled() ? EMovementMode::MOVE_NavWalking : EMovementMode::MOVE_Walking);
+	FFindFloorResult FloorResult;
+	FindFloor(CharacterOwner->GetActorLocation(), FloorResult, false);
+	const bool bIsWalkable = (IsWalkable(FloorResult.HitResult));
+	const bool bIsBot = CharacterOwner->IsBotControlled();
+	SetMovementMode(bIsWalkable ? bIsBot ? EMovementMode::MOVE_NavWalking : EMovementMode::MOVE_Walking : EMovementMode::MOVE_Falling);
 }
 
 void UWvCharacterMovementComponent::PhysMantling(float deltaTime, int32 Iterations)
@@ -1942,7 +1975,7 @@ void UWvCharacterMovementComponent::PhysMantling(float deltaTime, int32 Iteratio
 		{
 			HandleImpact(Hit, deltaTime, Adjusted);
 			Super::SlideAlongSurface(Adjusted, (1.f - Hit.Time), Hit.Normal, Hit, true);
-			UE_LOG(LogCharacterMovement, Verbose, TEXT("adjust and try again => %s"), *FString(__FUNCTION__));
+			//UE_LOG(LogCharacterMovement, Verbose, TEXT("adjust and try again => %s"), *FString(__FUNCTION__));
 		}
 	}
 

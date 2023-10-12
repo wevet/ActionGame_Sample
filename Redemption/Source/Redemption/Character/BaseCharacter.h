@@ -95,12 +95,12 @@ public:
 	*/
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
 
-	// IWvAbilitySystemAvatarInterface Start
+#pragma region IWvAbilitySystemAvatarInterface
 	virtual const FWvAbilitySystemAvatarData& GetAbilitySystemData() override;
 	virtual void InitAbilitySystemComponentByData(class UWvAbilitySystemComponentBase* ASC) override;
-	// IWvAbilitySystemAvatarInterface End
+#pragma endregion
 
-	// IWvAbilityTargetInterface Start
+#pragma region IWvAbilityTargetInterface
 	virtual int32 GetTeamNumImpl() const override;
 	virtual int32 GetTeamNum_Implementation() const override;
 	virtual FGameplayTag GetAvatarTag() const override;
@@ -130,7 +130,11 @@ public:
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "BaseCharacter|AbilityTarget")
 	void OnReceiveKillTarget(AActor* Actor, const float Damage);
 	virtual void OnReceiveKillTarget_Implementation(AActor* Actor, const float Damage) override;
-	// IWvAbilityTargetInterface End
+
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "BaseCharacter|AbilityTarget")
+	void OnReceiveHitReact(FGameplayEffectContextHandle Context, const bool IsInDead, const float Damage);
+	virtual void OnReceiveHitReact_Implementation(FGameplayEffectContextHandle Context, const bool IsInDead, const float Damage) override;
+#pragma endregion
 
 	const FCustomWvAbilitySystemAvatarData& GetCustomWvAbilitySystemData();
 
@@ -163,10 +167,11 @@ public:
 	UFUNCTION(BlueprintCallable, Category = Movement)
 	class UWvCharacterMovementComponent* GetWvCharacterMovementComponent() const;
 
+	UFUNCTION(BlueprintCallable, Category = Utils)
+	USceneComponent* GetHeldObjectRoot() const;
+
 	UFUNCTION(BlueprintCallable, Category = Movement)
 	FTrajectorySampleRange GetTrajectorySampleRange() const;
-
-	USceneComponent* GetHeldObjectRoot() const;
 
 	UFUNCTION(BlueprintCallable, Category = Movement)
 	float GetDistanceFromToeToKnee(FName KneeL = TEXT("calf_l"), FName BallL = TEXT("ball_l"), FName KneeR = TEXT("calf_r"), FName BallR = TEXT("ball_r")) const;
@@ -198,8 +203,6 @@ public:
 	virtual void DoStopWalking();
 
 	bool IsDead() const;
-
-	void OnHitBone(class USceneComponent* AttackerComp, const FHitResult& HitResult, const bool IsShakeAngle);
 
 
 protected:
@@ -258,8 +261,12 @@ protected:
 	FTrajectorySampleRange TrajectorySampleRange;
 
 	// Angle threshold to determine if the input direction is vertically aligned with Actor
-	int32 InputDirVerThreshold = 40;
-	float InputDirVerAngleThres = 40.0f;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input)
+	float InputDirVerThreshold = 40.0f;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input)
+	float InputDirVerAngleThreshold = 40.0f;
+	
 	FVector2D InputAxis = FVector2D::ZeroVector;
 	bool bHasMovementInput = false;
 	float MovementInputAmount;

@@ -2,14 +2,21 @@
 
 #include "RedemptionEditor.h"
 
-IMPLEMENT_MODULE(FRedemptionEditorModule, RedemptionEditor);
-
-void FRedemptionEditorModule::StartupModule()
+/**
+ * Implements the RedemptionEditor module.
+ */
+class FRedemptionEditorModule : public IRedemptionEditorPlugin
 {
-}
+public:
 
-void FRedemptionEditorModule::ShutdownModule()
-{
-}
+	virtual void StartupModule() override
+	{
+	}
 
+	virtual void ShutdownModule() override
+	{
+	}
+};
+
+IMPLEMENT_GAME_MODULE(FRedemptionEditorModule, RedemptionEditor);
 

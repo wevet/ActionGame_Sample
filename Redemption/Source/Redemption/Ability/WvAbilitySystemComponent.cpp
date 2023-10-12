@@ -13,6 +13,7 @@
 #include "Character/BaseCharacter.h"
 #include "Character/WvPlayerController.h"
 
+#include UE_INLINE_GENERATED_CPP_BY_NAME(WvAbilitySystemComponent)
 
 UWvAbilitySystemComponent::UWvAbilitySystemComponent() : Super()
 {
@@ -94,7 +95,7 @@ void UWvAbilitySystemComponent::RemoveGameplayTag(const FGameplayTag& GameplayTa
 
 void UWvAbilitySystemComponent::SetGameplayTagCount(const FGameplayTag& GameplayTag, int32 Count)
 {
-	int32 CurCount = GetTagCount(GameplayTag);
+	const int32 CurCount = GetTagCount(GameplayTag);
 	if (CurCount == Count)
 	{
 		return;
@@ -234,7 +235,7 @@ const bool UWvAbilitySystemComponent::TryActivateAbilityByClassPressing(TSubclas
 	bool bIsPressing = true;
 	if (GetAvatarCharacter())
 	{
-		if (AWvPlayerController* CTRL = Cast<AWvPlayerController>(GetAvatarCharacter()->GetController()))
+		if (AWvPlayerController* PC = Cast<AWvPlayerController>(GetAvatarCharacter()->GetController()))
 		{
 			FGameplayTag TriggerTag;
 			for (FGameplayAbilitySpec& ActiveSpec : ActivatableAbilities.Items)
@@ -250,7 +251,7 @@ const bool UWvAbilitySystemComponent::TryActivateAbilityByClassPressing(TSubclas
 
 			if (TriggerTag != FGameplayTag::EmptyTag)
 			{
-				bIsPressing = CTRL->GetInputEventComponent()->InputKeyDownControl(TriggerTag);
+				bIsPressing = PC->GetInputEventComponent()->InputKeyDownControl(TriggerTag);
 			}
 		}
 	}

@@ -9,6 +9,7 @@
 #include "WvAbilitySystemComponentBase.generated.h"
 
 class AController;
+class UWvAbilityAttributeSet;
 
 
 UCLASS(abstract)
@@ -86,6 +87,8 @@ public:
 	float GetNumericAttributeBaseByName(const FString& AttributeName) const;
 
 	TArray<FActiveGameplayEffectHandle> MakeEffectToTargetData(FGameplayEffectContextHandle& EffectContexHandle, FGameplayAbilityTargetDataHandle& TargetDataHandle, const FGameplayEffectQuery& Query);
+
+	UWvAbilityAttributeSet* GetStatusAttributeSet(TSubclassOf<UAttributeSet> AttributeSetClass) const;
 
 protected:
 	virtual void OnComponentDestroyed(bool bDestroyingHierarchy) override;

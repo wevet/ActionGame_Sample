@@ -2,17 +2,26 @@
 
 #pragma once
 
+#include "Engine.h"
 #include "CoreMinimal.h"
+#include "Modules/ModuleInterface.h"
 #include "Modules/ModuleManager.h"
 
 /**
- * Implements the RedemptionEditor module.
+ * The public interface to this module
  */
-class REDEMPTIONEDITOR_API FRedemptionEditorModule : public IModuleInterface
+class IRedemptionEditorPlugin : public IModuleInterface
 {
+
 public:
 
-	virtual void StartupModule() override;
-	virtual void ShutdownModule() override;
-};
+	static inline IRedemptionEditorPlugin& Get()
+	{
+		return FModuleManager::LoadModuleChecked<IRedemptionEditorPlugin>("RedemptionEditorPlugin");
+	}
 
+	static inline bool IsAvailable()
+	{
+		return FModuleManager::Get().IsModuleLoaded("RedemptionEditorPlugin");
+	}
+};

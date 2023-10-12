@@ -29,84 +29,20 @@ static TAutoConsoleVariable<int32> CVarDebugCharacterCombatTrace(
 UCombatComponent::UCombatComponent(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
 	PrimaryComponentTick.bCanEverTick = true;
-	InitAttackWeaponState = EAttackWeaponState::EmptyWeapon;
-
 	AbilityTraceChannel = UEngineTypes::ConvertToTraceType(ECollisionChannel::ECC_GameTraceChannel3);
 }
 
 void UCombatComponent::BeginPlay()
 {
 	Super::BeginPlay();
-	//Super::SetComponentTickEnabled(false);
+	Super::SetComponentTickEnabled(false);
 
 	Character = Cast<ABaseCharacter>(GetOwner());
 	ASC = Cast<UWvAbilitySystemComponent>(Character->GetAbilitySystemComponent());
-
-	if (CombatWeaponDA)
-	{
-		const auto Transform = Character->GetActorTransform();
-		for (auto Template : CombatWeaponDA->SpawnWeaponTemplates)
-		{
-			if (!Template)
-				continue;
-
-			AWeaponBaseActor* Instance = UWvCommonUtils::SpawnActorDeferred<AWeaponBaseActor>(GetOwner(), Template, Transform, GetOwner());
-
-			if (!Instance)
-				continue;
-
-			auto AttackState = Instance->GetAttackWeaponState();
-
-			if (!WeaponActorMap.Contains(AttackState))
-				WeaponActorMap.Add(AttackState, TArray<AWeaponBaseActor*>({}));
-			WeaponActorMap[AttackState].Add(Instance);
-		}
-	}
-
-	if (WeaponActorMap.Num() <= 0)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("Empty WeaponActorMap => %s"), *FString(__FUNCTION__));
-		return;
-	}
-
-	for (TPair<EAttackWeaponState, TArray<AWeaponBaseActor*>>Pair : WeaponActorMap)
-	{
-		Pair.Value.RemoveAll([](AWeaponBaseActor* Weapon) 
-		{
-			return Weapon == nullptr;
-		});
-	}
-
-	auto Values = WeaponActorMap[InitAttackWeaponState];
-	for (auto Weapon : Values)
-	{
-		if (!InitWeaponActor.IsValid())
-		{
-			InitWeaponActor = Weapon;
-			break;
-		}
-	}
-
-	if (InitWeaponActor.IsValid())
-	{
-		InitWeaponActor.Get()->Notify_Equip();
-	}
-
-	// output lod
-	for (TPair<EAttackWeaponState, TArray<AWeaponBaseActor*>>Pair : WeaponActorMap)
-	{
-		UE_LOG(LogTemp, Log, TEXT("%s"), *FString::Format(TEXT("WeaponState => {0}"), { *GETENUMSTRING("EAttackWeaponState", Pair.Key) }));
-		for (auto Weapon : Pair.Value)
-		{
-			UE_LOG(LogTemp, Log, TEXT("Weapon => %s"), *Weapon->GetName());
-		}
-	}
 }
 
 void UCombatComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-	WeaponActorMap.Empty();
-	InitWeaponActor.Reset();
 	Character.Reset();
 	ASC.Reset();
 	Super::EndPlay(EndPlayReason);
@@ -115,62 +51,8 @@ void UCombatComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 void UCombatComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
-
-#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
-	bIsDebugTrace = (CVarDebugCharacterCombatTrace.GetValueOnGameThread() > 0);
-#else
-	bIsDebugTrace = false;
-#endif // !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
-
 }
 
-const bool UCombatComponent::ChangeAttackWeapon(const EAttackWeaponState InAttackWeaponState, int32 Index/* = 0 */)
-{
-	if (WeaponActorMap.Num() <= 0)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("Empty WeaponActorMap => %s"), *FString(__FUNCTION__));
-		return false;
-	}
-
-	auto Values = WeaponActorMap[InAttackWeaponState];
-
-	if (Values.Num() <= 0)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("Empty WeaponArray => %s"), *FString(__FUNCTION__));
-		return false;
-	}
-
-	if (InitWeaponActor.IsValid())
-	{
-		InitWeaponActor.Get()->Notify_UnEquip();
-		InitWeaponActor.Reset();
-	}
-
-	const int32 CalcIndex = Index > (Values.Num() - 1) ? (Values.Num() - 1) : FMath::Clamp(Index, 0, (Values.Num() - 1));
-	InitWeaponActor = Values[CalcIndex];
-	InitWeaponActor.Get()->Notify_Equip();
-	return true;
-}
-
-const EAttackWeaponState UCombatComponent::ConvertWeaponState(const ELSOverlayState InLSOverlayState, bool& OutbCanAttack)
-{
-	OutbCanAttack = true;
-	switch (InLSOverlayState)
-	{
-	case ELSOverlayState::Pistol:
-		return EAttackWeaponState::Gun;
-	case ELSOverlayState::Rifle:
-		return EAttackWeaponState::Rifle;
-	case ELSOverlayState::Barrel:
-	case ELSOverlayState::Binoculars:
-	case ELSOverlayState::Torch:
-	case ELSOverlayState::Box:
-		OutbCanAttack = false;
-		break;
-	}
-
-	return EAttackWeaponState::EmptyWeapon;
-}
 
 #pragma region AbilityDamage
 bool UCombatComponent::AbilityDamageBoxTrace(class UWvAbilityBase* Ability, const int32 EffectGroupIndex, const FVector Start, const FVector End, FVector HalfSize, const FRotator Orientation, TArray<AActor*>& ActorsToIgnore)
@@ -213,6 +95,13 @@ void UCombatComponent::BoxTraceMulti(TArray<FWvBattleDamageAttackTargetInfo>& Hi
 {
 	TArray<FHitResult> HitResults;
 
+#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
+	bIsDebugTrace = (CVarDebugCharacterCombatTrace.GetValueOnGameThread() > 0);
+#else
+	bIsDebugTrace = false;
+#endif // !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
+
+
 	UKismetSystemLibrary::BoxTraceMulti(
 		GetWorld(),
 		Start, End, HalfSize, Orientation,
@@ -231,6 +120,13 @@ void UCombatComponent::CapsuleTraceMulti(TArray<FWvBattleDamageAttackTargetInfo>
 	static const FName CapsuleTraceMultiName(TEXT("CapsuleTraceMulti"));
 	const FCollisionQueryParams Params = UWvAbilitySystemBlueprintFunctionLibrary::ConfigureCollisionParams(CapsuleTraceMultiName, false, ActorsToIgnore, true, GetOwner());
 	GetWorld()->SweepMultiByChannel(HitResults, Start, End, CapsuleFquat, CollisionChannel, FCollisionShape::MakeCapsule(Radius, HalfHeight), Params);
+
+#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
+	bIsDebugTrace = (CVarDebugCharacterCombatTrace.GetValueOnGameThread() > 0);
+#else
+	bIsDebugTrace = false;
+#endif // !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
+
 
 #if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
 	if (bIsDebugTrace)

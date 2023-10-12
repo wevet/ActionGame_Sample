@@ -10,6 +10,7 @@
 #include "InventoryComponent.generated.h"
 
 class ABaseCharacter;
+class AWeaponBaseActor;
 
 UCLASS(BlueprintType)
 class REDEMPTION_API UItemInventoryDataAsset : public UDataAsset
@@ -21,13 +22,14 @@ public:
 	TArray<TSubclassOf<AItemBaseActor>> Item_Template;
 };
 
+
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class REDEMPTION_API UInventoryComponent : public UActorComponent
 {
 	GENERATED_BODY()
 
 public:	
-	UInventoryComponent();
+	UInventoryComponent(const FObjectInitializer& ObjectInitializer);
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
@@ -38,11 +40,17 @@ public:
 	void AddInventory(class AItemBaseActor* NewItem);
 	void RemoveInventory(class AItemBaseActor* InItem);
 
-	AItemBaseActor* FindItem(const ELSOverlayState InOverlayState) const;
+	AItemBaseActor* FindItem(const ELSOverlayState InLSOverlayState) const;
+
+	const EAttackWeaponState ConvertWeaponState(const ELSOverlayState InLSOverlayState, bool& OutbCanAttack);
+	const bool ChangeAttackWeapon(const EAttackWeaponState InAttackWeaponState, int32 Index = 0);
 
 protected:
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Config")
 	UItemInventoryDataAsset* InitInventoryDA;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Config")
+	EAttackWeaponState InitAttackWeaponState;
 
 private:
 	UPROPERTY()
@@ -50,4 +58,11 @@ private:
 
 	UPROPERTY()
 	TWeakObjectPtr<class ABaseCharacter> Character;
+
+	TMap<EAttackWeaponState, TArray<AWeaponBaseActor*>> WeaponActorMap;
+
+	UPROPERTY()
+	TWeakObjectPtr<AWeaponBaseActor> InitWeaponActor;
+
+	TArray<AWeaponBaseActor*> FindOverlayWeaponArray(const ELSOverlayState InLSOverlayState) const;
 };

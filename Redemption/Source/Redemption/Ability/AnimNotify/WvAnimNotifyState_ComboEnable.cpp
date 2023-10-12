@@ -19,7 +19,7 @@ UWvAnimNotifyState_ComboEnable::UWvAnimNotifyState_ComboEnable(const FObjectInit
 
 void UWvAnimNotifyState_ComboEnable::AbilityNotifyBegin(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, float TotalDuration, const FAnimNotifyEventReference& EventReference)
 {
-	UWvAbilityDataAsset* AbilityData = Ability->GetWvAbilityDataChecked();
+	const UWvAbilityDataAsset* AbilityData = Ability->GetWvAbilityDataChecked();
 	if (!AbilityData)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("[ComboSkill] acitivation failed, AbilityDataAsset Not Exist"));
@@ -30,9 +30,7 @@ void UWvAnimNotifyState_ComboEnable::AbilityNotifyBegin(USkeletalMeshComponent* 
 
 	LastPressedTag = FGameplayTag::EmptyTag;
 	CurTime = 0.f;
-
 	TriggerTag = GetInputCombo(AbilityData);
-	//UE_LOG(LogTemp, Log, TEXT("TriggerTag => %s, function => %s"), *TriggerTag.GetTagName().ToString(), *FString(__FUNCTION__));
 
 	TArray<FGameplayTag> TagArray;
 	OtherComboDA.GenerateKeyArray(TagArray);
@@ -78,7 +76,7 @@ void UWvAnimNotifyState_ComboEnable::AbilityNotifyEnd(USkeletalMeshComponent* Me
 	AbilitySystemComponent->RemoveLooseGameplayTags(RequiredGameplayTags, 1);
 }
 
-FGameplayTag UWvAnimNotifyState_ComboEnable::GetInputCombo(class UWvAbilityDataAsset* AbilityData)
+FGameplayTag UWvAnimNotifyState_ComboEnable::GetInputCombo(const class UWvAbilityDataAsset* AbilityData) const
 {
 	if (Ability->HasComboTrigger()) 
 	{

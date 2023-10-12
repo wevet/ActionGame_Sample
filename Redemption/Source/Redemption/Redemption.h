@@ -6,8 +6,9 @@
 #include "NativeGameplayTags.h"
 
 // using
+// *GETENUMSTRING("/Script/ProjectName.EnumName"
 #define GETENUMSTRING(etype, evalue)\
-	 ((FindObject<UEnum>(ANY_PACKAGE, TEXT(etype), true) != nullptr) ? FindObject<UEnum>(ANY_PACKAGE, TEXT(etype), true)->GetNameStringByIndex((int32)evalue) : FString("Invalid - UENUM() macro?"))
+	 ((FindObject<UEnum>(nullptr, TEXT(etype), true) != nullptr) ? FindObject<UEnum>(nullptr, TEXT(etype), true)->GetNameStringByIndex((int32)evalue) : FString("Invalid - UENUM() macro?"))
 
 // avatar
 REDEMPTION_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Character_Default);
@@ -54,5 +55,9 @@ REDEMPTION_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Locomotion_ForbidMantling);
 REDEMPTION_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Locomotion_ForbidMovement);
 REDEMPTION_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Locomotion_ForbidJump);
 
-
+// weapon type
+REDEMPTION_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Weapon_Melee_Default);
+REDEMPTION_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Weapon_Melee_Pistol);
+REDEMPTION_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Weapon_Melee_Rifle);
+REDEMPTION_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Weapon_Melee_Knife);
 

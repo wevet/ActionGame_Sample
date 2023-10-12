@@ -11,6 +11,7 @@
 #include "Component/CombatComponent.h"
 #include "Component/StatusComponent.h"
 #include "WvPlayerController.h"
+#include "Ability/WvInheritanceAttributeSet.h"
 
 #include "Components/CapsuleComponent.h"
 #include "Components/InputComponent.h"
@@ -95,11 +96,11 @@ ABaseCharacter::ABaseCharacter(const FObjectInitializer& ObjectInitializer)
 	LocomotionComponent = CreateDefaultSubobject<ULocomotionComponent>(TEXT("LocomotionComponent"));
 	LocomotionComponent->bAutoActivate = 1;
 
-	// managed itemÇä«óùÇ∑ÇÈclass
+	// managed item, weapon class
 	InventoryComponent = CreateDefaultSubobject<UInventoryComponent>(TEXT("InventoryComponent"));
 	InventoryComponent->bAutoActivate = 1;
 
-	// managed weapon class
+	// managed combat system
 	CombatComponent = CreateDefaultSubobject<UCombatComponent>(TEXT("CombatComponent"));
 	CombatComponent->bAutoActivate = 1;
 
@@ -130,7 +131,6 @@ void ABaseCharacter::BeginPlay()
 
 	USkeletalMeshComponent* SkelMesh = GetMesh();
 	SkelMesh->AddTickPrerequisiteActor(this);
-	InitAbilitySystemComponent();
 
 }
 
@@ -143,11 +143,7 @@ void ABaseCharacter::PossessedBy(AController* NewController)
 {
 	Super::PossessedBy(NewController);
 
-	if (WvAbilitySystemComponent)
-	{
-		WvAbilitySystemComponent->RefreshAbilityActorInfo();
-	}
-
+	InitAbilitySystemComponent();
 }
 
 void ABaseCharacter::Tick(float DeltaTime)
@@ -320,13 +316,18 @@ void ABaseCharacter::InitAbilitySystemComponentByData(class UWvAbilitySystemComp
 		for (int32 JIndex = 0; JIndex < Rows.Num(); ++JIndex)
 		{
 			const FWvAbilityRow* AbilityRow = Rows[JIndex];
-			UWvAbilityDataAsset* AbilityData = AbilityRow->AbilityData;
-			WvAbilitySystemComponent->AddRegisterAbilityDA(AbilityData);
+			WvAbilitySystemComponent->AddRegisterAbilityDA(AbilityRow->AbilityData);
 		}
 	}
 
 	WvAbilitySystemComponent->GiveAllRegisterAbility();
-	UE_LOG(LogTemp, Warning, TEXT("%s"), *FString(__FUNCTION__));
+	
+	auto Attr = WvAbilitySystemComponent->GetStatusAttributeSet(UWvAbilityAttributeSet::StaticClass());
+	if (Attr)
+	{
+		auto Health = Attr->GetHP();
+		UE_LOG(LogTemp, Warning, TEXT("Health => %.3f, function => %s"), Health, *FString(__FUNCTION__));
+	}
 }
 
 #pragma region IWvAbilityTargetInterface
@@ -387,8 +388,14 @@ void ABaseCharacter::OnReceiveKillTarget_Implementation(AActor* Actor, const flo
 		UE_LOG(LogTemp, Log, TEXT("Owner => %s, Actor => %s, function => %s"), *this->GetName(), *Actor->GetName(), *FString(__FUNCTION__));
 	}
 }
+
+void ABaseCharacter::OnReceiveHitReact_Implementation(FGameplayEffectContextHandle Context, const bool IsInDead, const float Damage)
+{
+	//
+}
 #pragma endregion
 
+#pragma region Components
 UAbilitySystemComponent* ABaseCharacter::GetAbilitySystemComponent() const
 {
 	return WvAbilitySystemComponent;
@@ -423,6 +430,7 @@ USceneComponent* ABaseCharacter::GetHeldObjectRoot() const
 {
 	return HeldObjectRoot;
 }
+#pragma endregion
 
 #pragma region Action
 void ABaseCharacter::Landed(const FHitResult& Hit)
@@ -573,7 +581,7 @@ void ABaseCharacter::DoStopAiming()
 #pragma endregion
 
 // AI Perception
-// ttps://blog.gamedev.tv/ai-sight-perception-to-custom-points/
+// https://blog.gamedev.tv/ai-sight-perception-to-custom-points/
 bool ABaseCharacter::CanBeSeenFrom(const FVector& ObserverLocation,	FVector& OutSeenLocation, int32& NumberOfLoSChecksPerformed, float& OutSightStrength, const AActor* IgnoreActor, const bool* bWasVisible, int32* UserData) const
 {
 	check(GetMesh());
@@ -586,12 +594,8 @@ bool ABaseCharacter::CanBeSeenFrom(const FVector& ObserverLocation,	FVector& Out
 	for (int32 Index = 0; Index < Sockets.Num(); ++Index)
 	{
 		const FVector SocketLocation = GetMesh()->GetSocketLocation(Sockets[Index]->SocketName);
-		const bool bHitResult = GetWorld()->LineTraceSingleByObjectType(
-			HitResult,
-			ObserverLocation,
-			SocketLocation,
-			FCollisionObjectQueryParams(CollisionQuery),
-			FCollisionQueryParams(AILineOfSight, true, IgnoreActor));
+		const bool bHitResult = GetWorld()->LineTraceSingleByObjectType(HitResult, ObserverLocation, SocketLocation,
+			FCollisionObjectQueryParams(CollisionQuery), FCollisionQueryParams(AILineOfSight, true, IgnoreActor));
 
 		++NumberOfLoSChecksPerformed;
 		if (!bHitResult || (HitResult.GetActor() && HitResult.GetActor()->IsOwnedBy(this)))
@@ -602,12 +606,8 @@ bool ABaseCharacter::CanBeSeenFrom(const FVector& ObserverLocation,	FVector& Out
 		}
 	}
 
-	const bool bHitResult = GetWorld()->LineTraceSingleByObjectType(
-		HitResult,
-		ObserverLocation,
-		GetActorLocation(),
-		FCollisionObjectQueryParams(CollisionQuery),
-		FCollisionQueryParams(AILineOfSight, true, IgnoreActor));
+	const bool bHitResult = GetWorld()->LineTraceSingleByObjectType(HitResult, ObserverLocation, GetActorLocation(), 
+		FCollisionObjectQueryParams(CollisionQuery), FCollisionQueryParams(AILineOfSight, true, IgnoreActor));
 
 	++NumberOfLoSChecksPerformed;
 	if (!bHitResult || (HitResult.GetActor() && HitResult.GetActor()->IsOwnedBy(this)))
@@ -641,11 +641,12 @@ FVector ABaseCharacter::GetRightMoveDir(FVector CompareDir) const
 	const FRotator ControllRotation = GetControlRotation();
 	FVector CameraRight = UKismetMathLibrary::GetRightVector(ControllRotation);
 	const float Angle = UWvCommonUtils::GetAngleBetweenVector(CameraRight, CompareDir);
+	const float HalfAngle = (180 - Angle);
 	if (Angle < InputDirVerThreshold)
 	{
 		CameraRight = UKismetMathLibrary::GetUpVector(ControllRotation);
 	}
-	else if (180 - Angle < InputDirVerAngleThres)
+	else if (HalfAngle < InputDirVerAngleThreshold)
 	{
 		CameraRight = FVector::ZeroVector - UKismetMathLibrary::GetUpVector(ControllRotation);
 	}
@@ -659,11 +660,12 @@ FVector ABaseCharacter::GetForwardMoveDir(FVector CompareDir) const
 	const FRotator ControllRotation = GetControlRotation();
 	FVector CameraForward = UKismetMathLibrary::GetForwardVector(ControllRotation);
 	const float Angle = UWvCommonUtils::GetAngleBetweenVector(CameraForward, CompareDir);
+	const float HalfAngle = (180 - Angle);
 	if (Angle < InputDirVerThreshold)
 	{
 		CameraForward = UKismetMathLibrary::GetUpVector(ControllRotation);
 	}
-	else if (180 - Angle < InputDirVerAngleThres)
+	else if (HalfAngle < InputDirVerAngleThreshold)
 	{
 		CameraForward = FVector::ZeroVector - UKismetMathLibrary::GetUpVector(ControllRotation);
 	}
@@ -700,8 +702,5 @@ bool ABaseCharacter::IsDead() const
 	return WvAbilitySystemComponent->HasMatchingGameplayTag(TAG_Character_StateDead);
 }
 
-void ABaseCharacter::OnHitBone(class USceneComponent* AttackerComp, const FHitResult& HitResult, const bool IsShakeAngle)
-{
-}
 
 

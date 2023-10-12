@@ -33,9 +33,9 @@ protected:
 	void PostGameplayEffectExecute_Stamina(const FGameplayEffectModCallbackData& Data);
 	void HpChangeFromDamage(const float InDamage, const FGameplayEffectModCallbackData& Data);
 
-	virtual void PostDamageEffectExecute(const FGameplayEffectModCallbackData& Data, const float InDamage) {}
-	virtual void HandleHitReactEvent(const FGameplayEffectModCallbackData& Data, const float InDamage) {}
-	virtual void HandleDeadEvent(const FGameplayEffectModCallbackData& Data) {}
+	virtual void PostDamageEffectExecute(const FGameplayEffectModCallbackData& Data, const float InDamage);
+	virtual void HandleHitReactEvent(const FGameplayEffectModCallbackData& Data, const float InDamage);
+	virtual void HandleDeadEvent(const FGameplayEffectModCallbackData& Data);
 
 public:
 	UPROPERTY(BlueprintReadOnly)
@@ -73,4 +73,7 @@ public:
 	UPROPERTY(BlueprintReadOnly)
 	FGameplayAttributeData RecoverStamina;
 	ATTRIBUTE_ACCESSORS(UWvAbilityAttributeSet, RecoverStamina)
+
+	const FName PassiveAbilityTrigger_KillTarget = "PassiveAbilityTrigger_KillTarget";
+	GAMEPLAYTAG_SCOPE_VALUE(UWvAbilityAttributeSet, PassiveAbilityTrigger_KillTarget)
 };

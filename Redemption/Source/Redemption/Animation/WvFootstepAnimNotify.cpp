@@ -21,14 +21,17 @@ FName UWvFootstepAnimNotify::GetSurfaceName(TEnumAsByte<EPhysicalSurface> Surfac
 	{
 		return TEXT("Default");
 	}
-	else if (const FPhysicalSurfaceName* FoundSurface = UPhysicsSettings::Get()->PhysicalSurfaces.FindByPredicate(
-		[&](const FPhysicalSurfaceName& SurfaceName)
+
+	const FPhysicalSurfaceName* FoundSurface = UPhysicsSettings::Get()->PhysicalSurfaces.FindByPredicate([&](const FPhysicalSurfaceName& SurfaceName)
 	{
 		return SurfaceName.Type == SurfaceType;
-	}))
+	});
+
+	if (FoundSurface)
 	{
 		return FoundSurface->Name;
 	}
+
 	return TEXT("Default");
 }
 

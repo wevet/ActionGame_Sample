@@ -182,6 +182,13 @@ private:
 
 	void DoWhileFalling();
 	void CalculateLandPredictionAlpha();
+
+	bool bOwnerPlayerController = false;
+	const TArray<UAnimInstance*> GetAllAnimInstances();
+	const TMap<FName, FAnimGroupInstance>& GetSyncGroupMapRead() const;
+	const TArray<FAnimTickRecord>& GetUngroupedActivePlayersRead();
+	void DrawRelevantAnimation();
+	void RenderAnimTickRecords(const TArray<FAnimTickRecord>& Records, const int32 HighlightIndex, FColor TextColor, FColor HighlightColor, FColor InInactiveColor, bool bFullBlendSpaceDisplay) const;
 };
 
 

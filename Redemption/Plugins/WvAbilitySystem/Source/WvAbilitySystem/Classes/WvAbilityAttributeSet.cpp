@@ -4,8 +4,12 @@
 #include "WvAbilityDataAsset.h"
 #include "Interface/WvAbilityTargetInterface.h"
 #include "WvAbilitySystemComponentBase.h"
+#include "WvAbilitySystemBlueprintFunctionLibrary.h"
 
 #include "GameplayEffectTypes.h"
+#include "WvGameplayTargetData.h"
+#include "GameplayEffectExtension.h"
+#include "GameFramework/PlayerController.h"
 
 
 UWvAbilityAttributeSet::UWvAbilityAttributeSet(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
@@ -66,6 +70,11 @@ void UWvAbilityAttributeSet::PreAttributeChange(const FGameplayAttribute& Attrib
 		if (OwnedGameplayTag.HasTag(TAG_Character_DamageBlock))
 		{
 			NewValue = 0;
+			auto Act = GetOwningActor();
+			if (Act)
+			{
+				UE_LOG(LogTemp, Log, TEXT("damage block => %s, function => %s"), *Act->GetName(), *FString(__FUNCTION__));
+			}
 		}
 	}
 }
@@ -77,6 +86,7 @@ void UWvAbilityAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModC
 	PostGameplayEffectExecute_Stamina(Data);
 }
 
+//-HP-----------------------------------
 void UWvAbilityAttributeSet::PostGameplayEffectExecute_HP(const FGameplayEffectModCallbackData& Data)
 {
 	if (Data.EvaluatedData.Attribute == GetDamageAttribute())
@@ -112,6 +122,112 @@ void UWvAbilityAttributeSet::HpChangeFromDamage(const float InDamage, const FGam
 	PostDamageEffectExecute(Data, NewDamage);
 	Data.Target.RemoveLooseGameplayTag(TAG_Character_DamageReaction);
 }
+
+void UWvAbilityAttributeSet::PostDamageEffectExecute(const FGameplayEffectModCallbackData& Data, const float InDamage)
+{
+	AActor* BeHitActor = GetOwningAbilitySystemComponent()->GetAvatarActor();
+	IWvAbilityTargetInterface* HitInterface = Cast<IWvAbilityTargetInterface>(BeHitActor);
+
+	if (HitInterface)
+	{
+		FGameplayEffectContextHandle Context = Data.EffectSpec.GetContext();
+		IWvAbilityTargetInterface::Execute_OnReceiveHitReact(BeHitActor, Context, (GetHP() <= 0), InDamage);
+	}
+
+	HandleHitReactEvent(Data, InDamage);
+	HandleDeadEvent(Data);
+}
+
+void UWvAbilityAttributeSet::HandleHitReactEvent(const FGameplayEffectModCallbackData& Data, const float InDamage)
+{
+	if (GetHP() <= 0)
+	{
+		return;
+	}
+
+	const FGameplayEffectContextHandle Context = Data.EffectSpec.GetContext();
+	AActor* SenderActor = Context.GetInstigatorAbilitySystemComponent()->GetAvatarActor();
+	AActor* ReceiverActor = GetOwningAbilitySystemComponent()->GetAvatarActor();
+
+	FName* WeaknessName = nullptr;
+	FWvBattleDamageAttackSourceInfo* SourceInfoPtr = nullptr;
+
+	FWvGameplayAbilityTargetData TargetData;
+	if (UWvAbilitySystemBlueprintFunctionLibrary::GetGameplayAbilityTargetData(Context, TargetData))
+	{
+		WeaknessName = TargetData.TargetInfo.WeaknessNames.Num() > 0 ? &TargetData.TargetInfo.MaxDamageWeaknessName : nullptr;
+		SourceInfoPtr = &TargetData.SourceInfo;
+	}
+
+	IWvAbilityTargetInterface* Sender = Cast<IWvAbilityTargetInterface>(SenderActor);
+	IWvAbilityTargetInterface* Receiver = Cast<IWvAbilityTargetInterface>(ReceiverActor);
+
+	if (Receiver)
+	{
+		if (WeaknessName && !WeaknessName->IsNone())
+		{
+			IWvAbilityTargetInterface::Execute_OnReceiveWeaknessAttack(ReceiverActor, SenderActor, *WeaknessName, InDamage);
+		}
+		else
+		{
+			IWvAbilityTargetInterface::Execute_OnReceiveAbilityAttack(ReceiverActor, SenderActor, *SourceInfoPtr, InDamage);
+		}
+	}
+
+	if (Sender)
+	{
+		if (WeaknessName && !WeaknessName->IsNone())
+		{
+			IWvAbilityTargetInterface::Execute_OnSendWeaknessAttack(SenderActor, ReceiverActor, *WeaknessName, InDamage);
+		}
+		else
+		{
+			IWvAbilityTargetInterface::Execute_OnSendAbilityAttack(SenderActor, ReceiverActor, *SourceInfoPtr, InDamage);
+		}
+	}
+}
+
+void UWvAbilityAttributeSet::HandleDeadEvent(const FGameplayEffectModCallbackData& Data)
+{
+	if (GetHP() > 0)
+	{
+		return;
+	}
+
+	UE_LOG(LogTemp, Log, TEXT("%s"), *FString(__FUNCTION__));
+
+	FGameplayEffectContextHandle Context = Data.EffectSpec.GetContext();
+	AActor* SenderActor = Context.GetInstigatorAbilitySystemComponent()->GetAvatarActor();
+	AActor* ReceiverActor = GetOwningAbilitySystemComponent()->GetAvatarActor();
+
+	if (SenderActor)
+	{
+		FGameplayEventData Payload{};
+		Payload.ContextHandle = Context;
+		Payload.Instigator = SenderActor;
+		Payload.Target = ReceiverActor;
+		Payload.EventMagnitude = GetDamage();
+
+		if (UAbilitySystemComponent* ASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(SenderActor))
+		{
+			ASC->HandleGameplayEvent(TAG_Character_DamageKill, &Payload);
+		}
+	}
+
+	IWvAbilityTargetInterface* Sender = Cast<IWvAbilityTargetInterface>(SenderActor);
+	IWvAbilityTargetInterface* Receiver = Cast<IWvAbilityTargetInterface>(ReceiverActor);
+
+	if (Receiver)
+	{
+		IWvAbilityTargetInterface::Execute_OnReceiveKillTarget(ReceiverActor, SenderActor, GetDamage());
+	}
+
+	if (Sender)
+	{
+		IWvAbilityTargetInterface::Execute_OnSendKillTarget(SenderActor, ReceiverActor, GetDamage());
+	}
+}
+
 
 //-Stamina-----------------------------------
 void UWvAbilityAttributeSet::PostGameplayEffectExecute_Stamina(const FGameplayEffectModCallbackData& Data)

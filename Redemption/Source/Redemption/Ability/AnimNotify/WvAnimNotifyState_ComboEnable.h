@@ -36,7 +36,7 @@ protected:
 	TMap<FGameplayTag, UWvAbilityDataAsset*> OtherComboDA;
 
 private:
-	FGameplayTag GetInputCombo(class UWvAbilityDataAsset* AbilityData);
+	FGameplayTag GetInputCombo(const class UWvAbilityDataAsset* AbilityData) const;
 
 	UFUNCTION()
 	void OnRelease(const FGameplayTag InTag, const bool bIsPressed);

@@ -14,16 +14,6 @@ class UWvAbilityBase;
 class UWvAbilitySystemComponent;
 class ABaseCharacter;
 
-UCLASS(BlueprintType)
-class REDEMPTION_API UCombatWeaponDataAsset : public UDataAsset
-{
-	GENERATED_BODY()
-
-public:
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	TArray<TSubclassOf<AWeaponBaseActor>> SpawnWeaponTemplates;
-};
-
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class REDEMPTION_API UCombatComponent : public UActorComponent
 {
@@ -41,29 +31,18 @@ public:
 
 
 protected:
-	UPROPERTY(EditAnywhere, Category = "Config")
-	UCombatWeaponDataAsset* CombatWeaponDA;
-
-	UPROPERTY(EditAnywhere, Category = "Config")
-	EAttackWeaponState InitAttackWeaponState;
-
 	UPROPERTY(EditDefaultsOnly)
 	TEnumAsByte<enum ETraceTypeQuery> AbilityTraceChannel;
 
 
 private:
-	TMap<EAttackWeaponState, TArray<AWeaponBaseActor*>> WeaponActorMap;
-
 	TWeakObjectPtr<UWvAbilitySystemComponent> ASC;
-	TWeakObjectPtr<AWeaponBaseActor> InitWeaponActor;
 	TWeakObjectPtr<ABaseCharacter> Character;
 
 	bool bIsDebugTrace = false;
 	float DrawTime = 2.0f;
 
 public:
-	const EAttackWeaponState ConvertWeaponState(const ELSOverlayState InLSOverlayState, bool &OutbCanAttack);
-	const bool ChangeAttackWeapon(const EAttackWeaponState InAttackWeaponState, int32 Index = 0);
 	bool AbilityDamageBoxTrace(class UWvAbilityBase* Ability, const int32 EffectGroupIndex, const FVector Start, const FVector End, FVector HalfSize, const FRotator Orientation, TArray<AActor*>& ActorsToIgnore);
 	bool AbilityDamageCapsuleTrace(class UWvAbilityBase* Ability, const int32 EffectGroupIndex, const FVector Start, const FVector End, const float Radius, const float HalfHeight, const FQuat CapsuleQuat, TArray<AActor*>& ActorsToIgnore);
 
