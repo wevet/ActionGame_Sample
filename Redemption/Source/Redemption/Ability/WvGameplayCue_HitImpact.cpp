@@ -227,7 +227,7 @@ void UWvGameplayCue_HitImpact::GetHitImpactParticleRotation(ABaseCharacter* BeHi
 		if (EffectContext)
 		{
 			FGameplayAbilityTargetDataHandle TargetDataHandle = EffectContext->GetTargetDataHandle();
-			TargetData = (FWvGameplayAbilityTargetData*)TargetDataHandle.Get(0);
+			TargetData = static_cast<FWvGameplayAbilityTargetData*>(TargetDataHandle.Get(0));
 		}
 
 		bool bIsSuccess = false;

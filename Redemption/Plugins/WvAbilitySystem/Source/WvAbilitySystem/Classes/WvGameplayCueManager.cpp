@@ -7,6 +7,7 @@
 #include "GameplayCueNotify_Static.h"
 #include "Net/UnrealNetwork.h"
 
+#include UE_INLINE_GENERATED_CPP_BY_NAME(WvGameplayCueManager)
 
 int32 ActGameplayCueActorRecycle = 1;
 static FAutoConsoleVariableRef CVarGameplayCueActorRecycle(TEXT("AbilitySystem.ActGameplayCueActorRecycle"), ActGameplayCueActorRecycle, TEXT("Allow recycling of GameplayCue Actors"), ECVF_Default);

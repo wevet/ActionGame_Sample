@@ -11,6 +11,8 @@
 #include "GameplayEffectExtension.h"
 #include "GameFramework/PlayerController.h"
 
+#include UE_INLINE_GENERATED_CPP_BY_NAME(WvAbilityAttributeSet)
+
 
 UWvAbilityAttributeSet::UWvAbilityAttributeSet(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
@@ -131,7 +133,7 @@ void UWvAbilityAttributeSet::PostDamageEffectExecute(const FGameplayEffectModCal
 	if (HitInterface)
 	{
 		FGameplayEffectContextHandle Context = Data.EffectSpec.GetContext();
-		IWvAbilityTargetInterface::Execute_OnReceiveHitReact(BeHitActor, Context, (GetHP() <= 0), InDamage);
+		HitInterface->OnReceiveHitReact(Context, (GetHP() <= 0), InDamage);
 	}
 
 	HandleHitReactEvent(Data, InDamage);
@@ -166,11 +168,11 @@ void UWvAbilityAttributeSet::HandleHitReactEvent(const FGameplayEffectModCallbac
 	{
 		if (WeaknessName && !WeaknessName->IsNone())
 		{
-			IWvAbilityTargetInterface::Execute_OnReceiveWeaknessAttack(ReceiverActor, SenderActor, *WeaknessName, InDamage);
+			Receiver->OnReceiveWeaknessAttack(SenderActor, *WeaknessName, InDamage);
 		}
 		else
 		{
-			IWvAbilityTargetInterface::Execute_OnReceiveAbilityAttack(ReceiverActor, SenderActor, *SourceInfoPtr, InDamage);
+			Receiver->OnReceiveAbilityAttack(SenderActor, *SourceInfoPtr, InDamage);
 		}
 	}
 
@@ -178,11 +180,11 @@ void UWvAbilityAttributeSet::HandleHitReactEvent(const FGameplayEffectModCallbac
 	{
 		if (WeaknessName && !WeaknessName->IsNone())
 		{
-			IWvAbilityTargetInterface::Execute_OnSendWeaknessAttack(SenderActor, ReceiverActor, *WeaknessName, InDamage);
+			Sender->OnSendWeaknessAttack(ReceiverActor, *WeaknessName, InDamage);
 		}
 		else
 		{
-			IWvAbilityTargetInterface::Execute_OnSendAbilityAttack(SenderActor, ReceiverActor, *SourceInfoPtr, InDamage);
+			Sender->OnSendAbilityAttack(ReceiverActor, *SourceInfoPtr, InDamage);
 		}
 	}
 }
@@ -219,12 +221,12 @@ void UWvAbilityAttributeSet::HandleDeadEvent(const FGameplayEffectModCallbackDat
 
 	if (Receiver)
 	{
-		IWvAbilityTargetInterface::Execute_OnReceiveKillTarget(ReceiverActor, SenderActor, GetDamage());
+		Receiver->OnReceiveKillTarget(SenderActor, GetDamage());
 	}
 
 	if (Sender)
 	{
-		IWvAbilityTargetInterface::Execute_OnSendKillTarget(SenderActor, ReceiverActor, GetDamage());
+		Sender->OnSendKillTarget(ReceiverActor, GetDamage());
 	}
 }
 

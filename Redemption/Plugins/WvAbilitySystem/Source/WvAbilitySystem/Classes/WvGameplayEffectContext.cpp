@@ -5,6 +5,8 @@
 #include "AbilitySystemComponent.h"
 #include "GameplayAbilitySpec.h"
 
+#include UE_INLINE_GENERATED_CPP_BY_NAME(WvGameplayEffectContext)
+
 void FWvGameplayEffectContext::AddInstigator(class AActor* InInstigator, class AActor* InEffectCauser)
 {
 	Super::AddInstigator(InInstigator, InEffectCauser);

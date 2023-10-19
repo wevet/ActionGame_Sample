@@ -3,6 +3,8 @@
 #include "WvPlayerController.h"
 #include "PlayerCharacter.h"
 
+#include UE_INLINE_GENERATED_CPP_BY_NAME(WvPlayerController)
+
 AWvPlayerController::AWvPlayerController(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
 
@@ -53,4 +55,22 @@ class UWvInputEventComponent* AWvPlayerController::GetInputEventComponent() cons
 	return InputEventComponent;
 }
 
+void AWvPlayerController::SetGenericTeamId(const FGenericTeamId& NewTeamID)
+{
+	UE_LOG(LogTemp, Error, TEXT("You can't set the team ID on a player controller (%s); it's driven by the associated player state"), *GetPathNameSafe(this));
+}
+
+FGenericTeamId AWvPlayerController::GetGenericTeamId() const
+{
+	if (const IWvAbilityTargetInterface* PSWithTeamInterface = Cast<IWvAbilityTargetInterface>(PlayerState))
+	{
+		return PSWithTeamInterface->GetGenericTeamId();
+	}
+	return FGenericTeamId::NoTeam;
+}
+
+FOnTeamIndexChangedDelegate* AWvPlayerController::GetOnTeamIndexChangedDelegate()
+{
+	return &OnTeamChangedDelegate;
+}
 

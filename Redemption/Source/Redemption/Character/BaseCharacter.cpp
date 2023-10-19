@@ -97,8 +97,8 @@ ABaseCharacter::ABaseCharacter(const FObjectInitializer& ObjectInitializer)
 	LocomotionComponent->bAutoActivate = 1;
 
 	// managed item, weapon class
-	InventoryComponent = CreateDefaultSubobject<UInventoryComponent>(TEXT("InventoryComponent"));
-	InventoryComponent->bAutoActivate = 1;
+	ItemInventoryComponent = CreateDefaultSubobject<UInventoryComponent>(TEXT("InventoryComponent"));
+	ItemInventoryComponent->bAutoActivate = 1;
 
 	// managed combat system
 	CombatComponent = CreateDefaultSubobject<UCombatComponent>(TEXT("CombatComponent"));
@@ -141,9 +141,38 @@ void ABaseCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
 
 void ABaseCharacter::PossessedBy(AController* NewController)
 {
+	const FGenericTeamId OldTeamID = MyTeamID;
+
 	Super::PossessedBy(NewController);
 
+	// Grab the current team ID and listen for future changes
+	if (IWvAbilityTargetInterface* ControllerAsTeamProvider = Cast<IWvAbilityTargetInterface>(NewController))
+	{
+		MyTeamID = ControllerAsTeamProvider->GetGenericTeamId();
+		ControllerAsTeamProvider->GetTeamChangedDelegateChecked().AddDynamic(this, &ThisClass::OnControllerChangedTeam);
+	}
+
+	ConditionalBroadcastTeamChanged(this, OldTeamID, MyTeamID);
 	InitAbilitySystemComponent();
+}
+
+void ABaseCharacter::UnPossessed()
+{
+	AController* const OldController = Controller;
+
+	// Stop listening for changes from the old controller
+	const FGenericTeamId OldTeamID = MyTeamID;
+	if (IWvAbilityTargetInterface* ControllerAsTeamProvider = Cast<IWvAbilityTargetInterface>(OldController))
+	{
+		ControllerAsTeamProvider->GetTeamChangedDelegateChecked().RemoveAll(this);
+	}
+
+	Super::UnPossessed();
+
+	// @TODO
+	// Determine what the new team ID should be afterwards
+	MyTeamID = DetermineNewTeamAfterPossessionEnds(OldTeamID);
+	ConditionalBroadcastTeamChanged(this, OldTeamID, MyTeamID);
 }
 
 void ABaseCharacter::Tick(float DeltaTime)
@@ -241,33 +270,7 @@ void ABaseCharacter::OnRep_ReplicatedAcceleration()
 
 void ABaseCharacter::OnRep_MyTeamID(FGenericTeamId OldTeamID)
 {
-	//ConditionalBroadcastTeamChanged(this, OldTeamID, MyTeamID);
-}
-
-FGenericTeamId ABaseCharacter::GetGenericTeamId() const
-{
-	return MyTeamID;
-}
-
-void ABaseCharacter::SetGenericTeamId(const FGenericTeamId& NewTeamID)
-{
-	if (GetController() == nullptr)
-	{
-		if (HasAuthority())
-		{
-			const FGenericTeamId OldTeamID = MyTeamID;
-			MyTeamID = NewTeamID;
-			//ConditionalBroadcastTeamChanged(this, OldTeamID, MyTeamID);
-		}
-		else
-		{
-			UE_LOG(LogTemp, Error, TEXT("You can't set the team ID on a character (%s) except on the authority"), *GetPathNameSafe(this));
-		}
-	}
-	else
-	{
-		UE_LOG(LogTemp, Error, TEXT("You can't set the team ID on a possessed character (%s); it's driven by the associated controller"), *GetPathNameSafe(this));
-	}
+	ConditionalBroadcastTeamChanged(this, OldTeamID, MyTeamID);
 }
 
 const FWvAbilitySystemAvatarData& ABaseCharacter::GetAbilitySystemData()
@@ -330,20 +333,65 @@ void ABaseCharacter::InitAbilitySystemComponentByData(class UWvAbilitySystemComp
 	}
 }
 
+void ABaseCharacter::OnControllerChangedTeam(UObject* TeamAgent, int32 OldTeam, int32 NewTeam)
+{
+	const FGenericTeamId MyOldTeamID = MyTeamID;
+	MyTeamID = IntegerToGenericTeamId(NewTeam);
+	ConditionalBroadcastTeamChanged(this, MyOldTeamID, MyTeamID);
+}
+
+void ABaseCharacter::NotifyControllerChanged()
+{
+	const FGenericTeamId OldTeamId = GetGenericTeamId();
+
+	Super::NotifyControllerChanged();
+
+	// Update our team ID based on the controller
+	if (HasAuthority() && (Controller != nullptr))
+	{
+		if (IWvAbilityTargetInterface* ControllerWithTeam = Cast<IWvAbilityTargetInterface>(Controller))
+		{
+			MyTeamID = ControllerWithTeam->GetGenericTeamId();
+			ConditionalBroadcastTeamChanged(this, OldTeamId, MyTeamID);
+		}
+	}
+}
+
 #pragma region IWvAbilityTargetInterface
+FGenericTeamId ABaseCharacter::GetGenericTeamId() const
+{
+	return MyTeamID;
+}
+
+void ABaseCharacter::SetGenericTeamId(const FGenericTeamId& NewTeamID)
+{
+	if (!GetController())
+	{
+		if (HasAuthority())
+		{
+			const FGenericTeamId OldTeamID = MyTeamID;
+			MyTeamID = NewTeamID;
+			ConditionalBroadcastTeamChanged(this, OldTeamID, MyTeamID);
+		}
+		else
+		{
+			UE_LOG(LogTemp, Error, TEXT("You can't set the team ID on a character (%s) except on the authority"), *GetPathNameSafe(this));
+		}
+	}
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT("You can't set the team ID on a possessed character (%s); it's driven by the associated controller"), *GetPathNameSafe(this));
+	}
+}
+
+FOnTeamIndexChangedDelegate* ABaseCharacter::GetOnTeamIndexChangedDelegate()
+{
+	return &OnTeamChangedDelegate;
+}
+
 ECharacterRelation ABaseCharacter::GetRelationWithSelfImpl(const IWvAbilityTargetInterface* Other) const
 {
 	return CharacterRelation;
-}
-
-int32 ABaseCharacter::GetTeamNumImpl() const
-{
-	return INDEX_NONE;
-}
-
-int32 ABaseCharacter::GetTeamNum_Implementation() const
-{
-	return GetTeamNumImpl();
 }
 
 FGameplayTag ABaseCharacter::GetAvatarTag() const
@@ -356,40 +404,41 @@ USceneComponent* ABaseCharacter::GetOverlapBaseComponent()
 	return GetMesh();
 }
 
-void ABaseCharacter::OnSendWeaknessAttack_Implementation(AActor* Actor, const FName WeaknessName, const float Damage)
+void ABaseCharacter::OnSendWeaknessAttack(AActor* Actor, const FName WeaknessName, const float Damage)
 {
 }
 
-void ABaseCharacter::OnReceiveWeaknessAttack_Implementation(AActor* Actor, const FName WeaknessName, const float Damage)
+void ABaseCharacter::OnReceiveWeaknessAttack(AActor* Actor, const FName WeaknessName, const float Damage)
 {
 }
 
-void ABaseCharacter::OnSendAbilityAttack_Implementation(AActor* Actor, const FWvBattleDamageAttackSourceInfo SourceInfo, const float Damage)
+void ABaseCharacter::OnSendAbilityAttack(AActor* Actor, const FWvBattleDamageAttackSourceInfo SourceInfo, const float Damage)
+{
+	//UE_LOG(LogTemp, Log, TEXT("Owner => %s, Actor => %s, function => %s"), *this->GetName(), *Actor->GetName(), *FString(__FUNCTION__));
+}
+
+void ABaseCharacter::OnReceiveAbilityAttack(AActor* Actor, const FWvBattleDamageAttackSourceInfo SourceInfo, const float Damage)
+{
+}
+
+void ABaseCharacter::OnSendKillTarget(AActor* Actor, const float Damage)
 {
 	UE_LOG(LogTemp, Log, TEXT("Owner => %s, Actor => %s, function => %s"), *this->GetName(), *Actor->GetName(), *FString(__FUNCTION__));
 }
 
-void ABaseCharacter::OnReceiveAbilityAttack_Implementation(AActor* Actor, const FWvBattleDamageAttackSourceInfo SourceInfo, const float Damage)
-{
-}
-
-void ABaseCharacter::OnSendKillTarget_Implementation(AActor* Actor, const float Damage)
-{
-	UE_LOG(LogTemp, Log, TEXT("Owner => %s, Actor => %s, function => %s"), *this->GetName(), *Actor->GetName(), *FString(__FUNCTION__));
-}
-
-void ABaseCharacter::OnReceiveKillTarget_Implementation(AActor* Actor, const float Damage)
+void ABaseCharacter::OnReceiveKillTarget(AActor* Actor, const float Damage)
 {
 	if (!IsDead())
 	{
 		WvAbilitySystemComponent->AddGameplayTag(TAG_Character_StateDead, 1);
+		//WvAbilitySystemComponent->AddGameplayTag(TAG_Locomotion_ForbidMovement, 1);
 		ILocomotionInterface::Execute_SetLSMovementMode(LocomotionComponent, ELSMovementMode::Ragdoll);
 		LocomotionComponent->StartRagdollAction();
 		UE_LOG(LogTemp, Log, TEXT("Owner => %s, Actor => %s, function => %s"), *this->GetName(), *Actor->GetName(), *FString(__FUNCTION__));
 	}
 }
 
-void ABaseCharacter::OnReceiveHitReact_Implementation(FGameplayEffectContextHandle Context, const bool IsInDead, const float Damage)
+void ABaseCharacter::OnReceiveHitReact(FGameplayEffectContextHandle Context, const bool IsInDead, const float Damage)
 {
 	//
 }
@@ -591,24 +640,26 @@ bool ABaseCharacter::CanBeSeenFrom(const FVector& ObserverLocation,	FVector& Out
 	const TArray<USkeletalMeshSocket*> Sockets = GetMesh()->GetSkeletalMeshAsset()->GetActiveSocketList();
 	const int32 CollisionQuery = ECC_TO_BITFIELD(ECC_WorldStatic) | ECC_TO_BITFIELD(ECC_WorldDynamic) | ECC_TO_BITFIELD(ECC_Pawn);
 
+	auto Param = FCollisionObjectQueryParams(CollisionQuery);
+	auto Param2 = FCollisionQueryParams(AILineOfSight, true, IgnoreActor);
+
 	for (int32 Index = 0; Index < Sockets.Num(); ++Index)
 	{
 		const FVector SocketLocation = GetMesh()->GetSocketLocation(Sockets[Index]->SocketName);
-		const bool bHitResult = GetWorld()->LineTraceSingleByObjectType(HitResult, ObserverLocation, SocketLocation,
-			FCollisionObjectQueryParams(CollisionQuery), FCollisionQueryParams(AILineOfSight, true, IgnoreActor));
+		const bool bHitResult = GetWorld()->LineTraceSingleByObjectType(HitResult, ObserverLocation, SocketLocation, Param, Param2);
 
 		++NumberOfLoSChecksPerformed;
 		if (!bHitResult || (HitResult.GetActor() && HitResult.GetActor()->IsOwnedBy(this)))
 		{
 			OutSeenLocation = SocketLocation;
+			UKismetSystemLibrary::DrawDebugPoint(GetWorld(), OutSeenLocation, 20.0f, FLinearColor::Red, 2.0f);
 			OutSightStrength = 1;
 			return true;
 		}
 	}
 
-	const bool bHitResult = GetWorld()->LineTraceSingleByObjectType(HitResult, ObserverLocation, GetActorLocation(), 
-		FCollisionObjectQueryParams(CollisionQuery), FCollisionQueryParams(AILineOfSight, true, IgnoreActor));
-
+	HitResult.Reset();
+	const bool bHitResult = GetWorld()->LineTraceSingleByObjectType(HitResult, ObserverLocation, GetActorLocation(), Param, Param2);
 	++NumberOfLoSChecksPerformed;
 	if (!bHitResult || (HitResult.GetActor() && HitResult.GetActor()->IsOwnedBy(this)))
 	{

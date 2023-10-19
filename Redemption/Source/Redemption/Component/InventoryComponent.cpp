@@ -20,8 +20,6 @@ void UInventoryComponent::BeginPlay()
 	Super::BeginPlay();
 
 	Character = Cast<ABaseCharacter>(GetOwner());
-	ItemArray.Reset(0);
-	WeaponActorMap.Reserve(0);
 
 	if (InitInventoryDA)
 	{
@@ -39,6 +37,7 @@ void UInventoryComponent::BeginPlay()
 					ItemPtr->AttachToComponent(Character->GetMesh(), Rules, ItemPtr->AttachSocketName);
 				}
 				ItemPtr->SetActorHiddenInGame(true);
+				ItemPtr->SetOwner(Character.Get());
 				AddInventory(ItemPtr);
 			}
 		}
@@ -197,7 +196,7 @@ void UInventoryComponent::RemoveInventory(class AItemBaseActor* InItem)
 
 AItemBaseActor* UInventoryComponent::FindItem(const ELSOverlayState InLSOverlayState) const
 {
-	for (auto& Item : ItemArray)
+	for (auto Item : ItemArray)
 	{
 		if (Item && Item->OverlayState == InLSOverlayState)
 		{
@@ -206,13 +205,14 @@ AItemBaseActor* UInventoryComponent::FindItem(const ELSOverlayState InLSOverlayS
 	}
 
 	TArray<AWeaponBaseActor*> WeaponArray = FindOverlayWeaponArray(InLSOverlayState);
-	for (auto& Item : WeaponArray)
+	for (auto Weapon : WeaponArray)
 	{
-		if (Item && Item->OverlayState == InLSOverlayState)
+		if (Weapon && Weapon->OverlayState == InLSOverlayState)
 		{
-			return Item;
+			return Weapon;
 		}
 	}
+
 	return nullptr;
 }
 

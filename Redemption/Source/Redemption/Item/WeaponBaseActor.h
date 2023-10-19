@@ -33,4 +33,8 @@ public:
 	}
 
 	FGameplayTag GetItemtag() const { return Itemtag; }
+
+	virtual void Notify_Equip() override;
+	virtual void Notify_UnEquip() override;
 };
+

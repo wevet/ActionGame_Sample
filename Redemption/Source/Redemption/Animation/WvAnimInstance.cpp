@@ -112,6 +112,10 @@ void UWvAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 		Speed = LocomotionEssencialVariables.Velocity.Size();
 		bHasVelocity = LocomotionEssencialVariables.bWasMoving;
 		OverlayState = LocomotionEssencialVariables.OverlayState;
+
+		LastVelocityRotation = LocomotionEssencialVariables.LastVelocityRotation;
+		Direction = LocomotionEssencialVariables.Direction;
+
 		WalkingSpeed = LocomotionComponent->GetWalkingSpeed_Implementation();
 		RunningSpeed = LocomotionComponent->GetRunningSpeed_Implementation();
 		SprintingSpeed = LocomotionComponent->GetSprintingSpeed_Implementation();
@@ -185,6 +189,7 @@ EDataValidationResult UWvAnimInstance::IsDataValid(TArray<FText>& ValidationErro
 void UWvAnimInstance::DoWhileGrounded()
 {
 	CalculateGaitValue();
+	CalculateGroundedLeaningValues();
 }
 
 void UWvAnimInstance::CalculateGaitValue()
@@ -278,6 +283,38 @@ void UWvAnimInstance::CalculateLandPredictionAlpha()
 
 	//UE_LOG(LogTemp, Log, TEXT("LandPredictionAlpha => %.3f"), LandPredictionAlpha);
 }
+
+void UWvAnimInstance::CalculateGroundedLeaningValues()
+{
+	if (!IsValid(CharacterMovementComponent))
+	{
+		return;
+	}
+
+	check(GetWorld());
+
+	const float DeltaSeconds = GetWorld()->GetDeltaSeconds();
+	const float ClampedSpeed = UKismetMathLibrary::MapRangeClamped(Speed, WalkingSpeed, RunningSpeed, 0.0f, 1.0f);
+	const FRotator DeltaRot = UKismetMathLibrary::NormalizedDeltaRotator(LastVelocityRotation, PreviousVelocityRotation);
+	DeltaVelocityDifference = (DeltaRot.Yaw / DeltaSeconds);
+	PreviousVelocityRotation = LastVelocityRotation;
+	const float DeltaVelocityClampValue = UKismetMathLibrary::MapRangeClamped(DeltaVelocityDifference, -200.0f, 200.0f, -1.0f, 1.0f);
+	const float LeanRotation = (DeltaVelocityClampValue * ClampedSpeed);
+
+	AccelerationDifference = (Speed - PreviousSpeed) / DeltaSeconds;
+	PreviousSpeed = Speed;
+	const float MaxAcceleration = CharacterMovementComponent->GetMaxAcceleration();
+	const float BrakingDecelerationWalking = CharacterMovementComponent->GetMaxBrakingDeceleration();
+	const float MaxAccelerationClamp = UKismetMathLibrary::MapRangeClamped(FMath::Abs(AccelerationDifference), 0.0f, MaxAcceleration, 0.0f, 1.0f);
+	const float BrakingDecelerationClamp = UKismetMathLibrary::MapRangeClamped(FMath::Abs(AccelerationDifference), 0.0f, BrakingDecelerationWalking, 0.0f, -1.0f);
+	const float LeanAcceleration = ClampedSpeed * UKismetMathLibrary::SelectFloat(MaxAccelerationClamp, BrakingDecelerationClamp, (AccelerationDifference > 0.0f));
+
+	const FVector LeanPosition = FVector(LeanRotation, LeanAcceleration, 0.0f);
+	const FVector AngleAxis = UKismetMathLibrary::RotateAngleAxis(LeanPosition, Direction, FVector(0.0f, 0.0f, -1.0f));
+	LeanGrounded.X = AngleAxis.X;
+	LeanGrounded.Y = AngleAxis.Y;
+}
+
 
 #pragma region Utils
 const TArray<UAnimInstance*> UWvAnimInstance::GetAllAnimInstances()

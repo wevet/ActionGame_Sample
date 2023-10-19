@@ -85,7 +85,7 @@ namespace WvCharacter
 
 UWvCharacterMovementComponent::UWvCharacterMovementComponent(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
-	//bUseSeparateBrakingFriction = 1;
+	bUseSeparateBrakingFriction = 0;
 	MinAnalogWalkSpeed = 10.0f;
 
 	// Climbing Variables

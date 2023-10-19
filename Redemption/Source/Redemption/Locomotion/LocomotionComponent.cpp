@@ -68,8 +68,8 @@ ULocomotionComponent::ULocomotionComponent(const FObjectInitializer& ObjectIniti
 	CrouchingSpeed = 250.0f;
 	WalkingAcceleration = 800.f;
 	RunningAcceleration = 1000.f;
-	WalkingDeceleration = 400.f;
-	RunningDeceleration = 600.f;
+	WalkingDeceleration = 600.f;
+	RunningDeceleration = 400.f;
 	WalkingGroundFriction = 6.0f;
 	RunningGroundFriction = 3.0f;
 	WalkingBrakingFriction = 1.0f;
@@ -815,11 +815,6 @@ void ULocomotionComponent::StopRagdollAction()
 
 void ULocomotionComponent::DoWhileRagdolling()
 {
-	if (Character->IsBotControlled())
-	{
-		return;
-	}
-
 	FRotator ActorRotation = FRotator::ZeroRotator;
 	FVector ActorLocation = FVector::ZeroVector;
 	UpdateRagdollTransform(ActorRotation, ActorLocation);

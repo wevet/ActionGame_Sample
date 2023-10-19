@@ -17,6 +17,8 @@
 #include "AbilitySystemInterface.h"
 
 
+#include UE_INLINE_GENERATED_CPP_BY_NAME(WvAbilitySystemBlueprintFunctionLibrary)
+
 static const float KISMET_TRACE_DEBUG_IMPACTPOINT_SIZE = 16.f;
 
 
@@ -235,10 +237,10 @@ FWvGameplayAbilityTargetData* UWvAbilitySystemBlueprintFunctionLibrary::GetGamep
 
 FGameplayEffectContextHandle UWvAbilitySystemBlueprintFunctionLibrary::EffectContextSetEffectDataAsset(FGameplayEffectContextHandle EffectContextHandle, UWvAbilityEffectDataAsset* DataAsset, const int32 Index)
 {
-	FWvGameplayEffectContext* EffectContext = (FWvGameplayEffectContext*)EffectContextHandle.Get();
-	if (EffectContext)
+	FWvGameplayEffectContext* GEContext = static_cast<FWvGameplayEffectContext*>(EffectContextHandle.Get());
+	if (GEContext)
 	{
-		EffectContext->SetEffectDataAsset(DataAsset, Index);
+		GEContext->SetEffectDataAsset(DataAsset, Index);
 	}
 	return EffectContextHandle;
 }

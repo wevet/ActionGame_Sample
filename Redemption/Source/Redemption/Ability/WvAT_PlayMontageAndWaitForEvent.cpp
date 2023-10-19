@@ -5,8 +5,7 @@
 #include "AbilitySystemLog.h"
 #include "Character/BaseCharacter.h"
 
-UWvAT_PlayMontageAndWaitForEvent::UWvAT_PlayMontageAndWaitForEvent(const FObjectInitializer& ObjectInitializer)
-	: Super(ObjectInitializer)
+UWvAT_PlayMontageAndWaitForEvent::UWvAT_PlayMontageAndWaitForEvent(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
 	Rate = 1.0f;
 	StartTimeSeconds = 0.0f;
@@ -28,8 +27,7 @@ void UWvAT_PlayMontageAndWaitForEvent::OnMontageBlendingOut(UAnimMontage* Montag
 
 			// Reset AnimRootMotionTranslationScale
 			ABaseCharacter* Character = Cast<ABaseCharacter>(GetAvatarActor());
-			if (Character && (Character->GetLocalRole() == ROLE_Authority ||
-				(Character->GetLocalRole() == ROLE_AutonomousProxy && Ability->GetNetExecutionPolicy() == EGameplayAbilityNetExecutionPolicy::LocalPredicted)))
+			if (Character && (Character->GetLocalRole() == ROLE_Authority || (Character->GetLocalRole() == ROLE_AutonomousProxy && Ability->GetNetExecutionPolicy() == EGameplayAbilityNetExecutionPolicy::LocalPredicted)))
 			{
 				Character->SetAnimRootMotionTranslationScale(1.f);
 			}
@@ -142,8 +140,7 @@ void UWvAT_PlayMontageAndWaitForEvent::Activate()
 		if (IsValid(AnimInstance))
 		{
 			// Bind to event callback
-			EventHandle = ASC->AddGameplayEventTagContainerDelegate(EventTags,
-				FGameplayEventTagMulticastDelegate::FDelegate::CreateUObject(this, &UWvAT_PlayMontageAndWaitForEvent::OnGameplayEvent));
+			EventHandle = ASC->AddGameplayEventTagContainerDelegate(EventTags, FGameplayEventTagMulticastDelegate::FDelegate::CreateUObject(this, &UWvAT_PlayMontageAndWaitForEvent::OnGameplayEvent));
 
 			const float Result = ASC->PlayMontage(Ability, Ability->GetCurrentActivationInfo(), MontageToPlay, PlayRate, StartSection, StartTimeSeconds);
 			if (Result > 0.0f)
@@ -164,9 +161,7 @@ void UWvAT_PlayMontageAndWaitForEvent::Activate()
 
 				ACharacter* Character = Cast<ACharacter>(GetAvatarActor());
 
-				if (Character && (Character->GetLocalRole() == ROLE_Authority ||
-					(Character->GetLocalRole() == ROLE_AutonomousProxy && 
-						Ability->GetNetExecutionPolicy() == EGameplayAbilityNetExecutionPolicy::LocalPredicted)))
+				if (Character && (Character->GetLocalRole() == ROLE_Authority || (Character->GetLocalRole() == ROLE_AutonomousProxy && Ability->GetNetExecutionPolicy() == EGameplayAbilityNetExecutionPolicy::LocalPredicted)))
 				{
 					Character->SetAnimRootMotionTranslationScale(AnimRootMotionTranslationScale);
 				}
@@ -278,9 +273,7 @@ FString UWvAT_PlayMontageAndWaitForEvent::GetDebugString() const
 			PlayingMontage = AnimInstance->Montage_IsActive(MontageToPlay) ? MontageToPlay : AnimInstance->GetCurrentActiveMontage();
 		}
 	}
-
-	return FString::Printf(TEXT("PlayMontageAndWaitForEvent. MontageToPlay: %s  (Currently Playing): %s"),
-		*GetNameSafe(MontageToPlay), *GetNameSafe(PlayingMontage));
+	return FString::Printf(TEXT("PlayMontageAndWaitForEvent. MontageToPlay: %s  (Currently Playing): %s"), *GetNameSafe(MontageToPlay), *GetNameSafe(PlayingMontage));
 }
 
 

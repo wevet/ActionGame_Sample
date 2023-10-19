@@ -81,6 +81,12 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Ability")
 	class AController* GetAvatarController() const;
 
+	UFUNCTION(BlueprintCallable, Category = "Ability")
+	void AddGameplayTag(const FGameplayTag& GameplayTag, int32 Count = 1);
+
+	UFUNCTION(BlueprintCallable, Category = "Ability")
+	void RemoveGameplayTag(const FGameplayTag& GameplayTag, int32 Count = 1);
+
 	virtual void PluralInputTriggerInputEvent(const FGameplayTag Tag);
 
 	bool SetNumericAttributeBaseByName(const FString& AttributeName, float NewBaseValue);
@@ -90,6 +96,15 @@ public:
 
 	UWvAbilityAttributeSet* GetStatusAttributeSet(TSubclassOf<UAttributeSet> AttributeSetClass) const;
 
+	void AddRegisterAbilityDA(class UWvAbilityDataAsset* InDA);
+	void GiveAllRegisterAbility();
+	void GetActiveAbilitiesWithTags(const FGameplayTagContainer& GameplayTagContainer, TArray<UGameplayAbility*>& ActiveAbilities);
+	void AddStartupGameplayAbilities();
+
+	bool HasActivatingAbilitiesWithTag(const FGameplayTag Tag) const;
+	bool IsAnimatingCombo() const;
+
+
 protected:
 	virtual void OnComponentDestroyed(bool bDestroyingHierarchy) override;
 
@@ -98,11 +113,17 @@ protected:
 	virtual void Debug_Internal(struct FAbilitySystemComponentDebugInfo& Info) override;
 
 	bool FindGameplayAttributeByName(const FString& AttributeName, FGameplayAttribute& OutAttribute) const;
+	void SetGameplayTagCount(const FGameplayTag& GameplayTag, int32 Count = 1);
+
+
 
 protected:
 
 	// key: ability instance, value: active time
 	TMap<FGameplayAbilitySpecHandle, float> AbilityCooldownRecord;
 	FGameplayAbilitySpecHandle CurTryActiveSpecHandle;
+
+	UPROPERTY()
+	TArray<TObjectPtr<class UWvAbilityDataAsset>> RegisterAbilityDAs;
 };
 

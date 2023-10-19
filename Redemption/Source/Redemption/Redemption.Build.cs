@@ -20,8 +20,6 @@ public class Redemption : ModuleRules
 				"CoreUObject",
 				"ApplicationCore",
 				"Engine",
-				"InputCore",
-				"EnhancedInput",
 				"GameplayTags",
 				"GameplayTasks",
 				"GameplayAbilities",
@@ -54,6 +52,24 @@ public class Redemption : ModuleRules
 			}
 		);
 
+		PrivateDependencyModuleNames.AddRange(
+			new string[] 
+			{
+				"InputCore",
+				"Slate",
+				"SlateCore",
+				"RenderCore",
+				"DeveloperSettings",
+				"EnhancedInput",
+				"NetCore",
+				"RHI",
+				"Projects",
+				"Gauntlet",
+				"UMG",
+				"CommonUI",
+				"CommonInput",
+			}
+		);
 
 		// For non-shipping build.
 		if (Target.Configuration != UnrealTargetConfiguration.Shipping)

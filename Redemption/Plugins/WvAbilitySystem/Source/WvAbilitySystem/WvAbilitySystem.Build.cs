@@ -37,6 +37,7 @@ public class WvAbilitySystem : ModuleRules
                 "GameplayAbilities",
 				"NetCore",
 				"GameplayCameras",
+				"AIModule",
 			}
 		);
 

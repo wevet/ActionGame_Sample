@@ -6,6 +6,7 @@
 #include "WvAbilityDataAsset.h"
 #include "WvGameplayEffectContext.h"
 #include "WvAbilityAttributeSet.h"
+#include "Interface/WvAbilitySystemAvatarInterface.h"
 
 #include "AbilitySystemInterface.h"
 #include "GameFramework/Controller.h"
@@ -257,11 +258,12 @@ UGameplayAbility* UWvAbilitySystemComponentBase::CreateNewInstanceOfAbility(FGam
 		AbilityInstance->BlockAbilitiesWithTag = AbilityData->BlockAbilitiesWithTag;
 		AbilityInstance->AbilityTriggers += AbilityData->AbilityTriggers;
 
-		for (int32 i = AbilityInstance->AbilityTriggers.Num() - 1; i >= 0; i--)
+		const int32 LastIndex = (AbilityInstance->AbilityTriggers.Num() - 1);
+		for (int32 Index = LastIndex; Index >= 0; Index--)
 		{
-			if (!AbilityInstance->AbilityTriggers[i].TriggerTag.IsValid())
+			if (!AbilityInstance->AbilityTriggers[Index].TriggerTag.IsValid())
 			{
-				AbilityInstance->AbilityTriggers.RemoveAt(i);
+				AbilityInstance->AbilityTriggers.RemoveAt(Index);
 			}
 		}
 
@@ -687,5 +689,143 @@ UWvAbilityAttributeSet* UWvAbilitySystemComponentBase::GetStatusAttributeSet(TSu
 {
 	const auto Attr = Cast<UWvAbilityAttributeSet>(GetAttributeSet(AttributeSetClass));
 	return const_cast<UWvAbilityAttributeSet*>(Attr);
+}
+
+void UWvAbilitySystemComponentBase::AddRegisterAbilityDA(class UWvAbilityDataAsset* InDA)
+{
+	if (!InDA)
+	{
+		return;
+	}
+
+	RegisterAbilityDAs.Add(InDA);
+}
+
+void UWvAbilitySystemComponentBase::GiveAllRegisterAbility()
+{
+	for (int32 Index = 0; Index < RegisterAbilityDAs.Num(); ++Index)
+	{
+		TObjectPtr<class UWvAbilityDataAsset> DA = RegisterAbilityDAs[Index];
+		if (DA->AbilityClass)
+		{
+			ApplyGiveAbility(DA, 1.0f);
+		}
+	}
+}
+
+void UWvAbilitySystemComponentBase::GetActiveAbilitiesWithTags(const FGameplayTagContainer& GameplayTagContainer, TArray<UGameplayAbility*>& ActiveAbilities)
+{
+	TArray<FGameplayAbilitySpec*> AbilitiesToActivate;
+	GetActivatableGameplayAbilitySpecsByAllMatchingTags(GameplayTagContainer, AbilitiesToActivate, false);
+
+	// Iterate the list of all ability specs
+	for (FGameplayAbilitySpec* Spec : AbilitiesToActivate)
+	{
+		if (!Spec)
+		{
+			continue;
+		}
+
+		// Iterate all instances on this ability spec
+		TArray<UGameplayAbility*> AbilityInstances = Spec->GetAbilityInstances();
+
+		for (UGameplayAbility* ActiveAbility : AbilityInstances)
+		{
+			ActiveAbilities.Add(Cast<UGameplayAbility>(ActiveAbility));
+		}
+	}
+}
+
+void UWvAbilitySystemComponentBase::AddStartupGameplayAbilities()
+{
+	if (!IsOwnerActorAuthoritative())
+	{
+		UE_LOG(LogTemp, Error, TEXT("not IsOwnerActorAuthoritative => %s"), *FString(__FUNCTION__));
+		return;
+	}
+
+	ClearAllAbilities();
+	SetSpawnedAttributes({});
+
+	AActor* Avatar = GetAvatarActor();
+	if (!Avatar)
+	{
+		UE_LOG(LogTemp, Error, TEXT("not Valid Avatar => %s"), *FString(__FUNCTION__));
+		return;
+	}
+
+	IWvAbilitySystemAvatarInterface* AvatarInterface = Cast<IWvAbilitySystemAvatarInterface>(Avatar);
+	if (AvatarInterface)
+	{
+		AvatarInterface->InitAbilitySystemComponentByData(this);
+	}
+}
+
+bool UWvAbilitySystemComponentBase::HasActivatingAbilitiesWithTag(const FGameplayTag Tag) const
+{
+	if (Tag == FGameplayTag::EmptyTag)
+	{
+		return false;
+	}
+
+	FGameplayTagContainer Container(Tag);
+	for (const FGameplayAbilitySpec& Spec : ActivatableAbilities.Items)
+	{
+		if (!Spec.IsActive())
+		{
+			continue;
+		}
+
+		UGameplayAbility* Ability = Spec.GetPrimaryInstance() ? Spec.GetPrimaryInstance() : Spec.Ability;
+		if (!Ability)
+		{
+			continue;
+		}
+
+		const bool WithTagPass = Ability->AbilityTags.HasAny(Container);
+		if (WithTagPass)
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
+void UWvAbilitySystemComponentBase::AddGameplayTag(const FGameplayTag& GameplayTag, int32 Count)
+{
+	AddLooseGameplayTag(GameplayTag, Count);
+}
+
+void UWvAbilitySystemComponentBase::RemoveGameplayTag(const FGameplayTag& GameplayTag, int32 Count)
+{
+	RemoveLooseGameplayTag(GameplayTag, Count);
+}
+
+void UWvAbilitySystemComponentBase::SetGameplayTagCount(const FGameplayTag& GameplayTag, int32 Count)
+{
+	const int32 CurCount = GetTagCount(GameplayTag);
+	if (CurCount == Count)
+	{
+		return;
+	}
+
+	if (CurCount > Count)
+	{
+		RemoveGameplayTag(GameplayTag, CurCount - Count);
+	}
+	else
+	{
+		AddGameplayTag(GameplayTag, Count - CurCount);
+	}
+}
+
+bool UWvAbilitySystemComponentBase::IsAnimatingCombo() const
+{
+	if (const UWvAbilityBase* PlayingAbility = Cast<UWvAbilityBase>(LocalAnimMontageInfo.AnimatingAbility))
+	{
+		const int32 ComboNum = PlayingAbility->GetComboRequiredTag().Num();
+		return (ComboNum > 0);
+	}
+	return false;
 }
 

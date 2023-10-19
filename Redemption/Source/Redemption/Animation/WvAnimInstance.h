@@ -129,6 +129,9 @@ protected:
 	float Speed;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
+	float Direction;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
 	float GaitValue;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
@@ -149,6 +152,27 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion")
 	float AimSweepTime = 0.0f;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
+	FLocomotionEssencialVariables LocomotionEssencialVariables;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
+	FVector2D LeanGrounded;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
+	FRotator LastVelocityRotation;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
+	FRotator PreviousVelocityRotation;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
+	float AccelerationDifference;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
+	float PreviousSpeed;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
+	float DeltaVelocityDifference;
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "DistanceMatching")
 	float GroundDistance = -1.0f;
 
@@ -158,8 +182,7 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "MotionMatching")
 	FTrajectorySampleRange TrajectorySampleRange;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
-	FLocomotionEssencialVariables LocomotionEssencialVariables;
+
 
 	// Blueprintの変数にマッピングできるGameplayTagです。Tagが追加または削除されると、変数が自動的に更新される。
 	// GameplayTagを手動で照会する代わりに、これらを使用する必要があります。
@@ -182,6 +205,8 @@ private:
 
 	void DoWhileFalling();
 	void CalculateLandPredictionAlpha();
+
+	void CalculateGroundedLeaningValues();
 
 	bool bOwnerPlayerController = false;
 	const TArray<UAnimInstance*> GetAllAnimInstances();

@@ -18,10 +18,6 @@ UWvAbilityTargetInterface::UWvAbilityTargetInterface(const FObjectInitializer& O
 {
 }
 
-int32 IWvAbilityTargetInterface::GetTeamNumImpl() const
-{
-	return -1;
-}
 
 ECharacterRelation IWvAbilityTargetInterface::GetRelationWithSelfImpl(const IWvAbilityTargetInterface* Other) const
 {
@@ -30,14 +26,13 @@ ECharacterRelation IWvAbilityTargetInterface::GetRelationWithSelfImpl(const IWvA
 		return ECharacterRelation::Friend;
 	}
 
-	const int32 OtherTeamNum = Other->GetTeamNumImpl();
-	const int32 MyTeamNum = GetTeamNumImpl();
+	const int32 OtherTeamNum = GenericTeamIdToInteger(Other->GetGenericTeamId());
+	const int32 MyTeamNum = GenericTeamIdToInteger(GetGenericTeamId());
 
-	auto Actor = Cast<AActor>(this);
-	auto ActorWorld = Actor ? Actor->GetWorld() : nullptr;
+	const AActor* Actor = Cast<AActor>(this);
+	UWorld* ActorWorld = Actor ? Actor->GetWorld() : nullptr;
 
-	check(ActorWorld);
-	if (ActorWorld)
+	if (IsValid(ActorWorld))
 	{
 		AGameModeBase* GameModeBase = ActorWorld->GetAuthGameMode();
 		IWvCombatRuleInterface* CombatRuleInterface = Cast<IWvCombatRuleInterface>(GameModeBase);
@@ -83,6 +78,22 @@ FGameplayEffectQuery IWvAbilityTargetInterface::GetHitEffectQuery()
 	return FGameplayEffectQuery::MakeQuery_MatchAnyEffectTags(Container);
 }
 
+void IWvAbilityTargetInterface::ConditionalBroadcastTeamChanged(TScriptInterface<IWvAbilityTargetInterface> This, FGenericTeamId OldTeamID, FGenericTeamId NewTeamID)
+{
+	if (OldTeamID != NewTeamID)
+	{
+		const int32 OldTeamIndex = GenericTeamIdToInteger(OldTeamID);
+		const int32 NewTeamIndex = GenericTeamIdToInteger(NewTeamID);
+		UObject* ThisObj = This.GetObject();
+		UE_LOG(LogTemp, Log, TEXT("[%s] %s assigned team %d"), *GetPathNameSafe(ThisObj), *GetPathNameSafe(ThisObj), NewTeamIndex);
+
+		if (This.GetInterface())
+		{
+			This.GetInterface()->GetTeamChangedDelegateChecked().Broadcast(ThisObj, OldTeamIndex, NewTeamIndex);
+		}
+	}
+}
+
 USceneComponent* IWvAbilityTargetInterface::GetOverlapBaseComponent()
 {
 	return nullptr;
@@ -93,24 +104,38 @@ FGameplayTag IWvAbilityTargetInterface::GetAvatarTag() const
 	return FGameplayTag::EmptyTag;
 }
 
-void IWvAbilityTargetInterface::OnKillTarget(IWvAbilityTargetInterface* Target)
+void IWvAbilityTargetInterface::OnReceiveHitReact(FGameplayEffectContextHandle Context, const bool IsInDead, const float Damage)
 {
-	TScriptInterface<IWvAbilityTargetInterface> TargetAsInterface = TScriptInterface<IWvAbilityTargetInterface>();
-	TargetAsInterface.SetObject(Cast<UObject>(Target));
-	TargetAsInterface.SetInterface(Target);
-	Execute_ReceiveOnKillTarget(Cast<UObject>(this), TargetAsInterface);
 }
 
-void IWvAbilityTargetInterface::OnKilledBy(IWvAbilityTargetInterface* Source)
+void IWvAbilityTargetInterface::OnSendWeaknessAttack(AActor* Actor, const FName WeaknessName, const float Damage)
 {
-	TScriptInterface<IWvAbilityTargetInterface> SourceAsInterface = TScriptInterface<IWvAbilityTargetInterface>();
-	SourceAsInterface.SetObject(Cast<UObject>(Source));
-	SourceAsInterface.SetInterface(Source);
-	Execute_ReceiveOnKilledBy(Cast<UObject>(this), SourceAsInterface);
 }
 
+void IWvAbilityTargetInterface::OnReceiveWeaknessAttack(AActor* Actor, const FName WeaknessName, const float Damage)
+{
+}
+
+void IWvAbilityTargetInterface::OnSendAbilityAttack(AActor* Actor, const FWvBattleDamageAttackSourceInfo SourceInfo, const float Damage)
+{
+}
+
+void IWvAbilityTargetInterface::OnReceiveAbilityAttack(AActor* Actor, const FWvBattleDamageAttackSourceInfo SourceInfo, const float Damage)
+{
+}
+
+void IWvAbilityTargetInterface::OnSendKillTarget(AActor* Actor, const float Damage)
+{
+}
+
+void IWvAbilityTargetInterface::OnReceiveKillTarget(AActor* Actor, const float Damage)
+{
+}
 
 
 UWvEnvironmentInterface::UWvEnvironmentInterface(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
 }
+
+
+

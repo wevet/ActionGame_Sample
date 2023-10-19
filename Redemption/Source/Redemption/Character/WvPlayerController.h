@@ -6,6 +6,7 @@
 #include "GameplayTagContainer.h"
 #include "Component/WvInputEventComponent.h"
 #include "GameFramework/PlayerController.h"
+#include "Interface/WvAbilityTargetInterface.h"
 #include "WvPlayerController.generated.h"
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FInputEventGameplayTagDelegate, FGameplayTag, GameplayTag, bool, IsPressed);
@@ -17,13 +18,19 @@ class APlayerCharacter;
  * 
  */
 UCLASS()
-class REDEMPTION_API AWvPlayerController : public APlayerController
+class REDEMPTION_API AWvPlayerController : public APlayerController, public IWvAbilityTargetInterface
 {
 	GENERATED_BODY()
 	
 public:
 	AWvPlayerController(const FObjectInitializer& ObjectInitializer);
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+
+	//~IWvAbilityTargetInterface interface
+	virtual void SetGenericTeamId(const FGenericTeamId& NewTeamID) override;
+	virtual FGenericTeamId GetGenericTeamId() const override;
+	virtual FOnTeamIndexChangedDelegate* GetOnTeamIndexChangedDelegate() override;
+	//~End of IWvAbilityTargetInterface interface
 
 protected:
 	virtual void BeginPlay() override;
@@ -37,14 +44,17 @@ public:
 	void PostAscInitialize(UAbilitySystemComponent* ASC);
 
 public:
+	//All keys pressed will be notified
 	UPROPERTY(BlueprintAssignable)
-	FInputEventGameplayTagDelegate OnInputEventGameplayTagTrigger_All; //All keys pressed will be notified
+	FInputEventGameplayTagDelegate OnInputEventGameplayTagTrigger_All;
 
+	//In-game button press event notification
 	UPROPERTY(BlueprintAssignable)
-	FInputEventGameplayTagDelegate OnInputEventGameplayTagTrigger_Game; //In-game button press event notification
+	FInputEventGameplayTagDelegate OnInputEventGameplayTagTrigger_Game;
 
+	//Event notification when the UI button is pressed
 	UPROPERTY(BlueprintAssignable)
-	FInputEventGameplayTagDelegate OnInputEventGameplayTagTrigger_UI; //Event notification when the UI button is pressed
+	FInputEventGameplayTagDelegate OnInputEventGameplayTagTrigger_UI;
 
 	UPROPERTY(BlueprintAssignable)
 	FPluralInputEventTriggerDelegate OnPluralInputEventTrigger;
@@ -58,4 +68,8 @@ protected:
 
 private:
 	class APlayerCharacter* PC;
+
+	UPROPERTY()
+	FOnTeamIndexChangedDelegate OnTeamChangedDelegate;
 };
+

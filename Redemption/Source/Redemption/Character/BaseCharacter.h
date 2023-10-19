@@ -57,7 +57,7 @@ class UStatusComponent;
 
 
 UCLASS(Abstract)
-class REDEMPTION_API ABaseCharacter : public ACharacter, public IAbilitySystemInterface, public IAISightTargetInterface, public IGenericTeamAgentInterface, public IWvAbilitySystemAvatarInterface, public IWvAbilityTargetInterface
+class REDEMPTION_API ABaseCharacter : public ACharacter, public IAbilitySystemInterface, public IAISightTargetInterface, public IWvAbilitySystemAvatarInterface, public IWvAbilityTargetInterface
 {
 	GENERATED_BODY()
 
@@ -74,21 +74,13 @@ public:
 protected:
 	virtual void BeginPlay() override;
 	virtual void PossessedBy(AController* NewController) override;
+	virtual void UnPossessed() override;
 	virtual void OnStartCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust) override;
 	virtual void OnEndCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust) override;
 	virtual void Landed(const FHitResult& Hit) override;
 
 
 public:
-	/**
-	* Retrieve team identifier in form of FGenericTeamId
-	* Returns the FGenericTeamID that represents "which team this character belongs to".
-	* There are three teams prepared by default: hostile, neutral, and friendly.
-	* Required for AI Perception's "Detection by Affiliation" to work.
-	*/
-	virtual FGenericTeamId GetGenericTeamId() const override;
-	virtual void SetGenericTeamId(const FGenericTeamId& NewTeamID) override;
-
 	/**
 	* Returns the ability system component to use for this actor.
 	* It may live on another actor, such as a Pawn using the PlayerState's component
@@ -101,43 +93,29 @@ public:
 #pragma endregion
 
 #pragma region IWvAbilityTargetInterface
-	virtual int32 GetTeamNumImpl() const override;
-	virtual int32 GetTeamNum_Implementation() const override;
+	virtual FGenericTeamId GetGenericTeamId() const override;
+	virtual void SetGenericTeamId(const FGenericTeamId& NewTeamID) override;
+
 	virtual FGameplayTag GetAvatarTag() const override;
-	virtual USceneComponent* GetOverlapBaseComponent() override;
 	virtual ECharacterRelation GetRelationWithSelfImpl(const IWvAbilityTargetInterface* Other) const override;
 
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "BaseCharacter|AbilityTarget")
-	void OnSendWeaknessAttack(AActor* Actor, const FName WeaknessName, const float Damage);
-	virtual void OnSendWeaknessAttack_Implementation(AActor* Actor, const FName WeaknessName, const float Damage) override;
+	virtual USceneComponent* GetOverlapBaseComponent() override;
 
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "BaseCharacter|AbilityTarget")
-	void OnReceiveWeaknessAttack(AActor* Actor, const FName WeaknessName, const float Damage);
-	virtual void OnReceiveWeaknessAttack_Implementation(AActor* Actor, const FName WeaknessName, const float Damage) override;
-
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "BaseCharacter|AbilityTarget")
-	void OnSendAbilityAttack(AActor* Actor, const FWvBattleDamageAttackSourceInfo SourceInfo, const float Damage);
-	virtual void OnSendAbilityAttack_Implementation(AActor* Actor, const FWvBattleDamageAttackSourceInfo SourceInfo, const float Damage) override;
-
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "BaseCharacter|AbilityTarget")
-	void OnReceiveAbilityAttack(AActor* Actor, const FWvBattleDamageAttackSourceInfo SourceInfo, const float Damage);
-	virtual void OnReceiveAbilityAttack_Implementation(AActor* Actor, const FWvBattleDamageAttackSourceInfo SourceInfo, const float Damage) override;
-
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "BaseCharacter|AbilityTarget")
-	void OnSendKillTarget(AActor* Actor, const float Damage);
-	virtual void OnSendKillTarget_Implementation(AActor* Actor, const float Damage) override;
-
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "BaseCharacter|AbilityTarget")
-	void OnReceiveKillTarget(AActor* Actor, const float Damage);
-	virtual void OnReceiveKillTarget_Implementation(AActor* Actor, const float Damage) override;
-
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "BaseCharacter|AbilityTarget")
-	void OnReceiveHitReact(FGameplayEffectContextHandle Context, const bool IsInDead, const float Damage);
-	virtual void OnReceiveHitReact_Implementation(FGameplayEffectContextHandle Context, const bool IsInDead, const float Damage) override;
+	virtual void OnReceiveHitReact(FGameplayEffectContextHandle Context, const bool IsInDead, const float Damage) override;
+	virtual void OnSendWeaknessAttack(AActor* Actor, const FName WeaknessName, const float Damage) override;
+	virtual void OnReceiveWeaknessAttack(AActor* Actor, const FName WeaknessName, const float Damage) override;
+	virtual void OnSendAbilityAttack(AActor* Actor, const FWvBattleDamageAttackSourceInfo SourceInfo, const float Damage) override;
+	virtual void OnReceiveAbilityAttack(AActor* Actor, const FWvBattleDamageAttackSourceInfo SourceInfo, const float Damage) override;
+	virtual void OnSendKillTarget(AActor* Actor, const float Damage) override;
+	virtual void OnReceiveKillTarget(AActor* Actor, const float Damage) override;
+	virtual FOnTeamIndexChangedDelegate* GetOnTeamIndexChangedDelegate() override;
 #pragma endregion
 
 	const FCustomWvAbilitySystemAvatarData& GetCustomWvAbilitySystemData();
 
+	//~APawn interface
+	virtual void NotifyControllerChanged() override;
+	//~End of APawn interface
 
 	/**
 	* The method needs to check whether the implementer is visible from given observer's location.
@@ -223,7 +201,7 @@ protected:
 	class UWvAbilitySystemComponent* WvAbilitySystemComponent;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Component, meta = (AllowPrivateAccess = "true"))
-	class UInventoryComponent* InventoryComponent;
+	class UInventoryComponent* ItemInventoryComponent;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Component, meta = (AllowPrivateAccess = "true"))
 	class UCombatComponent* CombatComponent;
@@ -253,12 +231,25 @@ protected:
 	void OnRep_MyTeamID(FGenericTeamId OldTeamID);
 
 	UFUNCTION()
+	void OnControllerChangedTeam(UObject* TeamAgent, int32 OldTeam, int32 NewTeam);
+
+	UFUNCTION()
 	void OnRep_ReplicatedAcceleration();
+
+	// Called to determine what happens to the team ID when possession ends
+	virtual FGenericTeamId DetermineNewTeamAfterPossessionEnds(FGenericTeamId OldTeamID) const
+	{
+		// This could be changed to return, e.g., OldTeamID if you want to keep it assigned afterwards, or return an ID for some neutral faction, or etc...
+		return FGenericTeamId::NoTeam;
+	}
 
 	virtual void InitAbilitySystemComponent();
 
 	UPROPERTY()
 	FTrajectorySampleRange TrajectorySampleRange;
+
+	UPROPERTY()
+	FOnTeamIndexChangedDelegate OnTeamChangedDelegate;
 
 	// Angle threshold to determine if the input direction is vertically aligned with Actor
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input)

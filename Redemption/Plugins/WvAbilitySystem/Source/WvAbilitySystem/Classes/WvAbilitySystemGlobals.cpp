@@ -6,6 +6,7 @@
 #include "WvGameplayEffectContext.h"
 #include "GameplayEffect.h"
 
+#include UE_INLINE_GENERATED_CPP_BY_NAME(WvAbilitySystemGlobals)
 
 FGameplayEffectContext* UWvAbilitySystemGlobals::AllocGameplayEffectContext() const
 {

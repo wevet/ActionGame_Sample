@@ -8,6 +8,8 @@
 #include "WvAbilityDataAsset.h"
 #include "WvAbilityAttributeSet.h"
 
+#include UE_INLINE_GENERATED_CPP_BY_NAME(WvCommonDamageExecution)
+
 
 UWvCommonDamageExecution::UWvCommonDamageExecution()
 {

@@ -3,6 +3,8 @@
 
 #include "WvCommonAbilityDataAsset.h"
 
+#include UE_INLINE_GENERATED_CPP_BY_NAME(WvCommonAbilityDataAsset)
+
 #if WITH_EDITORONLY_DATA
 void UWvCommonAbilityDataAsset::PostEditChangeChainProperty(struct FPropertyChangedChainEvent& PropertyChangedEvent)
 {

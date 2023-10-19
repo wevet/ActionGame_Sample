@@ -10,6 +10,8 @@
 #include "WvAbilityDataAsset.h"
 #include "WvAbilitySystemBlueprintFunctionLibrary.h"
 
+#include UE_INLINE_GENERATED_CPP_BY_NAME(WvAbilityBase)
+
 
 UWvAbilityBase::UWvAbilityBase(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {	

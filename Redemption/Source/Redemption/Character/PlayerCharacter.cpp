@@ -242,14 +242,19 @@ void APlayerCharacter::OnPluralInputEventTrigger_Callback(const FGameplayTag Tag
 
 void APlayerCharacter::OverlayStateChange_Callback(const ELSOverlayState PrevOverlay, const ELSOverlayState CurrentOverlay)
 {
-	auto PrevItem = InventoryComponent->FindItem(PrevOverlay);
+	if (!IsValid(ItemInventoryComponent))
+	{
+		return;
+	}
+
+	auto PrevItem = ItemInventoryComponent->FindItem(PrevOverlay);
 	if (PrevItem)
 	{
 		PrevItem->Notify_UnEquip();
 		PrevItem->SetActorHiddenInGame(true);
 	}
 
-	auto CurrentItem = InventoryComponent->FindItem(CurrentOverlay);
+	auto CurrentItem = ItemInventoryComponent->FindItem(CurrentOverlay);
 	if (CurrentItem)
 	{
 		CurrentItem->Notify_Equip();

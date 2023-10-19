@@ -75,21 +75,18 @@ class ABaseCharacter* UWvGameplayAbility::GetBaseCharacter()
 
 void UWvGameplayAbility::ApplyEffectToSelf(int32 EffectGroupIdx)
 {
-	do {
-		UWvAbilityDataAsset* AbilityData = GetWvAbilityDataNoChecked();
-		if (!AbilityData)
-		{
-			break;
-		}
-		UWvAbilityEffectDataAsset* EffectDataAsset = AbilityData->EffectDataAsset;
+	UWvAbilityDataAsset* AbilityData = GetWvAbilityDataNoChecked();
+	if (!AbilityData)
+	{
+		return;
+	}
 
-		if (!EffectDataAsset)
-		{
-			break;
-		}
-		ASC->ApplyEffectToSelf(ASC, EffectDataAsset, EffectGroupIdx);
-
-	} while (false);
+	UWvAbilityEffectDataAsset* EffectDataAsset = AbilityData->EffectDataAsset;
+	if (!EffectDataAsset)
+	{
+		return;
+	}
+	ASC->ApplyEffectToSelf(ASC, EffectDataAsset, EffectGroupIdx);
 }
 
 void UWvGameplayAbility::ApplyEffectToTarget(FVector InOrigin, const TArray<FHitResult>& Hits, FWvAbilityData EffectData, int32 EffectGroupIdx /*= 0*/, bool DoFilter /*= true*/, AActor* OptionalExternalSource /*= nullptr*/)

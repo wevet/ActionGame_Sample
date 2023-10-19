@@ -30,10 +30,10 @@ public:
 	ETargetRelation TargetRelationFilter = ETargetRelation::Enemy;
 
 	/*
-	* 以下のようなニーズが考えられる：
-	* 1. シーン内の岩は、特別なタグが付けられた特定のスキルによってのみ壊すことができる。
-	* 2. 召喚アクターは、特定のスキルを持つパーティによってのみ発火可能な爆弾を仕掛けることができ、爆弾は互いに発火することができる。
-	この変数を使用すると、上記の要件にあるような機能をフィルタリングで追加でき、IActAbilityTargetInterface::CanAsTargetをオーバーライドすることで実装できます。
+	* The following needs may be considered:
+	* 1. rocks in a scene can only be broken by a specific skill with a special tag attached to it.
+	* 2. summoning actors can plant bombs that can only be ignited by parties with specific skills, and bombs can ignite each other.
+	* This variable allows for filtering to add functionality similar to that in the above requirement, and can be implemented by overriding IWvAbilityTargetInterface::CanAsTarget.
 	*/
 	UPROPERTY(EditDefaultsOnly, Category = Filter)
 	FGameplayTagContainer FilterTagContainer;

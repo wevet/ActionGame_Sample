@@ -3,6 +3,13 @@
 #include "WvTargetDataFilter.h"
 #include "Interface/WvAbilityTargetInterface.h"
 
+/// <summary>
+/// Target filter
+/// </summary>
+/// <param name="Self"></param>
+/// <param name="ActorToBeFiltered"></param>
+/// <param name="bConsiderTeamRelationOnly">ƒ`[ƒ€ŠÖŒW‚Ì‚İ‚ğl—¶‚·‚é</param>
+/// <returns></returns>
 bool FWvTargetDataFilter::FilterPassesForActor(IWvAbilityTargetInterface* Self, const AActor* ActorToBeFiltered, bool bConsiderTeamRelationOnly) const
 {
 	bool bIsResult = false;
@@ -11,12 +18,13 @@ bool FWvTargetDataFilter::FilterPassesForActor(IWvAbilityTargetInterface* Self, 
 	{
 		if (bConsiderTeamRelationOnly) 
 		{
-			Target->IWvAbilityTargetInterface::CanAsTarget(Self, this);
+			auto bHasTarget = Target->CanAsTarget(Self, this);
 		}
 		else 
 		{
 			bIsResult = Target->CanAsTarget(Self, this);
 		}
+		// bIsResult = bIsResult ^ bReverseFilter
 		bIsResult ^= bReverseFilter;
 	}
 	return bIsResult;

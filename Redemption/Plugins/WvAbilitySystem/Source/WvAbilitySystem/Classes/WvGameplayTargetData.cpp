@@ -6,6 +6,8 @@
 #include "Interface/WvAbilityTargetInterface.h"
 #include "PhysicsEngine/PhysicsAsset.h"
 
+#include UE_INLINE_GENERATED_CPP_BY_NAME(WvGameplayTargetData)
+
 #pragma region FWvGameplayAbilityTargetData
 bool FWvGameplayAbilityTargetData::HasHitResult() const
 {

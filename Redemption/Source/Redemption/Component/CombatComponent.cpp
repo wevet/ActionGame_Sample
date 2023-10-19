@@ -183,12 +183,9 @@ void UCombatComponent::AttackToASC(const FWvBattleDamageAttackSourceInfo SourceI
 		FGameplayAbilityTargetDataHandle TargetDataHandle;
 
 		FGameplayEffectContextHandle EffectContextHandle = ASC->MakeEffectContext();
-		FWvGameplayEffectContext* EffectContext = static_cast<FWvGameplayEffectContext*>(EffectContextHandle.Get());
-		if (EffectContext)
-		{
-			EffectContext->SetEffectDataAsset(EffectDA, EffectGroupIndex);
-		}
+		UWvAbilitySystemBlueprintFunctionLibrary::EffectContextSetEffectDataAsset(EffectContextHandle, EffectDA, EffectGroupIndex);
 
+		UE_LOG(LogTemp, Log, TEXT("%s"), *FString(__FUNCTION__));
 		FWvGameplayAbilityTargetData* TargetData = new FWvGameplayAbilityTargetData();
 		TargetData->TargetInfo = HitTargetInfo;
 		TargetData->SourceInfo = SourceInfo;

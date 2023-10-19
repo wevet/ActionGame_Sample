@@ -18,6 +18,8 @@ UE_DEFINE_GAMEPLAY_TAG(TAG_GameplayCue_HitImpact_Weakness, "GameplayCue.HitImpac
 //
 UE_DEFINE_GAMEPLAY_TAG(TAG_Config_HitReactFeature_Hit, "Config.HitReactFeature.Hit");
 
+#include UE_INLINE_GENERATED_CPP_BY_NAME(WvAbilityDataAsset)
+
 UWvAbilityDataAsset::UWvAbilityDataAsset()
 {
 	AbilityTypeTag = (FGameplayTagContainer)FGameplayTag::RequestGameplayTag(TAG_Common_Attack_Ability.GetTag().GetTagName());

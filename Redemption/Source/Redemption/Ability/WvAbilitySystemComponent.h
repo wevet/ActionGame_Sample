@@ -18,7 +18,6 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FAbilityMontageBeginDelegate, UGame
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FAbilityTagUpdateDelegate, FGameplayTag, Tag, bool, TagExists);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FActorAbilityTagUpdateDelegate, AActor*, Actor, FGameplayTag, Tag, bool, TagExists);
 
-class USkeletalMeshComponent;
 class ABaseCharacter;
 class AWvPlayerController;
 
@@ -43,40 +42,16 @@ public:
 
 	TArray<FAnimatingAbilityNotify> AnimatingAbilityNotifys;
 
-	void GetActiveAbilitiesWithTags(const FGameplayTagContainer& GameplayTagContainer, TArray<UGameplayAbility*>& ActiveAbilities);
-
-	int32 GetDefaultAbilityLevel() const;
-
-	static UWvAbilitySystemComponent* GetAbilitySystemComponentFromActor(const AActor* Actor, bool LookForComponent = false);
-	void AddStartupGameplayAbilities();
-	void AddRegisterAbilityDA(class UWvAbilityDataAsset* InDA);
-	void GiveAllRegisterAbility();
-	bool IsAnimatingCombo() const;
-
-	bool HasActivatingAbilitiesWithTag(const FGameplayTag Tag) const;
-
-	UFUNCTION(BlueprintCallable, Category = "Ability")
-	void AddGameplayTag(const FGameplayTag& GameplayTag, int32 Count = 1);
-
-	UFUNCTION(BlueprintCallable, Category = "Ability")
-	void RemoveGameplayTag(const FGameplayTag& GameplayTag, int32 Count = 1);
-
-	UFUNCTION(BlueprintCallable, Category = "Ability")
-	void SetGameplayTagCount(const FGameplayTag& GameplayTag, int32 Count = 1);
-
-	UFUNCTION(BlueprintCallable)
-	const bool TryActivateAbilityByClassPressing(TSubclassOf<UGameplayAbility> InAbilityToActivate, bool bAllowRemoteActivation);
-
-	UFUNCTION(BlueprintCallable, Category = "Ability")
-	class ABaseCharacter* GetAvatarCharacter() const;
-
 	void ApplyEffectToSelf(UWvAbilitySystemComponent* InstigatorASC, UWvAbilityEffectDataAsset* EffectData, const int32 EffectGroupIndex);
-
 	void AbilityNotifyBegin(class UWvAnimNotifyState* Notify, class UWvGameplayAbility* DebugAbility = nullptr);
 	void AbilityNotifyEnd(class UWvAnimNotifyState* Notify);
+	int32 GetDefaultAbilityLevel() const;
+	class ABaseCharacter* GetAvatarCharacter() const;
 
-private:
-	UPROPERTY()
-	TArray<TObjectPtr<class UWvAbilityDataAsset>> RegisterAbilityDAs;
+
+	const bool TryActivateAbilityByClassPressing(TSubclassOf<UGameplayAbility> InAbilityToActivate, bool bAllowRemoteActivation);
+
+
 };
+
 
