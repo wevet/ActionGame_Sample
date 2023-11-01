@@ -36,8 +36,9 @@ void AItemBaseActor::Notify_UnEquip()
 	ItemEquipCallback.Broadcast(bIsEquip);
 }
 
-bool AItemBaseActor::CanEquip() const
+bool AItemBaseActor::IsEquipped() const
 {
-	return bCanEquip;
+	return bIsEquip;
 }
+
 

@@ -49,5 +49,13 @@ public:
 	static void RecoverHP(AActor* Actor, const float Value);
 	static void RecoverPercentHP(AActor* Actor, const float Percent);
 	static void SetDamage(AActor* Actor, const float Value);
+
+	static class UApplyEffectExData* GetEffectExData(FGameplayEffectContextHandle ContextHandle);
+
+	static EHitVerticalDirection EvaluteHitVerticalDirection(const FVector Direction);
+
+	static EHitReactDirection EvaluteHitReactDirection(const float Angle);
+
+	static FVector GetAttackDirection(FGameplayEffectContextHandle EffectContextHandle, const FVector ActorLocation);
 };
 

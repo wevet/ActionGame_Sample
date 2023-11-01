@@ -2,7 +2,9 @@
 
 
 #include "Misc/WvCommonUtils.h"
-
+#include "Character/BaseCharacter.h"
+#include "Component/CombatComponent.h"
+#include "Component/InventoryComponent.h"
 
 #include "Kismet/KismetMathLibrary.h"
 #include "Kismet/GameplayStatics.h"
@@ -12,7 +14,8 @@
 #include "Particles/ParticleSystem.h"
 #include "Particles/ParticleSystemComponent.h"
 #include "AIController.h"
-
+#include "AbilitySystemComponent.h"
+#include "AbilitySystemGlobals.h"
 
 
 float UWvCommonUtils::GetAngleBetweenVector(FVector Vec1, FVector Vec2)
@@ -32,6 +35,18 @@ float UWvCommonUtils::GetAngleBetween3DVector(FVector Vec1, FVector Vec2)
 		Angle = -Angle;
 	}
 
+	return Angle;
+}
+
+float UWvCommonUtils::GetAngleBetween3DVector(FVector Vec1, FVector Vec2, FVector RefUpVector)
+{
+	Vec1.Normalize();
+	Vec2.Normalize();
+	float Angle = UKismetMathLibrary::DegAcos(FVector::DotProduct(Vec1, Vec2));
+	if (FVector::DotProduct(FVector::CrossProduct(Vec1, Vec2), RefUpVector) < 0)
+	{
+		Angle = -Angle;
+	}
 	return Angle;
 }
 
@@ -167,6 +182,60 @@ bool UWvCommonUtils::IsBot(const AController* Controller)
 	if (!Class->IsChildOf(AAIController::StaticClass())) 
 		return false;
 	return true;
+}
+
+FHitReactInfoRow* UWvCommonUtils::FindHitReactInfoRow(ABaseCharacter* Character)
+{
+	IWvAbilitySystemAvatarInterface* Avatar = Cast<IWvAbilitySystemAvatarInterface>(Character);
+	if (!Avatar)
+	{
+		UE_LOG(LogTemp, Error, TEXT("[%s : Avatar is null.]"), *FString(__FUNCTION__));
+		return nullptr;
+	}
+
+	const FWvAbilitySystemAvatarData& AbilitySystemData = Avatar->GetAbilitySystemData();
+	UWvHitReactDataAsset* HitReactDA = AbilitySystemData.HitReactData;
+	UCombatComponent* CombatComponent = Character->GetCombatComponent();
+	const UInventoryComponent* InventoryComponent = Character->GetInventoryComponent();
+
+	if (!IsValid(CombatComponent) || !IsValid(HitReactDA) || !IsValid(InventoryComponent))
+	{
+		UE_LOG(LogTemp, Error, TEXT("[%s : CombatComponent or HitReactDA or InventoryComponent is null.]"), *FString(__FUNCTION__));
+		return nullptr;
+	}
+
+	const FGameplayTag HitReactFeatureTag = CombatComponent->GetHitReactFeature();
+	const bool bIsFixed = CombatComponent->GetIsFixedHitReactFeature();
+	const FGameplayTag WeaknesshitReactFeatureTag = CombatComponent->GetWeaknessHitReactFeature();
+	CombatComponent->SetWeaknessHitReactFeature(FGameplayTag::EmptyTag);
+
+	const FName WeaponName = InventoryComponent->GetEquipWeaponName();
+
+	UAbilitySystemComponent* ASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(Character);
+
+	FHitReactInfoRow* HitReactInfo = nullptr;
+
+	if (WeaknesshitReactFeatureTag.IsValid())
+	{
+		HitReactInfo = const_cast<FHitReactInfoRow*>(HitReactDA->GetHitReactInfoRow_Special(ASC, WeaknesshitReactFeatureTag));
+	}
+
+	if (!HitReactInfo && bIsFixed)
+	{
+		HitReactInfo = const_cast<FHitReactInfoRow*>(HitReactDA->GetHitReactInfoRow_Special(ASC, HitReactFeatureTag));
+	}
+
+	if (!HitReactInfo && !WeaponName.IsNone())
+	{
+		HitReactInfo = const_cast<FHitReactInfoRow*>(HitReactDA->GetHitReactInfoRow_Weapon(WeaponName, ASC, HitReactFeatureTag));
+	}
+
+	if (!HitReactInfo)
+	{
+		HitReactInfo = const_cast<FHitReactInfoRow*>(HitReactDA->GetHitReactInfoRow_Normal(ASC, HitReactFeatureTag));
+	}
+
+	return HitReactInfo;
 }
 
 

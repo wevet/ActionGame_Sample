@@ -132,10 +132,13 @@ void IWvAbilityTargetInterface::OnReceiveKillTarget(AActor* Actor, const float D
 {
 }
 
+bool IWvAbilityTargetInterface::IsDead() const
+{
+	return false;
+}
+
 
 UWvEnvironmentInterface::UWvEnvironmentInterface(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
 }
-
-
 

@@ -11,6 +11,7 @@
 #include "Component/CombatComponent.h"
 #include "Component/StatusComponent.h"
 #include "WvPlayerController.h"
+#include "Animation/WvAnimInstance.h"
 #include "Ability/WvInheritanceAttributeSet.h"
 
 #include "Components/CapsuleComponent.h"
@@ -36,12 +37,27 @@
 #include "UObject/UObjectBaseUtility.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "Kismet/KismetSystemLibrary.h"
+#include "Animation/AnimInstance.h"
 
 // Misc
 #include "Engine/SkeletalMeshSocket.h"
 
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(BaseCharacter)
+
+
+TSubclassOf<UAnimInstance> UOverlayAnimInstanceDataAsset::FindAnimInstance(const ELSOverlayState InOverlayState) const
+{
+	for (FOverlayAnimInstance Instance : OverlayAnimInstances)
+	{
+		if (Instance.OverlayState == InOverlayState)
+		{
+			return Instance.AnimInstanceClass;
+		}
+	}
+	return UnArmedAnimInstanceClass;
+}
+
 
 ABaseCharacter::ABaseCharacter(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer.SetDefaultSubobjectClass<UWvCharacterMovementComponent>(ACharacter::CharacterMovementComponentName))
@@ -132,10 +148,13 @@ void ABaseCharacter::BeginPlay()
 	USkeletalMeshComponent* SkelMesh = GetMesh();
 	SkelMesh->AddTickPrerequisiteActor(this);
 
+	AnimInstance = Cast<UWvAnimInstance>(GetMesh()->GetAnimInstance());
 }
 
 void ABaseCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
+	FTimerManager& TM = GetWorld()->GetTimerManager();
+	TM.ClearTimer(Ragdoll_TimerHandle);
 	Super::EndPlay(EndPlayReason);
 }
 
@@ -273,6 +292,31 @@ void ABaseCharacter::OnRep_MyTeamID(FGenericTeamId OldTeamID)
 	ConditionalBroadcastTeamChanged(this, OldTeamID, MyTeamID);
 }
 
+void ABaseCharacter::OnControllerChangedTeam(UObject* TeamAgent, int32 OldTeam, int32 NewTeam)
+{
+	const FGenericTeamId MyOldTeamID = MyTeamID;
+	MyTeamID = IntegerToGenericTeamId(NewTeam);
+	ConditionalBroadcastTeamChanged(this, MyOldTeamID, MyTeamID);
+}
+
+void ABaseCharacter::NotifyControllerChanged()
+{
+	const FGenericTeamId OldTeamId = GetGenericTeamId();
+
+	Super::NotifyControllerChanged();
+
+	// Update our team ID based on the controller
+	if (HasAuthority() && (Controller != nullptr))
+	{
+		if (IWvAbilityTargetInterface* ControllerWithTeam = Cast<IWvAbilityTargetInterface>(Controller))
+		{
+			MyTeamID = ControllerWithTeam->GetGenericTeamId();
+			ConditionalBroadcastTeamChanged(this, OldTeamId, MyTeamID);
+		}
+	}
+}
+
+#pragma region IWvAbilitySystemAvatarInterface
 const FWvAbilitySystemAvatarData& ABaseCharacter::GetAbilitySystemData()
 {
 	return AbilitySystemData;
@@ -322,40 +366,9 @@ void ABaseCharacter::InitAbilitySystemComponentByData(class UWvAbilitySystemComp
 			WvAbilitySystemComponent->AddRegisterAbilityDA(AbilityRow->AbilityData);
 		}
 	}
-
 	WvAbilitySystemComponent->GiveAllRegisterAbility();
-	
-	auto Attr = WvAbilitySystemComponent->GetStatusAttributeSet(UWvAbilityAttributeSet::StaticClass());
-	if (Attr)
-	{
-		auto Health = Attr->GetHP();
-		UE_LOG(LogTemp, Warning, TEXT("Health => %.3f, function => %s"), Health, *FString(__FUNCTION__));
-	}
 }
-
-void ABaseCharacter::OnControllerChangedTeam(UObject* TeamAgent, int32 OldTeam, int32 NewTeam)
-{
-	const FGenericTeamId MyOldTeamID = MyTeamID;
-	MyTeamID = IntegerToGenericTeamId(NewTeam);
-	ConditionalBroadcastTeamChanged(this, MyOldTeamID, MyTeamID);
-}
-
-void ABaseCharacter::NotifyControllerChanged()
-{
-	const FGenericTeamId OldTeamId = GetGenericTeamId();
-
-	Super::NotifyControllerChanged();
-
-	// Update our team ID based on the controller
-	if (HasAuthority() && (Controller != nullptr))
-	{
-		if (IWvAbilityTargetInterface* ControllerWithTeam = Cast<IWvAbilityTargetInterface>(Controller))
-		{
-			MyTeamID = ControllerWithTeam->GetGenericTeamId();
-			ConditionalBroadcastTeamChanged(this, OldTeamId, MyTeamID);
-		}
-	}
-}
+#pragma endregion
 
 #pragma region IWvAbilityTargetInterface
 FGenericTeamId ABaseCharacter::GetGenericTeamId() const
@@ -414,7 +427,7 @@ void ABaseCharacter::OnReceiveWeaknessAttack(AActor* Actor, const FName Weakness
 
 void ABaseCharacter::OnSendAbilityAttack(AActor* Actor, const FWvBattleDamageAttackSourceInfo SourceInfo, const float Damage)
 {
-	//UE_LOG(LogTemp, Log, TEXT("Owner => %s, Actor => %s, function => %s"), *this->GetName(), *Actor->GetName(), *FString(__FUNCTION__));
+	//UE_LOG(LogTemp, Log, TEXT("Owner => %s, Actor => %s, function => %s"), *GetPathName(this), *GetPathName(Actor), *FString(__FUNCTION__));
 }
 
 void ABaseCharacter::OnReceiveAbilityAttack(AActor* Actor, const FWvBattleDamageAttackSourceInfo SourceInfo, const float Damage)
@@ -423,24 +436,24 @@ void ABaseCharacter::OnReceiveAbilityAttack(AActor* Actor, const FWvBattleDamage
 
 void ABaseCharacter::OnSendKillTarget(AActor* Actor, const float Damage)
 {
-	UE_LOG(LogTemp, Log, TEXT("Owner => %s, Actor => %s, function => %s"), *this->GetName(), *Actor->GetName(), *FString(__FUNCTION__));
+	UE_LOG(LogTemp, Log, TEXT("Owner => %s, Actor => %s, function => %s"), *GetPathNameSafe(this), *GetPathNameSafe(Actor), *FString(__FUNCTION__));
 }
 
 void ABaseCharacter::OnReceiveKillTarget(AActor* Actor, const float Damage)
 {
 	if (!IsDead())
 	{
-		WvAbilitySystemComponent->AddGameplayTag(TAG_Character_StateDead, 1);
-		//WvAbilitySystemComponent->AddGameplayTag(TAG_Locomotion_ForbidMovement, 1);
-		ILocomotionInterface::Execute_SetLSMovementMode(LocomotionComponent, ELSMovementMode::Ragdoll);
-		LocomotionComponent->StartRagdollAction();
-		UE_LOG(LogTemp, Log, TEXT("Owner => %s, Actor => %s, function => %s"), *this->GetName(), *Actor->GetName(), *FString(__FUNCTION__));
+
 	}
 }
 
 void ABaseCharacter::OnReceiveHitReact(FGameplayEffectContextHandle Context, const bool IsInDead, const float Damage)
 {
-	//
+	if (IsValid(CombatComponent))
+	{
+		CombatComponent->StartHitReact(Context, IsInDead, Damage);
+	}
+
 }
 #pragma endregion
 
@@ -473,6 +486,16 @@ UWvAbilitySystemComponent* ABaseCharacter::GetWvAbilitySystemComponent() const
 ULocomotionComponent* ABaseCharacter::GetLocomotionComponent() const
 {
 	return LocomotionComponent;
+}
+
+UCombatComponent* ABaseCharacter::GetCombatComponent() const
+{
+	return CombatComponent;
+}
+
+UInventoryComponent* ABaseCharacter::GetInventoryComponent() const
+{
+	return ItemInventoryComponent;
 }
 
 USceneComponent* ABaseCharacter::GetHeldObjectRoot() const
@@ -753,5 +776,43 @@ bool ABaseCharacter::IsDead() const
 	return WvAbilitySystemComponent->HasMatchingGameplayTag(TAG_Character_StateDead);
 }
 
+void ABaseCharacter::BeginDeathAction()
+{
+	WvAbilitySystemComponent->AddGameplayTag(TAG_Character_StateDead, 1);
+	WvAbilitySystemComponent->AddGameplayTag(TAG_Locomotion_ForbidMovement, 1);
+	UE_LOG(LogTemp, Log, TEXT("Owner => %s, function => %s"), *GetName(), *FString(__FUNCTION__));
+}
+
+void ABaseCharacter::EndDeathAction(const float Interval)
+{
+	FTimerManager& TM = GetWorld()->GetTimerManager();
+	if (TM.IsTimerActive(Ragdoll_TimerHandle))
+	{
+		TM.ClearTimer(Ragdoll_TimerHandle);
+	}
+
+	TM.SetTimer(Ragdoll_TimerHandle, this, &ABaseCharacter::EndDeathAction_Callback, Interval, false);
+}
+
+void ABaseCharacter::EndDeathAction_Callback()
+{
+	ILocomotionInterface::Execute_SetLSMovementMode(LocomotionComponent, ELSMovementMode::Ragdoll);
+	LocomotionComponent->StartRagdollAction();
+	UE_LOG(LogTemp, Log, TEXT("Owner => %s, function => %s"), *GetName(), *FString(__FUNCTION__));
+}
+
+void ABaseCharacter::OverlayStateChange(const ELSOverlayState CurrentOverlay)
+{
+	if (!IsValid(OverlayAnimInstanceDA))
+	{
+		return;
+	}
+
+	auto AnimInstanceClass = OverlayAnimInstanceDA->FindAnimInstance(CurrentOverlay);
+	if (AnimInstanceClass)
+	{
+		AnimInstance->LinkAnimClassLayers(AnimInstanceClass);
+	}
+}
 
 

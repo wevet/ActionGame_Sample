@@ -202,6 +202,7 @@ void UWvAbilityAttributeSet::HandleDeadEvent(const FGameplayEffectModCallbackDat
 	AActor* SenderActor = Context.GetInstigatorAbilitySystemComponent()->GetAvatarActor();
 	AActor* ReceiverActor = GetOwningAbilitySystemComponent()->GetAvatarActor();
 
+	// Called if target is killed.
 	if (SenderActor)
 	{
 		FGameplayEventData Payload{};
@@ -212,7 +213,21 @@ void UWvAbilityAttributeSet::HandleDeadEvent(const FGameplayEffectModCallbackDat
 
 		if (UAbilitySystemComponent* ASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(SenderActor))
 		{
-			ASC->HandleGameplayEvent(TAG_Character_DamageKill, &Payload);
+			ASC->HandleGameplayEvent(TAG_Common_PassiveAbilityTrigger_KillTarget, &Payload);
+		}
+	}
+
+	if (ReceiverActor)
+	{
+		FGameplayEventData Payload{};
+		Payload.ContextHandle = Context;
+		Payload.Instigator = ReceiverActor;
+		Payload.Target = SenderActor;
+		Payload.EventMagnitude = GetDamage();
+
+		if (UAbilitySystemComponent* ASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(ReceiverActor))
+		{
+			ASC->HandleGameplayEvent(TAG_Common_PassiveAbilityTrigger_KillReact, &Payload);
 		}
 	}
 

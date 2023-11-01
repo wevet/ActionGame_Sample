@@ -4,6 +4,7 @@
 #include "AbilitySystemGlobals.h"
 #include "AbilitySystemLog.h"
 #include "Character/BaseCharacter.h"
+#include "Animation/AnimInstance.h"
 
 UWvAT_PlayMontageAndWaitForEvent::UWvAT_PlayMontageAndWaitForEvent(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {

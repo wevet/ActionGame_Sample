@@ -84,6 +84,10 @@ public class Redemption : ModuleRules
 		//	);
 		}
 
+		if (Target.bBuildEditor)
+		{
+			PrivateDependencyModuleNames.AddRange(new string[] { "UnrealEd" });
+		}
 
 		//if (Target.Type == TargetType.Editor)
 		//{

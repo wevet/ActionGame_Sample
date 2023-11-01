@@ -5,6 +5,11 @@
 #include "WvAbilitySystemGlobals.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "GameFramework/Character.h"
+#include "AnimationRuntime.h"
+
+#if WITH_EDITOR
+#include "FileHelpers.h"
+#endif
 
 bool FWvOverlapResult::IsValid() const
 {
@@ -220,4 +225,249 @@ void UWvHitFeedback::DoFeedback(FGameplayEffectContextHandle EffectContextHandle
 
 }
 
+
+#pragma region HitReaction
+const FHitReactInfoRow* UWvHitReactDataAsset::GetHitReactInfoRow_Normal(const UAbilitySystemComponent* ASC, const FGameplayTag& Tag)
+{
+	return GetHitReactInfoRow(NormalHitReactTable, ASC, Tag);
+}
+
+const FHitReactInfoRow* UWvHitReactDataAsset::GetHitReactInfoRow_Weapon(const FName WeaponName, const UAbilitySystemComponent* ASC, const FGameplayTag& Tag)
+{
+	UDataTable* TablePtr = WeaponHitReactTables.FindRef(WeaponName);
+	if (!TablePtr)
+	{
+		return nullptr;
+	}
+
+	return GetHitReactInfoRow(TablePtr, ASC, Tag);
+}
+
+const FHitReactInfoRow* UWvHitReactDataAsset::GetHitReactInfoRow_Special(const UAbilitySystemComponent* ASC, const FGameplayTag& Tag)
+{
+	return GetHitReactInfoRow(SpecialHitReactTable, ASC, Tag);
+}
+
+const FHitReactInfoRow* UWvHitReactDataAsset::GetHitReactInfoRow(UDataTable* Table, const UAbilitySystemComponent* ASC, const FGameplayTag& AbilityMontageFilter)
+{
+	if (Table == nullptr)
+	{
+		return nullptr;
+	}
+
+	FHitReactInfoRow* HitReactRow = nullptr;
+
+	FString RowName = AbilityMontageFilter.ToString();
+	int32 LastIndex = -1;
+	if (!RowName.FindLastChar('.', LastIndex))
+	{
+		return nullptr;
+	}
+
+	const int32 TagLength = RowName.Len();
+	RowName = RowName.Right(TagLength - (LastIndex + 1));
+	UE_LOG(LogTemp, Log, TEXT("RowName => %s, function => %s"), *RowName, *FString(__FUNCTION__));
+	HitReactRow = Table->FindRow<FHitReactInfoRow>(FName(RowName), TEXT("HitReactInfoRow"), false);
+	return HitReactRow;
+}
+
+void UAAU_HitReactBoneShakeDATool::ResetHitReactBoneShakeDA(class UHitReactBoneShakeDataAsset* DA, class USkeletalMesh* SkeletalMesh, FGameplayTag TriggetTag, FGameplayTag StrengthTag, float BaseStrength, float ShakeBoneStrength, float ShakeDuration, class UCurveFloat* DampingCurve, float NearestBoneDistance, float ShakeBoneDistance)
+{
+	FSkeletalMeshShakeData* SkeletalMeshShakeData = DA->SkeletalShakeData.Find(TriggetTag);
+	if (!SkeletalMeshShakeData)
+	{
+		DA->SkeletalShakeData.Add(TriggetTag, FSkeletalMeshShakeData());
+		SkeletalMeshShakeData = DA->SkeletalShakeData.Find(TriggetTag);
+	}
+
+	FHitReactBoneShakeStrengthConfig* HitReactBoneShakeStrengthConfig = SkeletalMeshShakeData->StrengthBoneShakeData.Find(StrengthTag);
+	if (!HitReactBoneShakeStrengthConfig)
+	{
+		SkeletalMeshShakeData->StrengthBoneShakeData.Add(StrengthTag, FHitReactBoneShakeStrengthConfig());
+		HitReactBoneShakeStrengthConfig = SkeletalMeshShakeData->StrengthBoneShakeData.Find(StrengthTag);
+	}
+
+	HitReactBoneShakeStrengthConfig->Strength = BaseStrength;
+
+	TArray<FName> ShakeBoneNames;
+	for (TMap<FName, FHitReactBoneShake>::TConstIterator Iter = HitReactBoneShakeStrengthConfig->BoneShakeData; Iter; ++Iter)
+	{
+		FName BoneName = Iter.Key();
+		ShakeBoneNames.Add(BoneName);
+		FHitReactBoneShake HitReactBoneShake = Iter.Value();
+		HitReactBoneShake.ShakeStrength = ShakeBoneStrength;
+		HitReactBoneShake.ShakeDuration = ShakeDuration;
+		HitReactBoneShake.DampingCurve = DampingCurve;
+		HitReactBoneShakeStrengthConfig->BoneShakeData[BoneName] = HitReactBoneShake;
+	}
+
+	const FReferenceSkeleton& RefSkeleton = SkeletalMesh->GetRefSkeleton();
+	TMap<FName, FTransform> BoneName2PosDict;
+	for (int32 Index = 0; Index < SkeletalMesh->GetRefSkeleton().GetNum(); Index++)
+	{
+		FName BoneName = RefSkeleton.GetBoneName(Index);
+		int32 ShakeBoneIndex = RefSkeleton.FindRawBoneIndex(BoneName);
+
+		if (ShakeBoneIndex != INDEX_NONE)
+		{
+			BoneName2PosDict.Add(BoneName, FAnimationRuntime::GetComponentSpaceTransformRefPose(RefSkeleton, ShakeBoneIndex));
+		}
+	}
+
+	SkeletalMeshCalculateAllNearestShakeBone(SkeletalMesh, ShakeBoneNames, BoneName2PosDict, NearestBoneDistance, *SkeletalMeshShakeData);
+	SkeletalMeshCalculateShakeBoneTransmitStrength(SkeletalMesh, ShakeBoneNames, BoneName2PosDict, ShakeBoneDistance, *HitReactBoneShakeStrengthConfig);
+	SkeletalMeshShakeData->StrengthBoneShakeData[StrengthTag] = *HitReactBoneShakeStrengthConfig;
+	DA->SkeletalShakeData[TriggetTag] = *SkeletalMeshShakeData;
+	SaveDA(DA);
+}
+
+void UAAU_HitReactBoneShakeDATool::ResetSkeletalBoneData(class UHitReactBoneShakeDataAsset* DA, class USkeletalMesh* SkeletalMesh, FGameplayTag TriggetTag, FGameplayTag StrengthTag, float NearestBoneDistance, float ShakeBoneDistance)
+{
+	FSkeletalMeshShakeData* SkeletalMeshShakeData = DA->SkeletalShakeData.Find(TriggetTag);
+	if (!SkeletalMeshShakeData)
+	{
+		return;
+	}
+
+	FHitReactBoneShakeStrengthConfig* HitReactBoneShakeStrengthConfig = SkeletalMeshShakeData->StrengthBoneShakeData.Find(StrengthTag);
+	if (!HitReactBoneShakeStrengthConfig)
+	{
+		return;
+	}
+
+	TArray<FName> ShakeBoneNames;
+	HitReactBoneShakeStrengthConfig->BoneShakeData.GetKeys(ShakeBoneNames);
+
+	const FReferenceSkeleton& RefSkeleton = SkeletalMesh->GetRefSkeleton();
+	TMap<FName, FTransform> BoneName2PosDict;
+	for (int32 Index = 0; Index < SkeletalMesh->GetRefSkeleton().GetNum(); Index++)
+	{
+		FName BoneName = RefSkeleton.GetBoneName(Index);
+		int32 ShakeBoneIndex = RefSkeleton.FindRawBoneIndex(BoneName);
+
+		if (ShakeBoneIndex != INDEX_NONE)
+		{
+			BoneName2PosDict.Add(BoneName, FAnimationRuntime::GetComponentSpaceTransformRefPose(RefSkeleton, ShakeBoneIndex));
+		}
+	}
+
+	SkeletalMeshCalculateAllNearestShakeBone(SkeletalMesh, ShakeBoneNames, BoneName2PosDict, NearestBoneDistance, *SkeletalMeshShakeData);
+	SkeletalMeshCalculateShakeBoneTransmitStrength(SkeletalMesh, ShakeBoneNames, BoneName2PosDict, ShakeBoneDistance, *HitReactBoneShakeStrengthConfig);
+	SkeletalMeshShakeData->StrengthBoneShakeData[StrengthTag] = *HitReactBoneShakeStrengthConfig;
+	DA->SkeletalShakeData[TriggetTag] = *SkeletalMeshShakeData;
+	SaveDA(DA);
+}
+
+void UAAU_HitReactBoneShakeDATool::SkeletalMeshCalculateAllNearestShakeBone(USkeletalMesh* SkeletalMesh, TArray<FName> ShakeBoneNames, TMap<FName, FTransform> boneName2PosDict, float BoneDistance, FSkeletalMeshShakeData& SkeletalMeshShakeData)
+{
+	TMap<FName, FNearestShakableBone> NearestShakableBoneInfos;
+
+	float BoneDistanceSquared = BoneDistance * BoneDistance;
+
+	for (int32 Index = 0; Index < SkeletalMesh->GetRefSkeleton().GetNum(); Index++)
+	{
+		FName BoneName = SkeletalMesh->GetRefSkeleton().GetBoneName(Index);
+		FTransform* BoneTransform = boneName2PosDict.Find(BoneName);
+		if (!BoneTransform)
+		{
+			continue;
+		}
+
+		if (ShakeBoneNames.Contains(BoneName))
+		{
+			FNearestShakableBone NearestShakableBone;
+			NearestShakableBone.Bone = BoneName;
+			NearestShakableBone.Weight = 1;
+			NearestShakableBoneInfos.Add(BoneName, NearestShakableBone);
+			continue;
+		}
+
+		float DistanceSquared = -1;
+		FName NearestShakableBoneName;
+		int32 ParentIndex = SkeletalMesh->GetRefSkeleton().GetRawParentIndex(Index);
+		while (ParentIndex != INDEX_NONE)
+		{
+			FName ParentBoneName = SkeletalMesh->GetRefSkeleton().GetBoneName(ParentIndex);
+			bool bIsShakeBone = ShakeBoneNames.Contains(ParentBoneName);
+			if (!bIsShakeBone)
+			{
+				ParentIndex = SkeletalMesh->GetRefSkeleton().GetRawParentIndex(ParentIndex);
+				continue;
+			}
+
+			FTransform* ShakeParentTransfrm = boneName2PosDict.Find(ParentBoneName);
+			if (ShakeParentTransfrm)
+			{
+				NearestShakableBoneName = ParentBoneName;
+				DistanceSquared = FVector::DistSquared(BoneTransform->GetLocation(), ShakeParentTransfrm->GetLocation());
+				break;
+			}
+		}
+
+		if (DistanceSquared == -1)
+		{
+			continue;
+		}
+
+		FNearestShakableBone NearestShakableBone;
+		NearestShakableBone.Bone = NearestShakableBoneName;
+		NearestShakableBone.Weight = FMath::Min(DistanceSquared > BoneDistanceSquared ? 0 : (1 - DistanceSquared / BoneDistanceSquared), 1);
+		NearestShakableBoneInfos.Add(BoneName, NearestShakableBone);
+	}
+
+	SkeletalMeshShakeData.NearestShakableBoneData = NearestShakableBoneInfos;
+}
+
+void UAAU_HitReactBoneShakeDATool::SkeletalMeshCalculateShakeBoneTransmitStrength(USkeletalMesh* SkeletalMesh, TArray<FName> ShakeBoneNames, TMap<FName, FTransform> boneName2PosDict, float BoneDistance, FHitReactBoneShakeStrengthConfig& HitReactBoneShakeStrengthConfig)
+{
+	const TArray<FTransform> BoneTransfroms = SkeletalMesh->GetRefSkeleton().GetRawRefBonePose();
+	float BoneDistanceSquared = BoneDistance * BoneDistance;
+
+	for (int32 Index = 0; Index < ShakeBoneNames.Num(); ++Index)
+	{
+		FName BoneName = ShakeBoneNames[Index];
+		FTransform* MyTransfrom = boneName2PosDict.Find(BoneName);
+		if (!MyTransfrom)
+		{
+			continue;
+		}
+
+		FTransmitShakableBoneInfo TransmitShakableBoneInfo;
+		for (int32 JIndex = 0; JIndex < ShakeBoneNames.Num(); ++JIndex)
+		{
+			FName OtherBoneName = ShakeBoneNames[JIndex];
+			if (BoneName == OtherBoneName)
+			{
+				continue;
+			}
+
+			FTransform* OtherTransfrom = boneName2PosDict.Find(OtherBoneName);
+			if (OtherTransfrom)
+			{
+				float DistanceSquared = FVector::DistSquared(MyTransfrom->GetLocation(), OtherTransfrom->GetLocation());
+				float Weight = FMath::Min(DistanceSquared > BoneDistanceSquared ? 0 : (1 - DistanceSquared / BoneDistanceSquared), 1);
+				TransmitShakableBoneInfo.OtherBoneTransmitShakeStrength.Add(OtherBoneName, Weight);
+			}
+		}
+
+		FHitReactBoneShake* HitReactBoneShake = HitReactBoneShakeStrengthConfig.BoneShakeData.Find(BoneName);
+		if (HitReactBoneShake)
+		{
+			HitReactBoneShake->Transmits = TransmitShakableBoneInfo;
+		}
+	}
+
+}
+
+void UAAU_HitReactBoneShakeDATool::SaveDA(class UHitReactBoneShakeDataAsset* DA)
+{
+#if WITH_EDITOR
+	DA->Modify();
+	UPackage* Package = DA->GetOutermost();
+	FEditorFileUtils::PromptForCheckoutAndSave({ Package }, false, false);
+	UE_LOG(LogTemp, Log, TEXT("[HitReactBoneShakeDATool] Save Success."));
+#endif
+}
+
+#pragma endregion
 

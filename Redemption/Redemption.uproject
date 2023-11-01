@@ -177,6 +177,10 @@
 			"Enabled": true
 		},
 		{
+			"Name": "RuleProcessor",
+			"Enabled": true
+		},
+		{
 			"Name": "MotoricaStudio",
 			"Enabled": true,
 			"SupportedTargetPlatforms": [

@@ -149,6 +149,12 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion")
 	UCurveFloat* LandAlphaCurve;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Linked Layer Data")
+	bool bIsLinkedLayerChanged = false;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Linked Layer Data")
+	UAnimInstance* LastLinkedAnimInstance = nullptr;
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion")
 	float AimSweepTime = 0.0f;
 

@@ -260,6 +260,8 @@ void APlayerCharacter::OverlayStateChange_Callback(const ELSOverlayState PrevOve
 		CurrentItem->Notify_Equip();
 		CurrentItem->SetActorHiddenInGame(false);
 	}
+
+	Super::OverlayStateChange(CurrentOverlay);
 }
 
 void APlayerCharacter::HandleJump(const bool bIsPress)

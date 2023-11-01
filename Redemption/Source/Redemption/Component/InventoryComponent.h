@@ -12,6 +12,25 @@
 class ABaseCharacter;
 class AWeaponBaseActor;
 
+USTRUCT(BlueprintType)
+struct FEquipmentActorToSpawn
+{
+	GENERATED_BODY()
+
+	FEquipmentActorToSpawn()
+	{}
+
+public:
+	UPROPERTY(EditAnywhere, Category = Equipment)
+	TSubclassOf<AItemBaseActor> ActorToSpawn;
+
+	UPROPERTY(EditAnywhere, Category = Equipment)
+	FName AttachSocket;
+
+	UPROPERTY(EditAnywhere, Category = Equipment)
+	FTransform AttachTransform;
+};
+
 UCLASS(BlueprintType)
 class REDEMPTION_API UItemInventoryDataAsset : public UDataAsset
 {
@@ -19,7 +38,7 @@ class REDEMPTION_API UItemInventoryDataAsset : public UDataAsset
 
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	TArray<TSubclassOf<AItemBaseActor>> Item_Template;
+	TArray<FEquipmentActorToSpawn> ActorsToSpawn;
 };
 
 
@@ -41,6 +60,8 @@ public:
 	void RemoveInventory(class AItemBaseActor* InItem);
 
 	AItemBaseActor* FindItem(const ELSOverlayState InLSOverlayState) const;
+	AWeaponBaseActor* GetEquipWeapon() const;
+	FName GetEquipWeaponName() const;
 
 	const EAttackWeaponState ConvertWeaponState(const ELSOverlayState InLSOverlayState, bool& OutbCanAttack);
 	const bool ChangeAttackWeapon(const EAttackWeaponState InAttackWeaponState, int32 Index = 0);

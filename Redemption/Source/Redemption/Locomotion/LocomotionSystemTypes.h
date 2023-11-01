@@ -331,16 +331,6 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, meta = (EditCondition = "bHasAmmo"))
 	int32 ClipType;
 
-	// not gun maybe knife?
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
-	bool bHasItem = false;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, meta = (EditCondition = "bHasAmmo|bHasItem"))
-	FName EquipSocketName;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, meta = (EditCondition = "bHasAmmo|bHasItem"))
-	FName UnEquipSocketName;
-
 	int32 NeededAmmo;
 	// åªç›íeêî
 	int32 CurrentAmmo;

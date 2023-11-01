@@ -6,6 +6,7 @@
 #include "Misc/WvCommonUtils.h"
 #include "Character/BaseCharacter.h"
 #include "Locomotion/LocomotionComponent.h"
+#include "Animation/WvAnimInstance.h"
 
 #include "AbilitySystemGlobals.h"
 #include "CollisionQueryParams.h"

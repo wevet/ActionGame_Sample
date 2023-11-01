@@ -29,10 +29,7 @@ public:
 	virtual void Notify_Equip();
 	virtual void Notify_UnEquip();
 
-	virtual bool CanEquip() const;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Settings", meta = (EditCondition = bCanEquip))
-	FName AttachSocketName;
+	bool IsEquipped() const;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Settings")
 	ELSOverlayState OverlayState;

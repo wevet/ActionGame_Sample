@@ -24,6 +24,7 @@ public:
 
 protected:
 	virtual void BeginPlay() override;
+	virtual void BeginDestroy() override;
 
 public:	
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
@@ -34,26 +35,71 @@ protected:
 	UPROPERTY(EditDefaultsOnly)
 	TEnumAsByte<enum ETraceTypeQuery> AbilityTraceChannel;
 
+	UPROPERTY(EditDefaultsOnly)
+	float DrawTime = 0.5f;
+
+	UPROPERTY(EditDefaultsOnly)
+	class UHitReactBoneShakeDataAsset* HitReactBoneShakeDA;
+
+public:
+	bool AbilityDamageBoxTrace(class UWvAbilityBase* Ability, const int32 EffectGroupIndex, const FVector Start, const FVector End, FVector HalfSize, const FRotator Orientation, TArray<AActor*>& ActorsToIgnore);
+	bool AbilityDamageCapsuleTrace(class UWvAbilityBase* Ability, const int32 EffectGroupIndex, const FVector Start, const FVector End, const float Radius, const float HalfHeight, const FQuat CapsuleQuat, TArray<AActor*>& ActorsToIgnore);
+	const bool BulletTraceAttackToAbilitySystemComponent(const int32 WeaponID, class UWvAbilityEffectDataAsset* EffectDA, const int32 EffectGroupIndex, TArray<FHitResult>& Hits, const FVector SourceLocation);
+
+	UFUNCTION(BlueprintCallable)
+	FGameplayTag GetHitReactFeature();
+
+	UFUNCTION(BlueprintCallable)
+	bool GetIsFixedHitReactFeature() const;
+
+	UFUNCTION(BlueprintCallable)
+	bool HasBoneShaking() const;
+
+	void SetHitReactFeature(const FGameplayTag Tag, const bool bIsFixed);
+	void SetWeaknessHitReactFeature(const FGameplayTag Tag);
+	void StartHitReact(FGameplayEffectContextHandle& Context, const bool bIsDeath, const float Damage);
+
+	FGameplayTag GetWeaknessHitReactFeature() const;
+	TArray<class UBoneShakeExecuteData*> GetBoneShakeDatas() const;
+
+private:
+	void BoxTraceMulti(TArray<FWvBattleDamageAttackTargetInfo>& HitTargetInfos, const FVector Start, const FVector End, const FVector HalfSize, const FRotator Orientation, const TArray<AActor*>& ActorsToIgnore);
+	void CapsuleTraceMulti(TArray<FWvBattleDamageAttackTargetInfo>& HitTargetInfos, const FVector Start, const FVector End, const float Radius, const float HalfHeight, const FQuat CapsuleFquat, const TArray<AActor*>& ActorsToIgnore);
+	void AbilityTraceAttackToASC(class UWvAbilityBase* Ability, const int32 EffectGroupIndex, TArray<FWvBattleDamageAttackTargetInfo> HitTargetInfos, const FVector SourceLocation);
+	void AttackToASC(const FWvBattleDamageAttackSourceInfo SourceInfo, TArray<FWvBattleDamageAttackTargetInfo> HitInfos, class UWvAbilityEffectDataAsset* EffectDA, const int32 EffectGroupIndex, const FVector SourceLocation);
+	void HitResultEnemyFilter(TArray<FHitResult>& Hits, TArray<FWvBattleDamageAttackTargetInfo>& HitTargetInfos);
+
+
+	UFUNCTION()
+	void OnTagUpdate(const FGameplayTag Tag, const bool bIsTagExists);
+
+	UFUNCTION()
+	void HandleDeath();
+
+	UFUNCTION()
+	void WeaknessHitReactEventCallbak(const AActor* AttackActor, const FName WeaknessName, const float HitValue);
+
+	void StartBoneShake(const FName HitBoneName, const FGameplayTag BoneShakeTriggerTag, const FGameplayTag BoneShakeStrengthTag);
+	void TickUpdateUpdateBoneShake();
+	bool UpdateBoneShake(const float DeltaTime);
 
 private:
 	TWeakObjectPtr<UWvAbilitySystemComponent> ASC;
 	TWeakObjectPtr<ABaseCharacter> Character;
 
 	bool bIsDebugTrace = false;
-	float DrawTime = 2.0f;
 
-public:
-	bool AbilityDamageBoxTrace(class UWvAbilityBase* Ability, const int32 EffectGroupIndex, const FVector Start, const FVector End, FVector HalfSize, const FRotator Orientation, TArray<AActor*>& ActorsToIgnore);
-	bool AbilityDamageCapsuleTrace(class UWvAbilityBase* Ability, const int32 EffectGroupIndex, const FVector Start, const FVector End, const float Radius, const float HalfHeight, const FQuat CapsuleQuat, TArray<AActor*>& ActorsToIgnore);
+	FTimerHandle TimerHandle;
+	FTimerHandle TickBoneShakeTimerHandle;
 
-	const bool BulletTraceAttackToAbilitySystemComponent(const int32 WeaponID, class UWvAbilityEffectDataAsset* EffectDA, const int32 EffectGroupIndex, TArray<FHitResult>& Hits, const FVector SourceLocation);
+	bool IsFixedHitReactFeature{ false };
+	FGameplayTag HitReactFeature;
+	FGameplayTag WeaknessHitReactFeature;
+	FGameplayTag StateDead;
+	FGameplayTag StateHitReact;
 
-private:
-	void BoxTraceMulti(TArray<FWvBattleDamageAttackTargetInfo>& HitTargetInfos, const FVector Start, const FVector End, const FVector HalfSize, const FRotator Orientation, const TArray<AActor*>& ActorsToIgnore);
-	void CapsuleTraceMulti(TArray<FWvBattleDamageAttackTargetInfo>& HitTargetInfos, const FVector Start, const FVector End, const float Radius, const float HalfHeight, const FQuat CapsuleFquat, const TArray<AActor*>& ActorsToIgnore);
+	bool IsDead{ false };
 
-	void AbilityTraceAttackToASC(class UWvAbilityBase* Ability, const int32 EffectGroupIndex, TArray<FWvBattleDamageAttackTargetInfo> HitTargetInfos, const FVector SourceLocation);
-	void AttackToASC(const FWvBattleDamageAttackSourceInfo SourceInfo, TArray<FWvBattleDamageAttackTargetInfo> HitInfos, class UWvAbilityEffectDataAsset* EffectDA, const int32 EffectGroupIndex, const FVector SourceLocation);
-
-	void HitResultEnemyFilter(TArray<FHitResult>& Hits, TArray<FWvBattleDamageAttackTargetInfo>& HitTargetInfos);
+	UPROPERTY()
+	class USkeletalMeshBoneShakeExecuteData* SkeletalMeshBoneShakeExecuteData;
 };

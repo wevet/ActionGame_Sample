@@ -22,7 +22,7 @@ enum class ETargetRelation : uint8
 USTRUCT(BlueprintType)
 struct WVABILITYSYSTEM_API FWvTargetDataFilter
 {
-	GENERATED_USTRUCT_BODY()
+	GENERATED_BODY()
 
 public:
 

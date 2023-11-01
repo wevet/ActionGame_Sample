@@ -358,6 +358,11 @@ void UWvInputEventComponent::TriggerCacheInputEvent(UGameplayAbility* CallFromAb
 			ResetWaitTillEnd(CallFromAbility);
 		}
 	}
+
+	if (AnimatingAbility)
+	{
+		UE_LOG(LogTemp, Log, TEXT("AnimatingAbility => %s"), *AnimatingAbility->GetName());
+	}
 }
 
 void UWvInputEventComponent::InputCallBack(const FKey InputKey, const FName Key, const bool bPress)

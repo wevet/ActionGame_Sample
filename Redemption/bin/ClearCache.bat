@@ -16,6 +16,8 @@ rmdir /q /s ..\\Plugins\\QuadrupedIK\\Binaries
 rmdir /q /s ..\\Plugins\\QuadrupedIK\\Intermediate
 rmdir /q /s ..\\Plugins\\WvAbilitySystem\\Binaries
 rmdir /q /s ..\\Plugins\\WvAbilitySystem\\Intermediate
+rmdir /q /s ..\\Plugins\\RuleProcessor\\Binaries
+rmdir /q /s ..\\Plugins\\RuleProcessor\\Intermediate
 
 del ..\\.vsconfig
 del ..\\Redemption.sln

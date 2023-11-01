@@ -432,4 +432,79 @@ void UWvAbilitySystemBlueprintFunctionLibrary::SetDamage(AActor* Actor, const fl
 	} while (false);
 }
 
+class UApplyEffectExData* UWvAbilitySystemBlueprintFunctionLibrary::GetEffectExData(FGameplayEffectContextHandle ContextHandle)
+{
+	FOnceApplyEffect OnceApplyEffect;
+	if (EffectContextGetEffectGroup(ContextHandle, OnceApplyEffect))
+	{
+		return GetOnecEffectExData(OnceApplyEffect);
+	}
+	return nullptr;
+}
+
+EHitReactDirection UWvAbilitySystemBlueprintFunctionLibrary::EvaluteHitReactDirection(const float Angle)
+{
+	if (Angle > -45.f && Angle <= 45.f)
+	{
+		return EHitReactDirection::Back;
+	}
+	else if (Angle > 45.f && Angle <= 135.f)
+	{
+		return EHitReactDirection::Right;
+	}
+	else if (Angle <= -45.f && Angle >= -135.f)
+	{
+		return EHitReactDirection::Left;
+	}
+	return EHitReactDirection::Forward;
+}
+
+EHitVerticalDirection UWvAbilitySystemBlueprintFunctionLibrary::EvaluteHitVerticalDirection(const FVector Direction)
+{
+	if (Direction.Z >= 0.4f) //0.8f
+	{
+		return EHitVerticalDirection::Top;
+	}
+	else if (Direction.Z <= -0.4f) //-0.8f
+	{
+		return EHitVerticalDirection::Bottom;
+	}
+	return EHitVerticalDirection::Middle;
+}
+
+FVector UWvAbilitySystemBlueprintFunctionLibrary::GetAttackDirection(FGameplayEffectContextHandle EffectContextHandle, const FVector ActorLocation)
+{
+	FVector* AttackDirectionPtr = nullptr;
+
+	FWvGameplayEffectContext* EffectContext = static_cast<FWvGameplayEffectContext*>(EffectContextHandle.Get());
+	if (EffectContext)
+	{
+		FGameplayAbilityTargetDataHandle TargetDataHandle = EffectContext->GetTargetDataHandle();
+		const FWvGameplayAbilityTargetData* TargetData = static_cast<FWvGameplayAbilityTargetData*>(TargetDataHandle.Get(0));
+
+		if (TargetData)
+		{
+			FVector AttackDirection = FVector(TargetData->SourceLocation - ActorLocation).GetSafeNormal();
+			AttackDirectionPtr = &AttackDirection;
+		}
+	}
+	
+	if (!AttackDirectionPtr)
+	{
+		const FHitResult* HitResult = EffectContextHandle.GetHitResult();
+		if (HitResult)
+		{
+			FVector AttackDirection = HitResult->Normal;
+			AttackDirectionPtr = &AttackDirection;
+		}
+		else
+		{
+			FVector AttackDirection = FVector(EffectContextHandle.GetOrigin() - ActorLocation).GetSafeNormal();
+			AttackDirectionPtr = &AttackDirection;
+		}
+	}
+
+	return *AttackDirectionPtr;
+}
+
 

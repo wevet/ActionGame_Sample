@@ -22,6 +22,22 @@ void UStatusComponent::BeginPlay()
 	HPChangeDelegateHandle = ASC->GetGameplayAttributeValueChangeDelegate(UWvAbilityAttributeSet::GetHPAttribute()).AddUObject(this, &UStatusComponent::HealthChange_Callback);
 	DamageChangeDelegateHandle = ASC->GetGameplayAttributeValueChangeDelegate(UWvAbilityAttributeSet::GetDamageAttribute()).AddUObject(this, &UStatusComponent::DamageChange_Callback);
 
+	if (ASC.IsValid())
+	{
+		AAS = ASC->GetStatusAttributeSet(UWvAbilityAttributeSet::StaticClass());
+		if (AAS.IsValid())
+		{
+			UE_LOG(LogTemp, Log, TEXT("AAS valid, function => %s"), *FString(__FUNCTION__));
+		}
+		else
+		{
+			UE_LOG(LogTemp, Error, TEXT("AAS not valid, function => %s"), *FString(__FUNCTION__));
+		}
+	}
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT("ASC not valid, function => %s"), *FString(__FUNCTION__));
+	}
 }
 
 void UStatusComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -35,6 +51,7 @@ void UStatusComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	}
 
 	ASC.Reset();
+	AAS.Reset();
 	Super::EndPlay(EndPlayReason);
 }
 
@@ -45,10 +62,9 @@ void UStatusComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActo
 
 void UStatusComponent::HealthChange_Callback(const FOnAttributeChangeData& Data)
 {
-	auto Attr = ASC->GetStatusAttributeSet(UWvAbilityAttributeSet::StaticClass());
-	if (Attr)
+	if (AAS.IsValid())
 	{
-		auto Health = Attr->GetHP();
+		auto Health = AAS->GetHP();
 		UE_LOG(LogTemp, Log, TEXT("Health => %.3f, function => %s"), Health, *FString(__FUNCTION__));
 	}
 }
@@ -58,4 +74,5 @@ void UStatusComponent::DamageChange_Callback(const FOnAttributeChangeData& Data)
 	//
 	UE_LOG(LogTemp, Log, TEXT("Damage => %.3f, function => %s"), Data.NewValue, *FString(__FUNCTION__));
 }
+
 

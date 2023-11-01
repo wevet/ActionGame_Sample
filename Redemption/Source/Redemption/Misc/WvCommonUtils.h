@@ -11,6 +11,8 @@
 class USkeletalMeshComponent;
 class UFXSystemComponent;
 class UFXSystemAsset;
+class ABaseCharacter;
+struct FHitReactInfoRow;
 
 /**
  * 
@@ -24,6 +26,7 @@ class REDEMPTION_API UWvCommonUtils : public UBlueprintFunctionLibrary
 public:
 	static float GetAngleBetweenVector(FVector Vec1, FVector Vec2);
 	static float GetAngleBetween3DVector(FVector Vec1, FVector Vec2);
+	static float GetAngleBetween3DVector(FVector Vec1, FVector Vec2, FVector RefUpVector);
 
 	static FTransform TransformSubStract(const FTransform& TransformA, const FTransform& TransformB);
 	static FTransform TransformAdd(const FTransform& TransformA, const FTransform& TransformB);
@@ -63,4 +66,6 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "CommonUtils")
 	static bool IsBot(const AController* Controller);
+
+	static FHitReactInfoRow* FindHitReactInfoRow(ABaseCharacter* Character);
 };

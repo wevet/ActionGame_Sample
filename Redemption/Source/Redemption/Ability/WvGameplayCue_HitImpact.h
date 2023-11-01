@@ -21,9 +21,6 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Asset")
 	UWvCueConfigDataAssest* CueConfigDataAssest;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Asset|Hit Direction")
-	TMap<EHitDirection, float> DecalHitRelativeRollMapping;
-
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Asset")
 	bool IsDebug{ true };
 

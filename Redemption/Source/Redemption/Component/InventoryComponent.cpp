@@ -23,19 +23,18 @@ void UInventoryComponent::BeginPlay()
 
 	if (InitInventoryDA)
 	{
-		for (auto Item : InitInventoryDA->Item_Template)
+		for (auto SpawnInfo : InitInventoryDA->ActorsToSpawn)
 		{
-			if (Item)
+			if (SpawnInfo.ActorToSpawn)
 			{
 				FActorSpawnParameters SpawnParams;
 				SpawnParams.Owner = Character.Get();
 				SpawnParams.Instigator = nullptr;
-				AItemBaseActor* ItemPtr = GetWorld()->SpawnActor<AItemBaseActor>(Item, Character->GetActorTransform(), SpawnParams);
-				if (ItemPtr->CanEquip())
-				{
-					FAttachmentTransformRules Rules(EAttachmentRule::SnapToTarget, true);
-					ItemPtr->AttachToComponent(Character->GetMesh(), Rules, ItemPtr->AttachSocketName);
-				}
+				AItemBaseActor* ItemPtr = GetWorld()->SpawnActorDeferred<AItemBaseActor>(SpawnInfo.ActorToSpawn, FTransform::Identity, Character.Get());
+				ItemPtr->FinishSpawning(FTransform::Identity, /*bIsDefaultTransform=*/ true);
+				ItemPtr->SetActorRelativeTransform(SpawnInfo.AttachTransform);
+				ItemPtr->AttachToComponent(Character->GetMesh(), FAttachmentTransformRules::KeepRelativeTransform, SpawnInfo.AttachSocket);
+
 				ItemPtr->SetActorHiddenInGame(true);
 				ItemPtr->SetOwner(Character.Get());
 				AddInventory(ItemPtr);
@@ -214,6 +213,31 @@ AItemBaseActor* UInventoryComponent::FindItem(const ELSOverlayState InLSOverlayS
 	}
 
 	return nullptr;
+}
+
+AWeaponBaseActor* UInventoryComponent::GetEquipWeapon() const
+{
+	for (TPair<EAttackWeaponState, TArray<AWeaponBaseActor*>>Pair : WeaponActorMap)
+	{
+		for (auto& Item : Pair.Value)
+		{
+			if (Item->IsEquipped())
+			{
+				return Item;
+			}
+		}
+	}
+	return nullptr;
+}
+
+FName UInventoryComponent::GetEquipWeaponName() const
+{
+	AWeaponBaseActor* Weapon = GetEquipWeapon();
+	if (IsValid(Weapon))
+	{
+		return Weapon->GetWeaponName();
+	}
+	return NAME_None;
 }
 
 TArray<AWeaponBaseActor*> UInventoryComponent::FindOverlayWeaponArray(const ELSOverlayState InLSOverlayState) const

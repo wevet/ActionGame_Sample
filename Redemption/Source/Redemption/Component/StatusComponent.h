@@ -26,14 +26,13 @@ public:
 protected:
 	virtual void BeginPlay() override;
 
-public:	
-
 private:
 	UPROPERTY()
 	FCharacterBaseParameter CharacterBaseParameter;
 
 	TWeakObjectPtr<UWvAbilitySystemComponent> ASC;
 	TWeakObjectPtr<ABaseCharacter> Character;
+	TWeakObjectPtr<UWvAbilityAttributeSet> AAS;
 
 	FDelegateHandle HPChangeDelegateHandle;
 	FDelegateHandle DamageChangeDelegateHandle;

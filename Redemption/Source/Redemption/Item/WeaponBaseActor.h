@@ -27,12 +27,9 @@ protected:
 	FGameplayTag Itemtag;
 
 public:
-	EAttackWeaponState GetAttackWeaponState() const 
-	{
-		return PawnAttackParam.AttackWeaponState;
-	}
-
+	EAttackWeaponState GetAttackWeaponState() const { return PawnAttackParam.AttackWeaponState; }
 	FGameplayTag GetItemtag() const { return Itemtag; }
+	FName GetWeaponName() const { return PawnAttackParam.WeaponName; }
 
 	virtual void Notify_Equip() override;
 	virtual void Notify_UnEquip() override;

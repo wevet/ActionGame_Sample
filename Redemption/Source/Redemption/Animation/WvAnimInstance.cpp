@@ -14,9 +14,11 @@
 #include "Animation/AnimClassInterface.h"
 #include "Animation/AnimInstanceProxy.h"
 #include "Animation/AnimNode_LinkedAnimLayer.h"
+#include "Animation/BlendSpaceBase.h"
 
 #include "Component/WvCharacterMovementComponent.h"
 #include "Locomotion/LocomotionComponent.h"
+#include "Character/WvPlayerController.h"
 
 
 

@@ -46,6 +46,33 @@ struct FWvReplicatedAcceleration
 	// Raw Z accel rate component, quantized to represent [-MaxAcceleration, MaxAcceleration]
 };
 
+USTRUCT(BlueprintType)
+struct FOverlayAnimInstance
+{
+	GENERATED_BODY()
+
+public:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	ELSOverlayState OverlayState;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	TSubclassOf<UAnimInstance> AnimInstanceClass;
+};
+
+UCLASS(BlueprintType)
+class REDEMPTION_API UOverlayAnimInstanceDataAsset : public UDataAsset
+{
+	GENERATED_BODY()
+
+public:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	TArray<FOverlayAnimInstance> OverlayAnimInstances;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	TSubclassOf<UAnimInstance> UnArmedAnimInstanceClass;
+
+	TSubclassOf<UAnimInstance> FindAnimInstance(const ELSOverlayState InOverlayState) const;
+};
 
 class UPredictionFootIKComponent;
 class UMotionWarpingComponent;
@@ -54,6 +81,7 @@ class ULocomotionComponent;
 class UInventoryComponent;
 class UCombatComponent;
 class UStatusComponent;
+class UWvAnimInstance;
 
 
 UCLASS(Abstract)
@@ -98,6 +126,7 @@ public:
 
 	virtual FGameplayTag GetAvatarTag() const override;
 	virtual ECharacterRelation GetRelationWithSelfImpl(const IWvAbilityTargetInterface* Other) const override;
+	virtual bool IsDead() const override;
 
 	virtual USceneComponent* GetOverlapBaseComponent() override;
 
@@ -145,6 +174,12 @@ public:
 	UFUNCTION(BlueprintCallable, Category = Movement)
 	class UWvCharacterMovementComponent* GetWvCharacterMovementComponent() const;
 
+	UFUNCTION(BlueprintCallable, Category = Components)
+	class UCombatComponent* GetCombatComponent() const;
+
+	UFUNCTION(BlueprintCallable, Category = Components)
+	class UInventoryComponent* GetInventoryComponent() const;
+
 	UFUNCTION(BlueprintCallable, Category = Utils)
 	USceneComponent* GetHeldObjectRoot() const;
 
@@ -180,7 +215,10 @@ public:
 	UFUNCTION(BlueprintCallable, Category = Movement)
 	virtual void DoStopWalking();
 
-	bool IsDead() const;
+	void BeginDeathAction();
+	void EndDeathAction(const float Interval);
+
+	void OverlayStateChange(const ELSOverlayState CurrentOverlay);
 
 
 protected:
@@ -214,6 +252,9 @@ protected:
 
 	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = "AbilitySystem")
 	FCustomWvAbilitySystemAvatarData AbilitySystemData;
+
+	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = "Animation")
+	UOverlayAnimInstanceDataAsset* OverlayAnimInstanceDA;
 
 	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = "AbilitySystem")
 	FGameplayTag CharacterTag;
@@ -251,6 +292,9 @@ protected:
 	UPROPERTY()
 	FOnTeamIndexChangedDelegate OnTeamChangedDelegate;
 
+	UPROPERTY()
+	UWvAnimInstance* AnimInstance;
+
 	// Angle threshold to determine if the input direction is vertically aligned with Actor
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input)
 	float InputDirVerThreshold = 40.0f;
@@ -261,5 +305,10 @@ protected:
 	FVector2D InputAxis = FVector2D::ZeroVector;
 	bool bHasMovementInput = false;
 	float MovementInputAmount;
+
+
+	FTimerHandle Ragdoll_TimerHandle;
+	void EndDeathAction_Callback();
+
 };
 

@@ -60,6 +60,7 @@ public:
 	virtual void OnReceiveAbilityAttack(AActor* Actor, const FWvBattleDamageAttackSourceInfo SourceInfo, const float Damage);
 	virtual void OnSendKillTarget(AActor* Actor, const float Damage);
 	virtual void OnReceiveKillTarget(AActor* Actor, const float Damage);
+	virtual bool IsDead() const;
 
 	FAbilityDeadAnimProcessForEventDelegate OnDeadAnimBeginPlay;
 	FAbilityDeadAnimProcessForEventDelegate OnDeadAnimFinish;

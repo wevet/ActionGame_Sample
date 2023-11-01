@@ -9,6 +9,7 @@
 #include "AbilitySystemComponent.h"
 #include "Engine/DataAsset.h"
 #include "Engine/DataTable.h"
+#include "Curves/CurveFloat.h"
 #include "Components/PrimitiveComponent.h"
 #include "LegacyCameraShake.h"
 #include "WvAbilityBase.h"
@@ -132,7 +133,7 @@ struct FWvAbilityConfig
 	float CD;
 };
 
-//主人公の汎用スキルリスト
+// character common skill list
 USTRUCT(BlueprintType)
 struct FWvAbilityRow : public FTableRowBase
 {
@@ -157,14 +158,13 @@ enum class EMagicType : uint8
 {
 	Buff = 0,
 	DeBuff,
-	//補助
+	//Assist
 	Auxiliary,
 	Attack,
 	Shield,
 	Recover,
-	//武器エンチャント
+	// weapon enchantment
 	WeaponEnchantment,
-	//状態異常
 	AbnormalStatus
 };
 
@@ -227,21 +227,6 @@ enum class EMagicUseCondition : uint8
 {
 	OnlyInBattle = 0,
 	Any
-};
-
-UENUM(BlueprintType)
-enum class EHitDirection : uint8
-{
-	None UMETA(DisplayName = "None"),
-	Left UMETA(DisplayName = "Right to left"),
-	Right UMETA(DisplayName = "Left to right"),
-	Up UMETA(DisplayName = "Bottom to top"),
-	Down UMETA(DisplayName = "Top to bottom"),
-	LeftDown_RightUp UMETA(DisplayName = "Lower left to upper right"),
-	LeftUp_RightDown UMETA(DisplayName = "Upper left to lower right"),
-	RightDown_LeftUp UMETA(DisplayName = "Lower right to upper left"),
-	RightUp_LeftDown UMETA(DisplayName = "Upper right to lower left"),
-	Back_Front UMETA(DisplayName = "Back to front"),
 };
 
 USTRUCT(BlueprintType)
@@ -543,12 +528,6 @@ struct FWvAbilityData
 };
 
 
-UCLASS(BlueprintType)
-class WVABILITYSYSTEM_API UWvHitReactDataAsset : public UDataAsset
-{
-	GENERATED_BODY()
-};
-
 USTRUCT(BlueprintType)
 struct FWvHitReact
 {
@@ -557,6 +536,9 @@ struct FWvHitReact
 public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
 	FGameplayTag FeatureTag;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+	FGameplayTag FixFeatureTag;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
 	bool IsFixed = false;
@@ -612,9 +594,6 @@ public:
 
 	UPROPERTY(EditDefaultsOnly)
 	FWvHitReact TargetHitReact;
-
-	UPROPERTY(EditDefaultsOnly)
-	EHitDirection HitDirection;
 
 	UPROPERTY(EditDefaultsOnly)
 	FWvAbilityEffectCueConfig CueConfig;
@@ -718,4 +697,245 @@ public:
 };
 
 
+#pragma region HitReaction
+USTRUCT(BlueprintType)
+struct FHitReactRow : public FTableRowBase
+{
+	GENERATED_BODY()
+
+public:
+
+	UPROPERTY(EditDefaultsOnly)
+	class UAnimMontage* Montage = nullptr;
+};
+
+UENUM(BlueprintType)
+enum class EHitReactDirection : uint8
+{
+	Forward,
+	Back,
+	Left,
+	Right,
+};
+
+UENUM(BlueprintType)
+enum class EHitVerticalDirection : uint8
+{
+	Top,
+	Bottom,
+	Middle,
+};
+
+USTRUCT(BlueprintType)
+struct FHitReactConditionInfo
+{
+	GENERATED_BODY()
+
+public:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	EHitReactDirection HitDirection;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	class UAnimMontage* Montage = nullptr;
+};
+
+USTRUCT(BlueprintType)
+struct FHitReactVerticalConditionInfo
+{
+	GENERATED_BODY()
+
+public:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	EHitVerticalDirection VerticalDirection;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	TArray<FHitReactConditionInfo> Montages;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	class UAnimMontage* NormalMontage = nullptr;
+};
+
+UENUM(BlueprintType)
+enum class EDynamicHitDirection : uint8
+{
+	NONE,
+	HitDirection,
+	FaceToAttacker,
+};
+
+USTRUCT(BlueprintType)
+struct FHitReactInfoRow : public FTableRowBase
+{
+	GENERATED_BODY()
+
+public:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	TArray<FHitReactVerticalConditionInfo> VerticalConditions;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	EDynamicHitDirection DynamicHitDirection { EDynamicHitDirection::FaceToAttacker };
+};
+
+UCLASS()
+class WVABILITYSYSTEM_API UWvHitReactDataAsset : public UDataAsset
+{
+	GENERATED_BODY()
+
+public:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	class UDataTable* NormalHitReactTable;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	class UDataTable* SpecialHitReactTable;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	TMap<FName, class UDataTable*> WeaponHitReactTables;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FGameplayTag BoneShakeTriggerTag;
+
+public:
+	const FHitReactInfoRow* GetHitReactInfoRow_Normal(const UAbilitySystemComponent* ASC, const FGameplayTag& Tag);
+	const FHitReactInfoRow* GetHitReactInfoRow_Weapon(const FName WeaponName, const UAbilitySystemComponent* ASC, const FGameplayTag& Tag);
+	const FHitReactInfoRow* GetHitReactInfoRow_Special(const UAbilitySystemComponent* ASC, const FGameplayTag& Tag);
+
+protected:
+	const FHitReactInfoRow* GetHitReactInfoRow(UDataTable* Table, const UAbilitySystemComponent* ASC, const FGameplayTag& AbilityMontageFilter);
+
+};
+
+USTRUCT(BlueprintType)
+struct FNearestShakableBone
+{
+	GENERATED_BODY()
+
+public:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FName Bone;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float Weight;
+};
+
+USTRUCT(BlueprintType)
+struct FTransmitShakableBoneInfo
+{
+	GENERATED_BODY()
+
+public:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	TMap<FName, float> OtherBoneTransmitShakeStrength;
+};
+
+USTRUCT(BlueprintType)
+struct FHitReactBoneShake
+{
+	GENERATED_BODY()
+
+public:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float ShakeStrength = 5.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float ShakeDuration;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UCurveFloat* DampingCurve;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FTransmitShakableBoneInfo Transmits;
+};
+
+USTRUCT(BlueprintType)
+struct FHitReactBoneShakeStrengthConfig
+{
+	GENERATED_BODY()
+
+public:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float Strength{ 1.f };
+
+	// bone jitter data
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	TMap<FName, FHitReactBoneShake> BoneShakeData;
+};
+
+USTRUCT(BlueprintType)
+struct FSkeletalMeshShakeData
+{
+	GENERATED_BODY()
+
+public:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	TMap<FGameplayTag, FHitReactBoneShakeStrengthConfig> StrengthBoneShakeData;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	TArray<FName> LockBoneNams;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	TMap<FName, FNearestShakableBone> NearestShakableBoneData;
+};
+
+UCLASS(BlueprintType)
+class WVABILITYSYSTEM_API UHitReactBoneShakeDataAsset : public UDataAsset
+{
+	GENERATED_BODY()
+
+public:
+	//Trigger tag - hit jitter data for skeletal mesh bodies
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	TMap<FGameplayTag, FSkeletalMeshShakeData> SkeletalShakeData;
+};
+
+UCLASS(MinimalAPI, Blueprintable)
+class UBoneShakeExecuteData : public UObject
+{
+	GENERATED_BODY()
+
+public:
+	UPROPERTY(BlueprintReadOnly)
+	FName BoneName;
+
+	UPROPERTY(BlueprintReadOnly)
+	FVector ShakeOffsetLocation { FVector::ZeroVector };
+
+	FVector SourceLocation;
+	float Strength = 0.f;
+	float TotalTime = 0.f;
+	float CurTime = 0.f;
+	float Direction = 0.f;
+
+	UPROPERTY()
+	UCurveFloat* DampingCurve = nullptr;
+};
+
+UCLASS(MinimalAPI)
+class USkeletalMeshBoneShakeExecuteData : public UObject
+{
+	GENERATED_BODY()
+
+public:
+	UPROPERTY()
+	TArray<UBoneShakeExecuteData*> BoneShakeDatas;
+	FVector HitDirection;
+};
+
+UCLASS(Blueprintable)
+class UAAU_HitReactBoneShakeDATool : public UObject
+{
+	GENERATED_BODY()
+
+public:
+	UFUNCTION(BlueprintCallable)
+	void ResetHitReactBoneShakeDA(class UHitReactBoneShakeDataAsset* DA, class USkeletalMesh* SkeletalMesh, FGameplayTag TriggetTag, FGameplayTag StrengthTag, float BaseStrength, float ShakeBoneStrength, float ShakeDuration, class UCurveFloat* DampingCurve, float NearestBoneDistance, float ShakeBoneDistance);
+
+	UFUNCTION(BlueprintCallable)
+	void ResetSkeletalBoneData(class UHitReactBoneShakeDataAsset* DA, class USkeletalMesh* SkeletalMesh, FGameplayTag TriggetTag, FGameplayTag StrengthTag, float NearestBoneDistance, float ShakeBoneDistance);
+
+private:
+	void SkeletalMeshCalculateAllNearestShakeBone(USkeletalMesh* SkeletalMesh, TArray<FName> ShakeBoneNames, TMap<FName, FTransform> boneName2PosDict, float BoneDistance, FSkeletalMeshShakeData& SkeletalMeshShakeData);
+	void SkeletalMeshCalculateShakeBoneTransmitStrength(USkeletalMesh* SkeletalMesh, TArray<FName> ShakeBoneNames, TMap<FName, FTransform> boneName2PosDict, float BoneDistance, FHitReactBoneShakeStrengthConfig& HitReactBoneShakeStrengthConfig);
+	void SaveDA(class UHitReactBoneShakeDataAsset* DA);
+};
+#pragma endregion
 
