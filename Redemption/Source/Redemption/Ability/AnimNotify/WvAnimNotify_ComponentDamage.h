@@ -41,4 +41,7 @@ protected:
 
 	UPROPERTY()
 	class UWvAT_ComponentDamage* BoneFrameTask;
+
+private:
+	void NotifyWeapon_Fire(USkeletalMeshComponent* MeshComp);
 };

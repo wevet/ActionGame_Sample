@@ -61,6 +61,7 @@ public:
 	virtual void OnSendKillTarget(AActor* Actor, const float Damage);
 	virtual void OnReceiveKillTarget(AActor* Actor, const float Damage);
 	virtual bool IsDead() const;
+	virtual bool IsTargetable() const;
 
 	FAbilityDeadAnimProcessForEventDelegate OnDeadAnimBeginPlay;
 	FAbilityDeadAnimProcessForEventDelegate OnDeadAnimFinish;

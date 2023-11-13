@@ -2,6 +2,11 @@
 
 
 #include "Ability/AnimNotify/WvAnimNotify_ComponentDamage.h"
+#include "Character/BaseCharacter.h"
+#include "Component/CombatComponent.h"
+#include "Component/InventoryComponent.h"
+#include "Item/WeaponBaseActor.h"
+
 
 UWvAnimNotify_ComponentDamage::UWvAnimNotify_ComponentDamage(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
@@ -34,7 +39,9 @@ void UWvAnimNotify_ComponentDamage::AbilityNotifyBegin(USkeletalMeshComponent* M
 			);
 
 			BoneFrameTask->ReadyForActivation();
+			NotifyWeapon_Fire(MeshComp);
 		}
+
 	}
 }
 
@@ -43,6 +50,22 @@ void UWvAnimNotify_ComponentDamage::AbilityNotifyEnd(USkeletalMeshComponent* Mes
 	if (BoneFrameTask)
 	{
 		BoneFrameTask->EndTask();
+	}
+}
+
+void UWvAnimNotify_ComponentDamage::NotifyWeapon_Fire(USkeletalMeshComponent* MeshComp)
+{
+	ABaseCharacter* Character = Cast<ABaseCharacter>(MeshComp->GetOwner());
+	if (Character)
+	{
+		if (Character->GetInventoryComponent())
+		{
+			auto Weapon = Character->GetInventoryComponent()->GetEquipWeapon();
+			if (Weapon)
+			{
+				Weapon->DoFire();
+			}
+		}
 	}
 }
 

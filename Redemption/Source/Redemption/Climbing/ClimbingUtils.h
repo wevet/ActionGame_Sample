@@ -5,7 +5,7 @@
 #include "CoreMinimal.h"
 #include "UObject/NoExportTypes.h"
 #include "Kismet/BlueprintFunctionLibrary.h"
-#include "Component/WvCharacterMovementTypes.h"
+#include "Locomotion/LocomotionSystemTypes.h"
 #include "ClimbingUtils.generated.h"
 
 class ACharacter;
@@ -50,5 +50,8 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "ClimbingUtils")
 	static bool ClimbingDetectFootIKTrace(const ACharacter* Character, const FVector Center, const FVector Direction, const FVector2D TraceHeight, const float SphereRadius, const bool bDebug, const float RightOffset, FVector& OutTargetImpact, FVector& OutTargetNormal);
+
+	UFUNCTION(BlueprintPure, Category = "ClimbingUtils")
+	static FTransform ExtractedTransformsInterpolation(const FTransform A, const FTransform B, const float VX, const float VY, const float VZ, const float ROT, const float Alpha, const float RotationDirection180, const bool UseInterFor180Rot);
 };
 

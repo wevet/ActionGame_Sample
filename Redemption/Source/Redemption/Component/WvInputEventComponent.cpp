@@ -377,10 +377,10 @@ void UWvInputEventComponent::InputCallBack(const FKey InputKey, const FName Key,
 
 	if (PlayerCharacter.Get())
 	{
-		//if (!PlayerCharacter->GetEnableInputControl())
-		//{
-		//	return;
-		//}
+		if (PlayerCharacter->IsInputKeyDisable())
+		{
+			return;
+		}
 	}
 
 	FWvInputEvent* InputEvent = FindInputEvent(Key);
@@ -467,10 +467,10 @@ void UWvInputEventComponent::PluralInputCallBack(const FKey InputKey, const FNam
 {
 	if (PlayerCharacter.Get())
 	{
-		//if (!PlayerCharacter->GetEnableInputControl())
-		//{
-		//	return;
-		//}
+		if (PlayerCharacter->IsInputKeyDisable())
+		{
+			return;
+		}
 	}
 
 	if (!InputKey.IsValid())

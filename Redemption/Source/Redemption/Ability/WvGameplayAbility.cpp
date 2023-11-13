@@ -219,15 +219,3 @@ bool UWvGameplayAbility::DoesAbilitySatisfyTagRequirements(const UAbilitySystemC
 	return true;
 }
 
-bool UWvGameplayAbility::AbilityTagsHasAny(const FGameplayTagContainer TagContainer) const
-{
-	UWvAbilityDataAsset* DA = GetWvAbilityDataNoChecked();
-	if (!DA)
-	{
-		return false;
-	}
-	const bool bHasAny = DA->AbilityTags.HasAny(TagContainer);
-	return bHasAny;
-}
-
-

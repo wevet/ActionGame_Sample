@@ -16,6 +16,7 @@ class UAnimInstance;
 class UWvAbilitySystemComponent;
 class ABaseCharacter;
 class UCapsuleComponent;
+class UHitTargetComponent;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FLocomotionStateChangeDelegate);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FLocomotionOverlayChangeDelegate, const ELSOverlayState, PrevOverlay, const ELSOverlayState, CurrentOverlay);
@@ -252,16 +253,43 @@ protected:
 	FVector2D GroundFrictionRange = FVector2D(0.7f, 1.0f);
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion")
-	FVector2D SpeedRate = FVector2D(160.f, 380.f);
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion")
-	FVector2D RotationInterpSpeedRate = FVector2D(5.f, 10.f);
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion")
 	FRotator RunningRotationRate = FRotator(0.0f, 560.0f, 0.0f);
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion")
 	FRotator SprintingRotationRate = FRotator(0.0f, 420.0f, 0.0f);
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion|Rotation")
+	bool bAllowCustomRotation = true;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion|Rotation", meta = (EditCondition = "bAllowCustomRotation"))
+	float SlowSpeedRate = 10.0f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion|Rotation", meta = (EditCondition = "bAllowCustomRotation"))
+	float FastSpeedRate = 15.0f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion|Rotation", meta = (EditCondition = "bAllowCustomRotation"))
+	float AimRotationInterpSpeed = 10.0f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion|Rotation", meta = (EditCondition = "bAllowCustomRotation"))
+	float AimRotationLimitTheshold = 45.0f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion|Rotation", meta = (EditCondition = "bAllowCustomRotation"))
+	float AimGunRotationLimitTheshold = 4.0f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion|Rotation", meta = (EditCondition = "bAllowCustomRotation"))
+	float AimGunYawOffset = 0.f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion|Rotation", meta = (EditCondition = "bAllowCustomRotation"))
+	FVector2D SpeedRate = FVector2D(160.f, 380.f);
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion|Rotation", meta = (EditCondition = "bAllowCustomRotation"))
+	FVector2D CalcRotationRate = FVector2D(0.1f, 15.0f);
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion|Rotation", meta = (EditCondition = "bAllowCustomRotation"))
+	FVector2D StrafeRotationMinOffset { 60.f, -60.f };
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion|Rotation", meta = (EditCondition = "bAllowCustomRotation"))
+	FVector2D StrafeRotationMaxOffset { 120.f, -120.f };
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion|AimOffset")
 	float LookAtInterpSpeed = 6.0f;
@@ -292,8 +320,8 @@ public:
 	void SetLockUpdatingRotation(const bool NewLockUpdatingRotation);
 	bool GetLockUpdatingRotation() const;
 
-	void ApplyCharacterRotation(const FRotator InTargetRotation, const bool bInterpRotation, const float InterpSpeed);
-	void SetLookAtAimTransform(const bool NewLookAtAimOffset, const FTransform NewLookAtTransform);
+	void ApplyCharacterRotation(const FRotator InTargetRotation, const bool bInterpRotation, const float InterpSpeed, const bool bIsModifyRotation);
+	void SetLookAimTarget(const bool NewLookAtAimOffset, AActor* NewLookAtTarget, UHitTargetComponent* HitTargetComponent);
 
 	void Move(const FVector2D InputAxis);
 	void SetSprintPressed(const bool NewSprintPressed);
@@ -304,7 +332,7 @@ public:
 	FVector ChooseVelocity() const;
 
 	void OnLanded();
-	void LimitRotation(const float AimYawLimit, const float InterpSpeed);
+	void LimitRotation(const float AimYawLimit);
 	ELSMovementMode GetPawnMovementModeChanged(const EMovementMode PrevMovementMode, const uint8 PrevCustomMode) const;
 
 	float ChooseMaxWalkSpeed() const;
@@ -343,18 +371,29 @@ private:
 	void MoveForward(const float NewForwardAxisValue);
 	void MoveRight(const float NewRightAxisValue);
 	void MovementInputControl(const bool bForwardAxis);
+
+	// normal moving
 	void GroundMovementInput(const bool bForwardAxis);
+
+	// aim target moving
+	void TargetMovementInput(const bool bForwardAxis);
+
+	// climbing moving
+	void ClimbingMovementInput(const bool bForwardAxis);
+
 	void RagdollMovementInput();
 	void CalculateActorTransformRagdoll(const FRotator InRagdollRotation, const FVector InRagdollLocation, FRotator& OutActorRotation, FVector& OutActorLocation);
 	void CalculateEssentialVariables();
 
 	void SetForwardOrRightVector(FVector& OutForwardVector, FVector& OutRightVector);
-	const float CalculateRotationRate(const float SlowSpeed, const float SlowSpeedRate, const float FastSpeed, const float FastSpeedRate);
+	const float CalculateRotationRate(const float SlowSpeed, const float InSlowSpeedRate, const float FastSpeed, const float InFastSpeedRate);
 	const FRotator LookingDirectionWithOffset(const float OffsetInterpSpeed, const float NEAngle, const float NWAngle, const float SEAngle, const float SWAngle, const float Buffer);
 	bool CardinalDirectionAngles(const float Value, const float Min, const float Max, const float Buffer, const ELSCardinalDirection Direction) const;
 	void CustomAcceleration();
 
 	void DrawDebugDirectionArrow();
+
+	FVector ChooseTargetPosition() const;
 
 	UPROPERTY()
 	TWeakObjectPtr<class ABaseCharacter> Character;

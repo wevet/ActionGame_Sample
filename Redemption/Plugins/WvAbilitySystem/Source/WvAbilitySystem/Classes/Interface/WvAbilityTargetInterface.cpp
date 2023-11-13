@@ -137,6 +137,10 @@ bool IWvAbilityTargetInterface::IsDead() const
 	return false;
 }
 
+bool IWvAbilityTargetInterface::IsTargetable() const
+{
+	return false;
+}
 
 UWvEnvironmentInterface::UWvEnvironmentInterface(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {

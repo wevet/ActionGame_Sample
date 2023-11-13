@@ -5,11 +5,13 @@
 #include "Engine/EngineTypes.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "WvCharacterMovementTypes.h"
+#include "Locomotion/LocomotionSystemTypes.h"
 #include "Math/Rotator.h"
 #include "Math/UnrealMathSSE.h"
 #include "UObject/UObjectGlobals.h"
 #include "WvCharacterMovementComponent.generated.h"
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FMovementActionDelegate);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FHandleImpact, const FHitResult&, HitInfo);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FHandleImpactAtStepUpFail, const FVector&, RampVector, const FHitResult&, HitInfo);
 
@@ -57,20 +59,45 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Character|Components|CharacterMovement")
 	bool IsMantling() const;
 
+	UFUNCTION(BlueprintCallable, Category = "Character|Components|CharacterMovement")
+	bool IsWallClimbing() const;
+
 	UPROPERTY(BlueprintAssignable)
 	FHandleImpact OnHandleImpact;
 
 	UPROPERTY(BlueprintAssignable)
 	FHandleImpactAtStepUpFail OnHandleImpactAtStepUpFail;
 
-	bool HasFallEdge() const { return bHasFallEdge; }
+	UPROPERTY(BlueprintAssignable)
+	FMovementActionDelegate OnWallClimbingBeginDelegate;
 
+	UPROPERTY(BlueprintAssignable)
+	FMovementActionDelegate OnWallClimbingEndDelegate;
+
+	static FName MantleSyncPoint;
+	static FName ClimbSyncPoint;
+
+	bool HasFallEdge() const { return bHasFallEdge; }
+	void UpdateCharacterMovementSettings(const bool bHasStanding);
+
+	// Mantling public
+	FMantleParams GetMantleParams() const;
 	const bool GroundMantling();
 	const bool FallingMantling();
 	void MantleEnd();
 
-	FMantleParams GetMantleParams() const;
-	void UpdateCharacterMovementSettings(const bool bHasStanding);
+	// WallClimbing public
+	bool IsClimbJumping() const;
+	bool IsForbidClimbing() const;
+	FVector GetClimbSurfaceNormal() const;
+	FVector GetClimbDashDirection() const;
+	void TryClimbJumping();
+	void AbortClimbing();
+	void ForbidClimbing(const bool bIsTagAdd);
+	void TryLedgeEndAction();
+
+	// Apply UAbilityInteraction_ClimbUpLedge
+	UAnimMontage* GetClimbUpLedgeMontage() const;
 
 protected:
 	virtual void InitializeComponent() override;
@@ -112,14 +139,13 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Character Movement: Mantle")
 	class UMantleAnimationDataAsset* MantleDataAsset;
 
+	UPROPERTY(EditDefaultsOnly, Category = "Character Movement: WallClimbing")
+	class UClimbingDataAsset* ClimbingDataAsset;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Character Movement: Falling")
 	bool bIsDrawGroundTrace = false;
 
-
-	////////////////
-	/// LEDGE END
-	////////////////	
+#pragma region LedgeEndParameters
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Character Movement: Ledge")
 	bool bWantsToLedgeEnd = false;
 
@@ -146,6 +172,7 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Character Movement: Ledge")
 	FVector2D LedgeCapsuleScale = FVector2D(3.0f, 2.5f);
+#pragma endregion
 
 private:
 	UPROPERTY()
@@ -203,6 +230,50 @@ private:
 	// MantleStart Details
 	void MantleStart(const float InMantleHeight, const FLSComponentAndTransform MantleLedgeWorldSpace, const EMantleType InMantleType);
 	void PhysMantling(float deltaTime, int32 Iterations);
+#pragma endregion
+
+#pragma region WallClimbing
+	void PhysWallClimbing(float deltaTime, int32 Iterations);
+	void TryWallClimbingMovement();
+	void TryClimbing();
+	void UpdateClimbSprintState(const float DeltaTime);
+	void GetEyeHeightTraceData(FHitResult& OutHitResult, const float TraceDistance);
+	bool EyeHeightTrace(const float TraceDistance) const;
+	bool ShouldStopClimbing() const;
+	bool ClimbDownToFloor() const;
+	bool CheckFloor(FHitResult& FloorHit) const;
+	void SetRotationToStand() const;
+	const bool TryClimbUpLedge();
+	bool HasReachedEdge() const;
+	const bool IsLocationWalkable(const FVector& CheckLocation);
+	const bool CanMoveToLedgeClimbLocation();
+	bool CanStartClimbing();
+	const bool GetWallWidth(FHitResult& HitResult);
+	bool IsFacingSurface(float Steepness) const;
+	bool IsPlayerStickInputUp() const;
+	FQuat GetClimbingRotation(const float DeltaTime) const;
+	void StopClimbing(const float DeltaTime, int32 Iterations);
+	void AlignClimbDashDirection();
+	void StoreClimbDashDirection();
+	void StopClimbJumping();
+	void ComputeClimbingVelocity(const float DeltaTime);
+	void MoveAlongClimbingSurface(const float DeltaTime);
+	void SnapToClimbingSurface(const float DeltaTime) const;
+	const bool ComputeSurfaceInfo();
+	void SweepAndStoreWallHits();
+	void ShrinkCapsuleSize();
+	void ResetShrinkCapsuleSize();
+	void CheckGroundOrFalling(const float DeltaTime, int32 Iterations);
+	void StopClimbing_Action();
+
+	FCollisionQueryParams ClimbQueryParams;
+	TArray<FHitResult> CurrentWallHits;
+	FVector ClimbDashDirection;
+	FVector CurrentClimbingNormal;
+	FVector CurrentClimbingPosition;
+	FTransform ClimbUpLedgeTransform;
+	float CurrentClimbDashTime;
+	bool bPrepareStrafeMovement = false;
 #pragma endregion
 
 };

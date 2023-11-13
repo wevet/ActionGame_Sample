@@ -75,6 +75,7 @@ public:
 	void SetComboTriggerTag(const FGameplayTag Tag);
 	FGameplayTag& GetComboTriggerTag();
 	bool HasComboTrigger() const;
+	bool AbilityTagsHasAny(const FGameplayTagContainer TagContainer) const;
 
 protected:
 	virtual void OnGameplayTaskInitialized(UGameplayTask& Task) override;

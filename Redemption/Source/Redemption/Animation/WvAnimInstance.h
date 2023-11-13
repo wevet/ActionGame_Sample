@@ -123,7 +123,37 @@ protected:
 	ELSOverlayState OverlayState;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
+	ELSMovementMode LSMovementMode;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
+	ELSMovementMode PrevLSMovementMode;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
+	ELSGait LSGait;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
+	ELSStance LSStance;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
+	ELSRotationMode LSRotationMode;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
+	FRotator CharacterRotation;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
+	FRotator LookingRotation;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
+	FRotator LastVelocityRotation;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
+	FRotator PreviousVelocityRotation;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
 	bool bHasVelocity;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
+	bool bWasAiming;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
 	float Speed;
@@ -146,8 +176,15 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
 	float LandPredictionAlpha;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
+	float AimSweepTime = 0.0f;
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion")
 	UCurveFloat* LandAlphaCurve;
+
+	// edit locomotion parameters
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion|AimOffset")
+	FVector2D AimOffsetClampRange { 180.0f, 180.0f };
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Linked Layer Data")
 	bool bIsLinkedLayerChanged = false;
@@ -155,20 +192,11 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Linked Layer Data")
 	UAnimInstance* LastLinkedAnimInstance = nullptr;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion")
-	float AimSweepTime = 0.0f;
-
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
 	FLocomotionEssencialVariables LocomotionEssencialVariables;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
 	FVector2D LeanGrounded;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
-	FRotator LastVelocityRotation;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
-	FRotator PreviousVelocityRotation;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
 	float AccelerationDifference;
@@ -179,6 +207,9 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
 	float DeltaVelocityDifference;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion|AimOffset")
+	FVector2D AimOffset;
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "DistanceMatching")
 	float GroundDistance = -1.0f;
 
@@ -188,7 +219,14 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "MotionMatching")
 	FTrajectorySampleRange TrajectorySampleRange;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Climbing")
+	bool bIsClimbing;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Climbing|Wall")
+	bool bIsWallClimbing;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Climbing|Wall")
+	bool bIsWallClimbingJumping;
 
 	// Blueprintの変数にマッピングできるGameplayTagです。Tagが追加または削除されると、変数が自動的に更新される。
 	// GameplayTagを手動で照会する代わりに、これらを使用する必要があります。
@@ -208,9 +246,9 @@ private:
 
 	void DoWhileGrounded();
 	void CalculateGaitValue();
+	void CalculateAimOffset();
 
 	void DoWhileFalling();
-	void CalculateLandPredictionAlpha();
 
 	void CalculateGroundedLeaningValues();
 

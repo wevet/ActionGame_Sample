@@ -240,6 +240,16 @@ FName UInventoryComponent::GetEquipWeaponName() const
 	return NAME_None;
 }
 
+EAttackWeaponState UInventoryComponent::GetEquipWeaponType() const
+{
+	AWeaponBaseActor* Weapon = GetEquipWeapon();
+	if (IsValid(Weapon))
+	{
+		return Weapon->GetAttackWeaponState();
+	}
+	return EAttackWeaponState::EmptyWeapon;
+}
+
 TArray<AWeaponBaseActor*> UInventoryComponent::FindOverlayWeaponArray(const ELSOverlayState InLSOverlayState) const
 {
 	TArray<AWeaponBaseActor*> Temp;

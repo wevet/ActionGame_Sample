@@ -81,6 +81,7 @@ class ULocomotionComponent;
 class UInventoryComponent;
 class UCombatComponent;
 class UStatusComponent;
+class UWeaknessComponent;
 class UWvAnimInstance;
 
 
@@ -127,6 +128,7 @@ public:
 	virtual FGameplayTag GetAvatarTag() const override;
 	virtual ECharacterRelation GetRelationWithSelfImpl(const IWvAbilityTargetInterface* Other) const override;
 	virtual bool IsDead() const override;
+	virtual bool IsTargetable() const override;
 
 	virtual USceneComponent* GetOverlapBaseComponent() override;
 
@@ -180,6 +182,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = Components)
 	class UInventoryComponent* GetInventoryComponent() const;
 
+	UFUNCTION(BlueprintCallable, Category = Components)
+	class UWeaknessComponent* GetWeaknessComponent() const;
+
 	UFUNCTION(BlueprintCallable, Category = Utils)
 	USceneComponent* GetHeldObjectRoot() const;
 
@@ -197,8 +202,8 @@ public:
 
 	virtual void DoSprinting();
 	virtual void DoStopSprinting();
-	virtual void VelocityModement();
-	virtual void StrafeModement();
+	virtual void VelocityMovement();
+	virtual void StrafeMovement();
 	void DoStartCrouch();
 	void DoStopCrouch();
 
@@ -219,6 +224,8 @@ public:
 	void EndDeathAction(const float Interval);
 
 	void OverlayStateChange(const ELSOverlayState CurrentOverlay);
+
+	virtual bool IsTargetLock() const;
 
 
 protected:
@@ -246,6 +253,9 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Component, meta = (AllowPrivateAccess = "true"))
 	class UStatusComponent* StatusComponent;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Component, meta = (AllowPrivateAccess = "true"))
+	class UWeaknessComponent* WeaknessComponent;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Component, meta = (AllowPrivateAccess = "true"))
 	class USceneComponent* HeldObjectRoot;
@@ -276,6 +286,12 @@ protected:
 
 	UFUNCTION()
 	void OnRep_ReplicatedAcceleration();
+
+	UFUNCTION()
+	virtual void OnWallClimbingBegin_Callback();
+
+	UFUNCTION()
+	virtual void OnWallClimbingEnd_Callback();
 
 	// Called to determine what happens to the team ID when possession ends
 	virtual FGenericTeamId DetermineNewTeamAfterPossessionEnds(FGenericTeamId OldTeamID) const

@@ -80,6 +80,7 @@ enum ECustomMovementMode
 	CUSTOM_MOVE_Default UMETA(DisplayName = "CustomDefault"),
 	CUSTOM_MOVE_Climbing UMETA(DisplayName = "CustomClimbing"),
 	CUSTOM_MOVE_Mantling UMETA(DisplayName = "CustomMantling"),
+	CUSTOM_MOVE_WallClimbing UMETA(DisplayName = "CustomWallClimbing"),
 	CUSTOM_MOVE_MAX	UMETA(Hidden),
 };
 
@@ -91,6 +92,9 @@ class REDEMPTION_API UClimbingDataAsset : public UDataAsset
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	TEnumAsByte<ECollisionChannel> ClimbTraceChannel;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	TArray<UClass*> FilterClasses;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FVector2D LedgeEndTraceDistance { 160.0f, 100.0f };
@@ -132,7 +136,10 @@ public:
 	float FloorCheckDistance = 90.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	float WallAngleThreshold = 50.0f;
+	FVector2D WallAngleRange = FVector2D(50.0f, 100.0f);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float MinHorizontalDegreesToStartClimbing = 25.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	UCurveFloat* ClimbJumpCurve;
@@ -140,16 +147,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	UAnimMontage* LedgeClimbMontage;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	bool bUseMantleCurve = false;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (EditCondition = "bUseMantleCurve"))
-	class UCurveVector* MantleCurve;
-
-	UClimbingDataAsset()
-	{
-
-	}
+	UClimbingDataAsset() {}
 };
 
 UENUM(BlueprintType)
@@ -158,26 +156,6 @@ enum class EMantleType : uint8
 	HighMantle   UMETA(DisplayName = "HighMantle"),
 	LowMantle    UMETA(DisplayName = "LowMantle"),
 	FallingCatch UMETA(DisplayName = "FallingCatch"),
-};
-
-USTRUCT(BlueprintType)
-struct REDEMPTION_API FLSComponentAndTransform
-{
-	GENERATED_BODY()
-
-public:
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	FTransform Transform;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	UPrimitiveComponent* Component;
-
-public:
-	FLSComponentAndTransform()
-	{
-		Component = nullptr;
-		Transform = FTransform::Identity;
-	}
 };
 
 USTRUCT(BlueprintType)

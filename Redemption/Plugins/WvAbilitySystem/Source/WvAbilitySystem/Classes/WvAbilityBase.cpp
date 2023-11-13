@@ -310,3 +310,14 @@ void UWvAbilityBase::OnGameplayTaskInitialized(UGameplayTask& Task)
 	Super::OnGameplayTaskInitialized(Task);
 }
 
+bool UWvAbilityBase::AbilityTagsHasAny(const FGameplayTagContainer TagContainer) const
+{
+	UWvAbilityDataAsset* DA = GetWvAbilityDataNoChecked();
+	if (!DA)
+	{
+		return false;
+	}
+	const bool bHasAny = DA->AbilityTags.HasAny(TagContainer);
+	return bHasAny;
+}
+

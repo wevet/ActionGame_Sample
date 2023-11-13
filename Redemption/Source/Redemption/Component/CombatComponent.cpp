@@ -1,6 +1,10 @@
 // Copyright 2022 wevet works All Rights Reserved.
 
 #include "CombatComponent.h"
+#include "InventoryComponent.h"
+#include "WeaknessComponent.h"
+#include "HitTargetComponent.h"
+
 #include "Misc/WvCommonUtils.h"
 #include "Redemption.h"
 #include "WvAbilityBase.h"
@@ -17,13 +21,7 @@
 #include "AbilitySystemBlueprintLibrary.h"
 
 #if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
-static TAutoConsoleVariable<int32> CVarDebugCharacterCombatTrace(
-	TEXT("wv.CharacterCombatDebugTrace"),
-	0,
-	TEXT("Charactermovement ledge end\n")
-	TEXT("<=0: Debug off\n")
-	TEXT(">=1: Debug on\n"),
-	ECVF_Default);
+static TAutoConsoleVariable<int32> CVarDebugCharacterCombatTrace(TEXT("wv.CharacterCombatDebugTrace"), 0, TEXT("Charactermovement ledge end\n") TEXT("<=0: Debug off\n") TEXT(">=1: Debug on\n"), ECVF_Default);
 #endif // !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(CombatComponent)
@@ -249,17 +247,17 @@ void UCombatComponent::HitResultEnemyFilter(TArray<FHitResult>& Hits, TArray<FWv
 		FWvBattleDamageAttackTargetInfo* InfoPointer = TargetCharacterInfos.Find(HitActor);
 		UPrimitiveComponent* HitComponent = HitResult.GetComponent();
 
-		//UWeaknessEquipComponent* WeaknessEquipComponent = nullptr;
-		//if (HitComponent && HitComponent->GetClass()->IsChildOf(UWeaknessEquipComponent::StaticClass()))
-		//{
-		//	WeaknessEquipComponent = Cast<UWeaknessEquipComponent>(HitComponent);
-		//	if (!InfoPointer)
-		//	{
-		//		FBattleDamageAttackTargetInfo InfoInstance = FBattleDamageAttackTargetInfo();
-		//		InfoPointer = &InfoInstance;
-		//		TargetCharacterInfos.Add(HitActor, *InfoPointer);
-		//	}
-		//}
+		UHitTargetComponent* HitTargetComponent = nullptr;
+		if (HitComponent && HitComponent->GetClass()->IsChildOf(UHitTargetComponent::StaticClass()))
+		{
+			HitTargetComponent = Cast<UHitTargetComponent>(HitComponent);
+			if (!InfoPointer)
+			{
+				FWvBattleDamageAttackTargetInfo InfoInstance = FWvBattleDamageAttackTargetInfo();
+				InfoPointer = &InfoInstance;
+				TargetCharacterInfos.Add(HitActor, *InfoPointer);
+			}
+		}
 
 		if (!InfoPointer || !InfoPointer->Target)
 		{
@@ -291,10 +289,10 @@ void UCombatComponent::HitResultEnemyFilter(TArray<FHitResult>& Hits, TArray<FWv
 			continue;
 		}
 
-		//if (WeaknessEquipComponent)
-		//{
-		//	InfoPointer->WeaknessNames.Add(WeaknessEquipComponent->GetWeaknessName());
-		//}
+		if (HitTargetComponent)
+		{
+			InfoPointer->WeaknessNames.Add(HitTargetComponent->GetAttachBoneName());
+		}
 
 		TargetCharacterInfos[HitActor] = *InfoPointer;
 	}
@@ -388,6 +386,7 @@ void UCombatComponent::OnTagUpdate(const FGameplayTag Tag, const bool bIsTagExis
 		if (IsDead)
 		{
 			GetWorld()->GetTimerManager().SetTimer(TimerHandle, this, &UCombatComponent::HandleDeath, 0.01, true);
+			UE_LOG(LogTemp, Log, TEXT("HandleDeath => %s"), *FString(__FUNCTION__));
 		}
 	}
 }
@@ -447,14 +446,12 @@ void UCombatComponent::StartHitReact(FGameplayEffectContextHandle& Context, cons
 		//{
 		//	ASC->RemoveGameplayTag(StateHitReact);
 		//}
-
 		//UGameplayEffect* DeadGE = (ABILITY_GLOBAL()->DeadGE).GetDefaultObject();
 		//if (DeadGE)
 		//{
 		//	FActiveGameplayEffectHandle DeadGEHandle = ASC->ApplyGameplayEffectToSelf(DeadGE, 1.0f, ASC->MakeEffectContext());
 		//	ASC->SetDeadStateEffectHandle(DeadGEHandle);
 		//}
-
 		// UWvAbility_Death Applied
 		//FGameplayEventData GameplayEventData;
 		//GameplayEventData.ContextHandle = Context;
@@ -475,16 +472,29 @@ void UCombatComponent::StartHitReact(FGameplayEffectContextHandle& Context, cons
 	FName* WeaknessName = nullptr;
 	FName* WeaknessBoneName = nullptr;
 	FWvBattleDamageAttackSourceInfo* SourceInfoPtr = nullptr;
+	EAttackWeaponState WeaponState = EAttackWeaponState::InValid;
 
 	if (TargetData)
 	{
 		if (TargetData->TargetInfo.WeaknessNames.Num() > 0)
 		{
-			//WeaknessName = &TargetData->TargetInfo.MaxDamageWeaknessName;
-			//FName AttachBoneName;
-			//Character->GetWeaknessComponent()->GetWeaknessAttachBoneName(*WeaknessName, AttachBoneName);
+			// @TODO
+			UInventoryComponent* InventoryComp = Cast<UInventoryComponent>(Attacker->GetComponentByClass(UInventoryComponent::StaticClass()));
+			if (InventoryComp)
+			{
+				WeaponState = InventoryComp->GetEquipWeaponType();
+			}
+
+			const FName HitBoneName = Context.GetHitResult()->BoneName;
+			WeaknessName = &TargetData->TargetInfo.MaxDamageWeaknessName;
+			const FCharacterWeaknessData WeaknessData = Character->GetWeaknessComponent()->FindCharacterWeaknessData(WeaponState, HitBoneName);
+
+			for (FName BoneName : TargetData->TargetInfo.WeaknessNames)
+			{
+				UE_LOG(LogTemp, Log, TEXT("TargetInfo.WeaknessName => %s"), *BoneName.ToString());
+			}
 			//WeaknessBoneName = &AttachBoneName;
-			WeaknessHitReactEventCallbak(Attacker, *WeaknessName, Damage);
+			//WeaknessHitReactEventCallbak(Attacker, *WeaknessName, Damage);
 		}
 		else
 		{

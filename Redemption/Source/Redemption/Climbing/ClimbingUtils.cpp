@@ -227,4 +227,31 @@ bool UClimbingUtils::ClimbingDetectFootIKTrace(const ACharacter* Character, cons
 	return false;
 }
 
+FTransform UClimbingUtils::ExtractedTransformsInterpolation(const FTransform A, const FTransform B, const float VX, const float VY, const float VZ, const float ROT, const float Alpha, const float RotationDirection180, const bool UseInterFor180Rot)
+{
+	// Method 2 - No Relative
+	const FVector A_Unrot = A.GetRotation().UnrotateVector(A.GetLocation());
+	const FVector B_Unrot = A.GetRotation().UnrotateVector(B.GetLocation());
+	const FVector Position = FVector(FMath::Lerp(A_Unrot.X, B_Unrot.X, VY), FMath::Lerp(A_Unrot.Y, B_Unrot.Y, VX), FMath::Lerp(A_Unrot.Z, B_Unrot.Z, VZ));
+	const FVector RotV = A.GetRotation().RotateVector(Position);
+	const FVector FinalPosition = UKismetMathLibrary::VLerp(RotV, B.GetLocation(), Alpha);
+
+	// Update Rotation
+	const FRotator AA_Rot = FRotator(A.GetRotation());
+	const FRotator BA_Rot = FRotator(B.GetRotation());
+	const FRotator MiddleRot = UKismetMathLibrary::RLerp(AA_Rot, BA_Rot, ROT, true);
+
+	const float RotAlphaA = (ROT < 0.5f) ? UKismetMathLibrary::MapRangeClamped(ROT, 0.0f, 0.5f, 0.0f, 1.0f) : 1.0f;
+	const FRotator LerpRotA = UKismetMathLibrary::RLerp(AA_Rot, FRotator(0.0f, FRotator(B.GetRotation()).Yaw + RotationDirection180, 0.0f), RotAlphaA, true);
+
+	const float RotAlphaB = (ROT >= 0.5f) ? UKismetMathLibrary::MapRangeClamped(ROT, 0.5f, 1.0f, 0.0f, 1.0f) : 0.0f;
+	const FRotator LerpRotB = UKismetMathLibrary::RLerp(LerpRotA, BA_Rot, RotAlphaB, true);
+
+	const FRotator FinalRot = UKismetMathLibrary::RLerp(UseInterFor180Rot ? LerpRotB : MiddleRot, BA_Rot, 0.f, true);
+
+	FTransform Result = FTransform::Identity;
+	Result.SetRotation(FQuat(FinalRot));
+	Result.SetLocation(FinalPosition);
+	return Result;
+}
 

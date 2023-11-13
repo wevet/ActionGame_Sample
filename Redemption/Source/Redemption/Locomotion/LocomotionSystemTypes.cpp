@@ -1,6 +1,8 @@
 // Copyright 2022 wevet works All Rights Reserved.
 
 #include "LocomotionSystemTypes.h"
+#include "Kismet/KismetSystemLibrary.h"
+#include "Kismet/KismetMathLibrary.h"
 
 
 void FLocomotionEssencialVariables::Init(const FRotator Rotation)
@@ -51,6 +53,63 @@ void FPawnAttackParam::Replenishment()
 	const bool bWasNeededAmmo = (MaxAmmo <= NeededAmmo);
 	MaxAmmo = bWasNeededAmmo ? 0 : (MaxAmmo - NeededAmmo);
 	CurrentAmmo = bWasNeededAmmo ? (CurrentAmmo + MaxAmmo) : ClipType;
+}
+#pragma endregion
+
+
+#pragma region QTE
+void FCilmbingQTEData::Begin()
+{
+	CurPressCount = 0;
+	CurTimer = 0.0f;
+	bSystemEnable = true;
+}
+
+void FCilmbingQTEData::Reset()
+{
+	//CurPressCount = 0;
+	//CurTimer = 0.0f;
+	bSystemEnable = false;
+}
+
+float FCilmbingQTEData::GetTimerProgress() const
+{
+	return ((Timer - CurTimer) / Timer);
+}
+
+float FCilmbingQTEData::GetPressCountProgress() const
+{
+	return (CurPressCount / RequirePressCount);
+}
+
+void FCilmbingQTEData::UpdateTimer(const float DeltaTime)
+{
+	if (CurTimer <= Timer)
+	{
+		CurTimer += DeltaTime;
+	}
+}
+
+bool FCilmbingQTEData::IsTimeOver() const
+{
+	return (CurTimer >= Timer);
+}
+
+void FCilmbingQTEData::IncrementPress()
+{
+	//auto Value = FMath::RandRange(RangeMin, RangeMax);
+	CurPressCount += 1.0f;
+}
+
+// @NOTE
+// Once you press more than a certain number of times in time, make it a success.
+bool FCilmbingQTEData::IsSuccess() const
+{
+	if (CurTimer < Timer && CurPressCount >= RequirePressCount)
+	{
+		return true;
+	}
+	return false;
 }
 #pragma endregion
 

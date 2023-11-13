@@ -73,6 +73,18 @@ UWvAnimInstance::UWvAnimInstance(const FObjectInitializer& ObjectInitializer) : 
 	LandPredictionAlpha = 0.0f;
 
 	OverlayState = ELSOverlayState::None;
+	LSMovementMode = ELSMovementMode::None;
+
+	bIsClimbing = false;
+	//bIsFreeHang = false;
+	//bIsLaddering = false;
+	//bIsQTEActivate = false;
+	//bIsStartMantling = false;
+	//bIsMoveToNextLedgeMode = false;
+	//bIsLockUpdatingHangingMode = false;
+
+	bIsWallClimbing = false;
+	bIsWallClimbingJumping = false;
 }
 
 void UWvAnimInstance::NativeInitializeAnimation()
@@ -100,39 +112,6 @@ void UWvAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 {
 	Super::NativeUpdateAnimation(DeltaSeconds);
 
-	if (Character.IsValid())
-	{
-		TrajectorySampleRange = Character->GetTrajectorySampleRange();
-	}
-
-	if (LocomotionComponent.IsValid())
-	{
-		LocomotionEssencialVariables = LocomotionComponent->GetLocomotionEssencialVariables();
-
-		CharacterOverlayInfo.ChooseStanceMode(LocomotionEssencialVariables.LSStance == ELSStance::Standing);
-		CharacterOverlayInfo.ModifyAnimCurveValue(this);
-		Speed = LocomotionEssencialVariables.Velocity.Size();
-		bHasVelocity = LocomotionEssencialVariables.bWasMoving;
-		OverlayState = LocomotionEssencialVariables.OverlayState;
-
-		LastVelocityRotation = LocomotionEssencialVariables.LastVelocityRotation;
-		Direction = LocomotionEssencialVariables.Direction;
-
-		WalkingSpeed = LocomotionComponent->GetWalkingSpeed_Implementation();
-		RunningSpeed = LocomotionComponent->GetRunningSpeed_Implementation();
-		SprintingSpeed = LocomotionComponent->GetSprintingSpeed_Implementation();
-	}
-
-	switch (LocomotionEssencialVariables.LSMovementMode)
-	{
-		case ELSMovementMode::Grounded:
-		DoWhileGrounded();
-		break;
-		case ELSMovementMode::Falling:
-		DoWhileFalling();
-		break;
-	}
-
 #if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
 	static const IConsoleVariable* RelevantCVar = IConsoleManager::Get().FindConsoleVariable(TEXT("wv.LocomotionSystem.Debug"));
 	const int32 RelevantConsoleValue = RelevantCVar->GetInt();
@@ -150,6 +129,57 @@ void UWvAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 void UWvAnimInstance::NativeThreadSafeUpdateAnimation(float DeltaSeconds)
 {
 	Super::NativeThreadSafeUpdateAnimation(DeltaSeconds);
+
+	if (Character.IsValid())
+	{
+		TrajectorySampleRange = Character->GetTrajectorySampleRange();
+	}
+
+	if (IsValid(CharacterMovementComponent))
+	{
+		bIsWallClimbing = CharacterMovementComponent->IsWallClimbing();
+		bIsWallClimbingJumping = CharacterMovementComponent->IsClimbJumping();
+	}
+
+	if (LocomotionComponent.IsValid())
+	{
+		LocomotionEssencialVariables = LocomotionComponent->GetLocomotionEssencialVariables();
+		CharacterOverlayInfo.ChooseStanceMode(LocomotionEssencialVariables.LSStance == ELSStance::Standing);
+		CharacterOverlayInfo.ModifyAnimCurveValue(this);
+		Speed = LocomotionEssencialVariables.Velocity.Size();
+		bHasVelocity = LocomotionEssencialVariables.bWasMoving;
+		OverlayState = LocomotionEssencialVariables.OverlayState;
+
+		LastVelocityRotation = LocomotionEssencialVariables.LastVelocityRotation;
+		Direction = LocomotionEssencialVariables.Direction;
+
+		CharacterRotation = LocomotionEssencialVariables.CharacterRotation;
+		LookingRotation = LocomotionEssencialVariables.LookingRotation;
+		bWasAiming = LocomotionEssencialVariables.bAiming;
+		LSRotationMode = LocomotionEssencialVariables.LSRotationMode;
+		LSGait = LocomotionEssencialVariables.LSGait;
+		LSStance = LocomotionEssencialVariables.LSStance;
+		const ELSMovementMode CurMovementMode = LocomotionEssencialVariables.LSMovementMode;
+		if (LSMovementMode != CurMovementMode)
+		{
+			PrevLSMovementMode = LSMovementMode;
+			LSMovementMode = CurMovementMode;
+		}
+
+		WalkingSpeed = LocomotionComponent->GetWalkingSpeed_Implementation();
+		RunningSpeed = LocomotionComponent->GetRunningSpeed_Implementation();
+		SprintingSpeed = LocomotionComponent->GetSprintingSpeed_Implementation();
+	}
+
+	switch (LSMovementMode)
+	{
+		case ELSMovementMode::Grounded:
+		DoWhileGrounded();
+		break;
+		case ELSMovementMode::Falling:
+		DoWhileFalling();
+		break;
+	}
 
 }
 
@@ -188,9 +218,11 @@ EDataValidationResult UWvAnimInstance::IsDataValid(TArray<FText>& ValidationErro
 }
 #endif
 
+#pragma region Grounded
 void UWvAnimInstance::DoWhileGrounded()
 {
 	CalculateGaitValue();
+	CalculateAimOffset();
 	CalculateGroundedLeaningValues();
 }
 
@@ -205,85 +237,37 @@ void UWvAnimInstance::CalculateGaitValue()
 	GaitValue = CurrentSpeed;
 }
 
-void UWvAnimInstance::DoWhileFalling()
-{
-	//CalculateLandPredictionAlpha();
-
-	if (IsValid(CharacterMovementComponent))
-	{
-		const FWvCharacterGroundInfo& GroundInfo = CharacterMovementComponent->GetGroundInfo();
-		GroundDistance = GroundInfo.GroundDistance;
-		LandPredictionAlpha = GroundInfo.LandPredictionAlpha;
-
-		//UE_LOG(LogTemp, Log, TEXT("GroundDistance => %.3f, LandPredictionAlpha => %.3f"), GroundDistance, LandPredictionAlpha);
-	}
-
-}
-
-void UWvAnimInstance::CalculateLandPredictionAlpha()
+void UWvAnimInstance::CalculateAimOffset()
 {
 	const float DeltaSeconds = GetWorld()->GetDeltaSeconds();
-	float InterpSpeed = 10.f;
+	constexpr float DefaultInterpSpeed = 4.0f;
 
-	if (!Character.IsValid() || !CharacterMovementComponent || !CapsuleComponent.IsValid())
+	switch (LSRotationMode)
 	{
-		LandPredictionAlpha = UKismetMathLibrary::FInterpTo(LandPredictionAlpha, 0.0f, DeltaSeconds, InterpSpeed);
-		return;
+		case ELSRotationMode::VelocityDirection:
+		{
+			AimOffset = UKismetMathLibrary::Vector2DInterpTo(AimOffset, FVector2D::ZeroVector, DeltaSeconds, DefaultInterpSpeed);
+		}
+		break;
+		case ELSRotationMode::LookingDirection:
+		{
+			if (bWasAiming)
+			{
+				const FRotator DeltaRot = UKismetMathLibrary::NormalizedDeltaRotator(LookingRotation, CharacterRotation);
+				FVector2D NewAimOffset = FVector2D(DeltaRot.Yaw, DeltaRot.Pitch);
+				NewAimOffset.X = FMath::Clamp(NewAimOffset.X, -AimOffsetClampRange.X, AimOffsetClampRange.X);
+				NewAimOffset.Y = FMath::Clamp(NewAimOffset.Y, -AimOffsetClampRange.Y, AimOffsetClampRange.Y);
+				AimOffset = NewAimOffset;
+			}
+			else
+			{
+				AimOffset = UKismetMathLibrary::Vector2DInterpTo(AimOffset, FVector2D::ZeroVector, DeltaSeconds, DefaultInterpSpeed);
+			}
+		}
+		break;
 	}
 
-	// up jumping..
-	FVector Velocity = LocomotionEssencialVariables.Velocity;
-	if (Velocity.Z > 0.0f)
-	{
-		LandPredictionAlpha = UKismetMathLibrary::FInterpTo(LandPredictionAlpha, 0.0f, DeltaSeconds, InterpSpeed);
-		return;
-	}
-
-	// fall down..
-	const FVector Location = Character->GetActorLocation();
-	const float Radius = CapsuleComponent->GetScaledCapsuleRadius();
-	const float OffsetZ = (Location.Z - CapsuleComponent->GetScaledCapsuleHalfHeight_WithoutHemisphere());
-	const FVector StartLocation = FVector(Location.X, Location.Y, OffsetZ);
-
-	constexpr float ClampMin = -4000.f;
-	constexpr float ClampMax = 1000.f;
-	constexpr float DrawTime = 1.0f;
-
-	FVector EndLocation = UKismetMathLibrary::Normal(FVector(Velocity.X, Velocity.Y, FMath::Clamp(Velocity.Z, ClampMin, -200.f)));
-	EndLocation *= UKismetMathLibrary::MapRangeClamped(Velocity.Z, 0.0f, ClampMin, 50.f, ClampMax);
-	EndLocation += StartLocation;
-	FHitResult HitData(ForceInit);
-	TArray<AActor*> IgnoreActors;
-
-	UKismetSystemLibrary::SphereTraceSingle(
-		GetWorld(),
-		StartLocation,
-		EndLocation,
-		Radius,
-		UEngineTypes::ConvertToTraceType(ECC_Visibility),
-		false,
-		IgnoreActors,
-		EDrawDebugTrace::Type::None,
-		HitData,
-		true,
-		FLinearColor::Red,
-		FLinearColor::Green,
-		DrawTime);
-
-	const bool bWasHitNormalGreater = (HitData.ImpactNormal.Z >= CharacterMovementComponent->GetWalkableFloorZ());
-	if (HitData.bBlockingHit && bWasHitNormalGreater)
-	{
-		InterpSpeed = 20.f;
-		const float Value = UKismetMathLibrary::MapRangeClamped(HitData.Time, 0.0f, 1.0f, 1.0f, 0.0f);
-		const float CurveValue = LandAlphaCurve ? LandAlphaCurve->GetFloatValue(Value) : Value;
-		LandPredictionAlpha = UKismetMathLibrary::FInterpTo(LandPredictionAlpha, CurveValue, DeltaSeconds, InterpSpeed);
-	}
-	else
-	{
-		LandPredictionAlpha = UKismetMathLibrary::FInterpTo(LandPredictionAlpha, 0.0f, DeltaSeconds, InterpSpeed);
-	}
-
-	//UE_LOG(LogTemp, Log, TEXT("LandPredictionAlpha => %.3f"), LandPredictionAlpha);
+	AimSweepTime = UKismetMathLibrary::MapRangeClamped(AimOffset.Y, -90.0f, 90.f, 1.0f, 0.0f);
 }
 
 void UWvAnimInstance::CalculateGroundedLeaningValues()
@@ -316,6 +300,22 @@ void UWvAnimInstance::CalculateGroundedLeaningValues()
 	LeanGrounded.X = AngleAxis.X;
 	LeanGrounded.Y = AngleAxis.Y;
 }
+#pragma endregion
+
+
+#pragma region Falling
+void UWvAnimInstance::DoWhileFalling()
+{
+	if (IsValid(CharacterMovementComponent))
+	{
+		const FWvCharacterGroundInfo& GroundInfo = CharacterMovementComponent->GetGroundInfo();
+		GroundDistance = GroundInfo.GroundDistance;
+		LandPredictionAlpha = GroundInfo.LandPredictionAlpha;
+
+		//UE_LOG(LogTemp, Log, TEXT("GroundDistance => %.3f, LandPredictionAlpha => %.3f"), GroundDistance, LandPredictionAlpha);
+	}
+}
+#pragma endregion
 
 
 #pragma region Utils

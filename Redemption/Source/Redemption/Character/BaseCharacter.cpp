@@ -10,6 +10,7 @@
 #include "Component/InventoryComponent.h"
 #include "Component/CombatComponent.h"
 #include "Component/StatusComponent.h"
+#include "Component/WeaknessComponent.h"
 #include "WvPlayerController.h"
 #include "Animation/WvAnimInstance.h"
 #include "Ability/WvInheritanceAttributeSet.h"
@@ -48,16 +49,15 @@
 
 TSubclassOf<UAnimInstance> UOverlayAnimInstanceDataAsset::FindAnimInstance(const ELSOverlayState InOverlayState) const
 {
-	for (FOverlayAnimInstance Instance : OverlayAnimInstances)
+	for (FOverlayAnimInstance AnimInstance : OverlayAnimInstances)
 	{
-		if (Instance.OverlayState == InOverlayState)
+		if (AnimInstance.OverlayState == InOverlayState)
 		{
-			return Instance.AnimInstanceClass;
+			return AnimInstance.AnimInstanceClass;
 		}
 	}
 	return UnArmedAnimInstanceClass;
 }
-
 
 ABaseCharacter::ABaseCharacter(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer.SetDefaultSubobjectClass<UWvCharacterMovementComponent>(ACharacter::CharacterMovementComponentName))
@@ -124,6 +124,10 @@ ABaseCharacter::ABaseCharacter(const FObjectInitializer& ObjectInitializer)
 	StatusComponent = CreateDefaultSubobject<UStatusComponent>(TEXT("StatusComponent"));
 	StatusComponent->bAutoActivate = 1;
 
+	// managed character combat weakness
+	WeaknessComponent = CreateDefaultSubobject<UWeaknessComponent>(TEXT("WeaknessComponent"));
+	WeaknessComponent->bAutoActivate = 1;
+
 	HeldObjectRoot = CreateDefaultSubobject<USceneComponent>(TEXT("HeldObjectRoot"));
 	HeldObjectRoot->bAutoActivate = 1;
 	HeldObjectRoot->SetupAttachment(GetMesh());
@@ -149,12 +153,21 @@ void ABaseCharacter::BeginPlay()
 	SkelMesh->AddTickPrerequisiteActor(this);
 
 	AnimInstance = Cast<UWvAnimInstance>(GetMesh()->GetAnimInstance());
+
+	UWvCharacterMovementComponent* CMC = GetWvCharacterMovementComponent();
+	CMC->OnWallClimbingBeginDelegate.AddDynamic(this, &ABaseCharacter::OnWallClimbingBegin_Callback);
+	CMC->OnWallClimbingEndDelegate.AddDynamic(this, &ABaseCharacter::OnWallClimbingEnd_Callback);
 }
 
 void ABaseCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	FTimerManager& TM = GetWorld()->GetTimerManager();
 	TM.ClearTimer(Ragdoll_TimerHandle);
+
+	UWvCharacterMovementComponent* CMC = GetWvCharacterMovementComponent();
+	CMC->OnWallClimbingBeginDelegate.RemoveDynamic(this, &ABaseCharacter::OnWallClimbingBegin_Callback);
+	CMC->OnWallClimbingEndDelegate.RemoveDynamic(this, &ABaseCharacter::OnWallClimbingEnd_Callback);
+
 	Super::EndPlay(EndPlayReason);
 }
 
@@ -455,6 +468,16 @@ void ABaseCharacter::OnReceiveHitReact(FGameplayEffectContextHandle Context, con
 	}
 
 }
+
+bool ABaseCharacter::IsDead() const
+{
+	return WvAbilitySystemComponent->HasMatchingGameplayTag(TAG_Character_StateDead);
+}
+
+bool ABaseCharacter::IsTargetable() const
+{
+	return !IsDead();
+}
 #pragma endregion
 
 #pragma region Components
@@ -498,6 +521,11 @@ UInventoryComponent* ABaseCharacter::GetInventoryComponent() const
 	return ItemInventoryComponent;
 }
 
+UWeaknessComponent* ABaseCharacter::GetWeaknessComponent() const
+{
+	return WeaknessComponent;
+}
+
 USceneComponent* ABaseCharacter::GetHeldObjectRoot() const
 {
 	return HeldObjectRoot;
@@ -519,7 +547,8 @@ void ABaseCharacter::Jump()
 	}
 	else
 	{
-		const EMovementMode MovementMode = GetWvCharacterMovementComponent()->MovementMode;
+		UWvCharacterMovementComponent* CMC = GetWvCharacterMovementComponent();
+		const EMovementMode MovementMode = CMC->MovementMode;
 		switch (MovementMode)
 		{
 			case MOVE_None:
@@ -529,7 +558,7 @@ void ABaseCharacter::Jump()
 			{
 				if (bHasMovementInput)
 				{
-					const bool bResult = GetWvCharacterMovementComponent()->GroundMantling();
+					const bool bResult = CMC->GroundMantling();
 					if (!bResult)
 					{
 						Super::Jump();
@@ -543,12 +572,27 @@ void ABaseCharacter::Jump()
 			break;
 			case MOVE_Falling:
 			{
-				GetWvCharacterMovementComponent()->FallingMantling();
+				CMC->FallingMantling();
 			}
 			break;
 			case MOVE_Flying:
 			break;
 			case MOVE_Swimming:
+			break;
+			case MOVE_Custom:
+			{
+				const ECustomMovementMode CustomMovementMode = (ECustomMovementMode)CMC->CustomMovementMode;
+				switch (CustomMovementMode)
+				{
+					case CUSTOM_MOVE_Climbing:
+					break;
+					case CUSTOM_MOVE_WallClimbing:
+					CMC->TryClimbJumping();
+					break;
+					case CUSTOM_MOVE_Mantling:
+					break;
+				}
+			}
 			break;
 		}
 	}
@@ -579,23 +623,37 @@ void ABaseCharacter::DoStopAttack()
 	WvAbilitySystemComponent->AddGameplayTag(TAG_Character_ActionMelee_Forbid, 1);
 }
 
-void ABaseCharacter::VelocityModement()
+void ABaseCharacter::VelocityMovement()
 {
-	if (GetCharacterMovement())
+	if (LocomotionComponent->GetLockUpdatingRotation())
 	{
-		GetCharacterMovement()->bUseControllerDesiredRotation = false;
-		GetCharacterMovement()->bOrientRotationToMovement = true;
+		return;
+	}
+
+	auto CMC = GetWvCharacterMovementComponent();
+
+	if (CMC)
+	{
+		CMC->bUseControllerDesiredRotation = false;
+		CMC->bOrientRotationToMovement = true;
 	}
 
 	ILocomotionInterface::Execute_SetLSRotationMode(LocomotionComponent, ELSRotationMode::VelocityDirection);
 }
 
-void ABaseCharacter::StrafeModement()
+void ABaseCharacter::StrafeMovement()
 {
-	if (GetCharacterMovement())
+	if (LocomotionComponent->GetLockUpdatingRotation())
 	{
-		GetCharacterMovement()->bUseControllerDesiredRotation = true;
-		GetCharacterMovement()->bOrientRotationToMovement = false;
+		return;
+	}
+
+	auto CMC = GetWvCharacterMovementComponent();
+
+	if (CMC)
+	{
+		CMC->bUseControllerDesiredRotation = true;
+		CMC->bOrientRotationToMovement = false;
 	}
 
 	ILocomotionInterface::Execute_SetLSRotationMode(LocomotionComponent, ELSRotationMode::LookingDirection);
@@ -641,7 +699,7 @@ void ABaseCharacter::DoStopCrouch()
 
 void ABaseCharacter::DoStartAiming()
 {
-	StrafeModement();
+	StrafeMovement();
 	DoWalking();
 	LocomotionComponent->SetLSAiming_Implementation(true);
 }
@@ -649,6 +707,16 @@ void ABaseCharacter::DoStartAiming()
 void ABaseCharacter::DoStopAiming()
 {
 	LocomotionComponent->SetLSAiming_Implementation(false);
+}
+
+void ABaseCharacter::OnWallClimbingBegin_Callback()
+{
+	UE_LOG(LogTemp, Log, TEXT("Character => %s, function => %s"), *GetName(), *FString(__FUNCTION__));
+}
+
+void ABaseCharacter::OnWallClimbingEnd_Callback()
+{
+	UE_LOG(LogTemp, Log, TEXT("Character => %s, function => %s"), *GetName(), *FString(__FUNCTION__));
 }
 #pragma endregion
 
@@ -771,11 +839,6 @@ float ABaseCharacter::GetDistanceFromToeToKnee(FName KneeL, FName BallL, FName K
 	return FMath::Max(GetWvCharacterMovementComponent()->MaxStepHeight, Result);
 }
 
-bool ABaseCharacter::IsDead() const
-{
-	return WvAbilitySystemComponent->HasMatchingGameplayTag(TAG_Character_StateDead);
-}
-
 void ABaseCharacter::BeginDeathAction()
 {
 	WvAbilitySystemComponent->AddGameplayTag(TAG_Character_StateDead, 1);
@@ -813,6 +876,11 @@ void ABaseCharacter::OverlayStateChange(const ELSOverlayState CurrentOverlay)
 	{
 		AnimInstance->LinkAnimClassLayers(AnimInstanceClass);
 	}
+}
+
+bool ABaseCharacter::IsTargetLock() const
+{
+	return WvAbilitySystemComponent->HasMatchingGameplayTag(TAG_Character_TargetLocking);
 }
 
 

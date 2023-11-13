@@ -57,8 +57,6 @@ public:
 
 	void CommitTargetDataHandle(FGameplayAbilityTargetDataHandle TDH, int32 EffectGroupIdx, const FGameplayEffectQuery& Query);
 
-	bool AbilityTagsHasAny(const FGameplayTagContainer TagContainer) const;
-
 protected:
 	virtual void SetCurrentActorInfo(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo) const override;
 

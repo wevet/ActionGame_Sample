@@ -62,6 +62,7 @@ public:
 	AItemBaseActor* FindItem(const ELSOverlayState InLSOverlayState) const;
 	AWeaponBaseActor* GetEquipWeapon() const;
 	FName GetEquipWeaponName() const;
+	EAttackWeaponState GetEquipWeaponType() const;
 
 	const EAttackWeaponState ConvertWeaponState(const ELSOverlayState InLSOverlayState, bool& OutbCanAttack);
 	const bool ChangeAttackWeapon(const EAttackWeaponState InAttackWeaponState, int32 Index = 0);

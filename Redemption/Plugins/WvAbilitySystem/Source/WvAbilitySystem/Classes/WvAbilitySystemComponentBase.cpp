@@ -184,7 +184,9 @@ void UWvAbilitySystemComponentBase::ReleasedTriggerInputEvent(FGameplayTag Tag)
 	for (FGameplayAbilitySpec& Spec : ActivatableAbilities.Items)
 	{
 		if (Spec.Ability == nullptr)
+		{
 			continue;
+		}
 
 		if (!Spec.SourceObject.Get())
 		{
@@ -200,7 +202,9 @@ void UWvAbilitySystemComponentBase::ReleasedTriggerInputEvent(FGameplayTag Tag)
 		}
 
 		if (AbilityData->ActiveTriggerTag != Tag)
+		{
 			continue;
+		}
 
 		Spec.InputPressed = false;
 		if (Spec.Ability && Spec.IsActive())

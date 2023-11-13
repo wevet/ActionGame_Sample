@@ -9,6 +9,7 @@
 
 class UWvSpringArmComponent;
 class UWvCameraFollowComponent;
+class UHitTargetComponent;
 
 /**
  * 
@@ -25,6 +26,10 @@ public:
 protected:
 	virtual void BeginPlay() override;
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+
+public:
+	bool IsInputKeyDisable() const;
+	virtual bool IsTargetLock() const override;
 
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
@@ -58,7 +63,6 @@ protected:
 
 protected:
 	void Move(const FInputActionValue& Value);
-	virtual void DoAttack() override;
 
 private:
 	void TurnAtRate(float Rate);
@@ -67,9 +71,11 @@ private:
 	void ToggleRotationMode(const FInputActionValue& Value);
 	void ToggleAimMode(const FInputActionValue& Value);
 	void ToggleStanceMode();
+	void ToggleTargetLock();
 
 	void HandleJump(const bool bIsPress);
 	void HandleSprinting(const bool bIsPress);
+
 
 	UFUNCTION()
 	void GameplayTagTrigger_Callback(const FGameplayTag Tag, const bool bIsPress);
@@ -79,6 +85,12 @@ private:
 
 	UFUNCTION()
 	void OverlayStateChange_Callback(const ELSOverlayState PrevOverlay, const ELSOverlayState CurrentOverlay);
+
+	UFUNCTION()
+	void OnTargetLockedOn_Callback(AActor* LookOnTarget, UHitTargetComponent* TargetComponent);
+
+	UFUNCTION()
+	void OnTargetLockedOff_Callback(AActor* LookOnTarget, UHitTargetComponent* TargetComponent);
 
 public:
 	FORCEINLINE class UWvSpringArmComponent* GetCameraBoom() const { return CameraBoom; }

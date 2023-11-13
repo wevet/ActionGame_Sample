@@ -6,6 +6,8 @@
 #include "Component/WvSpringArmComponent.h"
 #include "Component/WvCameraFollowComponent.h"
 #include "Component/InventoryComponent.h"
+#include "Component/HitTargetComponent.h"
+#include "Component/WvCharacterMovementComponent.h"
 #include "Locomotion/LocomotionComponent.h"
 
 // built in
@@ -61,6 +63,8 @@ void APlayerCharacter::BeginPlay()
 		PC->OnPluralInputEventTrigger.AddDynamic(this, &APlayerCharacter::OnPluralInputEventTrigger_Callback);
 	}
 
+	WvCameraFollowComponent->OnTargetLockedOn.AddDynamic(this, &APlayerCharacter::OnTargetLockedOn_Callback);
+	WvCameraFollowComponent->OnTargetLockedOff.AddDynamic(this, &APlayerCharacter::OnTargetLockedOff_Callback);
 	LocomotionComponent->OnOverlayChangeDelegate.AddDynamic(this, &APlayerCharacter::OverlayStateChange_Callback);
 }
 
@@ -72,6 +76,8 @@ void APlayerCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
 		PC->OnPluralInputEventTrigger.RemoveDynamic(this, &APlayerCharacter::OnPluralInputEventTrigger_Callback);
 	}
 
+	WvCameraFollowComponent->OnTargetLockedOn.RemoveDynamic(this, &APlayerCharacter::OnTargetLockedOn_Callback);
+	WvCameraFollowComponent->OnTargetLockedOff.RemoveDynamic(this, &APlayerCharacter::OnTargetLockedOff_Callback);
 	LocomotionComponent->OnOverlayChangeDelegate.RemoveDynamic(this, &APlayerCharacter::OverlayStateChange_Callback);
 	Super::EndPlay(EndPlayReason);
 }
@@ -126,15 +132,20 @@ void APlayerCharacter::ToggleRotationMode(const FInputActionValue& Value)
 {
 	float HoldValue = Value.Get<float>();
 
+	if (IsTargetLock())
+	{
+		return;
+	}
+
 	const auto LocomotionEssencialVariables = LocomotionComponent->GetLocomotionEssencialVariables();
 	const ELSRotationMode LSRotationMode = LocomotionEssencialVariables.LSRotationMode;
 	if (LSRotationMode == ELSRotationMode::VelocityDirection)
 	{
-		StrafeModement();
+		StrafeMovement();
 	}
 	else
 	{
-		VelocityModement();
+		VelocityMovement();
 
 		if (LocomotionEssencialVariables.bAiming)
 		{
@@ -175,23 +186,36 @@ void APlayerCharacter::ToggleStanceMode()
 	}
 }
 
-void APlayerCharacter::DoAttack()
+void APlayerCharacter::ToggleTargetLock()
 {
-	if (WvAbilitySystemComponent->HasMatchingGameplayTag(TAG_Character_ActionMelee_Forbid))
+	if (!IsValid(WvCameraFollowComponent))
 	{
-		UE_LOG(LogTemp, Warning, TEXT("has tag TAG_Character_ActionMelee_Forbid => %s"), *FString(__FUNCTION__));
 		return;
 	}
 
-	if (WvAbilitySystemComponent->HasActivatingAbilitiesWithTag(TAG_Character_StateMelee))
+	if (!IsTargetLock())
 	{
-		UE_LOG(LogTemp, Warning, TEXT("already activating StateMelee"));
-		return;
+		WvCameraFollowComponent->TargetActor();
+		WvAbilitySystemComponent->AddGameplayTag(TAG_Character_TargetLocking, 1);
+
+		if (IsValid(ItemInventoryComponent))
+		{
+			auto WeaponType = ItemInventoryComponent->GetEquipWeaponType();
+			switch (WeaponType)
+			{
+			case EAttackWeaponState::Gun:
+			case EAttackWeaponState::Rifle:
+				LocomotionComponent->SetLSAiming_Implementation(true);
+				break;
+			}
+		}
+
 	}
-
-
-	UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(this, TAG_Character_ActionMelee, FGameplayEventData());
-	//UE_LOG(LogTemp, Warning, TEXT("%s"), *FString(__FUNCTION__));
+	else
+	{
+		WvCameraFollowComponent->TargetLockOff();
+		WvAbilitySystemComponent->RemoveGameplayTag(TAG_Character_TargetLocking, 1);
+	}
 }
 
 void APlayerCharacter::Look(const FInputActionValue& Value)
@@ -203,11 +227,21 @@ void APlayerCharacter::Look(const FInputActionValue& Value)
 
 void APlayerCharacter::TurnAtRate(float Rate)
 {
+	if (IsTargetLock())
+	{
+		WvCameraFollowComponent->TargetActorWithAxisInput(Rate);
+		return;
+	}
 	AddControllerYawInput(Rate * BaseTurnRate * GetWorld()->GetDeltaSeconds());
 }
 
 void APlayerCharacter::LookUpAtRate(float Rate)
 {
+	if (IsTargetLock())
+	{
+		WvCameraFollowComponent->TargetComponentWithAxisInput(Rate);
+		return;
+	}
 	AddControllerPitchInput(Rate * BaseLookUpRate * GetWorld()->GetDeltaSeconds());
 }
 
@@ -221,13 +255,6 @@ void APlayerCharacter::GameplayTagTrigger_Callback(const FGameplayTag Tag, const
 	{
 		HandleSprinting(bIsPress);
 	}
-	//else if (Tag == TAG_Character_ActionMelee)
-	//{
-	//	if (bIsPress)
-	//	{
-	//		DoAttack();
-	//	}
-	//}
 }
 
 void APlayerCharacter::OnPluralInputEventTrigger_Callback(const FGameplayTag Tag, const bool bIsPress)
@@ -235,6 +262,10 @@ void APlayerCharacter::OnPluralInputEventTrigger_Callback(const FGameplayTag Tag
 	if (Tag == TAG_Character_ActionCrouch)
 	{
 		ToggleStanceMode();
+	}
+	else if (Tag == TAG_Character_TargetLock)
+	{
+		ToggleTargetLock();
 	}
 
 	//UE_LOG(LogTemp, Log, TEXT("Tag => %s, Pressed => %s"), *Tag.ToString(), bIsPress ? TEXT("true") : TEXT("false"));
@@ -264,6 +295,16 @@ void APlayerCharacter::OverlayStateChange_Callback(const ELSOverlayState PrevOve
 	Super::OverlayStateChange(CurrentOverlay);
 }
 
+void APlayerCharacter::OnTargetLockedOn_Callback(AActor* LookOnTarget, UHitTargetComponent* TargetComponent)
+{
+	LocomotionComponent->SetLookAimTarget(true, LookOnTarget, TargetComponent);
+}
+
+void APlayerCharacter::OnTargetLockedOff_Callback(AActor* LookOnTarget, UHitTargetComponent* TargetComponent)
+{
+	LocomotionComponent->SetLookAimTarget(false, nullptr, nullptr);
+}
+
 void APlayerCharacter::HandleJump(const bool bIsPress)
 {
 	if (bIsPress)
@@ -280,11 +321,37 @@ void APlayerCharacter::HandleSprinting(const bool bIsPress)
 {
 	if (bIsPress)
 	{
-		Super::DoSprinting();
+		const auto LocomotionEssencialVariables = LocomotionComponent->GetLocomotionEssencialVariables();
+		const ELSMovementMode LSMovementMode = LocomotionEssencialVariables.LSMovementMode;
+		switch (LSMovementMode)
+		{
+			case ELSMovementMode::Grounded:
+			Super::DoSprinting();
+			break;
+			case ELSMovementMode::WallClimbing:
+			{
+				auto CMC = GetWvCharacterMovementComponent();
+				CMC->AbortClimbing();
+			}
+			break;
+		}
+
 	}
 	else
 	{
 		Super::DoStopSprinting();
 	}
+}
+
+bool APlayerCharacter::IsInputKeyDisable() const
+{
+	return WvAbilitySystemComponent->HasMatchingGameplayTag(TAG_Game_Input_Disable);
+}
+
+bool APlayerCharacter::IsTargetLock() const
+{
+	const FLocomotionEssencialVariables LocomotionEssencial = LocomotionComponent->GetLocomotionEssencialVariables();
+	const bool bHasTag = WvAbilitySystemComponent->HasMatchingGameplayTag(TAG_Character_TargetLocking);
+	return bHasTag && LocomotionEssencial.LookAtTarget.IsValid();
 }
 
