@@ -301,7 +301,6 @@ private:
 	AActor* FindNearestDistanceTarget(TArray<AActor*> Actors) const;
 	bool LineTrace(FHitResult& OutHitResult, const AActor* OtherActor, const TArray<AActor*>& ActorsToIgnore) const;
 	bool ShouldBreakLineOfSight() const;
-	bool IsInViewport(const AActor* TargetActor) const;
 	float GetDistanceFromCharacter(const AActor* OtherActor) const;
 	void BreakLineOfSight();
 

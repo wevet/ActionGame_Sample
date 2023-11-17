@@ -62,6 +62,14 @@ public:
 	UPROPERTY(EditDefaultsOnly)
 	TSubclassOf<UGameplayEffect> GE_Dead;
 
+	UPROPERTY(EditDefaultsOnly)
+	FBotConfig BotConfig;
+
+	UPROPERTY(EditDefaultsOnly)
+	TEnumAsByte<ETraceTypeQuery> WeaponTraceChannel;
+
+	UPROPERTY(EditDefaultsOnly)
+	bool bWeaponTraceDebug = false;
 
 public:
 	FGameplayTag FindScopeTagByNameToGameplayTagRefTable(FString Scope, const FName Name);

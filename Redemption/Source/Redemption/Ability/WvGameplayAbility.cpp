@@ -6,7 +6,7 @@
 #include "AbilitySystemComponent.h"
 #include "WvAbilitySystemComponent.h"
 #include "Character/BaseCharacter.h"
-#include "WvAbilityTask.h"
+#include "Task/WvAbilityTask.h"
 #include "WvAbilitySystemBlueprintFunctionLibrary.h"
 
 UWvGameplayAbility::UWvGameplayAbility(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
@@ -87,26 +87,6 @@ void UWvGameplayAbility::ApplyEffectToSelf(int32 EffectGroupIdx)
 		return;
 	}
 	ASC->ApplyEffectToSelf(ASC, EffectDataAsset, EffectGroupIdx);
-}
-
-void UWvGameplayAbility::ApplyEffectToTarget(FVector InOrigin, const TArray<FHitResult>& Hits, FWvAbilityData EffectData, int32 EffectGroupIdx /*= 0*/, bool DoFilter /*= true*/, AActor* OptionalExternalSource /*= nullptr*/)
-{
-	TArray<FHitResult> Res;
-	AActor* HitActor = OptionalExternalSource ? OptionalExternalSource : GetAvatarActorFromActorInfo();
-	if (DoFilter)
-	{
-		UWvAbilitySystemBlueprintFunctionLibrary::FilterHitResults(Hits, Res, HitActor, AbilityTargetFilter);
-	}
-	else
-	{
-		Res = Hits;
-	}
-
-	if (Res.Num() > 0)
-	{
-		FGameplayAbilityTargetDataHandle DataHandle = UWvAbilitySystemBlueprintFunctionLibrary::MakeTargetDataHandleFromHitResults(Res, InOrigin, GetBaseCharacter(), EffectData, HitActor);
-		CommitTargetDataHandle(DataHandle, EffectGroupIdx, FGameplayEffectQuery());
-	}
 }
 
 void UWvGameplayAbility::CommitTargetDataHandle(FGameplayAbilityTargetDataHandle TDH, int32 EffectGroupIdx, const FGameplayEffectQuery& Query)

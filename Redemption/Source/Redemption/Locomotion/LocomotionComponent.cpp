@@ -549,7 +549,7 @@ void ULocomotionComponent::OnLanded()
 
 void ULocomotionComponent::OnLandedCallback()
 {
-	UE_LOG(LogTemp, Log, TEXT("%s"), *FString(__FUNCTION__));
+	//UE_LOG(LogTemp, Log, TEXT("%s"), *FString(__FUNCTION__));
 }
 
 #pragma region CharacterSpeed
@@ -650,7 +650,9 @@ void ULocomotionComponent::UpdateCharacterMovementSettings()
 		const bool bHasStanding = (LocomotionEssencialVariables.LSStance == ELSStance::Standing);
 		CharacterMovementComponent->UpdateCharacterMovementSettings(bHasStanding);
 
-		if (bAllowCustomAcceleration)
+		const bool bIsGroundedOrFalling = CharacterMovementComponent->IsMovingOnGround() || CharacterMovementComponent->IsFalling();
+
+		if (bAllowCustomAcceleration || bIsGroundedOrFalling)
 		{
 			CharacterMovementComponent->BrakingDecelerationWalking = ChooseBrakingDeceleration();
 			CharacterMovementComponent->MaxAcceleration = ChooseMaxAcceleration();

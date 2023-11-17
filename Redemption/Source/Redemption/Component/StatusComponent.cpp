@@ -7,6 +7,8 @@
 #include "WvAbilityAttributeSet.h"
 #include "Ability/WvInheritanceAttributeSet.h"
 
+#include UE_INLINE_GENERATED_CPP_BY_NAME(StatusComponent)
+
 UStatusComponent::UStatusComponent()
 {
 	PrimaryComponentTick.bCanEverTick = true;
@@ -25,11 +27,7 @@ void UStatusComponent::BeginPlay()
 	if (ASC.IsValid())
 	{
 		AAS = ASC->GetStatusAttributeSet(UWvAbilityAttributeSet::StaticClass());
-		if (AAS.IsValid())
-		{
-			UE_LOG(LogTemp, Log, TEXT("AAS valid, function => %s"), *FString(__FUNCTION__));
-		}
-		else
+		if (!AAS.IsValid())
 		{
 			UE_LOG(LogTemp, Error, TEXT("AAS not valid, function => %s"), *FString(__FUNCTION__));
 		}

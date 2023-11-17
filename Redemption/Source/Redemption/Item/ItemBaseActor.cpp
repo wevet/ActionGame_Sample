@@ -2,6 +2,8 @@
 
 #include "ItemBaseActor.h"
 
+#include UE_INLINE_GENERATED_CPP_BY_NAME(ItemBaseActor)
+
 AItemBaseActor::AItemBaseActor(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
 	PrimaryActorTick.bCanEverTick = true;
@@ -41,4 +43,8 @@ bool AItemBaseActor::IsEquipped() const
 	return bIsEquip;
 }
 
+bool AItemBaseActor::IsAvailable() const
+{
+	return true;
+}
 

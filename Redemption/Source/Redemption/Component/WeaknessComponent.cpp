@@ -11,6 +11,7 @@
 #include "Character/BaseCharacter.h"
 #include "Ability/WvAbilitySystemComponent.h"
 
+#include UE_INLINE_GENERATED_CPP_BY_NAME(WeaknessComponent)
 
 FCharacterWeaknessData UCharacterWeaknessDataAsset::FindCharacterWeaknessData(const EAttackWeaponState InWeaponState, const FName HitBoneName) const
 {

@@ -51,6 +51,7 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
 	float Volume = 1.0f;
 
+
 protected:
 	virtual void Notify(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, const FAnimNotifyEventReference& EventReference) override;
 
@@ -62,4 +63,5 @@ private:
 	void TriggerEffect(AActor* Owner, UAnimSequenceBase* Animation, const FVector Location, const TEnumAsByte<EPhysicalSurface> SurfaceType);
 
 	const ELSGait GetGaitMode(AActor* Owner);
+	const bool IsInCrouch(AActor* Owner);
 };

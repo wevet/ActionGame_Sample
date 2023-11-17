@@ -14,6 +14,7 @@
 #include "Locomotion/LocomotionSystemTypes.h"
 
 // builtin
+#include "BehaviorTree/BehaviorTree.h"
 #include "AbilitySystemInterface.h"
 #include "Containers/Array.h"
 #include "Engine/EngineTypes.h"
@@ -76,6 +77,8 @@ public:
 
 class UPredictionFootIKComponent;
 class UMotionWarpingComponent;
+class UPawnNoiseEmitterComponent;
+
 class UWvCharacterMovementComponent;
 class ULocomotionComponent;
 class UInventoryComponent;
@@ -86,7 +89,12 @@ class UWvAnimInstance;
 
 
 UCLASS(Abstract)
-class REDEMPTION_API ABaseCharacter : public ACharacter, public IAbilitySystemInterface, public IAISightTargetInterface, public IWvAbilitySystemAvatarInterface, public IWvAbilityTargetInterface
+class REDEMPTION_API ABaseCharacter : public ACharacter, 
+	public IAbilitySystemInterface, 
+	public IAISightTargetInterface, 
+	public IWvAbilitySystemAvatarInterface, 
+	public IWvAbilityTargetInterface,
+	public IWvAIActionStateInterface
 {
 	GENERATED_BODY()
 
@@ -119,6 +127,7 @@ public:
 #pragma region IWvAbilitySystemAvatarInterface
 	virtual const FWvAbilitySystemAvatarData& GetAbilitySystemData() override;
 	virtual void InitAbilitySystemComponentByData(class UWvAbilitySystemComponentBase* ASC) override;
+	virtual UBehaviorTree* GetBehaviorTree() const override;
 #pragma endregion
 
 #pragma region IWvAbilityTargetInterface
@@ -131,15 +140,26 @@ public:
 	virtual bool IsTargetable() const override;
 
 	virtual USceneComponent* GetOverlapBaseComponent() override;
-
-	virtual void OnReceiveHitReact(FGameplayEffectContextHandle Context, const bool IsInDead, const float Damage) override;
-	virtual void OnSendWeaknessAttack(AActor* Actor, const FName WeaknessName, const float Damage) override;
-	virtual void OnReceiveWeaknessAttack(AActor* Actor, const FName WeaknessName, const float Damage) override;
-	virtual void OnSendAbilityAttack(AActor* Actor, const FWvBattleDamageAttackSourceInfo SourceInfo, const float Damage) override;
-	virtual void OnReceiveAbilityAttack(AActor* Actor, const FWvBattleDamageAttackSourceInfo SourceInfo, const float Damage) override;
-	virtual void OnSendKillTarget(AActor* Actor, const float Damage) override;
-	virtual void OnReceiveKillTarget(AActor* Actor, const float Damage) override;
 	virtual FOnTeamIndexChangedDelegate* GetOnTeamIndexChangedDelegate() override;
+
+	virtual void OnSendAbilityAttack(AActor* Actor, const FWvBattleDamageAttackSourceInfo SourceInfo, const float Damage) override;
+	virtual void OnSendWeaknessAttack(AActor* Actor, const FName WeaknessName, const float Damage) override;
+	virtual void OnSendKillTarget(AActor* Actor, const float Damage) override;
+
+	virtual void OnReceiveAbilityAttack(AActor* Actor, const FWvBattleDamageAttackSourceInfo SourceInfo, const float Damage) override;
+	virtual void OnReceiveWeaknessAttack(AActor* Actor, const FName WeaknessName, const float Damage) override;
+	virtual void OnReceiveKillTarget(AActor* Actor, const float Damage) override;
+	virtual void OnReceiveHitReact(FGameplayEffectContextHandle Context, const bool IsInDead, const float Damage) override;
+#pragma endregion
+
+#pragma region IWvAIActionStateInterface
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "BaseCharacter|AI")
+	void SetAIActionState(const EAIActionState NewAIActionState, AActor* Attacker);
+	virtual void SetAIActionState_Implementation(const EAIActionState NewAIActionState, AActor* Attacker) override;
+
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "BaseCharacter|AI")
+	EAIActionState GetAIActionState() const;
+	virtual EAIActionState GetAIActionState_Implementation() const override;
 #pragma endregion
 
 	const FCustomWvAbilitySystemAvatarData& GetCustomWvAbilitySystemData();
@@ -158,7 +178,7 @@ public:
 	* @param UserData			If available, it is a data passed between visibility tests for the users to store whatever they want
 	* @return	True if visible from the observer's location
 	*/
-	virtual bool CanBeSeenFrom(const FVector& ObserverLocation, FVector& OutSeenLocation, int32& NumberOfLoSChecksPerformed, float& OutSightStrength, const AActor* IgnoreActor = nullptr, const bool* bWasVisible = nullptr, int32* UserData = nullptr) const override;
+	virtual bool CanBeSeenFrom(const FVector& ObserverLocation, FVector& OutSeenLocation, int32& NumberOfLoSChecksPerformed, float& OutSightStrength, const AActor* IgnoreActor = nullptr, const bool* bWasVisible = nullptr, int32* UserData = nullptr) const;
 
 public:
 	UFUNCTION(BlueprintCallable, Category = Abilities)
@@ -211,6 +231,16 @@ public:
 	void DoStopAiming();
 
 	virtual void DoAttack();
+
+	UFUNCTION(BlueprintCallable, Category = Action)
+	void HandleCrouchAction(const bool bCanCrouch);
+
+	UFUNCTION(BlueprintCallable, Category = Action)
+	void HandleGuardAction(const bool bGuardEnable);
+
+	UFUNCTION(BlueprintCallable, Category = Action)
+	FTransform GetChestTransform(const FName BoneName) const;
+
 	void DoResumeAttack();
 	void DoStopAttack();
 
@@ -227,9 +257,22 @@ public:
 
 	virtual bool IsTargetLock() const;
 
+	UFUNCTION(BlueprintCallable, Category = Network)
+	bool IsBotCharacter() const;
+
+
+	// noise event
+	void ReportNoiseEvent(const FVector Offset, const float Volume, const float Radius);
+
+	/*
+	* Asks perception system to supply Requestor with PredictedActor's predicted location in PredictionTime seconds
+	* Location is being predicted based on PredicterActor's current location and velocity 
+	*/
+	void ReportPredictionEvent(AActor* PredictedActor, const float PredictionTime);
+
+	FVector GetPredictionStopLocation(const FVector CurrentLocation) const;
 
 protected:
-
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Component, meta = (AllowPrivateAccess = "true"))
 	class ULocomotionComponent* LocomotionComponent;
 
@@ -258,25 +301,37 @@ protected:
 	class UWeaknessComponent* WeaknessComponent;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Component, meta = (AllowPrivateAccess = "true"))
+	class UPawnNoiseEmitterComponent* PawnNoiseEmitterComponent;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Component, meta = (AllowPrivateAccess = "true"))
 	class USceneComponent* HeldObjectRoot;
 
-	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = "AbilitySystem")
+	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = "BaseCharacter|Config")
 	FCustomWvAbilitySystemAvatarData AbilitySystemData;
 
-	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = "Animation")
+	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = "BaseCharacter|Config")
 	UOverlayAnimInstanceDataAsset* OverlayAnimInstanceDA;
 
-	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = "AbilitySystem")
+	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = "BaseCharacter|Config")
+	UAIActionStateDataAsset* AIActionStateDA;
+
+	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = "BaseCharacter|Config")
 	FGameplayTag CharacterTag;
 
-	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = "AbilitySystem")
+	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = "BaseCharacter|Config")
 	ECharacterRelation CharacterRelation;
+
+	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = "BaseCharacter|Config")
+	class UBehaviorTree* BehaviorTree;
 
 	UPROPERTY(Transient, ReplicatedUsing = OnRep_ReplicatedAcceleration)
 	FWvReplicatedAcceleration ReplicatedAcceleration;
 
 	UPROPERTY(ReplicatedUsing = OnRep_MyTeamID)
 	FGenericTeamId MyTeamID;
+
+	UPROPERTY()
+	EAIActionState AIActionState;
 
 	UFUNCTION()
 	void OnRep_MyTeamID(FGenericTeamId OldTeamID);

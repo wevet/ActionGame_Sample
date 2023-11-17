@@ -3,7 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Ability/WvAbilityTask.h"
+#include "WvAbilityTask.h"
 #include "Components/BoxComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Component/CombatComponent.h"

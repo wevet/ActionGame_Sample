@@ -67,6 +67,18 @@ public:
 	const EAttackWeaponState ConvertWeaponState(const ELSOverlayState InLSOverlayState, bool& OutbCanAttack);
 	const bool ChangeAttackWeapon(const EAttackWeaponState InAttackWeaponState, int32 Index = 0);
 
+	/*
+	* Search and return unused weapons of the same type
+	*/
+	const AWeaponBaseActor* GetAvailableWeaponSameType(const bool bIsCheckAvailable);
+
+	/*
+	* Search and return unused weapons of different types
+	*/
+	const AWeaponBaseActor* GetAvailableWeaponNoSameType(const bool bIsCheckAvailable);
+	TArray<EAttackWeaponState> GetAvailableWeaponType() const;
+
+
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Config")
 	UItemInventoryDataAsset* InitInventoryDA;
@@ -84,7 +96,8 @@ private:
 	TMap<EAttackWeaponState, TArray<AWeaponBaseActor*>> WeaponActorMap;
 
 	UPROPERTY()
-	TWeakObjectPtr<AWeaponBaseActor> InitWeaponActor;
+	TWeakObjectPtr<AWeaponBaseActor> CurrentWeaponActor;
 
 	TArray<AWeaponBaseActor*> FindOverlayWeaponArray(const ELSOverlayState InLSOverlayState) const;
+	bool GetAvailableWeaponType(const TArray<AWeaponBaseActor*> InWeaponArray) const;
 };

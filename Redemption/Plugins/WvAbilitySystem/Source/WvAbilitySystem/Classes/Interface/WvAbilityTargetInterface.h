@@ -51,15 +51,15 @@ public:
 	virtual FGameplayTag GetAvatarTag() const;
 	virtual FGameplayEffectQuery GetHitEffectQuery();
 
-
-public:
-	virtual void OnReceiveHitReact(FGameplayEffectContextHandle Context, const bool IsInDead, const float Damage);
-	virtual void OnSendWeaknessAttack(AActor* Actor, const FName WeaknessName,  const float Damage);
-	virtual void OnReceiveWeaknessAttack(AActor* Actor, const FName WeaknessName, const float Damage);
 	virtual void OnSendAbilityAttack(AActor* Actor, const FWvBattleDamageAttackSourceInfo SourceInfo, const float Damage);
-	virtual void OnReceiveAbilityAttack(AActor* Actor, const FWvBattleDamageAttackSourceInfo SourceInfo, const float Damage);
+	virtual void OnSendWeaknessAttack(AActor* Actor, const FName WeaknessName, const float Damage);
 	virtual void OnSendKillTarget(AActor* Actor, const float Damage);
+
+	virtual void OnReceiveAbilityAttack(AActor* Actor, const FWvBattleDamageAttackSourceInfo SourceInfo, const float Damage);
+	virtual void OnReceiveWeaknessAttack(AActor* Actor, const FName WeaknessName, const float Damage);
+	virtual void OnReceiveHitReact(FGameplayEffectContextHandle Context, const bool IsInDead, const float Damage);
 	virtual void OnReceiveKillTarget(AActor* Actor, const float Damage);
+
 	virtual bool IsDead() const;
 	virtual bool IsTargetable() const;
 
@@ -76,7 +76,25 @@ public:
 		check(Result);
 		return *Result;
 	}
+};
 
+
+UINTERFACE(BlueprintType)
+class WVABILITYSYSTEM_API UWvAIActionStateInterface : public UInterface
+{
+	GENERATED_UINTERFACE_BODY()
+};
+
+class WVABILITYSYSTEM_API IWvAIActionStateInterface
+{
+	GENERATED_IINTERFACE_BODY()
+
+public:
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "AI")
+	void SetAIActionState(const EAIActionState NewAIActionState, AActor* Attacker);
+
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "AI")
+	EAIActionState GetAIActionState() const;
 };
 
 

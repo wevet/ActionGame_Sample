@@ -58,8 +58,8 @@ void UWvAbility_Melee::ActivateAbility(const FGameplayAbilitySpecHandle Handle, 
 		true,
 		1.0f);
 
-	MontageTask->OnCancelled.AddDynamic(this, &UWvAbility_Melee::OnPlayMontageCanceled_Event);
-	MontageTask->OnInterrupted.AddDynamic(this, &UWvAbility_Melee::OnPlayMontageInterrupted_Event);
+	MontageTask->OnCancelled.AddDynamic(this, &UWvAbility_Melee::OnPlayMontageCompleted_Event);
+	MontageTask->OnInterrupted.AddDynamic(this, &UWvAbility_Melee::OnPlayMontageCompleted_Event);
 	MontageTask->OnCompleted.AddDynamic(this, &UWvAbility_Melee::OnPlayMontageCompleted_Event);
 	MontageTask->ReadyForActivation();
 }
@@ -67,16 +67,6 @@ void UWvAbility_Melee::ActivateAbility(const FGameplayAbilitySpecHandle Handle, 
 void UWvAbility_Melee::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled)
 {
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
-}
-
-void UWvAbility_Melee::OnPlayMontageCanceled_Event(FGameplayTag EventTag, FGameplayEventData EventData)
-{
-	K2_EndAbility();
-}
-
-void UWvAbility_Melee::OnPlayMontageInterrupted_Event(FGameplayTag EventTag, FGameplayEventData EventData)
-{
-	K2_EndAbility();
 }
 
 void UWvAbility_Melee::OnPlayMontageCompleted_Event(FGameplayTag EventTag, FGameplayEventData EventData)

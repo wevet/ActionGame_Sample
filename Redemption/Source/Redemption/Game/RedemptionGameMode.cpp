@@ -3,6 +3,8 @@
 #include "RedemptionGameMode.h"
 #include "UObject/ConstructorHelpers.h"
 
+#include UE_INLINE_GENERATED_CPP_BY_NAME(RedemptionGameMode)
+
 ARedemptionGameMode::ARedemptionGameMode()
 {
 	//static ConstructorHelpers::FClassFinder<APawn> PlayerPawnBPClass(TEXT("/Game/ThirdPerson/Blueprints/BP_PlayerCharacter"));

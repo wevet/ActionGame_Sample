@@ -471,3 +471,20 @@ void UAAU_HitReactBoneShakeDATool::SaveDA(class UHitReactBoneShakeDataAsset* DA)
 
 #pragma endregion
 
+
+#pragma region BotSetting
+FGameplayTag UAIActionStateDataAsset::FindActionStateTag(const EAIActionState InAIActionState) const
+{
+	auto FindItemData = AIActionStateData.FindByPredicate([&](FAIActionStateData Item)
+	{
+		return (Item.AIActionState == InAIActionState);
+	});
+
+	if (FindItemData)
+	{
+		return FindItemData->StateTag;
+	}
+	return FGameplayTag::EmptyTag;
+}
+#pragma endregion
+

@@ -42,7 +42,9 @@ protected:
 public:
 	bool AbilityDamageBoxTrace(class UWvAbilityBase* Ability, const int32 EffectGroupIndex, const FVector Start, const FVector End, FVector HalfSize, const FRotator Orientation, TArray<AActor*>& ActorsToIgnore);
 	bool AbilityDamageCapsuleTrace(class UWvAbilityBase* Ability, const int32 EffectGroupIndex, const FVector Start, const FVector End, const float Radius, const float HalfHeight, const FQuat CapsuleQuat, TArray<AActor*>& ActorsToIgnore);
-	const bool BulletTraceAttackToAbilitySystemComponent(const int32 WeaponID, class UWvAbilityEffectDataAsset* EffectDA, const int32 EffectGroupIndex, TArray<FHitResult>& Hits, const FVector SourceLocation);
+	const bool BulletTraceAttackToAbilitySystemComponent(const int32 WeaponID, class UWvAbilityBase* Ability, const int32 EffectGroupIndex, TArray<FHitResult>& Hits, const FVector SourceLocation);
+
+	const bool LineOfSightTraceOuter(class UWvAbilityBase* Ability, const int32 EffectGroupIndex, TArray<FHitResult>& Hits, const FVector SourceLocation);
 
 	UFUNCTION(BlueprintCallable)
 	FGameplayTag GetHitReactFeature();
@@ -60,13 +62,26 @@ public:
 	FGameplayTag GetWeaknessHitReactFeature() const;
 	TArray<class UBoneShakeExecuteData*> GetBoneShakeDatas() const;
 
+#pragma region BattleCommand
+	UFUNCTION(BlueprintCallable, Category = "CombatComponent|BattleCommand")
+	void UnEquipWeapon();
+
+	UFUNCTION(BlueprintCallable, Category = "CombatComponent|BattleCommand")
+	void EquipPistol();
+
+	UFUNCTION(BlueprintCallable, Category = "CombatComponent|BattleCommand")
+	void EquipRifle();
+
+	UFUNCTION(BlueprintCallable, Category = "CombatComponent|BattleCommand")
+	void EquipKnife();
+#pragma endregion
+
 private:
 	void BoxTraceMulti(TArray<FWvBattleDamageAttackTargetInfo>& HitTargetInfos, const FVector Start, const FVector End, const FVector HalfSize, const FRotator Orientation, const TArray<AActor*>& ActorsToIgnore);
 	void CapsuleTraceMulti(TArray<FWvBattleDamageAttackTargetInfo>& HitTargetInfos, const FVector Start, const FVector End, const float Radius, const float HalfHeight, const FQuat CapsuleFquat, const TArray<AActor*>& ActorsToIgnore);
 	void AbilityTraceAttackToASC(class UWvAbilityBase* Ability, const int32 EffectGroupIndex, TArray<FWvBattleDamageAttackTargetInfo> HitTargetInfos, const FVector SourceLocation);
 	void AttackToASC(const FWvBattleDamageAttackSourceInfo SourceInfo, TArray<FWvBattleDamageAttackTargetInfo> HitInfos, class UWvAbilityEffectDataAsset* EffectDA, const int32 EffectGroupIndex, const FVector SourceLocation);
 	void HitResultEnemyFilter(TArray<FHitResult>& Hits, TArray<FWvBattleDamageAttackTargetInfo>& HitTargetInfos);
-
 
 	UFUNCTION()
 	void OnTagUpdate(const FGameplayTag Tag, const bool bIsTagExists);
@@ -80,6 +95,10 @@ private:
 	void StartBoneShake(const FName HitBoneName, const FGameplayTag BoneShakeTriggerTag, const FGameplayTag BoneShakeStrengthTag);
 	void TickUpdateUpdateBoneShake();
 	bool UpdateBoneShake(const float DeltaTime);
+
+#pragma region BattleCommand
+	void Modify_Weapon(const ELSOverlayState LSOverlayState);
+#pragma endregion
 
 private:
 	TWeakObjectPtr<UWvAbilitySystemComponent> ASC;

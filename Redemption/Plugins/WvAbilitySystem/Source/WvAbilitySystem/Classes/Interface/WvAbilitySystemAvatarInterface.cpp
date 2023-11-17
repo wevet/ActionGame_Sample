@@ -52,17 +52,6 @@ void IWvAbilitySystemAvatarInterface::InitAbilitySystemComponentByData(class UWv
 		});
 	}
 
-	if (Data.MagicAbilityTable)
-	{
-		Data.MagicAbilityTable->ForeachRow<FMagicAbilityRow>(TEXT("CharacterMagicAbilityTable foreach"), [&](const FName& Key, const FMagicAbilityRow& Config)
-		{
-			if (Config.AbilityData && Config.AbilityData->AbilityClass)
-			{
-				ASC->ApplyGiveMagicAbility(Config);
-			}
-		});
-	}
-
 #if !UE_BUILD_SHIPPING
 	if (Data.DebugAbilityTable)
 	{
@@ -87,5 +76,10 @@ void IWvAbilitySystemAvatarInterface::InitAbilitySystemComponentByData(class UWv
 		}
 	}
 	Execute_ReceiveOnInitAttribute(Cast<UObject>(this));
+}
+
+UBehaviorTree* IWvAbilitySystemAvatarInterface::GetBehaviorTree() const
+{
+	return nullptr;
 }
 

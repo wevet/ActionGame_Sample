@@ -14,7 +14,7 @@
 #include "Animation/AnimClassInterface.h"
 #include "Animation/AnimInstanceProxy.h"
 #include "Animation/AnimNode_LinkedAnimLayer.h"
-#include "Animation/BlendSpaceBase.h"
+#include "Animation/BlendSpace.h"
 
 #include "Component/WvCharacterMovementComponent.h"
 #include "Locomotion/LocomotionComponent.h"
@@ -251,18 +251,11 @@ void UWvAnimInstance::CalculateAimOffset()
 		break;
 		case ELSRotationMode::LookingDirection:
 		{
-			if (bWasAiming)
-			{
-				const FRotator DeltaRot = UKismetMathLibrary::NormalizedDeltaRotator(LookingRotation, CharacterRotation);
-				FVector2D NewAimOffset = FVector2D(DeltaRot.Yaw, DeltaRot.Pitch);
-				NewAimOffset.X = FMath::Clamp(NewAimOffset.X, -AimOffsetClampRange.X, AimOffsetClampRange.X);
-				NewAimOffset.Y = FMath::Clamp(NewAimOffset.Y, -AimOffsetClampRange.Y, AimOffsetClampRange.Y);
-				AimOffset = NewAimOffset;
-			}
-			else
-			{
-				AimOffset = UKismetMathLibrary::Vector2DInterpTo(AimOffset, FVector2D::ZeroVector, DeltaSeconds, DefaultInterpSpeed);
-			}
+			const FRotator DeltaRot = UKismetMathLibrary::NormalizedDeltaRotator(LookingRotation, CharacterRotation);
+			FVector2D NewAimOffset = FVector2D(DeltaRot.Yaw, DeltaRot.Pitch);
+			NewAimOffset.X = FMath::Clamp(NewAimOffset.X, -AimOffsetClampRange.X, AimOffsetClampRange.X);
+			NewAimOffset.Y = FMath::Clamp(NewAimOffset.Y, -AimOffsetClampRange.Y, AimOffsetClampRange.Y);
+			AimOffset = NewAimOffset;
 		}
 		break;
 	}

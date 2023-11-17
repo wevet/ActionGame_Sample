@@ -8,6 +8,7 @@
 #include "WvAbilitySystemAvatarInterface.generated.h"
 
 class UWvAbilitySystemComponentBase;
+class UBehaviorTree;
 
 UINTERFACE(MinimalAPI)
 class UWvAbilitySystemAvatarInterface : public UInterface
@@ -23,6 +24,8 @@ class WVABILITYSYSTEM_API IWvAbilitySystemAvatarInterface
 public:
 	virtual const FWvAbilitySystemAvatarData& GetAbilitySystemData() = 0;
 	virtual void InitAbilitySystemComponentByData(class UWvAbilitySystemComponentBase* ASC);
+
+	virtual UBehaviorTree* GetBehaviorTree() const;
 
 	UFUNCTION(BlueprintImplementableEvent)
 	void ReceiveOnInitAttribute();

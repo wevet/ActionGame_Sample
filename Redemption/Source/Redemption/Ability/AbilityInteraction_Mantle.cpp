@@ -71,8 +71,8 @@ void UAbilityInteraction_Mantle::ActivateAbility(const FGameplayAbilitySpecHandl
 		true,
 		1.0f);
 
-	MontageTask->OnCancelled.AddDynamic(this, &UAbilityInteraction_Mantle::OnPlayMontageCanceled_Event);
-	MontageTask->OnInterrupted.AddDynamic(this, &UAbilityInteraction_Mantle::OnPlayMontageInterrupted_Event);
+	MontageTask->OnCancelled.AddDynamic(this, &UAbilityInteraction_Mantle::OnPlayMontageCompleted_Event);
+	MontageTask->OnInterrupted.AddDynamic(this, &UAbilityInteraction_Mantle::OnPlayMontageCompleted_Event);
 	MontageTask->OnCompleted.AddDynamic(this, &UAbilityInteraction_Mantle::OnPlayMontageCompleted_Event);
 	MontageTask->ReadyForActivation();
 }
@@ -84,16 +84,6 @@ void UAbilityInteraction_Mantle::EndAbility(const FGameplayAbilitySpecHandle Han
 		MovementComponent->MantleEnd();
 	}
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
-}
-
-void UAbilityInteraction_Mantle::OnPlayMontageCanceled_Event(FGameplayTag EventTag, FGameplayEventData EventData)
-{
-	K2_EndAbility();
-}
-
-void UAbilityInteraction_Mantle::OnPlayMontageInterrupted_Event(FGameplayTag EventTag, FGameplayEventData EventData)
-{
-	K2_EndAbility();
 }
 
 void UAbilityInteraction_Mantle::OnPlayMontageCompleted_Event(FGameplayTag EventTag, FGameplayEventData EventData)

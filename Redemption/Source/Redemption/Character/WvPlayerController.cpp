@@ -2,12 +2,13 @@
 
 #include "WvPlayerController.h"
 #include "PlayerCharacter.h"
+#include "Engine/World.h"
+#include "BasePlayerState.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(WvPlayerController)
 
 AWvPlayerController::AWvPlayerController(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
-
 	InputEventComponent = CreateDefaultSubobject<UWvInputEventComponent>(TEXT("InputComponent"));
 }
 
@@ -25,6 +26,22 @@ void AWvPlayerController::OnPossess(APawn* InPawn)
 {
 	Super::OnPossess(InPawn);
 	PC = Cast<APlayerCharacter>(InPawn);
+
+	OverrideSquadID = FMath::Clamp(OverrideSquadID, 1, 255);
+	auto PS = Cast<ABasePlayerState>(PlayerState);
+	if (PS)
+	{
+		PS->SetSquadID(OverrideSquadID);
+		PS->SetGenericTeamId(FGenericTeamId(OverrideSquadID));
+	}
+
+	if (InPawn)
+	{
+		if (IWvAbilityTargetInterface* TeamAgent = Cast<IWvAbilityTargetInterface>(InPawn))
+		{
+			TeamAgent->SetGenericTeamId(FGenericTeamId(OverrideSquadID));
+		}
+	}
 }
 
 void AWvPlayerController::OnUnPossess()
@@ -62,9 +79,9 @@ void AWvPlayerController::SetGenericTeamId(const FGenericTeamId& NewTeamID)
 
 FGenericTeamId AWvPlayerController::GetGenericTeamId() const
 {
-	if (const IWvAbilityTargetInterface* PSWithTeamInterface = Cast<IWvAbilityTargetInterface>(PlayerState))
+	if (const IWvAbilityTargetInterface* TeamAgent = Cast<IWvAbilityTargetInterface>(PlayerState))
 	{
-		return PSWithTeamInterface->GetGenericTeamId();
+		return TeamAgent->GetGenericTeamId();
 	}
 	return FGenericTeamId::NoTeam;
 }

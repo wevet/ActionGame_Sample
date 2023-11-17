@@ -192,6 +192,12 @@ private:
 	float GetSlopeAngle(const FHitResult& InHitResult) const;
 	float GetMaxWalkSpeedCrouched() const;
 
+	struct FMantleMovementParams 
+	{
+	public:
+		bool IsMovingDetectChecked = true;
+	} MantleMovementParams;
+
 #pragma region LedgeEnd
 	FVector GetLedgeInputVelocity() const;
 	void DetectLedgeEnd();

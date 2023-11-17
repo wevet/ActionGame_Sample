@@ -3,7 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Ability/WvAnimNotifyState.h"
+#include "WvAnimNotifyState.h"
 #include "Ability/WvTraceActor.h"
 #include "Ability/Task/WvAT_ComponentDamage.h"
 #include "WvAnimNotify_ComponentDamage.generated.h"

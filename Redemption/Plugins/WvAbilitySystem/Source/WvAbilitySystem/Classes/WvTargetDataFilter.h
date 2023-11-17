@@ -27,7 +27,7 @@ struct WVABILITYSYSTEM_API FWvTargetDataFilter
 public:
 
 	UPROPERTY(EditDefaultsOnly, Category = Filter)
-	ETargetRelation TargetRelationFilter = ETargetRelation::Enemy;
+	ETargetRelation TargetRelationFilter = ETargetRelation::All;
 
 	/*
 	* The following needs may be considered:

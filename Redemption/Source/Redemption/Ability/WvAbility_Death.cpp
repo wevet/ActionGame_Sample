@@ -56,6 +56,8 @@ void UWvAbility_Death::ActivateAbility(const FGameplayAbilitySpecHandle Handle, 
 	bDebugTrace = false;
 #endif
 
+	const bool bIsCrouched = Character->bIsCrouched;
+
 	if (HitReactInfo)
 	{
 		const EHitVerticalDirection VerticalDirection = UWvAbilitySystemBlueprintFunctionLibrary::EvaluteHitVerticalDirection(AttackDirection);
@@ -68,17 +70,14 @@ void UWvAbility_Death::ActivateAbility(const FGameplayAbilitySpecHandle Handle, 
 			UE_LOG(LogTemp, Log, TEXT("HitReactDirection => %s"), *GETENUMSTRING("/Script/WvAbilitySystem.EHitReactDirection", HitReactDirection));
 		}
 
-		for (FHitReactVerticalConditionInfo VerticalConditionInfo : HitReactInfo->VerticalConditions)
+		auto FindItemData = HitReactInfo->VerticalConditions.FindByPredicate([&](FHitReactVerticalConditionInfo Item)
 		{
-			if (VerticalDirection != VerticalConditionInfo.VerticalDirection)
-			{
-				continue;
-			}
+			return (Item.VerticalDirection == VerticalDirection);
+		});
 
-			if (TargetMontage == nullptr)
-			{
-				TargetMontage = VerticalConditionInfo.NormalMontage;
-			}
+		if (FindItemData)
+		{
+			TargetMontage = FindItemData->NormalMontage;
 		}
 	}
 	else
@@ -126,8 +125,8 @@ void UWvAbility_Death::PlayHitReactMontage(UAnimMontage* Montage)
 		true,
 		1.0f);
 
-	MontageTask->OnCancelled.AddDynamic(this, &UWvAbility_Death::OnPlayMontageCanceled_Event);
-	MontageTask->OnInterrupted.AddDynamic(this, &UWvAbility_Death::OnPlayMontageInterrupted_Event);
+	MontageTask->OnCancelled.AddDynamic(this, &UWvAbility_Death::OnPlayMontageCompleted_Event);
+	MontageTask->OnInterrupted.AddDynamic(this, &UWvAbility_Death::OnPlayMontageCompleted_Event);
 	MontageTask->OnCompleted.AddDynamic(this, &UWvAbility_Death::OnPlayMontageCompleted_Event);
 	MontageTask->ReadyForActivation();
 }
@@ -135,16 +134,6 @@ void UWvAbility_Death::PlayHitReactMontage(UAnimMontage* Montage)
 void UWvAbility_Death::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled)
 {
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
-}
-
-void UWvAbility_Death::OnPlayMontageCanceled_Event(FGameplayTag EventTag, FGameplayEventData EventData)
-{
-	K2_EndAbility();
-}
-
-void UWvAbility_Death::OnPlayMontageInterrupted_Event(FGameplayTag EventTag, FGameplayEventData EventData)
-{
-	K2_EndAbility();
 }
 
 void UWvAbility_Death::OnPlayMontageCompleted_Event(FGameplayTag EventTag, FGameplayEventData EventData)

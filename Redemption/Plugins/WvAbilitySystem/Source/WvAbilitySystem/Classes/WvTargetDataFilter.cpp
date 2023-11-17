@@ -16,9 +16,25 @@ bool FWvTargetDataFilter::FilterPassesForActor(IWvAbilityTargetInterface* Self, 
 
 	if (const IWvAbilityTargetInterface* Target = Cast<IWvAbilityTargetInterface>(ActorToBeFiltered))
 	{
+		const AActor* Owner = Cast<AActor>(Self->_getUObject());
+		if (IsValid(Owner))
+		{
+			const ETeamAttitude::Type OwnerAttitude = Self->GetTeamAttitudeTowards(*ActorToBeFiltered);
+			const ETeamAttitude::Type TargetAttitude = Target->GetTeamAttitudeTowards(*Owner);
+			bIsResult = (OwnerAttitude == TargetAttitude);
+		}
+		else
+		{
+			UE_LOG(LogTemp, Error, TEXT("Cast Failed Owner => %s"), *FString(__FUNCTION__));
+		}
+	}
+
+#if false
+	if (const IWvAbilityTargetInterface* Target = Cast<IWvAbilityTargetInterface>(ActorToBeFiltered))
+	{
 		if (bConsiderTeamRelationOnly) 
 		{
-			auto bHasTarget = Target->CanAsTarget(Self, this);
+			const bool bHasTarget = Target->CanAsTarget(Self, this);
 		}
 		else 
 		{
@@ -27,5 +43,8 @@ bool FWvTargetDataFilter::FilterPassesForActor(IWvAbilityTargetInterface* Self, 
 		// bIsResult = bIsResult ^ bReverseFilter
 		bIsResult ^= bReverseFilter;
 	}
+#endif
+
 	return bIsResult;
 }
+

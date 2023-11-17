@@ -60,7 +60,7 @@ void UWvGameplayCue_HitImpact::HandleAttack(ABaseCharacter* BeHitActor, ABaseCha
 	const FGameplayTag AvatarTag = Attacker->GetAvatarTag();
 	const FGameplayTag AttackCueTag = ExData->CueConfig.AttackCueTag;
 
-	if (!CueConfigDataAssest || !CueConfigDataAssest->GetAttackCueConfigRow(AvatarTag, AttackCueTag, ConfigRow))
+	if (!CueConfigDataAssest->GetAttackCueConfigRow(AvatarTag, AttackCueTag, ConfigRow))
 	{
 		return;
 	}
@@ -99,11 +99,6 @@ void UWvGameplayCue_HitImpact::HandleBeHit(ABaseCharacter* BeHitActor, ABaseChar
 {
 	UApplyEffectExData* ExData = UWvAbilitySystemBlueprintFunctionLibrary::GetOnecEffectExData(OnceApplyEffect);
 	if (!ExData)
-	{
-		return;
-	}
-
-	if (!CueConfigDataAssest)
 	{
 		return;
 	}

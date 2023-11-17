@@ -14,14 +14,14 @@ FVector UWvSpringArmComponent::BlendLocations(const FVector& DesiredArmLocation,
 {
 	if (bHitSomething)
 	{
-		//壁と衝突したのでCurrentHitReturnInterpTimeをHitReturnInterpTimeにリセット
+		// Reset CurrentHitReturnInterpTime to HitReturnInterpTime because of collision with wall
 		FVector Interp = FMath::VInterpTo(PrevHitInterpLoc, TraceHitLocation, DeltaTime, HitInterpSpeed);
 		PrevHitInterpLoc = Interp;
 		CurrentHitReturnInterpTime = HitReturnInterpTime;
 		return Interp;
 	}
 
-	// 壁ぶつかり終了後の復帰補間
+	// Return interpolation after end of wall bump
 	if (CurrentHitReturnInterpTime > 0.0f)
 	{
 		CurrentHitReturnInterpTime -= DeltaTime;
@@ -30,7 +30,7 @@ FVector UWvSpringArmComponent::BlendLocations(const FVector& DesiredArmLocation,
 		return Interp;
 	}
 
-	// 上の条件に入らなかったのでArmは伸びきっている状態のはず
+	// Arm should be in full extension since it did not enter the above condition
 	PrevHitInterpLoc = DesiredArmLocation;
 	return DesiredArmLocation;
 }

@@ -5,6 +5,7 @@
 #include "Character/BaseCharacter.h"
 #include "Component/CombatComponent.h"
 #include "Component/InventoryComponent.h"
+#include "GameExtension.h"
 
 #include "Kismet/KismetMathLibrary.h"
 #include "Kismet/GameplayStatics.h"
@@ -179,9 +180,67 @@ bool UWvCommonUtils::IsBot(const AController* Controller)
 		return false;
 	}
 	//Is a BOT
-	if (!Class->IsChildOf(AAIController::StaticClass())) 
+	if (!Class->IsChildOf(AAIController::StaticClass()))
+	{
 		return false;
+	}
 	return true;
+}
+
+bool UWvCommonUtils::IsBotPawn(AActor* Actor)
+{
+	if (APawn* Pawn = Cast<APawn>(Actor))
+	{
+		return IsBot(Pawn->GetController());
+	}
+	return false;
+}
+
+void UWvCommonUtils::CircleSpawnPoints(const int32 InSpawnCount, const float InRadius, const FVector InRelativeLocation, TArray<FVector>& OutPointArray)
+{
+	float AngleDiff = 360.f / (float)InSpawnCount;
+	for (int i = 0; i < InSpawnCount; ++i)
+	{
+		FVector Position = InRelativeLocation;
+		float Ang = FMath::DegreesToRadians(90 - AngleDiff * i);
+		Position.X += InRadius * FMath::Cos(Ang);
+		Position.Y += InRadius * FMath::Sin(Ang);
+		OutPointArray.Add(Position);
+	}
+}
+
+bool UWvCommonUtils::IsInViewport(AActor* Actor)
+{
+	if (!IsBotPawn(Actor))
+	{
+		return true;
+	}
+
+	auto PC = UGameplayStatics::GetPlayerController(Actor->GetWorld(), 0);
+	if (PC)
+	{
+		FVector2D ScreenLocation;
+		PC->ProjectWorldLocationToScreen(Actor->GetActorLocation(), ScreenLocation);
+		FVector2D ViewportSize;
+		Actor->GetWorld()->GetGameViewport()->GetViewportSize(ViewportSize);
+		return ScreenLocation.X > 0 && ScreenLocation.Y > 0 && ScreenLocation.X < ViewportSize.X&& ScreenLocation.Y < ViewportSize.Y;
+	}
+	return false;
+}
+
+float UWvCommonUtils::PlayerPawnToDistance(AActor* Actor)
+{
+	if (!IsBotPawn(Actor))
+	{
+		return 0.f;
+	}
+
+	auto Pawn = Game::ControllerExtension::GetPlayerPawn(Actor->GetWorld(), 0);
+	if (Pawn)
+	{
+		return (Pawn->GetActorLocation() - Actor->GetActorLocation()).Size();
+	}
+	return 0.f;
 }
 
 FHitReactInfoRow* UWvCommonUtils::FindHitReactInfoRow(ABaseCharacter* Character)

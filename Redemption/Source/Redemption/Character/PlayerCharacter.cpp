@@ -278,21 +278,15 @@ void APlayerCharacter::OverlayStateChange_Callback(const ELSOverlayState PrevOve
 		return;
 	}
 
-	auto PrevItem = ItemInventoryComponent->FindItem(PrevOverlay);
-	if (PrevItem)
+	bool bCanAttack = false;
+	const auto WeaponType = ItemInventoryComponent->ConvertWeaponState(CurrentOverlay, bCanAttack);
+	const bool bResult = ItemInventoryComponent->ChangeAttackWeapon(WeaponType);
+
+	if (bResult)
 	{
-		PrevItem->Notify_UnEquip();
-		PrevItem->SetActorHiddenInGame(true);
+		Super::OverlayStateChange(CurrentOverlay);
 	}
 
-	auto CurrentItem = ItemInventoryComponent->FindItem(CurrentOverlay);
-	if (CurrentItem)
-	{
-		CurrentItem->Notify_Equip();
-		CurrentItem->SetActorHiddenInGame(false);
-	}
-
-	Super::OverlayStateChange(CurrentOverlay);
 }
 
 void APlayerCharacter::OnTargetLockedOn_Callback(AActor* LookOnTarget, UHitTargetComponent* TargetComponent)
@@ -350,8 +344,8 @@ bool APlayerCharacter::IsInputKeyDisable() const
 
 bool APlayerCharacter::IsTargetLock() const
 {
-	const FLocomotionEssencialVariables LocomotionEssencial = LocomotionComponent->GetLocomotionEssencialVariables();
 	const bool bHasTag = WvAbilitySystemComponent->HasMatchingGameplayTag(TAG_Character_TargetLocking);
+	const FLocomotionEssencialVariables LocomotionEssencial = LocomotionComponent->GetLocomotionEssencialVariables();
 	return bHasTag && LocomotionEssencial.LookAtTarget.IsValid();
 }
 

@@ -1,7 +1,7 @@
 // Copyright 2022 wevet works All Rights Reserved.
 
 #include "WvAbilitySystemComponent.h"
-#include "WvAnimNotifyState.h"
+#include "AnimNotify/WvAnimNotifyState.h"
 #include "WvGameplayTargetData.h"
 #include "WvGameplayEffectContext.h"
 #include "WvAbilitySystemBlueprintFunctionLibrary.h"

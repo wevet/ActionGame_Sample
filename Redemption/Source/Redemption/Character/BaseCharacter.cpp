@@ -17,6 +17,7 @@
 
 #include "Components/CapsuleComponent.h"
 #include "Components/InputComponent.h"
+#include "Components/PawnNoiseEmitterComponent.h"
 #include "MotionWarpingComponent.h"
 #include "AI/Navigation/NavigationTypes.h"
 #include "Delegates/Delegate.h"
@@ -39,6 +40,8 @@
 #include "Kismet/KismetMathLibrary.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Animation/AnimInstance.h"
+#include "Perception/AISense_Hearing.h"
+#include "Perception/AISense_Prediction.h"
 
 // Misc
 #include "Engine/SkeletalMeshSocket.h"
@@ -49,12 +52,14 @@
 
 TSubclassOf<UAnimInstance> UOverlayAnimInstanceDataAsset::FindAnimInstance(const ELSOverlayState InOverlayState) const
 {
-	for (FOverlayAnimInstance AnimInstance : OverlayAnimInstances)
+	auto FindItemData = OverlayAnimInstances.FindByPredicate([&](FOverlayAnimInstance Item)
 	{
-		if (AnimInstance.OverlayState == InOverlayState)
-		{
-			return AnimInstance.AnimInstanceClass;
-		}
+		return (Item.OverlayState == InOverlayState);
+	});
+
+	if (FindItemData)
+	{
+		return FindItemData->AnimInstanceClass;
 	}
 	return UnArmedAnimInstanceClass;
 }
@@ -71,6 +76,7 @@ ABaseCharacter::ABaseCharacter(const FObjectInitializer& ObjectInitializer)
 	bUseControllerRotationPitch = false;
 	bUseControllerRotationYaw = false;
 	bUseControllerRotationRoll = false;
+	AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;
 
 	USkeletalMeshComponent* MeshComp = GetMesh();
 	check(MeshComp);
@@ -98,37 +104,41 @@ ABaseCharacter::ABaseCharacter(const FObjectInitializer& ObjectInitializer)
 
 	SetReplicateMovement(true);
 
-	MotionWarpingComponent = CreateDefaultSubobject<UMotionWarpingComponent>(TEXT("MotionWarpingComponent"));
+	MotionWarpingComponent = ObjectInitializer.CreateDefaultSubobject<UMotionWarpingComponent>(this, TEXT("MotionWarpingComponent"));
 	MotionWarpingComponent->bSearchForWindowsInAnimsWithinMontages = true;
 
-	CharacterMovementTrajectoryComponent = CreateDefaultSubobject<UCharacterMovementTrajectoryComponent>(TEXT("CharacterMovementTrajectoryComponent"));
+	CharacterMovementTrajectoryComponent = ObjectInitializer.CreateDefaultSubobject<UCharacterMovementTrajectoryComponent>(this, TEXT("CharacterMovementTrajectoryComponent"));
 
-	PredictionFootIKComponent = CreateDefaultSubobject<UPredictionFootIKComponent>(TEXT("PredictionFootIKComponent"));
+	PredictionFootIKComponent = ObjectInitializer.CreateDefaultSubobject<UPredictionFootIKComponent>(this, TEXT("PredictionFootIKComponent"));
 	PredictionFootIKComponent->bAutoActivate = 1;
 
-	WvAbilitySystemComponent = CreateDefaultSubobject<UWvAbilitySystemComponent>(TEXT("WvAbilitySystemComponent"));
+	WvAbilitySystemComponent = ObjectInitializer.CreateDefaultSubobject<UWvAbilitySystemComponent>(this, TEXT("WvAbilitySystemComponent"));
 	WvAbilitySystemComponent->bAutoActivate = 1;
 
-	LocomotionComponent = CreateDefaultSubobject<ULocomotionComponent>(TEXT("LocomotionComponent"));
+	LocomotionComponent = ObjectInitializer.CreateDefaultSubobject<ULocomotionComponent>(this, TEXT("LocomotionComponent"));
 	LocomotionComponent->bAutoActivate = 1;
 
 	// managed item, weapon class
-	ItemInventoryComponent = CreateDefaultSubobject<UInventoryComponent>(TEXT("InventoryComponent"));
+	ItemInventoryComponent = ObjectInitializer.CreateDefaultSubobject<UInventoryComponent>(this, TEXT("InventoryComponent"));
 	ItemInventoryComponent->bAutoActivate = 1;
 
 	// managed combat system
-	CombatComponent = CreateDefaultSubobject<UCombatComponent>(TEXT("CombatComponent"));
+	CombatComponent = ObjectInitializer.CreateDefaultSubobject<UCombatComponent>(this, TEXT("CombatComponent"));
 	CombatComponent->bAutoActivate = 1;
 
 	// managed character health and more
-	StatusComponent = CreateDefaultSubobject<UStatusComponent>(TEXT("StatusComponent"));
+	StatusComponent = ObjectInitializer.CreateDefaultSubobject<UStatusComponent>(this, TEXT("StatusComponent"));
 	StatusComponent->bAutoActivate = 1;
 
 	// managed character combat weakness
-	WeaknessComponent = CreateDefaultSubobject<UWeaknessComponent>(TEXT("WeaknessComponent"));
+	WeaknessComponent = ObjectInitializer.CreateDefaultSubobject<UWeaknessComponent>(this, TEXT("WeaknessComponent"));
 	WeaknessComponent->bAutoActivate = 1;
 
-	HeldObjectRoot = CreateDefaultSubobject<USceneComponent>(TEXT("HeldObjectRoot"));
+	// noise emitter
+	PawnNoiseEmitterComponent = ObjectInitializer.CreateDefaultSubobject<UPawnNoiseEmitterComponent>(this, TEXT("PawnNoiseEmitterComponent"));
+	PawnNoiseEmitterComponent->bAutoActivate = 1;
+
+	HeldObjectRoot = ObjectInitializer.CreateDefaultSubobject<USceneComponent>(this, TEXT("HeldObjectRoot"));
 	HeldObjectRoot->bAutoActivate = 1;
 	HeldObjectRoot->SetupAttachment(GetMesh());
 
@@ -142,7 +152,7 @@ ABaseCharacter::ABaseCharacter(const FObjectInitializer& ObjectInitializer)
 	GetMesh()->SetCollisionResponseToChannel(ECollisionChannel::ECC_GameTraceChannel1, ECollisionResponse::ECR_Ignore);
 	GetMesh()->SetCollisionResponseToChannel(ECollisionChannel::ECC_GameTraceChannel2, ECollisionResponse::ECR_Ignore);
 	// sets Damage
-	GetMesh()->SetCollisionResponseToChannel(ECollisionChannel::ECC_GameTraceChannel3, ECollisionResponse::ECR_Overlap);
+	GetMesh()->SetCollisionResponseToChannel(ECollisionChannel::ECC_GameTraceChannel3, ECollisionResponse::ECR_Block);
 }
 
 void ABaseCharacter::BeginPlay()
@@ -151,6 +161,8 @@ void ABaseCharacter::BeginPlay()
 
 	USkeletalMeshComponent* SkelMesh = GetMesh();
 	SkelMesh->AddTickPrerequisiteActor(this);
+	CombatComponent->AddTickPrerequisiteActor(this);
+	PawnNoiseEmitterComponent->AddTickPrerequisiteActor(this);
 
 	AnimInstance = Cast<UWvAnimInstance>(GetMesh()->GetAnimInstance());
 
@@ -434,39 +446,39 @@ void ABaseCharacter::OnSendWeaknessAttack(AActor* Actor, const FName WeaknessNam
 {
 }
 
-void ABaseCharacter::OnReceiveWeaknessAttack(AActor* Actor, const FName WeaknessName, const float Damage)
-{
-}
-
 void ABaseCharacter::OnSendAbilityAttack(AActor* Actor, const FWvBattleDamageAttackSourceInfo SourceInfo, const float Damage)
 {
 	//UE_LOG(LogTemp, Log, TEXT("Owner => %s, Actor => %s, function => %s"), *GetPathName(this), *GetPathName(Actor), *FString(__FUNCTION__));
+}
+
+void ABaseCharacter::OnSendKillTarget(AActor* Actor, const float Damage)
+{
+	if (IWvAbilityTargetInterface* Interface = Cast<IWvAbilityTargetInterface>(GetController()))
+	{
+		Interface->OnSendKillTarget(Actor, Damage);
+	}
+	UE_LOG(LogTemp, Log, TEXT("Owner => %s, Actor => %s, function => %s"), *GetPathNameSafe(this), *GetPathNameSafe(Actor), *FString(__FUNCTION__));
+}
+
+void ABaseCharacter::OnReceiveWeaknessAttack(AActor* Actor, const FName WeaknessName, const float Damage)
+{
 }
 
 void ABaseCharacter::OnReceiveAbilityAttack(AActor* Actor, const FWvBattleDamageAttackSourceInfo SourceInfo, const float Damage)
 {
 }
 
-void ABaseCharacter::OnSendKillTarget(AActor* Actor, const float Damage)
-{
-	UE_LOG(LogTemp, Log, TEXT("Owner => %s, Actor => %s, function => %s"), *GetPathNameSafe(this), *GetPathNameSafe(Actor), *FString(__FUNCTION__));
-}
-
 void ABaseCharacter::OnReceiveKillTarget(AActor* Actor, const float Damage)
 {
-	if (!IsDead())
+	if (IWvAbilityTargetInterface* Interface = Cast<IWvAbilityTargetInterface>(GetController()))
 	{
-
+		Interface->OnReceiveKillTarget(Actor, Damage);
 	}
 }
 
 void ABaseCharacter::OnReceiveHitReact(FGameplayEffectContextHandle Context, const bool IsInDead, const float Damage)
 {
-	if (IsValid(CombatComponent))
-	{
-		CombatComponent->StartHitReact(Context, IsInDead, Damage);
-	}
-
+	CombatComponent->StartHitReact(Context, IsInDead, Damage);
 }
 
 bool ABaseCharacter::IsDead() const
@@ -477,6 +489,39 @@ bool ABaseCharacter::IsDead() const
 bool ABaseCharacter::IsTargetable() const
 {
 	return !IsDead();
+}
+#pragma endregion
+
+#pragma region IWvAIActionStateInterface
+void ABaseCharacter::SetAIActionState_Implementation(const EAIActionState NewAIActionState, AActor* Attacker)
+{
+	if (AIActionState == NewAIActionState)
+	{
+		return;
+	}
+
+	const auto PrevActionState = AIActionState;
+	AIActionState = NewAIActionState;
+
+	if (AIActionStateDA)
+	{
+		const FGameplayTag PrevStateTag = AIActionStateDA->FindActionStateTag(PrevActionState);
+		if (PrevStateTag.IsValid())
+		{
+			WvAbilitySystemComponent->RemoveGameplayTag(PrevStateTag, 1);
+		}
+
+		const FGameplayTag CurStateTag = AIActionStateDA->FindActionStateTag(AIActionState);
+		if (CurStateTag.IsValid())
+		{
+			WvAbilitySystemComponent->AddGameplayTag(CurStateTag, 1);
+		}
+	}
+}
+
+EAIActionState ABaseCharacter::GetAIActionState_Implementation() const
+{
+	return AIActionState;
 }
 #pragma endregion
 
@@ -610,7 +655,13 @@ void ABaseCharacter::DoAttack()
 		UE_LOG(LogTemp, Warning, TEXT("has tag TAG_Character_StateMelee_Forbid => %s"), *FString(__FUNCTION__));
 		return;
 	}
-	//
+
+	const auto Weapon = ItemInventoryComponent->GetEquipWeapon();
+	if (Weapon)
+	{
+		const FGameplayTag TriggerTag = Weapon->GetPluralInputTriggerTag();
+		WvAbilitySystemComponent->TryActivateAbilityByTag(TriggerTag);
+	}
 }
 
 void ABaseCharacter::DoResumeAttack()
@@ -718,49 +769,41 @@ void ABaseCharacter::OnWallClimbingEnd_Callback()
 {
 	UE_LOG(LogTemp, Log, TEXT("Character => %s, function => %s"), *GetName(), *FString(__FUNCTION__));
 }
+
+/// <summary>
+/// ref BTT_DoCover
+/// </summary>
+void ABaseCharacter::HandleCrouchAction(const bool bCanCrouch)
+{
+	if (bCanCrouch)
+	{
+		DoStartCrouch();
+	}
+	else
+	{
+		DoStopCrouch();
+	}
+}
+
+void ABaseCharacter::HandleGuardAction(const bool bGuardEnable)
+{
+	if (bGuardEnable)
+	{
+		WvAbilitySystemComponent->AddGameplayTag(TAG_Character_DamageBlock, 1);
+	}
+	else
+	{
+		WvAbilitySystemComponent->RemoveGameplayTag(TAG_Character_DamageBlock, 1);
+	}
+}
 #pragma endregion
 
-// AI Perception
-// https://blog.gamedev.tv/ai-sight-perception-to-custom-points/
-bool ABaseCharacter::CanBeSeenFrom(const FVector& ObserverLocation,	FVector& OutSeenLocation, int32& NumberOfLoSChecksPerformed, float& OutSightStrength, const AActor* IgnoreActor, const bool* bWasVisible, int32* UserData) const
+/// <summary>
+/// ref BTT_DoCover
+/// </summary>
+FTransform ABaseCharacter::GetChestTransform(const FName BoneName) const
 {
-	check(GetMesh());
-	static const FName AILineOfSight = FName(TEXT("TestPawnLineOfSight"));
-
-	FHitResult HitResult;
-	const TArray<USkeletalMeshSocket*> Sockets = GetMesh()->GetSkeletalMeshAsset()->GetActiveSocketList();
-	const int32 CollisionQuery = ECC_TO_BITFIELD(ECC_WorldStatic) | ECC_TO_BITFIELD(ECC_WorldDynamic) | ECC_TO_BITFIELD(ECC_Pawn);
-
-	auto Param = FCollisionObjectQueryParams(CollisionQuery);
-	auto Param2 = FCollisionQueryParams(AILineOfSight, true, IgnoreActor);
-
-	for (int32 Index = 0; Index < Sockets.Num(); ++Index)
-	{
-		const FVector SocketLocation = GetMesh()->GetSocketLocation(Sockets[Index]->SocketName);
-		const bool bHitResult = GetWorld()->LineTraceSingleByObjectType(HitResult, ObserverLocation, SocketLocation, Param, Param2);
-
-		++NumberOfLoSChecksPerformed;
-		if (!bHitResult || (HitResult.GetActor() && HitResult.GetActor()->IsOwnedBy(this)))
-		{
-			OutSeenLocation = SocketLocation;
-			UKismetSystemLibrary::DrawDebugPoint(GetWorld(), OutSeenLocation, 20.0f, FLinearColor::Red, 2.0f);
-			OutSightStrength = 1;
-			return true;
-		}
-	}
-
-	HitResult.Reset();
-	const bool bHitResult = GetWorld()->LineTraceSingleByObjectType(HitResult, ObserverLocation, GetActorLocation(), Param, Param2);
-	++NumberOfLoSChecksPerformed;
-	if (!bHitResult || (HitResult.GetActor() && HitResult.GetActor()->IsOwnedBy(this)))
-	{
-		OutSeenLocation = GetActorLocation();
-		OutSightStrength = 1;
-		return true;
-	}
-
-	OutSightStrength = 0;
-	return false;
+	return GetMesh()->GetSocketTransform(BoneName);
 }
 
 FTrajectorySampleRange ABaseCharacter::GetTrajectorySampleRange() const
@@ -861,6 +904,12 @@ void ABaseCharacter::EndDeathAction_Callback()
 {
 	ILocomotionInterface::Execute_SetLSMovementMode(LocomotionComponent, ELSMovementMode::Ragdoll);
 	LocomotionComponent->StartRagdollAction();
+
+	if (IsBotCharacter())
+	{
+		//DetachFromControllerPendingDestroy();
+		Super::SetLifeSpan(DEFAULT_LIFESPAN);
+	}
 	UE_LOG(LogTemp, Log, TEXT("Owner => %s, function => %s"), *GetName(), *FString(__FUNCTION__));
 }
 
@@ -881,6 +930,121 @@ void ABaseCharacter::OverlayStateChange(const ELSOverlayState CurrentOverlay)
 bool ABaseCharacter::IsTargetLock() const
 {
 	return WvAbilitySystemComponent->HasMatchingGameplayTag(TAG_Character_TargetLocking);
+}
+
+bool ABaseCharacter::IsBotCharacter() const
+{
+	return UWvCommonUtils::IsBot(GetController());
+}
+
+#pragma region AI
+// AI Perception
+// https://blog.gamedev.tv/ai-sight-perception-to-custom-points/
+bool ABaseCharacter::CanBeSeenFrom(const FVector& ObserverLocation, FVector& OutSeenLocation, int32& NumberOfLoSChecksPerformed, float& OutSightStrength, const AActor* IgnoreActor, const bool* bWasVisible, int32* UserData) const
+{
+	check(GetMesh());
+	static const FName NAME_AILineOfSight = FName(TEXT("TestPawnLineOfSight"));
+
+	FHitResult HitResult;
+	const TArray<USkeletalMeshSocket*> Sockets = GetMesh()->GetSkeletalMeshAsset()->GetActiveSocketList();
+
+	for (int32 Index = 0; Index < Sockets.Num(); ++Index)
+	{
+		const FVector SocketLocation = GetMesh()->GetSocketLocation(Sockets[Index]->SocketName);
+		const bool bHitSocket = GetWorld()->LineTraceSingleByObjectType(HitResult, ObserverLocation, SocketLocation,
+			FCollisionObjectQueryParams(ECC_TO_BITFIELD(ECC_WorldStatic) | ECC_TO_BITFIELD(ECC_WorldDynamic) | ECC_TO_BITFIELD(ECC_Pawn)),
+			FCollisionQueryParams(NAME_AILineOfSight, true, IgnoreActor));
+		NumberOfLoSChecksPerformed++;
+
+		if (bHitSocket || (HitResult.GetActor() && HitResult.GetActor()->IsOwnedBy(this)))
+		{
+			OutSeenLocation = SocketLocation;
+			OutSightStrength = 1;
+			return true;
+		}
+	}
+
+	HitResult.Reset();
+	const bool bHit = GetWorld()->LineTraceSingleByObjectType(HitResult, ObserverLocation, GetActorLocation(),
+		FCollisionObjectQueryParams(ECC_TO_BITFIELD(ECC_WorldStatic) | ECC_TO_BITFIELD(ECC_WorldDynamic) | ECC_TO_BITFIELD(ECC_Pawn)),
+		FCollisionQueryParams(NAME_AILineOfSight, true, IgnoreActor));
+	NumberOfLoSChecksPerformed++;
+
+	if (bHit || (HitResult.GetActor() && HitResult.GetActor()->IsOwnedBy(this)))
+	{
+		OutSeenLocation = GetActorLocation();
+		OutSightStrength = 1;
+		return true;
+	}
+
+	OutSightStrength = 0;
+	return false;
+}
+
+class UBehaviorTree* ABaseCharacter::GetBehaviorTree() const
+{
+	return BehaviorTree;
+}
+#pragma endregion
+
+
+/// <summary>
+/// Sound
+/// Send Sound AI
+/// </summary>
+void ABaseCharacter::ReportNoiseEvent(const FVector Offset, const float Volume, const float Radius)
+{
+	FVector Location = GetActorLocation();
+	Location += Offset;
+	PawnNoiseEmitterComponent->MakeNoise(this, Volume, Location);
+	UAISense_Hearing::ReportNoiseEvent(GetWorld(), Location, Volume, this, Radius);
+}
+
+void ABaseCharacter::ReportPredictionEvent(AActor* PredictedActor, const float PredictionTime)
+{
+	UAISense_Prediction::RequestPawnPredictionEvent(this, PredictedActor, PredictionTime);
+}
+
+FVector ABaseCharacter::GetPredictionStopLocation(const FVector CurrentLocation) const
+{
+	const auto CMC = GetCharacterMovement();
+
+	// Get and store current world delta seconds for later use
+	const float DT = GetWorld()->GetDeltaSeconds();
+
+	// Small number break loop when velocity is less than this value
+	const float SmallVelocity = 10.f * FMath::Square(DT);
+
+	// Current velocity at current frame in unit/frame
+	FVector CurrentVelocityInFrame = CMC->Velocity * DT;
+
+	// Store velocity direction for later use
+	const FVector CurrentVelocityDirection = CMC->Velocity.GetSafeNormal2D();
+
+	// Current deacceleration at current frame in unit/fame^2
+	const FVector CurrentDeaccelerationInFrame = (CurrentVelocityDirection * CMC->BrakingDecelerationWalking) * FMath::Square(DT);
+
+	// Calculate number of frames needed to reach zero velocity and gets its int value
+	const int32 StopFrameCount = CurrentVelocityInFrame.Size() / CurrentDeaccelerationInFrame.Size();
+
+	// float variable use to store distance to targeted stop location
+	float StoppingDistance = 0.0f;
+
+	// Do Stop calculation go through all frames and calculate stop distance in each frame and stack them
+	for (int32 Index = 0; Index <= StopFrameCount; Index++)
+	{
+		CurrentVelocityInFrame -= CurrentDeaccelerationInFrame;
+
+		// if velocity in XY plane is small break loop for safety
+		if (CurrentVelocityInFrame.Size2D() <= SmallVelocity)
+		{
+			break;
+		}
+		// Calculate distance travel in current frame and add to previous distance
+		StoppingDistance += CurrentVelocityInFrame.Size2D();
+	}
+	// return stopping distance from player position in previous frame
+	return CurrentLocation + CurrentVelocityDirection * StoppingDistance;
 }
 
 

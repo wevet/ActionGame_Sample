@@ -30,6 +30,7 @@ public:
 	virtual void Notify_UnEquip();
 
 	bool IsEquipped() const;
+	virtual bool IsAvailable() const;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Settings")
 	ELSOverlayState OverlayState;

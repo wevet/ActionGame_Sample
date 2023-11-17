@@ -52,9 +52,6 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void ApplyEffectToSelf(int32 EffectGroupIdx = 0);
 
-	UFUNCTION(BlueprintCallable, Category = "Target")
-	void ApplyEffectToTarget(FVector InOrigin, const TArray<FHitResult>& Hits, FWvAbilityData EffectData, int32 EffectGroupIdx = 0, bool DoFilter = true, AActor* OptionalExternalSource = nullptr);
-
 	void CommitTargetDataHandle(FGameplayAbilityTargetDataHandle TDH, int32 EffectGroupIdx, const FGameplayEffectQuery& Query);
 
 protected:

@@ -19,6 +19,10 @@
 #include "Kismet/KismetSystemLibrary.h"
 #include "Engine/EngineTypes.h"
 #include "AbilitySystemBlueprintLibrary.h"
+// sence
+#include "Perception/AISense_Hearing.h"
+#include "Perception/AISense_Damage.h"
+
 
 #if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
 static TAutoConsoleVariable<int32> CVarDebugCharacterCombatTrace(TEXT("wv.CharacterCombatDebugTrace"), 0, TEXT("Charactermovement ledge end\n") TEXT("<=0: Debug off\n") TEXT(">=1: Debug on\n"), ECVF_Default);
@@ -161,68 +165,6 @@ void UCombatComponent::CapsuleTraceMulti(TArray<FWvBattleDamageAttackTargetInfo>
 	HitResultEnemyFilter(HitResults, HitTargetInfos);
 }
 
-void UCombatComponent::AbilityTraceAttackToASC(class UWvAbilityBase* Ability, const int32 EffectGroupIndex, TArray<FWvBattleDamageAttackTargetInfo> HitTargetInfos, const FVector SourceLocation)
-{
-	FWvBattleDamageAttackSourceInfo SourceInfo = FWvBattleDamageAttackSourceInfo();
-	SourceInfo.SourceType = EWvBattleDamageAttackSourceType::BasicMelee;
-	SourceInfo.SourceAbility = Ability;
-	const UWvAbilityDataAsset* AbilityData = Ability->GetWvAbilityDataNoChecked();
-	UWvAbilityEffectDataAsset* EffectDA = AbilityData->EffectDataAsset;
-
-	if (!IsValid(EffectDA))
-	{
-		UE_LOG(LogTemp, Warning, TEXT("not valid EffectDA => %s"), *FString(__FUNCTION__));
-		return;
-	}
-
-	AttackToASC(SourceInfo, HitTargetInfos, EffectDA, EffectGroupIndex, SourceLocation);
-}
-
-void UCombatComponent::AttackToASC(const FWvBattleDamageAttackSourceInfo SourceInfo, TArray<FWvBattleDamageAttackTargetInfo> HitInfos, class UWvAbilityEffectDataAsset* EffectDA, const int32 EffectGroupIndex, const FVector SourceLocation)
-{
-	if (!ASC.IsValid() || !IsValid(EffectDA))
-	{
-		return;
-	}
-
-	for (auto& HitInfo : HitInfos)
-	{
-		FWvBattleDamageAttackTargetInfo HitTargetInfo = HitInfo;
-		if (!IsValid(HitTargetInfo.Target))
-		{
-			continue;
-		}
-
-		IWvAbilityTargetInterface* CastCharacter = Cast<IWvAbilityTargetInterface>(HitTargetInfo.Target);
-		if (CastCharacter && CastCharacter->IsDead())
-		{
-			continue;
-		}
-
-		FGameplayAbilityTargetDataHandle TargetDataHandle;
-
-		FGameplayEffectContextHandle EffectContextHandle = ASC->MakeEffectContext();
-		UWvAbilitySystemBlueprintFunctionLibrary::EffectContextSetEffectDataAsset(EffectContextHandle, EffectDA, EffectGroupIndex);
-		FWvGameplayAbilityTargetData* TargetData = new FWvGameplayAbilityTargetData();
-		TargetData->TargetInfo = HitTargetInfo;
-		TargetData->SourceInfo = SourceInfo;
-		TargetData->SourceLocation = SourceLocation;
-		TargetData->SourceActorLocation = Character->GetActorLocation();
-		TargetDataHandle.Add(TargetData);
-
-		EffectContextHandle.AddHitResult(HitTargetInfo.HitResult);
-		EffectContextHandle.AddOrigin(SourceLocation);
-
-		ASC->MakeEffectToTargetData(EffectContextHandle, TargetDataHandle, FGameplayEffectQuery());
-	}
-
-
-}
-
-/// <summary>
-/// @TODO
-/// Weakness Component Create
-/// </summary>
 void UCombatComponent::HitResultEnemyFilter(TArray<FHitResult>& Hits, TArray<FWvBattleDamageAttackTargetInfo>& HitTargetInfos)
 {
 	if (Hits.Num() < 0)
@@ -261,7 +203,7 @@ void UCombatComponent::HitResultEnemyFilter(TArray<FHitResult>& Hits, TArray<FWv
 
 		if (!InfoPointer || !InfoPointer->Target)
 		{
-			if (!SourceObj || TargetDataFilter.FilterPassesForActor(SourceObj, HitActor, false))
+			if (SourceObj == nullptr || TargetDataFilter.FilterPassesForActor(SourceObj, HitActor))
 			{
 				if (!HitActor->GetClass()->IsChildOf(ABaseCharacter::StaticClass()))
 				{
@@ -309,9 +251,17 @@ void UCombatComponent::HitResultEnemyFilter(TArray<FHitResult>& Hits, TArray<FWv
 }
 
 /// <summary>
+/// Call WvAT_BulletDamage
+/// </summary>
+const bool UCombatComponent::LineOfSightTraceOuter(class UWvAbilityBase* Ability, const int32 EffectGroupIndex, TArray<FHitResult>& Hits, const FVector SourceLocation)
+{
+	return BulletTraceAttackToAbilitySystemComponent(0, Ability, EffectGroupIndex, Hits, SourceLocation);
+}
+
+/// <summary>
 /// Attack from bullet infos
 /// </summary>
-const bool UCombatComponent::BulletTraceAttackToAbilitySystemComponent(const int32 WeaponID, class UWvAbilityEffectDataAsset* EffectDA, const int32 EffectGroupIndex, TArray<FHitResult>& Hits, const FVector SourceLocation)
+const bool UCombatComponent::BulletTraceAttackToAbilitySystemComponent(const int32 WeaponID, class UWvAbilityBase* Ability, const int32 EffectGroupIndex, TArray<FHitResult>& Hits, const FVector SourceLocation)
 {
 	TArray<FWvBattleDamageAttackTargetInfo> HitTargetInfos;
 	HitResultEnemyFilter(Hits, HitTargetInfos);
@@ -323,7 +273,10 @@ const bool UCombatComponent::BulletTraceAttackToAbilitySystemComponent(const int
 
 	FWvBattleDamageAttackSourceInfo SourceInfo = FWvBattleDamageAttackSourceInfo();
 	SourceInfo.SourceType = EWvBattleDamageAttackSourceType::Bullet;
+	SourceInfo.SourceAbility = Ability;
 	SourceInfo.WeaponID = WeaponID;
+	const UWvAbilityDataAsset* AbilityData = Ability->GetWvAbilityDataNoChecked();
+	UWvAbilityEffectDataAsset* EffectDA = AbilityData->EffectDataAsset;
 
 	if (!IsValid(EffectDA))
 	{
@@ -333,6 +286,59 @@ const bool UCombatComponent::BulletTraceAttackToAbilitySystemComponent(const int
 
 	AttackToASC(SourceInfo, HitTargetInfos, EffectDA, EffectGroupIndex, SourceLocation);
 	return true;
+}
+
+void UCombatComponent::AbilityTraceAttackToASC(class UWvAbilityBase* Ability, const int32 EffectGroupIndex, TArray<FWvBattleDamageAttackTargetInfo> HitTargetInfos, const FVector SourceLocation)
+{
+	FWvBattleDamageAttackSourceInfo SourceInfo = FWvBattleDamageAttackSourceInfo();
+	SourceInfo.SourceType = EWvBattleDamageAttackSourceType::BasicMelee;
+	SourceInfo.SourceAbility = Ability;
+	const UWvAbilityDataAsset* AbilityData = Ability->GetWvAbilityDataNoChecked();
+	UWvAbilityEffectDataAsset* EffectDA = AbilityData->EffectDataAsset;
+
+	if (!IsValid(EffectDA))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("not valid EffectDA => %s"), *FString(__FUNCTION__));
+		return;
+	}
+
+	AttackToASC(SourceInfo, HitTargetInfos, EffectDA, EffectGroupIndex, SourceLocation);
+}
+
+void UCombatComponent::AttackToASC(const FWvBattleDamageAttackSourceInfo SourceInfo, TArray<FWvBattleDamageAttackTargetInfo> HitInfos, class UWvAbilityEffectDataAsset* EffectDA, const int32 EffectGroupIndex, const FVector SourceLocation)
+{
+	if (!ASC.IsValid() || !IsValid(EffectDA))
+	{
+		return;
+	}
+
+	for (auto& HitInfo : HitInfos)
+	{
+		FWvBattleDamageAttackTargetInfo HitTargetInfo = HitInfo;
+		if (!IsValid(HitTargetInfo.Target))
+		{
+			continue;
+		}
+
+		IWvAbilityTargetInterface* ATI = Cast<IWvAbilityTargetInterface>(HitTargetInfo.Target);
+		if (ATI && ATI->IsDead())
+		{
+			continue;
+		}
+
+		FGameplayAbilityTargetDataHandle TargetDataHandle;
+		FGameplayEffectContextHandle EffectContextHandle = ASC->MakeEffectContext();
+		UWvAbilitySystemBlueprintFunctionLibrary::EffectContextSetEffectDataAsset(EffectContextHandle, EffectDA, EffectGroupIndex);
+		FWvGameplayAbilityTargetData* TargetData = new FWvGameplayAbilityTargetData();
+		TargetData->TargetInfo = HitTargetInfo;
+		TargetData->SourceInfo = SourceInfo;
+		TargetData->SourceLocation = SourceLocation;
+		TargetData->SourceActorLocation = Character->GetActorLocation();
+		TargetDataHandle.Add(TargetData);
+		EffectContextHandle.AddHitResult(HitTargetInfo.HitResult);
+		EffectContextHandle.AddOrigin(SourceLocation);
+		ASC->MakeEffectToTargetData(EffectContextHandle, TargetDataHandle, FGameplayEffectQuery());
+	}
 }
 #pragma endregion
 
@@ -467,6 +473,11 @@ void UCombatComponent::StartHitReact(FGameplayEffectContextHandle& Context, cons
 		GameplayEventData.ContextHandle = Context;
 		GameplayEventData.Instigator = Attacker;
 		ASC->HandleGameplayEvent(TAG_Common_PassiveAbilityTrigger_HitReact, &GameplayEventData);
+
+		// Send AIPerceptionComponent
+		auto HitResult = Context.GetHitResult();
+		const FVector EventLocation = Character->GetActorLocation();
+		UAISense_Damage::ReportDamageEvent(GetWorld(), Character.Get(), Attacker, Damage, EventLocation, HitResult->ImpactPoint);
 	}
 
 	FName* WeaknessName = nullptr;
@@ -578,7 +589,7 @@ void UCombatComponent::StartBoneShake(const FName HitBoneName, const FGameplayTa
 		return;
 	}
 
-	UE_LOG(LogTemp, Log, TEXT("function => %s"), *FString(__FUNCTION__));
+	//UE_LOG(LogTemp, Log, TEXT("function => %s"), *FString(__FUNCTION__));
 	FSkeletalMeshShakeData* SkeletalMeshShakeData = HitReactBoneShakeDA->SkeletalShakeData.Find(BoneShakeTriggerTag);
 
 	if (!SkeletalMeshShakeData)
@@ -708,4 +719,42 @@ bool UCombatComponent::UpdateBoneShake(const float DeltaTime)
 
 #pragma endregion
 
+
+#pragma region BattleCommand
+void UCombatComponent::UnEquipWeapon()
+{
+	Modify_Weapon(ELSOverlayState::None);
+}
+
+void UCombatComponent::EquipPistol()
+{
+	Modify_Weapon(ELSOverlayState::Pistol);
+}
+
+void UCombatComponent::EquipRifle()
+{
+	Modify_Weapon(ELSOverlayState::Rifle);
+}
+
+void UCombatComponent::EquipKnife()
+{
+	Modify_Weapon(ELSOverlayState::Knife);
+}
+
+void UCombatComponent::Modify_Weapon(const ELSOverlayState LSOverlayState)
+{
+	auto Inventory = Character->GetInventoryComponent();
+	if (Inventory)
+	{
+		bool bCanAttack = false;
+		auto WeaponType = Inventory->ConvertWeaponState(LSOverlayState, bCanAttack);
+		const bool bResult = Inventory->ChangeAttackWeapon(WeaponType);
+
+		if (bResult)
+		{
+			Character->OverlayStateChange(LSOverlayState);
+		}
+	}
+}
+#pragma endregion
 

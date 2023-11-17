@@ -3,7 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Ability/WvAnimNotifyState.h"
+#include "WvAnimNotifyState.h"
 #include "WvAbilityDataAsset.h"
 #include "Ability/Task/WvAT_WaitKeyPress.h"
 #include "WvAnimNotifyState_ComboEnable.generated.h"
@@ -22,7 +22,7 @@ protected:
 	virtual void AbilityNotifyEnd(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, const FAnimNotifyEventReference& EventReference) override;
 
 protected:
-	//コンボに要する時間（相対値）
+	// Time required for combo (relative value)
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	float ExecuteTime;
 
@@ -40,12 +40,9 @@ private:
 
 	UFUNCTION()
 	void OnRelease(const FGameplayTag InTag, const bool bIsPressed);
-
 	void TryCombo();
-
 	void PressedToCombo();
 
-private:
 	FGameplayTag TriggerTag;
 	UWvAT_WaitKeyPress* WaitReleaseTask;
 	FGameplayTag LastPressedTag;

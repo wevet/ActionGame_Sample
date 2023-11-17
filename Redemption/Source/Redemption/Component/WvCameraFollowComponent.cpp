@@ -7,7 +7,7 @@
 #include "Character/PlayerCharacter.h"
 #include "Locomotion/LocomotionComponent.h"
 #include "Character/BaseCharacter.h"
-
+#include "Misc/WvCommonUtils.h"
 #include "Camera/CameraComponent.h"
 
 #include "Curves/CurveBase.h"
@@ -819,7 +819,7 @@ TArray<AActor*> UWvCameraFollowComponent::GetAllTargetableOfClass() const
 	{
 		AActor* Actor = Component->GetOwner();
 		const bool bIsTargetable = TargetIsTargetable(Actor);
-		if (bIsTargetable && IsInViewport(Actor))
+		if (bIsTargetable && UWvCommonUtils::IsInViewport(Actor))
 		{
 			Actors.Add(Actor);
 		}
@@ -1089,22 +1089,6 @@ void UWvCameraFollowComponent::ControlRotation(const bool bStrafeMovement) const
 	}
 	//Character->bUseControllerRotationYaw = bStrafeMovement;
 	//Character->GetCharacterMovement()->bOrientRotationToMovement = !bStrafeMovement;
-}
-
-bool UWvCameraFollowComponent::IsInViewport(const AActor* TargetActor) const
-{
-	if (!PlayerController.IsValid())
-	{
-		return true;
-	}
-
-	FVector2D ScreenLocation;
-	PlayerController->ProjectWorldLocationToScreen(TargetActor->GetActorLocation(), ScreenLocation);
-
-	FVector2D ViewportSize;
-	GetWorld()->GetGameViewport()->GetViewportSize(ViewportSize);
-
-	return ScreenLocation.X > 0 && ScreenLocation.Y > 0 && ScreenLocation.X < ViewportSize.X && ScreenLocation.Y < ViewportSize.Y;
 }
 #pragma endregion
 

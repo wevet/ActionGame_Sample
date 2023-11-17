@@ -66,6 +66,9 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Component, meta = (AllowPrivateAccess = "true"))
 	class UWvInputEventComponent* InputEventComponent;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PlayerController|Config")
+	int32 OverrideSquadID = 1;
+
 private:
 	class APlayerCharacter* PC;
 

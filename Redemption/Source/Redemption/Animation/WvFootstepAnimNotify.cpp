@@ -8,7 +8,12 @@
 #include "Kismet/GameplayStatics.h"
 #include "Character/BaseCharacter.h"
 #include "Locomotion/LocomotionComponent.h"
+#include "Misc/WvCommonUtils.h"
+#include "WvAbilitySystemGlobals.h"
+#include "Component/WvCharacterMovementComponent.h"
 
+#include "Kismet/KismetMathLibrary.h"
+#include "Perception/AISense_Hearing.h"
 
 void UWvFootstepAnimNotify::Notify(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, const FAnimNotifyEventReference& EventReference)
 {
@@ -92,6 +97,11 @@ void UWvFootstepAnimNotify::TraceFootDone(const FTraceHandle& TraceHandle, FTrac
 
 	if (AActor* OwnerActor = MeshComp ? MeshComp->GetOwner() : nullptr)
 	{
+		if (!UWvCommonUtils::IsInViewport(OwnerActor))
+		{
+			return;
+		}
+
 		const FHitResult& HitResult = TraceDatum.OutHits[0];
 		FVector HitLocation = HitResult.Location;
 		EPhysicalSurface HitSurfaceType = HitResult.PhysMaterial.IsValid() ? HitResult.PhysMaterial->SurfaceType.GetValue() : EPhysicalSurface::SurfaceType_Default;
@@ -117,6 +127,22 @@ void UWvFootstepAnimNotify::TriggerEffect(AActor* Owner, UAnimSequenceBase* Anim
 		auto RowData = FootStepDT->FindRow<FFootStepTableRow>(FName(SurfaceName), "");
 		if (RowData)
 		{
+			Volume = 1.0f;
+			if (UWvCommonUtils::IsBotPawn(Owner))
+			{
+				const float BotVolume = ABILITY_GLOBAL()->BotConfig.FootStepMaxVolume;
+				constexpr float Threshold = 5000.0f;
+				const float Distance = UWvCommonUtils::PlayerPawnToDistance(Owner);
+				Volume = UKismetMathLibrary::MapRangeClamped(Distance, 0.f, Threshold, 1.0f, 0.f);
+				Volume = FMath::Clamp(Volume, 0.f, BotVolume);
+			}
+
+			if (IsInCrouch(Owner))
+			{
+				constexpr float CrouchThreshold = 4.0f;
+				Volume = Volume / CrouchThreshold;
+			}
+
 			UWorld* World = Owner->GetWorld();
 			if (RowData->NiagaraSystems)
 			{
@@ -126,6 +152,21 @@ void UWvFootstepAnimNotify::TriggerEffect(AActor* Owner, UAnimSequenceBase* Anim
 			if (RowData->FootStepSound)
 			{
 				UGameplayStatics::PlaySoundAtLocation(World, RowData->FootStepSound, Location, Volume, 1.0f, 0.0f, nullptr, nullptr);
+				const FVector2D NoiseRange = ABILITY_GLOBAL()->BotConfig.HearingRange;
+
+				if (ABaseCharacter* Character = Cast<ABaseCharacter>(Owner))
+				{
+					const float Speed = Character->GetCharacterMovement()->Velocity.Size();
+					const float MaxSpeed = Character->GetCharacterMovement()->MaxWalkSpeed;
+					float Radius = UKismetMathLibrary::MapRangeClamped(Speed, 0.f, MaxSpeed, NoiseRange.X, NoiseRange.Y);
+
+					if (IsInCrouch(Character))
+					{
+						constexpr float CrouchLoudness = 0.2f;
+						Radius *= CrouchLoudness;
+					}
+					Character->ReportNoiseEvent(FVector::ZeroVector, Volume, Radius);
+				}
 			}
 		}
 	}
@@ -146,4 +187,19 @@ const ELSGait UWvFootstepAnimNotify::GetGaitMode(AActor* Owner)
 	}
 	return ELSGait::Running;
 }
+
+const bool UWvFootstepAnimNotify::IsInCrouch(AActor* Owner)
+{
+	if (IsValid(Owner))
+	{
+		auto LocomotionComponent = Owner->FindComponentByClass<ULocomotionComponent>();
+		if (LocomotionComponent)
+		{
+			auto LocomotionEssencialVariabled = LocomotionComponent->GetLocomotionEssencialVariables();
+			return LocomotionEssencialVariabled.LSStance == ELSStance::Crouching;
+		}
+	}
+	return false;
+}
+
 

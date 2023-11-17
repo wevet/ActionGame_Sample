@@ -51,6 +51,29 @@ UE_DEFINE_GAMEPLAY_TAG(TAG_Weapon_Melee_Pistol, "Weapon.Melee.Pistol");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Weapon_Melee_Rifle, "Weapon.Melee.Rifle");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Weapon_Melee_Knife, "Weapon.Melee.Knife");
 
+// bullet weapon state
+UE_DEFINE_GAMEPLAY_TAG(TAG_Weapon_Gun_Reload, "Weapon.Gun.Reload");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Weapon_Gun_Fire, "Weapon.Gun.Fire");
+
+// HoldUp 
+UE_DEFINE_GAMEPLAY_TAG(TAG_Weapon_HoldUp_Sender, "Weapon.HoldUp.Sender");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Weapon_HoldUp_Receiver, "Weapon.HoldUp.Receiver");
+
+// KnockOut
+UE_DEFINE_GAMEPLAY_TAG(TAG_Weapon_KnockOut_Sender, "Weapon.KnockOut.Sender");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Weapon_KnockOut_Receiver, "Weapon.KnockOut.Receiver");
+
+// Finisher
+UE_DEFINE_GAMEPLAY_TAG(TAG_Weapon_Finisher_Sender, "Weapon.Finisher.Sender");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Weapon_Finisher_Receiver, "Weapon.Finisher.Receiver");
+
+// AI 
+// waypoint visited
+UE_DEFINE_GAMEPLAY_TAG(TAG_AI_Waypoint_Visited, "AI.Waypoint.Visited");
+UE_DEFINE_GAMEPLAY_TAG(TAG_AI_Waypoint_UnVisited, "AI.Waypoint.UnVisited");
+UE_DEFINE_GAMEPLAY_TAG(TAG_AI_State_Search, "AI.State.Search");
+UE_DEFINE_GAMEPLAY_TAG(TAG_AI_State_Combat, "AI.State.Combat");
+UE_DEFINE_GAMEPLAY_TAG(TAG_AI_State_Patrol, "AI.State.Patrol");
 
 IMPLEMENT_PRIMARY_GAME_MODULE( FDefaultGameModuleImpl, Redemption, "Redemption" );
 

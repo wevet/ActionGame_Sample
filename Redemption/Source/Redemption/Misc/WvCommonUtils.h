@@ -67,5 +67,17 @@ public:
 	UFUNCTION(BlueprintPure, Category = "CommonUtils")
 	static bool IsBot(const AController* Controller);
 
+	UFUNCTION(BlueprintPure, Category = "CommonUtils")
+	static bool IsBotPawn(AActor* Actor);
+
+	UFUNCTION(BlueprintPure, Category = "CommonUtils")
+	static void CircleSpawnPoints(const int32 InSpawnCount, const float InRadius, const FVector InRelativeLocation, TArray<FVector>& OutPointArray);
+
+	UFUNCTION(BlueprintPure, Category = "CommonUtils")
+	static bool IsInViewport(AActor* Actor);
+
+	UFUNCTION(BlueprintPure, Category = "CommonUtils")
+	static float PlayerPawnToDistance(AActor* Actor);
+
 	static FHitReactInfoRow* FindHitReactInfoRow(ABaseCharacter* Character);
 };

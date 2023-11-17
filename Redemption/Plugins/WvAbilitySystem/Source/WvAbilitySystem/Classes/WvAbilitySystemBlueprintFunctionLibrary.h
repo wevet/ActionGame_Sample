@@ -27,7 +27,6 @@ public:
 	static UGameplayEffect* NewModifyAttributeGE(FGameplayAttribute Attribute, float Magnitude, FGameplayTag GETag, UObject* Outer = nullptr);
 
 	//--------filter start
-	static void FilterHitResults(const TArray<FHitResult>& Hits, TArray<FHitResult>& OutHits, TScriptInterface<IWvAbilityTargetInterface> Source, const FWvTargetDataFilter& TargetDataFilter, bool bConsiderTeamRelationOnly = false);
 	static void FilterOverlaps(const TArray<FWvOverlapResult>& Overlaps, TArray<FWvOverlapResult>& OutOverlaps, TScriptInterface<IWvAbilityTargetInterface> Source, const FWvTargetDataFilter& TargetDataFilter);
 	static void FilterActors(const TArray<AActor*>& Actors, TArray<AActor*>& OutActors, TScriptInterface<IWvAbilityTargetInterface> Source, const FWvTargetDataFilter& TargetDataFilter);
 	//--------filter end

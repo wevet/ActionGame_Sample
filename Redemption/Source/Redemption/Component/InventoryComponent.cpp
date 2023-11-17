@@ -4,9 +4,11 @@
 #include "InventoryComponent.h"
 #include "Character/BaseCharacter.h"
 #include "Item/WeaponBaseActor.h"
+#include "Item/BulletHoldWeaponActor.h"
 #include "Misc/WvCommonUtils.h"
 #include "Redemption.h"
 
+#include UE_INLINE_GENERATED_CPP_BY_NAME(InventoryComponent)
 
 UInventoryComponent::UInventoryComponent(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
@@ -36,7 +38,6 @@ void UInventoryComponent::BeginPlay()
 				ItemPtr->AttachToComponent(Character->GetMesh(), FAttachmentTransformRules::KeepRelativeTransform, SpawnInfo.AttachSocket);
 
 				ItemPtr->SetActorHiddenInGame(true);
-				ItemPtr->SetOwner(Character.Get());
 				AddInventory(ItemPtr);
 			}
 		}
@@ -46,7 +47,6 @@ void UInventoryComponent::BeginPlay()
 	{
 		return Item == nullptr;
 	});
-
 	for (TPair<EAttackWeaponState, TArray<AWeaponBaseActor*>>Pair : WeaponActorMap)
 	{
 		Pair.Value.RemoveAll([](AWeaponBaseActor* Weapon)
@@ -61,21 +61,22 @@ void UInventoryComponent::BeginPlay()
 		TArray<AWeaponBaseActor*>& WeaponArray = WeaponActorMap[InitAttackWeaponState];
 		for (auto Weapon : WeaponArray)
 		{
-			if (!InitWeaponActor.IsValid())
+			if (!CurrentWeaponActor.IsValid())
 			{
-				InitWeaponActor = Weapon;
+				CurrentWeaponActor = Weapon;
 				break;
 			}
 		}
 	}
 
-	if (InitWeaponActor.IsValid())
+	if (CurrentWeaponActor.IsValid())
 	{
-		InitWeaponActor.Get()->SetActorHiddenInGame(false);
-		InitWeaponActor.Get()->Notify_Equip();
+		CurrentWeaponActor.Get()->Notify_Equip();
+		CurrentWeaponActor.Get()->SetActorHiddenInGame(false);
 	}
 
 	// output log
+#if false
 	for (TPair<EAttackWeaponState, TArray<AWeaponBaseActor*>>Pair : WeaponActorMap)
 	{
 		const FString CategoryName = *FString::Format(TEXT("Category => {0}"), { *GETENUMSTRING("/Script/Redemption.EAttackWeaponState", Pair.Key) });
@@ -84,6 +85,8 @@ void UInventoryComponent::BeginPlay()
 			UE_LOG(LogTemp, Log, TEXT("%s, WeaponName => %s"), *CategoryName, *Weapon->GetName());
 		}
 	}
+#endif
+
 }
 
 void UInventoryComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -92,7 +95,7 @@ void UInventoryComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	ItemArray.Empty();
 	WeaponActorMap.Empty();
 	Character.Reset();
-	InitWeaponActor.Reset();
+	CurrentWeaponActor.Reset();
 }
 
 void UInventoryComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
@@ -109,6 +112,8 @@ const EAttackWeaponState UInventoryComponent::ConvertWeaponState(const ELSOverla
 		return EAttackWeaponState::Gun;
 	case ELSOverlayState::Rifle:
 		return EAttackWeaponState::Rifle;
+	case ELSOverlayState::Knife:
+		return EAttackWeaponState::Knife;
 	case ELSOverlayState::Barrel:
 	case ELSOverlayState::Binoculars:
 	case ELSOverlayState::Torch:
@@ -122,12 +127,14 @@ const EAttackWeaponState UInventoryComponent::ConvertWeaponState(const ELSOverla
 
 const bool UInventoryComponent::ChangeAttackWeapon(const EAttackWeaponState InAttackWeaponState, int32 Index/* = 0 */)
 {
+	// Empty WeaponActorMap
 	if (WeaponActorMap.Num() <= 0 || !WeaponActorMap.Contains(InAttackWeaponState))
 	{
 		UE_LOG(LogTemp, Warning, TEXT("Empty WeaponActorMap => %s"), *FString(__FUNCTION__));
 		return false;
 	}
 
+	// Empty WeaponArray
 	TArray<AWeaponBaseActor*>& WeaponArray = WeaponActorMap[InAttackWeaponState];
 	if (WeaponArray.Num() <= 0)
 	{
@@ -135,25 +142,118 @@ const bool UInventoryComponent::ChangeAttackWeapon(const EAttackWeaponState InAt
 		return false;
 	}
 
-	if (InitWeaponActor.IsValid())
+	// not IsValidIndex
+	const int32 LastIndex = (WeaponArray.Num() - 1);
+	const int32 SelectIndex = (Index > LastIndex) ? LastIndex : FMath::Clamp(Index, 0, LastIndex);
+	if (!WeaponArray.IsValidIndex(SelectIndex))
 	{
-		InitWeaponActor.Get()->SetActorHiddenInGame(true);
-		InitWeaponActor.Get()->Notify_UnEquip();
-		InitWeaponActor.Reset();
+		UE_LOG(LogTemp, Warning, TEXT("not IsValidIndex => %d, function => %s"), SelectIndex, *FString(__FUNCTION__));
+		return false;
 	}
 
-	const int32 SelectIndex = Index > (WeaponArray.Num() - 1) ? (WeaponArray.Num() - 1) : FMath::Clamp(Index, 0, (WeaponArray.Num() - 1));
-	InitWeaponActor = WeaponArray[SelectIndex];
-	if (InitWeaponActor.IsValid())
+	if (CurrentWeaponActor.IsValid())
 	{
-		InitWeaponActor.Get()->SetActorHiddenInGame(false);
-		InitWeaponActor.Get()->Notify_Equip();
+		CurrentWeaponActor.Get()->Notify_UnEquip();
+		CurrentWeaponActor.Get()->SetActorHiddenInGame(true);
+		CurrentWeaponActor.Reset();
+	}
+
+	CurrentWeaponActor = WeaponArray[SelectIndex];
+	if (CurrentWeaponActor.IsValid())
+	{
+		CurrentWeaponActor.Get()->Notify_Equip();
+		CurrentWeaponActor.Get()->SetActorHiddenInGame(false);
 	}
 	return true;
 }
 
+const AWeaponBaseActor* UInventoryComponent::GetAvailableWeaponSameType(const bool bIsCheckAvailable)
+{
+	if (CurrentWeaponActor.IsValid())
+	{
+		const auto WeaponType = CurrentWeaponActor->GetAttackWeaponState();
+		TArray<AWeaponBaseActor*>& WeaponArray = WeaponActorMap[WeaponType];
+		for (AWeaponBaseActor* Weapon : WeaponArray)
+		{
+			bool bIsMatched = IsValid(Weapon) && CurrentWeaponActor.Get();
+			if (bIsCheckAvailable)
+			{
+				bIsMatched &= Weapon->IsAvailable();
+			}
+
+			if (bIsMatched)
+			{
+				return Weapon;
+			}
+		}
+	}
+	return nullptr;
+}
+
+const AWeaponBaseActor* UInventoryComponent::GetAvailableWeaponNoSameType(const bool bIsCheckAvailable)
+{
+	if (CurrentWeaponActor.IsValid())
+	{
+		auto WeaponType = CurrentWeaponActor->GetAttackWeaponState();
+		for (TPair<EAttackWeaponState, TArray<AWeaponBaseActor*>>Pair : WeaponActorMap)
+		{
+			if (Pair.Key == WeaponType)
+			{
+				continue;
+			}
+			for (auto& Item : Pair.Value)
+			{
+				bool bIsMatched = IsValid(Item);
+				if (bIsCheckAvailable)
+				{
+					bIsMatched &= Item->IsAvailable();
+				}
+
+				if (bIsMatched)
+				{
+					return Item;
+				}
+			}
+		}
+	}
+	return nullptr;
+}
+
+TArray<EAttackWeaponState> UInventoryComponent::GetAvailableWeaponType() const
+{
+	TArray<EAttackWeaponState> Result;
+
+	for (TPair<EAttackWeaponState, TArray<AWeaponBaseActor*>>Pair : WeaponActorMap)
+	{
+		const bool bWasAvailable = GetAvailableWeaponType(Pair.Value);
+		if (bWasAvailable)
+		{
+			Result.Add(Pair.Key);
+		}
+	}
+	return Result;
+}
+
+bool UInventoryComponent::GetAvailableWeaponType(const TArray<AWeaponBaseActor*> InWeaponArray) const
+{
+	for (const AWeaponBaseActor* Weapon : InWeaponArray)
+	{
+		if (IsValid(Weapon) && Weapon->IsAvailable())
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
 void UInventoryComponent::AddInventory(class AItemBaseActor* NewItem)
 {
+	const auto Owner = NewItem ? NewItem->GetOwner() : nullptr;
+	if (IsValid(Owner))
+	{
+		NewItem->SetOwner(Character.Get());
+	}
+
 	if (AWeaponBaseActor* Weapon = Cast<AWeaponBaseActor>(NewItem))
 	{
 		auto AttackState = Weapon->GetAttackWeaponState();
@@ -175,6 +275,12 @@ void UInventoryComponent::AddInventory(class AItemBaseActor* NewItem)
 
 void UInventoryComponent::RemoveInventory(class AItemBaseActor* InItem)
 {
+	const auto Owner = InItem ? InItem->GetOwner() : nullptr;
+	if (IsValid(Owner))
+	{
+		InItem->SetOwner(nullptr);
+	}
+
 	if (AWeaponBaseActor* Weapon = Cast<AWeaponBaseActor>(InItem))
 	{
 		auto AttackState = Weapon->GetAttackWeaponState();

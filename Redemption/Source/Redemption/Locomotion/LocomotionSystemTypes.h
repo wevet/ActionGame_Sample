@@ -59,12 +59,13 @@ enum class ELSOverlayState : uint8
 {
 	None UMETA(DisplayName = "None"),
 	Injured UMETA(DisplayName = "Injured"),
-	Rifle  UMETA(DisplayName = "Rifle"),
+	Rifle UMETA(DisplayName = "Rifle"),
 	Pistol UMETA(DisplayName = "Pistol"),
 	Torch UMETA(DisplayName = "Torch"),
-	Binoculars  UMETA(DisplayName = "Binoculars"),
+	Binoculars UMETA(DisplayName = "Binoculars"),
 	Box UMETA(DisplayName = "Box"),
-	Barrel  UMETA(DisplayName = "Barrel"),
+	Barrel UMETA(DisplayName = "Barrel"),
+	Knife UMETA(DisplayName = "Knife"),
 };
 
 UENUM(BlueprintType)
@@ -427,6 +428,15 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
 	bool bHasAmmo = false;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+	float Loudness = 1000.0f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+	float Volume = 1.0f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, meta = (EditCondition = "bHasAmmo"))
+	FName MuzzleSocketName = FName("MuzzleFlash");
+
 	// ç≈ëÂíeêîíl
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, meta = (EditCondition = "bHasAmmo"))
 	int32 BaseMaxAmmo;
@@ -434,6 +444,9 @@ public:
 	// reloadÇ∑ÇÈèÍçáÇÃíeêîíl
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, meta = (EditCondition = "bHasAmmo"))
 	int32 ClipType;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, meta = (EditCondition = "bHasAmmo"))
+	float TraceRange = 2000.0f;
 
 	int32 NeededAmmo;
 	// åªç›íeêî

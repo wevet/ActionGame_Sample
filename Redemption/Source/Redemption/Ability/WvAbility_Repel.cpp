@@ -55,6 +55,7 @@ void UWvAbility_Repel::ActivateAbility(const FGameplayAbilitySpecHandle Handle, 
 	bDebugTrace = false;
 #endif
 
+	const bool bIsCrouched = Character->bIsCrouched;
 
 	if (HitReactInfo)
 	{
@@ -70,26 +71,41 @@ void UWvAbility_Repel::ActivateAbility(const FGameplayAbilitySpecHandle Handle, 
 			UE_LOG(LogTemp, Log, TEXT("HitReactDirection => %s"), *GETENUMSTRING("/Script/WvAbilitySystem.EHitReactDirection", HitReactDirection));
 		}
 
-		for (FHitReactVerticalConditionInfo VerticalConditionInfo : HitReactInfo->VerticalConditions)
+		if (bIsCrouched)
 		{
-			if (VerticalDirection != VerticalConditionInfo.VerticalDirection)
+			auto FindItemData = HitReactInfo->CrouchingMontages.FindByPredicate([&](FHitReactConditionInfo Item)
 			{
-				continue;
-			}
+				return (Item.HitDirection == HitReactDirection);
+			});
 
-			for (int32 Index = 0; Index < VerticalConditionInfo.Montages.Num(); ++Index)
+			if (FindItemData)
 			{
-				const FHitReactConditionInfo ConditionInfo = VerticalConditionInfo.Montages[Index];
-				if (ConditionInfo.HitDirection == HitReactDirection)
+				TargetMontage = FindItemData->Montage;
+			}
+		}
+		else
+		{
+			auto FindItemData = HitReactInfo->VerticalConditions.FindByPredicate([&](FHitReactVerticalConditionInfo Item)
+			{
+				return (Item.VerticalDirection == VerticalDirection);
+			});
+
+			if (FindItemData)
+			{
+				for (int32 Index = 0; Index < FindItemData->Montages.Num(); ++Index)
 				{
-					TargetMontage = ConditionInfo.Montage;
-					break;
+					const FHitReactConditionInfo ConditionInfo = FindItemData->Montages[Index];
+					if (ConditionInfo.HitDirection == HitReactDirection)
+					{
+						TargetMontage = ConditionInfo.Montage;
+						break;
+					}
 				}
-			}
 
-			if (TargetMontage == nullptr)
-			{
-				TargetMontage = VerticalConditionInfo.NormalMontage;
+				if (TargetMontage == nullptr)
+				{
+					TargetMontage = FindItemData->NormalMontage;
+				}
 			}
 		}
 	}
@@ -178,8 +194,8 @@ void UWvAbility_Repel::PlayHitReactMontage(UAnimMontage* Montage)
 		true,
 		1.0f);
 
-	MontageTask->OnCancelled.AddDynamic(this, &UWvAbility_Repel::OnPlayMontageCanceled_Event);
-	MontageTask->OnInterrupted.AddDynamic(this, &UWvAbility_Repel::OnPlayMontageInterrupted_Event);
+	MontageTask->OnCancelled.AddDynamic(this, &UWvAbility_Repel::OnPlayMontageCompleted_Event);
+	MontageTask->OnInterrupted.AddDynamic(this, &UWvAbility_Repel::OnPlayMontageCompleted_Event);
 	MontageTask->OnCompleted.AddDynamic(this, &UWvAbility_Repel::OnPlayMontageCompleted_Event);
 	MontageTask->ReadyForActivation();
 }
@@ -187,16 +203,6 @@ void UWvAbility_Repel::PlayHitReactMontage(UAnimMontage* Montage)
 void UWvAbility_Repel::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled)
 {
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
-}
-
-void UWvAbility_Repel::OnPlayMontageCanceled_Event(FGameplayTag EventTag, FGameplayEventData EventData)
-{
-	K2_EndAbility();
-}
-
-void UWvAbility_Repel::OnPlayMontageInterrupted_Event(FGameplayTag EventTag, FGameplayEventData EventData)
-{
-	K2_EndAbility();
 }
 
 void UWvAbility_Repel::OnPlayMontageCompleted_Event(FGameplayTag EventTag, FGameplayEventData EventData)

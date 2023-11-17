@@ -4,7 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "UObject/ObjectMacros.h"
-#include "Ability/WvAbilityTask.h"
+#include "WvAbilityTask.h"
 #include "Abilities/GameplayAbility.h"
 #include "WvAT_WaitKeyPress.generated.h"
 

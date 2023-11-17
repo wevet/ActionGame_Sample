@@ -4,7 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "WvGameplayAbility.h"
-#include "WvAT_PlayMontageAndWaitForEvent.h"
+#include "Task/WvAT_PlayMontageAndWaitForEvent.h"
 #include "WvAbilitySystemTypes.h"
 #include "WvAbility_Repel.generated.h"
 
@@ -29,14 +29,11 @@ protected:
 private:
 	UFUNCTION()
 	void OnPlayMontageCompleted_Event(FGameplayTag EventTag, FGameplayEventData EventData);
-	UFUNCTION()
-	void OnPlayMontageCanceled_Event(FGameplayTag EventTag, FGameplayEventData EventData);
-	UFUNCTION()
-	void OnPlayMontageInterrupted_Event(FGameplayTag EventTag, FGameplayEventData EventData);
+
 	UPROPERTY()
 	class UWvAT_PlayMontageAndWaitForEvent* MontageTask;
-	void PlayHitReactMontage(UAnimMontage* Montage);
 
+	void PlayHitReactMontage(UAnimMontage* Montage);
 	bool bDebugTrace = false;
 };
 

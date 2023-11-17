@@ -49,30 +49,6 @@ UGameplayEffect* UWvAbilitySystemBlueprintFunctionLibrary::NewModifyAttributeGE(
 	return InstanceGE;
 }
 
-void UWvAbilitySystemBlueprintFunctionLibrary::FilterHitResults(const TArray<FHitResult>& Hits, TArray<FHitResult>& OutHits, TScriptInterface<IWvAbilityTargetInterface> Source, const FWvTargetDataFilter& TargetDataFilter, bool bConsiderTeamRelationOnly)
-{
-	IWvAbilityTargetInterface* SourceObj = Cast<IWvAbilityTargetInterface>(Source.GetObject());
-
-	TSet<AActor*> HitActors;
-	for (const FHitResult& Hit : Hits)
-	{
-		AActor* HitActor = Hit.GetActor();
-		if (!HitActor)
-		{
-			continue;
-		}
-
-		if (!HitActors.Find(HitActor))
-		{
-			if (SourceObj == nullptr || TargetDataFilter.FilterPassesForActor(SourceObj, HitActor, bConsiderTeamRelationOnly))
-			{
-				HitActors.Add(HitActor);
-				OutHits.Add(Hit);
-			}
-		}
-	}
-}
-
 void UWvAbilitySystemBlueprintFunctionLibrary::FilterOverlaps(const TArray<FWvOverlapResult>& Overlaps, TArray<FWvOverlapResult>& OutOverlaps, TScriptInterface<IWvAbilityTargetInterface> Source, const FWvTargetDataFilter& TargetDataFilter)
 {
 	IWvAbilityTargetInterface* SourceObj = Cast<IWvAbilityTargetInterface>(Source.GetObject());
@@ -85,15 +61,15 @@ void UWvAbilitySystemBlueprintFunctionLibrary::FilterOverlaps(const TArray<FWvOv
 			continue;
 		}
 
-		AActor* OverlapActor = Overlap.Actor.Get();
+		AActor* HitActor = Overlap.Actor.Get();
 
-		FWvOverlapResult** findRes = OverlapActors.Find(OverlapActor);
+		FWvOverlapResult** findRes = OverlapActors.Find(HitActor);
 		if (!findRes)
 		{
-			if (SourceObj == nullptr || TargetDataFilter.FilterPassesForActor(SourceObj, OverlapActor))
+			if (SourceObj == nullptr || TargetDataFilter.FilterPassesForActor(SourceObj, HitActor))
 			{
 				FWvOverlapResult& newItem = OutOverlaps.Add_GetRef(Overlap);
-				OverlapActors.Add(OverlapActor, &newItem);
+				OverlapActors.Add(HitActor, &newItem);
 			}
 		}
 		else
@@ -113,19 +89,19 @@ void UWvAbilitySystemBlueprintFunctionLibrary::FilterActors(const TArray<AActor*
 	IWvAbilityTargetInterface* SourceObj = Cast<IWvAbilityTargetInterface>(Source.GetObject());
 
 	TSet<AActor*> HitActors;
-	for (AActor* Actor : Actors)
+	for (AActor* HitActor : Actors)
 	{
-		if (!Actor)
+		if (!HitActor)
 		{
 			continue;
 		}
 
-		if (!HitActors.Find(Actor))
+		if (!HitActors.Find(HitActor))
 		{
-			if (SourceObj == nullptr || TargetDataFilter.FilterPassesForActor(SourceObj, Actor))
+			if (SourceObj == nullptr || TargetDataFilter.FilterPassesForActor(SourceObj, HitActor))
 			{
-				HitActors.Add(Actor);
-				OutActors.Add(Actor);
+				HitActors.Add(HitActor);
+				OutActors.Add(HitActor);
 			}
 		}
 	}

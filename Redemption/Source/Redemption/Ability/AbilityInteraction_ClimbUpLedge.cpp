@@ -72,8 +72,8 @@ void UAbilityInteraction_ClimbUpLedge::ActivateAbility(const FGameplayAbilitySpe
 		true,
 		1.0f);
 
-	MontageTask->OnCancelled.AddDynamic(this, &UAbilityInteraction_ClimbUpLedge::OnPlayMontageCanceled_Event);
-	MontageTask->OnInterrupted.AddDynamic(this, &UAbilityInteraction_ClimbUpLedge::OnPlayMontageInterrupted_Event);
+	MontageTask->OnCancelled.AddDynamic(this, &UAbilityInteraction_ClimbUpLedge::OnPlayMontageCompleted_Event);
+	MontageTask->OnInterrupted.AddDynamic(this, &UAbilityInteraction_ClimbUpLedge::OnPlayMontageCompleted_Event);
 	MontageTask->OnCompleted.AddDynamic(this, &UAbilityInteraction_ClimbUpLedge::OnPlayMontageCompleted_Event);
 	MontageTask->ReadyForActivation();
 }
@@ -93,16 +93,6 @@ void UAbilityInteraction_ClimbUpLedge::EndAbility(const FGameplayAbilitySpecHand
 	MovementComponent->TryLedgeEndAction();
 
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
-}
-
-void UAbilityInteraction_ClimbUpLedge::OnPlayMontageCanceled_Event(FGameplayTag EventTag, FGameplayEventData EventData)
-{
-	K2_EndAbility();
-}
-
-void UAbilityInteraction_ClimbUpLedge::OnPlayMontageInterrupted_Event(FGameplayTag EventTag, FGameplayEventData EventData)
-{
-	K2_EndAbility();
 }
 
 void UAbilityInteraction_ClimbUpLedge::OnPlayMontageCompleted_Event(FGameplayTag EventTag, FGameplayEventData EventData)

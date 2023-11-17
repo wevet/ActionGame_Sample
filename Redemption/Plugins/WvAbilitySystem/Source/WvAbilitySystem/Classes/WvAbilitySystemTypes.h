@@ -229,6 +229,15 @@ enum class EMagicUseCondition : uint8
 	Any
 };
 
+UENUM(BlueprintType)
+enum class EAIActionState : uint8
+{
+	None UMETA(DisplayName = "None"),
+	Patrol UMETA(DisplayName = "Patrol"),
+	Search UMETA(DisplayName = "Search"),
+	Combat UMETA(DisplayName = "Combat"),
+};
+
 USTRUCT(BlueprintType)
 struct FMagicAbilityRow : public FTableRowBase
 {
@@ -296,9 +305,6 @@ struct FWvAbilitySystemAvatarData
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "AbilitySystem")
 	UDataTable* GenericAbilityTable;
-
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "AbilitySystem")
-	UDataTable* MagicAbilityTable;
 
 	UPROPERTY(EditAnywhere, Category = "AbilitySystem")
 	FGameplayTagContainer ExcludeGenericAbilityTags;
@@ -658,6 +664,7 @@ enum class EWvBattleDamageAttackSourceType : uint8
 	None,
 	BasicMelee,
 	Bullet,
+	Bomb,
 };
 
 USTRUCT(BlueprintType)
@@ -771,6 +778,9 @@ struct FHitReactInfoRow : public FTableRowBase
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	TArray<FHitReactVerticalConditionInfo> VerticalConditions;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	TArray<FHitReactConditionInfo> CrouchingMontages;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	EDynamicHitDirection DynamicHitDirection { EDynamicHitDirection::FaceToAttacker };
@@ -938,4 +948,47 @@ private:
 	void SaveDA(class UHitReactBoneShakeDataAsset* DA);
 };
 #pragma endregion
+
+
+#pragma region BotSetting
+USTRUCT(BlueprintType)
+struct FBotConfig
+{
+	GENERATED_BODY()
+
+public:
+	UPROPERTY(EditDefaultsOnly)
+	float FootStepMaxVolume = 0.5f;
+
+	UPROPERTY(EditDefaultsOnly)
+	FVector2D HearingRange {0.f, 500.0f};
+};
+
+USTRUCT(BlueprintType)
+struct FAIActionStateData
+{
+	GENERATED_BODY()
+
+public:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	EAIActionState AIActionState;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FGameplayTag StateTag;
+};
+
+// set character classes
+UCLASS(BlueprintType)
+class WVABILITYSYSTEM_API UAIActionStateDataAsset : public UDataAsset
+{
+	GENERATED_BODY()
+
+public:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	TArray<FAIActionStateData> AIActionStateData;
+
+	FGameplayTag FindActionStateTag(const EAIActionState InAIActionState) const;
+};
+#pragma endregion
+
 

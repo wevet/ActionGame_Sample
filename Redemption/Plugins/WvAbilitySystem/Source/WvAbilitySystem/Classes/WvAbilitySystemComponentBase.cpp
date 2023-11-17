@@ -457,6 +457,25 @@ void UWvAbilitySystemComponentBase::TryActivateAbilityByTag(const FGameplayTag T
 	}
 }
 
+void UWvAbilitySystemComponentBase::PluralInputTriggerInputEvent(const FGameplayTag Tag)
+{
+	ABILITYLIST_SCOPE_LOCK();
+	for (FGameplayAbilitySpec& Spec : ActivatableAbilities.Items)
+	{
+		if (!Spec.Ability)
+		{
+			continue;
+		}
+
+		UWvAbilityDataAsset* AbilityData = CastChecked<UWvAbilityDataAsset>(Spec.SourceObject);
+		if (AbilityData->ActiveTriggerTag != Tag)
+		{
+			continue;
+		}
+		TryActivateAbility(Spec.Handle);
+	}
+}
+
 FGameplayAbilitySpec* UWvAbilitySystemComponentBase::FindAbilitySpecFromDataAsset(class UWvAbilityDataAsset* InAbilityData)
 {
 	for (FGameplayAbilitySpec& Spec : ActivatableAbilities.Items)
@@ -479,25 +498,6 @@ UWvAbilityBase* UWvAbilitySystemComponentBase::FindAbilityFromDataAsset(class UW
 		}
 	}
 	return nullptr;
-}
-
-void UWvAbilitySystemComponentBase::PluralInputTriggerInputEvent(const FGameplayTag Tag)
-{
-	ABILITYLIST_SCOPE_LOCK();
-	for (FGameplayAbilitySpec& Spec : ActivatableAbilities.Items)
-	{
-		if (!Spec.Ability)
-		{
-			continue;
-		}
-
-		UWvAbilityDataAsset* AbilityData = CastChecked<UWvAbilityDataAsset>(Spec.SourceObject);
-		if (AbilityData->ActiveTriggerTag != Tag)
-		{
-			continue;
-		}
-		TryActivateAbility(Spec.Handle);
-	}
 }
 
 TArray<FActiveGameplayEffectHandle> UWvAbilitySystemComponentBase::MakeEffectToTargetData(FGameplayEffectContextHandle& EffectContexHandle, FGameplayAbilityTargetDataHandle& TargetDataHandle, const FGameplayEffectQuery& Query)

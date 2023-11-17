@@ -18,7 +18,6 @@ UWvAbilityTargetInterface::UWvAbilityTargetInterface(const FObjectInitializer& O
 {
 }
 
-
 ECharacterRelation IWvAbilityTargetInterface::GetRelationWithSelfImpl(const IWvAbilityTargetInterface* Other) const
 {
 	if (!Other)
@@ -104,15 +103,7 @@ FGameplayTag IWvAbilityTargetInterface::GetAvatarTag() const
 	return FGameplayTag::EmptyTag;
 }
 
-void IWvAbilityTargetInterface::OnReceiveHitReact(FGameplayEffectContextHandle Context, const bool IsInDead, const float Damage)
-{
-}
-
 void IWvAbilityTargetInterface::OnSendWeaknessAttack(AActor* Actor, const FName WeaknessName, const float Damage)
-{
-}
-
-void IWvAbilityTargetInterface::OnReceiveWeaknessAttack(AActor* Actor, const FName WeaknessName, const float Damage)
 {
 }
 
@@ -120,11 +111,19 @@ void IWvAbilityTargetInterface::OnSendAbilityAttack(AActor* Actor, const FWvBatt
 {
 }
 
-void IWvAbilityTargetInterface::OnReceiveAbilityAttack(AActor* Actor, const FWvBattleDamageAttackSourceInfo SourceInfo, const float Damage)
+void IWvAbilityTargetInterface::OnSendKillTarget(AActor* Actor, const float Damage)
 {
 }
 
-void IWvAbilityTargetInterface::OnSendKillTarget(AActor* Actor, const float Damage)
+void IWvAbilityTargetInterface::OnReceiveHitReact(FGameplayEffectContextHandle Context, const bool IsInDead, const float Damage)
+{
+}
+
+void IWvAbilityTargetInterface::OnReceiveWeaknessAttack(AActor* Actor, const FName WeaknessName, const float Damage)
+{
+}
+
+void IWvAbilityTargetInterface::OnReceiveAbilityAttack(AActor* Actor, const FWvBattleDamageAttackSourceInfo SourceInfo, const float Damage)
 {
 }
 
@@ -141,6 +140,12 @@ bool IWvAbilityTargetInterface::IsTargetable() const
 {
 	return false;
 }
+
+
+UWvAIActionStateInterface::UWvAIActionStateInterface(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
+{
+}
+
 
 UWvEnvironmentInterface::UWvEnvironmentInterface(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
