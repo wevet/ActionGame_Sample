@@ -5,6 +5,8 @@
 #include "NiagaraFunctionLibrary.h"
 #include "Components/SkeletalMeshComponent.h"
 
+#include UE_INLINE_GENERATED_CPP_BY_NAME(WvAT_ComponentDamage)
+
 UWvAT_ComponentDamage::UWvAT_ComponentDamage(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
 	bTickingTask = true;

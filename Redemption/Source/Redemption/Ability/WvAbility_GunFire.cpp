@@ -16,6 +16,7 @@
 #include "Kismet/KismetMathLibrary.h"
 #include "Kismet/KismetSystemLibrary.h"
 
+#include UE_INLINE_GENERATED_CPP_BY_NAME(WvAbility_GunFire)
 
 UWvAbility_GunFire::UWvAbility_GunFire(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {

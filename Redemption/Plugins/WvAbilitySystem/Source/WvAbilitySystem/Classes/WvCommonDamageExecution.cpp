@@ -16,11 +16,6 @@ UWvCommonDamageExecution::UWvCommonDamageExecution()
 }
 
 
-/// <summary>
-/// @TODO
-/// </summary>
-/// <param name="ExecutionParams"></param>
-/// <param name="OutExecutionOutput"></param>
 void UWvCommonDamageExecution::Execute_Implementation(const FGameplayEffectCustomExecutionParameters& ExecutionParams, OUT FGameplayEffectCustomExecutionOutput& OutExecutionOutput) const
 {
 	const FGameplayEffectSpec& Spec = ExecutionParams.GetOwningSpec();

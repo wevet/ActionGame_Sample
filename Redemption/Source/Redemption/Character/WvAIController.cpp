@@ -18,7 +18,6 @@
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(WvAIController)
 
-
 AWvAIController::AWvAIController(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
 	bWantsPlayerState = true;
@@ -264,6 +263,26 @@ void AWvAIController::OnSendKillTarget(AActor* Actor, const float Damage)
 	SightTask.Abort();
 	ClearSightTaget();
 }
+
+bool AWvAIController::IsInBattled() const
+{
+	auto OutTarget = GetBlackboardTarget();
+	return IsValid(OutTarget) && IsSightTaskRunning();
+}
+
+void AWvAIController::Freeze()
+{
+	SightTask.Abort();
+	HearTask.Abort();
+	StopTree();
+	ClearSightTaget();
+	RemoveSearchNodeHolders();
+}
+
+void AWvAIController::UnFreeze()
+{
+	ResumeTree();
+}
 #pragma endregion
 
 #pragma region Core
@@ -333,7 +352,8 @@ void AWvAIController::RemoveSearchNodeHolders()
 {
 	if (Generators.Num() > 1)
 	{
-		UE_LOG(LogTemp, Error, TEXT("Generator is unnecessarily generated. => %s"), BaseCharacter.IsValid() ? *BaseCharacter->GetName() : TEXT("None"));
+		UE_LOG(LogTemp, Error, TEXT("Generator is unnecessarily generated.  => %d Character. => %s"), 
+			Generators.Num(), BaseCharacter.IsValid() ? *BaseCharacter->GetName() : TEXT("None"));
 
 		for (TWeakObjectPtr<AActor> Generator : Generators)
 		{
@@ -343,6 +363,8 @@ void AWvAIController::RemoveSearchNodeHolders()
 				IG->K2_DestroyActor();
 			}
 		}
+
+		Generators.Empty();
 	}
 	else
 	{
@@ -364,11 +386,6 @@ void AWvAIController::RemoveSearchNodeHolders()
 
 void AWvAIController::DoSearchEnemyState(AActor* Actor)
 {
-	if (!IsValid(Actor))
-	{
-		return;
-	}
-
 	if (NodeGeneratorClasses)
 	{
 		const FVector TargetLocation = CurrentStimulus.StimulusLocation;
@@ -384,10 +401,7 @@ void AWvAIController::DoSearchEnemyState(AActor* Actor)
 
 void AWvAIController::DoCombatEnemyState(AActor* Actor)
 {
-	if (IsValid(Actor))
-	{
-		SetBlackboardTarget(Actor);
-	}
+	SetBlackboardTarget(Actor);
 }
 
 void AWvAIController::Execute_DoAttack()
@@ -442,7 +456,7 @@ bool AWvAIController::CanFriendCombatSupport(const ABaseCharacter* OtherCharacte
 	if (AWvAIController* Ctrl = Cast<AWvAIController>(OtherCharacter->GetController()))
 	{
 		OutTarget = Ctrl->GetBlackboardTarget();
-		return IsValid(OutTarget) && Ctrl->IsSightTaskRunning();
+		return Ctrl->IsInBattled();
 	}
 	return false;
 }
@@ -501,10 +515,7 @@ void AWvAIController::OnTargetPerceptionUpdatedRecieve(AActor* Actor, FAIStimulu
 	}
 	else if (CurrentSenseID == UAISense::GetSenseID(PredictionConfig->GetSenseImplementation()))
 	{
-		UE_LOG(LogTemp, Log, TEXT("Apply PredictionConfig => %s, Owner => %s, Target => %s"), 
-			*FString(__FUNCTION__), *GetNameSafe(GetPawn()), *GetNameSafe(Actor));
-
-		DrawDebugLine(GetWorld(), GetPawn()->GetActorLocation(), Actor->GetActorLocation(), FColor::Green, false, 4.0f, 0, 1.5f);
+		OnPredictionPerceptionUpdatedRecieve(Actor);
 	}
 
 	if (!bHearRunning)
@@ -555,9 +566,16 @@ void AWvAIController::OnHearPerceptionUpdatedRecieve(AActor* Actor)
 
 }
 
+void AWvAIController::OnPredictionPerceptionUpdatedRecieve(AActor* Actor)
+{
+	UE_LOG(LogTemp, Log, TEXT("Apply PredictionConfig => %s, Owner => %s, Target => %s"),
+		*FString(__FUNCTION__), *GetNameSafe(GetPawn()), *GetNameSafe(Actor));
+
+	DrawDebugLine(GetWorld(), GetPawn()->GetActorLocation(), Actor->GetActorLocation(), FColor::Green, false, 4.0f, 0, 1.5f);
+}
+
 void AWvAIController::ClearSightTaget()
 {
 	SetBlackboardTarget(nullptr);
-	UE_LOG(LogTemp, Log, TEXT("[%s]"),*FString(__FUNCTION__));
 }
 

@@ -5,6 +5,7 @@
 #include "Character/PlayerCharacter.h"
 #include "Character/WvPlayerController.h"
 
+#include UE_INLINE_GENERATED_CPP_BY_NAME(WvAT_WaitKeyPress)
 
 UWvAT_WaitKeyPress::UWvAT_WaitKeyPress(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {

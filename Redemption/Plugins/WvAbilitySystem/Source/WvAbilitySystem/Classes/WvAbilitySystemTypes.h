@@ -992,3 +992,75 @@ public:
 #pragma endregion
 
 
+#pragma region Finiher
+UENUM(BlueprintType)
+enum class EFinisherDirectionType : uint8
+{
+	Always UMETA(DisplayName = "Always"),
+	Forward UMETA(DisplayName = "Forward"),
+	Backward UMETA(DisplayName = "Backward"),
+};
+
+USTRUCT(BlueprintType)
+struct FFinisherAnimation
+{
+	GENERATED_BODY()
+
+public:
+	UPROPERTY(EditDefaultsOnly, Category = Sender)
+	bool bIsSender = false;
+
+	UPROPERTY(EditDefaultsOnly, Category = Receiver)
+	bool bIsReceiver = false;
+
+	UPROPERTY(EditDefaultsOnly, Category = Sender, meta = (EditCondition = "bIsSender"))
+	EFinisherDirectionType FinisherDirectionType = EFinisherDirectionType::Backward;
+
+	UPROPERTY(EditDefaultsOnly, Category = Sender, meta = (EditCondition = "bIsSender"))
+	float PushDistance = 100.0f;
+
+	UPROPERTY(EditDefaultsOnly, Category = Receiver, meta = (EditCondition = "bIsReceiver"))
+	bool IsTurnAround = true;
+
+	UPROPERTY(EditDefaultsOnly)
+	class UAnimMontage* Montage;
+};
+
+USTRUCT(BlueprintType)
+struct FFinisherAnimationContainer
+{
+	GENERATED_BODY()
+
+public:
+	UPROPERTY(EditDefaultsOnly)
+	TArray<FFinisherAnimation> Montages;
+};
+
+UCLASS(BlueprintType)
+class WVABILITYSYSTEM_API UFinisherDataAsset : public UDataAsset
+{
+	GENERATED_BODY()
+
+public:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	TMap<FGameplayTag, FFinisherAnimationContainer> FinisherAnimationMap;
+
+	FFinisherAnimationContainer FindContainer(const FGameplayTag Tag) const;
+};
+
+USTRUCT(BlueprintType)
+struct FFinisherConfig
+{
+	GENERATED_BODY()
+
+public:
+	UPROPERTY(EditDefaultsOnly)
+	float NearlestDistance = 200.0f;
+
+	UPROPERTY(EditDefaultsOnly)
+	float AngleThreshold = 20.0f;
+};
+#pragma endregion
+
+
+

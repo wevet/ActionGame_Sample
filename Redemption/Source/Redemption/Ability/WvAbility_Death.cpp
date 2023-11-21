@@ -15,6 +15,7 @@
 #include "Kismet/KismetMathLibrary.h"
 #include "Kismet/KismetSystemLibrary.h"
 
+#include UE_INLINE_GENERATED_CPP_BY_NAME(WvAbility_Death)
 
 UWvAbility_Death::UWvAbility_Death(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {

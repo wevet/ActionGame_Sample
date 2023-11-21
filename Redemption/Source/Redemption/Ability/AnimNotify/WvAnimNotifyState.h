@@ -29,13 +29,9 @@ protected:
 
 protected:
 	UPROPERTY(BlueprintReadWrite)
-	UWvAbilitySystemComponent* AbilitySystemComponent {
-		nullptr
-	};
+	UWvAbilitySystemComponent* AbilitySystemComponent {	nullptr };
 
 	UPROPERTY(BlueprintReadWrite)
-	UWvAbilityBase* Ability {
-		nullptr
-	};
+	UWvAbilityBase* Ability { nullptr };
 };
 

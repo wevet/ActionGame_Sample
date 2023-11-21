@@ -267,6 +267,10 @@ void APlayerCharacter::OnPluralInputEventTrigger_Callback(const FGameplayTag Tag
 	{
 		ToggleTargetLock();
 	}
+	else if (HasFinisherAction(Tag) && bIsPress)
+	{
+		BuildFinisherAbility(Tag);
+	}
 
 	//UE_LOG(LogTemp, Log, TEXT("Tag => %s, Pressed => %s"), *Tag.ToString(), bIsPress ? TEXT("true") : TEXT("false"));
 }
@@ -287,6 +291,15 @@ void APlayerCharacter::OverlayStateChange_Callback(const ELSOverlayState PrevOve
 		Super::OverlayStateChange(CurrentOverlay);
 	}
 
+}
+
+bool APlayerCharacter::HasFinisherAction(const FGameplayTag Tag) const
+{
+	FGameplayTagContainer Container;
+	Container.AddTag(TAG_Weapon_Finisher);
+	Container.AddTag(TAG_Weapon_HoldUp);
+	Container.AddTag(TAG_Weapon_HoldUp);
+	return Container.HasTag(Tag);
 }
 
 void APlayerCharacter::OnTargetLockedOn_Callback(AActor* LookOnTarget, UHitTargetComponent* TargetComponent)

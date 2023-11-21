@@ -73,4 +73,14 @@ void UStatusComponent::DamageChange_Callback(const FOnAttributeChangeData& Data)
 	UE_LOG(LogTemp, Log, TEXT("Damage => %.3f, function => %s"), Data.NewValue, *FString(__FUNCTION__));
 }
 
+float UStatusComponent::GetKillDamage() const
+{
+	if (AAS.IsValid())
+	{
+		return AAS->GetHPMax();
+	}
+	return 0.f;
+}
+
+
 

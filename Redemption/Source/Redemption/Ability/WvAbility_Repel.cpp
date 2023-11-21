@@ -15,6 +15,7 @@
 #include "Kismet/KismetMathLibrary.h"
 #include "Kismet/KismetSystemLibrary.h"
 
+#include UE_INLINE_GENERATED_CPP_BY_NAME(WvAbility_Repel)
 
 UWvAbility_Repel::UWvAbility_Repel(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
@@ -156,12 +157,15 @@ void UWvAbility_Repel::ActivateAbility(const FGameplayAbilitySpecHandle Handle, 
 			}
 		}
 
+		// disable yaw system
+#if false
 		if (bIsUpdateYaw)
 		{
 			FRotator CurRotation = Character->GetActorRotation();
 			CurRotation.Yaw = RotatorYaw;
 			Character->SetActorRotation(CurRotation);
 		}
+#endif
 	}
 
 	Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);

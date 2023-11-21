@@ -21,10 +21,11 @@ EBTNodeResult::Type UBTTask_ChangeAIActionState::ExecuteTask(UBehaviorTreeCompon
 
 		if (IWvAIActionStateInterface* ASI = Cast<IWvAIActionStateInterface>(ControlPawn))
 		{
-			ASI->SetAIActionState_Implementation(AIActionState, nullptr);
+			ASI->SetAIActionState(AIActionState);
 		}
 
 		// @TODO
+		// It is necessary to separate the equipment of weapons according to the situation.
 		if (ABaseCharacter* Character = Cast<ABaseCharacter>(ControlPawn))
 		{
 			auto CombatComp = Character->GetCombatComponent();

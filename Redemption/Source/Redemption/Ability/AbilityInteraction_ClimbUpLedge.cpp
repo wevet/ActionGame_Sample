@@ -4,6 +4,8 @@
 #include "Ability/AbilityInteraction_ClimbUpLedge.h"
 #include "Character/BaseCharacter.h"
 
+#include UE_INLINE_GENERATED_CPP_BY_NAME(AbilityInteraction_ClimbUpLedge)
+
 UAbilityInteraction_ClimbUpLedge::UAbilityInteraction_ClimbUpLedge(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
 	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;

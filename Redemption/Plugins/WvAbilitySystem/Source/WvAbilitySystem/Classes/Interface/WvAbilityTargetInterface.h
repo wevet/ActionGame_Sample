@@ -62,6 +62,10 @@ public:
 
 	virtual bool IsDead() const;
 	virtual bool IsTargetable() const;
+	virtual bool IsInBattled() const;
+
+	virtual void Freeze() {};
+	virtual void UnFreeze() {};
 
 	FAbilityDeadAnimProcessForEventDelegate OnDeadAnimBeginPlay;
 	FAbilityDeadAnimProcessForEventDelegate OnDeadAnimFinish;
@@ -90,11 +94,8 @@ class WVABILITYSYSTEM_API IWvAIActionStateInterface
 	GENERATED_IINTERFACE_BODY()
 
 public:
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "AI")
-	void SetAIActionState(const EAIActionState NewAIActionState, AActor* Attacker);
-
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "AI")
-	EAIActionState GetAIActionState() const;
+	virtual void SetAIActionState(const EAIActionState NewAIActionState) {};
+	virtual EAIActionState GetAIActionState() const { return EAIActionState::None; };
 };
 
 

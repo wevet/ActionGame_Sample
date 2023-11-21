@@ -75,7 +75,7 @@ private:
 
 	void HandleJump(const bool bIsPress);
 	void HandleSprinting(const bool bIsPress);
-
+	bool HasFinisherAction(const FGameplayTag Tag) const;
 
 	UFUNCTION()
 	void GameplayTagTrigger_Callback(const FGameplayTag Tag, const bool bIsPress);

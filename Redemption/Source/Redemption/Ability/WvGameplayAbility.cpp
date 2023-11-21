@@ -9,6 +9,8 @@
 #include "Task/WvAbilityTask.h"
 #include "WvAbilitySystemBlueprintFunctionLibrary.h"
 
+#include UE_INLINE_GENERATED_CPP_BY_NAME(WvGameplayAbility)
+
 UWvGameplayAbility::UWvGameplayAbility(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
 	ASC = nullptr;

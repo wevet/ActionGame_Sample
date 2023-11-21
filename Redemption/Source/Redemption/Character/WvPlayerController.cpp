@@ -72,6 +72,7 @@ class UWvInputEventComponent* AWvPlayerController::GetInputEventComponent() cons
 	return InputEventComponent;
 }
 
+#pragma region IWvAbilityTargetInterface
 void AWvPlayerController::SetGenericTeamId(const FGenericTeamId& NewTeamID)
 {
 	UE_LOG(LogTemp, Error, TEXT("You can't set the team ID on a player controller (%s); it's driven by the associated player state"), *GetPathNameSafe(this));
@@ -90,4 +91,14 @@ FOnTeamIndexChangedDelegate* AWvPlayerController::GetOnTeamIndexChangedDelegate(
 {
 	return &OnTeamChangedDelegate;
 }
+
+void AWvPlayerController::Freeze()
+{
+}
+
+void AWvPlayerController::UnFreeze()
+{
+}
+#pragma endregion
+
 

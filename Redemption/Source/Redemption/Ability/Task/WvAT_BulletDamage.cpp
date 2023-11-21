@@ -7,6 +7,8 @@
 #include "Misc/WvCommonUtils.h"
 #include "Item/BulletHoldWeaponActor.h"
 
+#include UE_INLINE_GENERATED_CPP_BY_NAME(WvAT_BulletDamage)
+
 UWvAT_BulletDamage::UWvAT_BulletDamage(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
 	bTickingTask = true;

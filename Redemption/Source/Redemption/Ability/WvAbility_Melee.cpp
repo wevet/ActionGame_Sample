@@ -15,6 +15,7 @@
 #include "Kismet/KismetMathLibrary.h"
 #include "Kismet/KismetSystemLibrary.h"
 
+#include UE_INLINE_GENERATED_CPP_BY_NAME(WvAbility_Melee)
 
 UWvAbility_Melee::UWvAbility_Melee(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {

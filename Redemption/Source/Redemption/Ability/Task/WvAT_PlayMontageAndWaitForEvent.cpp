@@ -6,6 +6,8 @@
 #include "Character/BaseCharacter.h"
 #include "Animation/AnimInstance.h"
 
+#include UE_INLINE_GENERATED_CPP_BY_NAME(WvAT_PlayMontageAndWaitForEvent)
+
 UWvAT_PlayMontageAndWaitForEvent::UWvAT_PlayMontageAndWaitForEvent(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
 	Rate = 1.0f;

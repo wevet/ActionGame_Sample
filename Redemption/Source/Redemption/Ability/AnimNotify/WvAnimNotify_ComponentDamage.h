@@ -42,6 +42,9 @@ protected:
 	UPROPERTY()
 	class UWvAT_ComponentDamage* BoneFrameTask;
 
+	//UPROPERTY()
+	//AWvTraceActor* TracableActor;
+
 private:
 	void NotifyWeapon_Fire(USkeletalMeshComponent* MeshComp);
 };

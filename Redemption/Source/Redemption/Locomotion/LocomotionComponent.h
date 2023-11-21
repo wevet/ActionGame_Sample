@@ -346,7 +346,6 @@ public:
 	FLocomotionEssencialVariables GetLocomotionEssencialVariables() const { return LocomotionEssencialVariables; }
 
 	const UWvAbilitySystemComponent* FindAbilitySystemComponent();
-	FRequestAbilityAnimationData GetRequestAbilityAnimationData() const;
 	UAnimMontage* GetCurrentMontage() const;
 
 	void StartRagdollAction();
@@ -409,10 +408,6 @@ private:
 
 	UPROPERTY()
 	TWeakObjectPtr<class UCapsuleComponent> CapsuleComponent;
-
-
-	UPROPERTY()
-	FRequestAbilityAnimationData RequestAbilityAnimationData;
 
 	FVector LandingLocation = FVector::ZeroVector;
 	bool bDoSprint;

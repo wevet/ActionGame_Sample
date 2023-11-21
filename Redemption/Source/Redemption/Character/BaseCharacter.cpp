@@ -14,6 +14,7 @@
 #include "WvPlayerController.h"
 #include "Animation/WvAnimInstance.h"
 #include "Ability/WvInheritanceAttributeSet.h"
+#include "Game/WvGameInstance.h"
 
 #include "Components/CapsuleComponent.h"
 #include "Components/InputComponent.h"
@@ -169,6 +170,8 @@ void ABaseCharacter::BeginPlay()
 	UWvCharacterMovementComponent* CMC = GetWvCharacterMovementComponent();
 	CMC->OnWallClimbingBeginDelegate.AddDynamic(this, &ABaseCharacter::OnWallClimbingBegin_Callback);
 	CMC->OnWallClimbingEndDelegate.AddDynamic(this, &ABaseCharacter::OnWallClimbingEnd_Callback);
+
+	RequestAsyncLoad();
 }
 
 void ABaseCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -180,6 +183,12 @@ void ABaseCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	CMC->OnWallClimbingBeginDelegate.RemoveDynamic(this, &ABaseCharacter::OnWallClimbingBegin_Callback);
 	CMC->OnWallClimbingEndDelegate.RemoveDynamic(this, &ABaseCharacter::OnWallClimbingEnd_Callback);
 
+	ResetFinisherAnimationData();
+
+	OverlayAnimDAInstance = nullptr;
+
+	FinisherSender = nullptr;
+	FinisherReceiner = nullptr;
 	Super::EndPlay(EndPlayReason);
 }
 
@@ -223,10 +232,11 @@ void ABaseCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	if (IsValid(GetCharacterMovement()))
+	auto CMC = GetCharacterMovement();
+	if (IsValid(CMC))
 	{
-		const float Acc = GetCharacterMovement()->GetCurrentAcceleration().Length();
-		const float MaxAcc = GetCharacterMovement()->GetMaxAcceleration();
+		const float Acc = CMC->GetCurrentAcceleration().Length();
+		const float MaxAcc = CMC->GetMaxAcceleration();
 		MovementInputAmount = Acc / MaxAcc;
 		bHasMovementInput = (MovementInputAmount > 0.0f);
 	}
@@ -490,10 +500,55 @@ bool ABaseCharacter::IsTargetable() const
 {
 	return !IsDead();
 }
+
+bool ABaseCharacter::IsInBattled() const
+{
+	if (IWvAbilityTargetInterface* Interface = Cast<IWvAbilityTargetInterface>(GetController()))
+	{
+		Interface->IsInBattled();
+	}
+	return false;
+}
+
+void ABaseCharacter::Freeze()
+{
+	if (IWvAbilityTargetInterface* Interface = Cast<IWvAbilityTargetInterface>(GetController()))
+	{
+		Interface->Freeze();
+	}
+
+	WvAbilitySystemComponent->AddGameplayTag(TAG_Locomotion_ForbidMovement, 1);
+	WvAbilitySystemComponent->AddGameplayTag(TAG_Locomotion_ForbidClimbing, 1);
+	WvAbilitySystemComponent->AddGameplayTag(TAG_Locomotion_ForbidMantling, 1);
+	WvAbilitySystemComponent->AddGameplayTag(TAG_Locomotion_ForbidJump, 1);
+	WvAbilitySystemComponent->AddGameplayTag(TAG_Character_ActionMelee_Forbid, 1);
+	WvAbilitySystemComponent->AddGameplayTag(TAG_Character_ActionJump_Forbid, 1);
+	WvAbilitySystemComponent->AddGameplayTag(TAG_Character_ActionDash_Forbid, 1);
+	WvAbilitySystemComponent->AddGameplayTag(TAG_Character_ActionCrouch_Forbid, 1);
+	WvAbilitySystemComponent->AddGameplayTag(TAG_Character_TargetLock_Forbid, 1);
+}
+
+void ABaseCharacter::UnFreeze()
+{
+	if (IWvAbilityTargetInterface* Interface = Cast<IWvAbilityTargetInterface>(GetController()))
+	{
+		Interface->UnFreeze();
+	}
+
+	WvAbilitySystemComponent->RemoveGameplayTag(TAG_Locomotion_ForbidMovement, 1);
+	WvAbilitySystemComponent->RemoveGameplayTag(TAG_Locomotion_ForbidClimbing, 1);
+	WvAbilitySystemComponent->RemoveGameplayTag(TAG_Locomotion_ForbidMantling, 1);
+	WvAbilitySystemComponent->RemoveGameplayTag(TAG_Locomotion_ForbidJump, 1);
+	WvAbilitySystemComponent->RemoveGameplayTag(TAG_Character_ActionMelee_Forbid, 1);
+	WvAbilitySystemComponent->RemoveGameplayTag(TAG_Character_ActionJump_Forbid, 1);
+	WvAbilitySystemComponent->RemoveGameplayTag(TAG_Character_ActionDash_Forbid, 1);
+	WvAbilitySystemComponent->RemoveGameplayTag(TAG_Character_ActionCrouch_Forbid, 1);
+	WvAbilitySystemComponent->RemoveGameplayTag(TAG_Character_TargetLock_Forbid, 1);
+}
 #pragma endregion
 
 #pragma region IWvAIActionStateInterface
-void ABaseCharacter::SetAIActionState_Implementation(const EAIActionState NewAIActionState, AActor* Attacker)
+void ABaseCharacter::SetAIActionState(const EAIActionState NewAIActionState)
 {
 	if (AIActionState == NewAIActionState)
 	{
@@ -519,7 +574,7 @@ void ABaseCharacter::SetAIActionState_Implementation(const EAIActionState NewAIA
 	}
 }
 
-EAIActionState ABaseCharacter::GetAIActionState_Implementation() const
+EAIActionState ABaseCharacter::GetAIActionState() const
 {
 	return AIActionState;
 }
@@ -915,12 +970,13 @@ void ABaseCharacter::EndDeathAction_Callback()
 
 void ABaseCharacter::OverlayStateChange(const ELSOverlayState CurrentOverlay)
 {
-	if (!IsValid(OverlayAnimInstanceDA))
+	if (!IsValid(OverlayAnimDAInstance))
 	{
+		OverlayAnimDAInstance = OverlayAnimInstanceDA.LoadSynchronous();
 		return;
 	}
 
-	auto AnimInstanceClass = OverlayAnimInstanceDA->FindAnimInstance(CurrentOverlay);
+	auto AnimInstanceClass = OverlayAnimDAInstance->FindAnimInstance(CurrentOverlay);
 	if (AnimInstanceClass)
 	{
 		AnimInstance->LinkAnimClassLayers(AnimInstanceClass);
@@ -1008,28 +1064,20 @@ void ABaseCharacter::ReportPredictionEvent(AActor* PredictedActor, const float P
 FVector ABaseCharacter::GetPredictionStopLocation(const FVector CurrentLocation) const
 {
 	const auto CMC = GetCharacterMovement();
-
 	// Get and store current world delta seconds for later use
 	const float DT = GetWorld()->GetDeltaSeconds();
-
 	// Small number break loop when velocity is less than this value
 	const float SmallVelocity = 10.f * FMath::Square(DT);
-
 	// Current velocity at current frame in unit/frame
 	FVector CurrentVelocityInFrame = CMC->Velocity * DT;
-
 	// Store velocity direction for later use
 	const FVector CurrentVelocityDirection = CMC->Velocity.GetSafeNormal2D();
-
 	// Current deacceleration at current frame in unit/fame^2
 	const FVector CurrentDeaccelerationInFrame = (CurrentVelocityDirection * CMC->BrakingDecelerationWalking) * FMath::Square(DT);
-
 	// Calculate number of frames needed to reach zero velocity and gets its int value
 	const int32 StopFrameCount = CurrentVelocityInFrame.Size() / CurrentDeaccelerationInFrame.Size();
-
 	// float variable use to store distance to targeted stop location
 	float StoppingDistance = 0.0f;
-
 	// Do Stop calculation go through all frames and calculate stop distance in each frame and stack them
 	for (int32 Index = 0; Index <= StopFrameCount; Index++)
 	{
@@ -1046,5 +1094,355 @@ FVector ABaseCharacter::GetPredictionStopLocation(const FVector CurrentLocation)
 	// return stopping distance from player position in previous frame
 	return CurrentLocation + CurrentVelocityDirection * StoppingDistance;
 }
+
+#pragma region NearlestAction
+void ABaseCharacter::FindNearlestTarget(const FAttackMotionWarpingData AttackMotionWarpingData)
+{
+	auto Target = FindNearlestTarget(AttackMotionWarpingData.NearlestDistance, AttackMotionWarpingData.AngleThreshold, false);
+	if (!Target)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("not found FindNearlestTarget => %s"), *FString(__FUNCTION__));
+		return;
+	}
+
+	const FVector From = GetActorLocation();
+	const FVector To = Target->GetActorLocation();
+	const float Weight = AttackMotionWarpingData.TargetSyncPointWeight;
+	MotionWarpingComponent->RemoveWarpTarget(NEARLEST_TARGET_SYNC_POINT);
+	const FRotator TargetLookAt = UKismetMathLibrary::FindLookAtRotation(From, To);
+
+	const FRotator Rotation = UKismetMathLibrary::RLerp(GetActorRotation(), TargetLookAt, Weight, true);
+	FMotionWarpingTarget WarpingTarget;
+	WarpingTarget.Name = NEARLEST_TARGET_SYNC_POINT;
+	WarpingTarget.Location = UKismetMathLibrary::VLerp(From, To, Weight);
+	WarpingTarget.Rotation = FRotator(0.f, Rotation.Yaw, 0.f);
+	MotionWarpingComponent->AddOrUpdateWarpTarget(WarpingTarget);
+
+#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
+	DrawDebugSphere(GetWorld(), From, 20.f, 12, FColor::Blue, false, 2);
+	DrawDebugSphere(GetWorld(), To, 20.f, 12, FColor::Blue, false, 2);
+	DrawDebugDirectionalArrow(GetWorld(), From, To, 20.f, FColor::Red, false, 2);
+#endif
+
+}
+
+const TArray<AActor*> ABaseCharacter::FindNearlestTargets(const float Distance, const float AngleThreshold)
+{
+	// WorldDynamic and Pawn object type
+	static const TArray<TEnumAsByte<EObjectTypeQuery>> ObjectTypes = { EObjectTypeQuery::ObjectTypeQuery2, EObjectTypeQuery::ObjectTypeQuery3 };
+
+	TArray<AActor*> IgnoreActors;
+	IgnoreActors.Add(this);
+
+	TArray<AActor*> HitTargets;
+	UKismetSystemLibrary::SphereOverlapActors(GetWorld(), GetActorLocation(), Distance, ObjectTypes, ABaseCharacter::StaticClass(), IgnoreActors, HitTargets);
+
+	// Get the target with the smallest angle difference from the camera forward vector
+	TArray<AActor*> FilterTargets;
+	for (int32 Index = 0; Index < HitTargets.Num(); ++Index)
+	{
+		if (ABaseCharacter* Target = Cast<ABaseCharacter>(HitTargets[Index]))
+		{
+			if (!IsValid(Target) || Target->IsDead())
+			{
+				continue;
+			}
+
+			const FVector NormalizePos = (Target->GetActorLocation() - GetActorLocation()).GetSafeNormal();
+			const FVector Forward = GetActorForwardVector();
+			const float Angle = UKismetMathLibrary::DegAcos(FVector::DotProduct(Forward, NormalizePos));
+			const bool bIsTargetInView = (FMath::Abs(Angle) < AngleThreshold);
+			if (bIsTargetInView)
+			{
+				FilterTargets.Add(Target);
+
+//#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
+#if false
+				const FVector From = GetActorLocation();
+				const FVector To = Target->GetActorLocation();
+				DrawDebugSphere(GetWorld(), From, 20.f, 12, FColor::Blue, false, 2);
+				DrawDebugSphere(GetWorld(), To, 20.f, 12, FColor::Blue, false, 2);
+				DrawDebugDirectionalArrow(GetWorld(), From, To, 20.f, FColor::Red, false, 2);
+#endif
+			}
+		}
+	}
+	return FilterTargets;
+}
+
+/// <summary>
+/// Find Target, for example HoldUp. Finisher. KnockOut.
+/// </summary>
+AActor* ABaseCharacter::FindNearlestTarget(const float Distance, const float AngleThreshold, bool bTargetCheckBattled/* = true*/)
+{
+	TArray<AActor*> HitTargets = FindNearlestTargets(Distance, AngleThreshold);
+
+	if (HitTargets.Num() <= 0)
+	{
+		return nullptr;
+	}
+
+	// Get the target with the smallest angle difference from the camera forward vector
+	float ClosestDotToCenter = 0.f;
+	ABaseCharacter* NearlestTarget = nullptr;
+
+	for (int32 Index = 0; Index < HitTargets.Num(); ++Index)
+	{
+		if (ABaseCharacter* Target = Cast<ABaseCharacter>(HitTargets[Index]))
+		{
+			if (!IsValid(Target))
+			{
+				continue;
+			}
+
+			if (Target->IsDead())
+			{
+				continue;
+			}
+
+			if (bTargetCheckBattled && Target->IsInBattled())
+			{
+				continue;
+			}
+
+			const FVector NormalizePos = (Target->GetActorLocation() - GetActorLocation()).GetSafeNormal();
+			const FVector Forward = GetActorForwardVector();
+			const float Dot = FVector::DotProduct(Forward, NormalizePos);
+			if (Dot > ClosestDotToCenter)
+			{
+				ClosestDotToCenter = Dot;
+				NearlestTarget = Target;
+			}
+		}
+	}
+	return NearlestTarget;
+}
+
+const bool ABaseCharacter::CanFiniherSender()
+{
+	if (!IsValid(FinisherSender))
+	{
+		OnLoadFinisherSender();
+		return false;
+	}
+	return true;
+}
+
+const bool ABaseCharacter::CanFiniherReceiver()
+{
+	if (!IsValid(FinisherReceiner))
+	{
+		OnLoadFinisherReceiver();
+		return false;
+	}
+	return true;
+}
+
+void ABaseCharacter::BuildFinisherAbility(const FGameplayTag RequireTag)
+{
+	if (!CanFiniherSender() || !CanFiniherReceiver())
+	{
+		return;
+	}
+
+	auto Target = FindNearlestTarget(FinisherConfig.NearlestDistance, FinisherConfig.AngleThreshold);
+	if (!Target)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("not found FindNearlestTarget => %s"), *FString(__FUNCTION__));
+		return;
+	}
+
+	ABaseCharacter* TargetCharacter = Cast<ABaseCharacter>(Target);
+	if (!TargetCharacter)
+	{
+		UE_LOG(LogTemp, Error, TEXT("cast faild TargetCharacter => %s"), *FString(__FUNCTION__));
+		return;
+	}
+
+	int32 OutIndex = 0;
+	FFinisherAnimation Sender;
+	BuildFinisherAnimationSender(RequireTag, Sender, OutIndex);
+
+	// Determine whether you are in front of or behind the enemy.
+	const FRotator TargetRot = UKismetMathLibrary::FindLookAtRotation(TargetCharacter->GetActorLocation(), GetActorLocation());
+	const float Dot = (TargetCharacter->GetActorForwardVector() | UKismetMathLibrary::GetForwardVector(TargetRot));
+	const float Acos = (180.0) / UE_DOUBLE_PI * FMath::Acos(Dot);
+	const bool bHasForward = UKismetMathLibrary::InRange_FloatFloat(Acos, 0.f, 90.0f, true, true);
+
+	const EFinisherDirectionType Direction = Sender.FinisherDirectionType;
+	switch (Direction)
+	{
+		case EFinisherDirectionType::Backward:
+		{
+			if (bHasForward)
+			{
+				UE_LOG(LogTemp, Warning, TEXT("target is front => %s"), *FString(__FUNCTION__));
+				return;
+			}
+		}
+		break;
+		case EFinisherDirectionType::Forward:
+		{
+			if (!bHasForward)
+			{
+				UE_LOG(LogTemp, Warning, TEXT("target is backward => %s"), *FString(__FUNCTION__));
+				return;
+			}
+		}
+		break;
+	}
+
+	BuildFinisherAnimationData(Sender.Montage, false, nullptr);
+	FFinisherAnimation Receiver;
+	TargetCharacter->BuildFinisherAnimationReceiver(RequireTag, OutIndex, Receiver);
+	TargetCharacter->BuildFinisherAnimationData(Receiver.Montage, Receiver.IsTurnAround, this);
+	UE_LOG(LogTemp, Log, TEXT("Finisher Sender => %s, Receiver => %s, Acos => %.3f, Dot => %.3f"), *GetPathName(Sender.Montage), *GetPathName(Receiver.Montage), Acos, Dot);
+
+	// setup warping
+	MotionWarpingComponent->RemoveWarpTarget(FINISHER_TARGET_SYNC_POINT);
+	const FRotator TargetLookAt = UKismetMathLibrary::FindLookAtRotation(GetActorLocation(), TargetCharacter->GetActorLocation());
+	const float CurDistance = (GetActorLocation() - TargetCharacter->GetActorLocation()).Size2D();
+	FVector Forward = GetActorForwardVector() * FMath::Min(Sender.PushDistance, CurDistance);
+	Forward += GetActorLocation();
+
+	FMotionWarpingTarget WarpingTarget;
+	WarpingTarget.Name = FINISHER_TARGET_SYNC_POINT;
+	WarpingTarget.Location = Forward;
+	WarpingTarget.Rotation = FRotator(0.f, TargetLookAt.Yaw, 0.f);
+	MotionWarpingComponent->AddOrUpdateWarpTarget(WarpingTarget);
+
+	if (RequireTag == TAG_Weapon_Finisher)
+	{
+		WvAbilitySystemComponent->TryActivateAbilityByTag(TAG_Weapon_Finisher_Sender);
+		TargetCharacter->GetWvAbilitySystemComponent()->TryActivateAbilityByTag(TAG_Weapon_Finisher_Receiver);
+	}
+	else if (RequireTag == TAG_Weapon_HoldUp)
+	{
+		WvAbilitySystemComponent->TryActivateAbilityByTag(TAG_Weapon_HoldUp_Sender);
+		TargetCharacter->GetWvAbilitySystemComponent()->TryActivateAbilityByTag(TAG_Weapon_HoldUp_Receiver);
+	}
+	else if (RequireTag == TAG_Weapon_KnockOut)
+	{
+		WvAbilitySystemComponent->TryActivateAbilityByTag(TAG_Weapon_KnockOut_Sender);
+		TargetCharacter->GetWvAbilitySystemComponent()->TryActivateAbilityByTag(TAG_Weapon_KnockOut_Receiver);
+	}
+
+}
+
+void ABaseCharacter::BuildFinisherAnimationSender(const FGameplayTag RequireTag, FFinisherAnimation& OutFinisherAnimation, int32 &OutIndex)
+{
+	if (!IsValid(FinisherSender))
+	{
+		return;
+	}
+
+	FFinisherAnimationContainer AnimationContainer = FinisherSender->FindContainer(RequireTag);
+	if (AnimationContainer.Montages.Num() <= 0)
+	{
+		return;
+	}
+	const int32 LastIndex = (AnimationContainer.Montages.Num() - 1);
+	const int32 Index = FMath::RandRange(0, LastIndex);
+	if (AnimationContainer.Montages.IsValidIndex(Index))
+	{
+		OutIndex = Index;
+		OutFinisherAnimation = AnimationContainer.Montages[Index];
+	}
+}
+
+void ABaseCharacter::BuildFinisherAnimationReceiver(const FGameplayTag RequireTag, const int32 Index, FFinisherAnimation& OutFinisherAnimation)
+{
+	if (!IsValid(FinisherReceiner))
+	{
+		return;
+	}
+
+	FFinisherAnimationContainer AnimationContainer = FinisherReceiner->FindContainer(RequireTag);
+	if (AnimationContainer.Montages.Num() <= 0)
+	{
+		return;
+	}
+	OutFinisherAnimation = AnimationContainer.Montages[Index];
+}
+
+void ABaseCharacter::BuildFinisherAnimationData(UAnimMontage* InMontage, const bool IsTurnAround, AActor* TurnActor, float PlayRate/* = 1.0f*/)
+{
+	FinisherAnimationData.AnimMontage = InMontage;
+	FinisherAnimationData.PlayRate = PlayRate;
+	FinisherAnimationData.IsTurnAround = IsTurnAround;
+	FinisherAnimationData.LookAtTarget = TurnActor;
+	FinisherAnimationData.TimeToStartMontageAt = 0.f;
+}
+
+void ABaseCharacter::ResetFinisherAnimationData()
+{
+	FinisherAnimationData.AnimMontage = nullptr;
+	FinisherAnimationData.PlayRate = 1.0f;
+	FinisherAnimationData.LookAtTarget.Reset();
+}
+
+FRequestAbilityAnimationData ABaseCharacter::GetFinisherAnimationData() const
+{
+	return FinisherAnimationData;
+}
+#pragma endregion
+
+#pragma region AsyncLoad
+void ABaseCharacter::RequestAsyncLoad()
+{
+	OnABPAnimAssetLoad();
+	OnFinisherAnimAssetLoad();
+}
+
+void ABaseCharacter::OnABPAnimAssetLoad()
+{
+	if (OverlayAnimInstanceDA.IsValid())
+	{
+		FStreamableManager& StreamableManager = UWvGameInstance::GetStreamableManager();
+		const FSoftObjectPath ObjectPath = OverlayAnimInstanceDA.ToSoftObjectPath();
+		ABPStreamableHandle = StreamableManager.RequestAsyncLoad(ObjectPath, FStreamableDelegate::CreateUObject(this, &ThisClass::OnABPAnimAssetLoadComplete));
+	}
+}
+
+void ABaseCharacter::OnABPAnimAssetLoadComplete()
+{
+	OverlayAnimDAInstance = OverlayAnimInstanceDA.LoadSynchronous();
+	ABPStreamableHandle.Reset();
+	UE_LOG(LogTemp, Log, TEXT("%s"), *FString(__FUNCTION__));
+}
+
+void ABaseCharacter::OnFinisherAnimAssetLoad()
+{
+	FStreamableManager& StreamableManager = UWvGameInstance::GetStreamableManager();
+	TArray<FSoftObjectPath> Paths;
+	for (TPair<FGameplayTag, TSoftObjectPtr<UFinisherDataAsset>>Pair : FinisherDAList)
+	{
+		if (Pair.Value.IsNull())
+		{
+			continue;
+		}
+		Paths.Add(Pair.Value.ToSoftObjectPath());
+	}
+	FinisherStreamableHandle = StreamableManager.RequestAsyncLoad(Paths, FStreamableDelegate::CreateUObject(this, &ThisClass::OnFinisherAnimAssetLoadComplete));
+}
+
+void ABaseCharacter::OnFinisherAnimAssetLoadComplete()
+{
+	OnLoadFinisherSender();
+	OnLoadFinisherReceiver();
+	FinisherStreamableHandle.Reset();
+	UE_LOG(LogTemp, Log, TEXT("%s"), *FString(__FUNCTION__));
+}
+
+void ABaseCharacter::OnLoadFinisherSender()
+{
+	FinisherSender = FinisherDAList[TAG_Weapon_Finisher_Sender].LoadSynchronous();
+}
+
+void ABaseCharacter::OnLoadFinisherReceiver()
+{
+	FinisherReceiner = FinisherDAList[TAG_Weapon_Finisher_Receiver].LoadSynchronous();
+}
+#pragma endregion
 
 

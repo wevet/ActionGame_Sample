@@ -141,6 +141,11 @@ bool IWvAbilityTargetInterface::IsTargetable() const
 	return false;
 }
 
+bool IWvAbilityTargetInterface::IsInBattled() const
+{
+	return false;
+}
+
 
 UWvAIActionStateInterface::UWvAIActionStateInterface(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {

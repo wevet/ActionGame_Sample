@@ -8,6 +8,8 @@
 #include "Abilities/GameplayAbility.h"
 #include "Redemption.h"
 
+#include UE_INLINE_GENERATED_CPP_BY_NAME(WvAnimNotifyState_ComboEnable)
+
 /// <summary>
 /// ComboRequreTag is not required for the last Combo
 /// </summary>

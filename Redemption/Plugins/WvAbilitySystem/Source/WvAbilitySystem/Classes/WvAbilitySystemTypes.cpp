@@ -488,3 +488,16 @@ FGameplayTag UAIActionStateDataAsset::FindActionStateTag(const EAIActionState In
 }
 #pragma endregion
 
+
+FFinisherAnimationContainer UFinisherDataAsset::FindContainer(const FGameplayTag Tag) const
+{
+	FFinisherAnimationContainer Container;
+	const bool bIsValid = (FinisherAnimationMap.Num() > 0 && FinisherAnimationMap.Contains(Tag));
+	if (!bIsValid)
+	{
+		return Container;
+	}
+
+	return FinisherAnimationMap[Tag];
+}
+

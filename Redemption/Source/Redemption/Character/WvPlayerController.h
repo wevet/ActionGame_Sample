@@ -30,6 +30,8 @@ public:
 	virtual void SetGenericTeamId(const FGenericTeamId& NewTeamID) override;
 	virtual FGenericTeamId GetGenericTeamId() const override;
 	virtual FOnTeamIndexChangedDelegate* GetOnTeamIndexChangedDelegate() override;
+	virtual void Freeze() override;
+	virtual void UnFreeze() override;
 	//~End of IWvAbilityTargetInterface interface
 
 protected:

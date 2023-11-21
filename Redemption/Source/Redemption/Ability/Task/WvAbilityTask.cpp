@@ -3,6 +3,7 @@
 
 #include "WvAbilityTask.h"
 
+#include UE_INLINE_GENERATED_CPP_BY_NAME(WvAbilityTask)
 
 void UWvAbilityTask::InitSimulatedTask(UGameplayTasksComponent& InGameplayTasksComponent)
 {

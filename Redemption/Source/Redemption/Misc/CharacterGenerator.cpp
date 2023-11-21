@@ -3,7 +3,10 @@
 
 #include "Misc/CharacterGenerator.h"
 #include "Misc/WvCommonUtils.h"
+#include "Game/CharacterInstanceSubsystem.h"
+#include "Character/BaseCharacter.h"
 
+#include UE_INLINE_GENERATED_CPP_BY_NAME(CharacterGenerator)
 
 ACharacterGenerator::ACharacterGenerator()
 {
@@ -85,7 +88,10 @@ void ACharacterGenerator::DoSpawn()
 #if WITH_EDITOR
 		SpawningObject->SetFolderPath("CharacterGenerator");
 #endif
-
+		if (ABaseCharacter* Character = Cast<ABaseCharacter>(SpawningObject))
+		{
+			UCharacterInstanceSubsystem::Get()->AssignAICharacter(Character);
+		}
 	}
 }
 

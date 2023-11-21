@@ -138,6 +138,7 @@ public:
 	virtual ECharacterRelation GetRelationWithSelfImpl(const IWvAbilityTargetInterface* Other) const override;
 	virtual bool IsDead() const override;
 	virtual bool IsTargetable() const override;
+	virtual bool IsInBattled() const override;
 
 	virtual USceneComponent* GetOverlapBaseComponent() override;
 	virtual FOnTeamIndexChangedDelegate* GetOnTeamIndexChangedDelegate() override;
@@ -150,16 +151,14 @@ public:
 	virtual void OnReceiveWeaknessAttack(AActor* Actor, const FName WeaknessName, const float Damage) override;
 	virtual void OnReceiveKillTarget(AActor* Actor, const float Damage) override;
 	virtual void OnReceiveHitReact(FGameplayEffectContextHandle Context, const bool IsInDead, const float Damage) override;
+
+	virtual void Freeze() override;
+	virtual void UnFreeze() override;
 #pragma endregion
 
 #pragma region IWvAIActionStateInterface
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "BaseCharacter|AI")
-	void SetAIActionState(const EAIActionState NewAIActionState, AActor* Attacker);
-	virtual void SetAIActionState_Implementation(const EAIActionState NewAIActionState, AActor* Attacker) override;
-
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "BaseCharacter|AI")
-	EAIActionState GetAIActionState() const;
-	virtual EAIActionState GetAIActionState_Implementation() const override;
+	virtual void SetAIActionState(const EAIActionState NewAIActionState) override;
+	virtual EAIActionState GetAIActionState() const override;
 #pragma endregion
 
 	const FCustomWvAbilitySystemAvatarData& GetCustomWvAbilitySystemData();
@@ -181,19 +180,19 @@ public:
 	virtual bool CanBeSeenFrom(const FVector& ObserverLocation, FVector& OutSeenLocation, int32& NumberOfLoSChecksPerformed, float& OutSightStrength, const AActor* IgnoreActor = nullptr, const bool* bWasVisible = nullptr, int32* UserData = nullptr) const;
 
 public:
-	UFUNCTION(BlueprintCallable, Category = Abilities)
+	UFUNCTION(BlueprintCallable, Category = Components)
 	class UWvAbilitySystemComponent* GetWvAbilitySystemComponent() const;
 
-	UFUNCTION(BlueprintCallable, Category = Movement)
+	UFUNCTION(BlueprintCallable, Category = Components)
 	class UMotionWarpingComponent* GetMotionWarpingComponent() const;
 
-	UFUNCTION(BlueprintCallable, Category = Movement)
+	UFUNCTION(BlueprintCallable, Category = Components)
 	class UCharacterMovementTrajectoryComponent* GetCharacterMovementTrajectoryComponent() const;
 
-	UFUNCTION(BlueprintCallable, Category = Movement)
+	UFUNCTION(BlueprintCallable, Category = Components)
 	class ULocomotionComponent* GetLocomotionComponent() const;
 
-	UFUNCTION(BlueprintCallable, Category = Movement)
+	UFUNCTION(BlueprintCallable, Category = Components)
 	class UWvCharacterMovementComponent* GetWvCharacterMovementComponent() const;
 
 	UFUNCTION(BlueprintCallable, Category = Components)
@@ -205,7 +204,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = Components)
 	class UWeaknessComponent* GetWeaknessComponent() const;
 
-	UFUNCTION(BlueprintCallable, Category = Utils)
+	UFUNCTION(BlueprintCallable, Category = Components)
 	USceneComponent* GetHeldObjectRoot() const;
 
 	UFUNCTION(BlueprintCallable, Category = Movement)
@@ -254,12 +253,10 @@ public:
 	void EndDeathAction(const float Interval);
 
 	void OverlayStateChange(const ELSOverlayState CurrentOverlay);
-
 	virtual bool IsTargetLock() const;
 
 	UFUNCTION(BlueprintCallable, Category = Network)
 	bool IsBotCharacter() const;
-
 
 	// noise event
 	void ReportNoiseEvent(const FVector Offset, const float Volume, const float Radius);
@@ -271,6 +268,22 @@ public:
 	void ReportPredictionEvent(AActor* PredictedActor, const float PredictionTime);
 
 	FVector GetPredictionStopLocation(const FVector CurrentLocation) const;
+
+	/// <summary>
+	/// Async Assets load
+	/// </summary>
+	void RequestAsyncLoad();
+
+#pragma region NearlestAction
+	void FindNearlestTarget(const FAttackMotionWarpingData AttackMotionWarpingData);
+	void BuildFinisherAbility(const FGameplayTag RequireTag);
+	void BuildFinisherAnimationSender(const FGameplayTag RequireTag, FFinisherAnimation& OutFinisherAnimation, int32 &OutIndex);
+	void BuildFinisherAnimationReceiver(const FGameplayTag RequireTag, const int32 Index, FFinisherAnimation &OutFinisherAnimation);
+	void BuildFinisherAnimationData(UAnimMontage* InMontage, const bool IsTurnAround, AActor* TurnActor, float PlayRate = 1.0f);
+	void ResetFinisherAnimationData();
+	FRequestAbilityAnimationData GetFinisherAnimationData() const;
+#pragma endregion
+
 
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Component, meta = (AllowPrivateAccess = "true"))
@@ -310,10 +323,16 @@ protected:
 	FCustomWvAbilitySystemAvatarData AbilitySystemData;
 
 	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = "BaseCharacter|Config")
-	UOverlayAnimInstanceDataAsset* OverlayAnimInstanceDA;
+	TSoftObjectPtr<UOverlayAnimInstanceDataAsset> OverlayAnimInstanceDA;
+
+	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = "BaseCharacter|Config")
+	TMap<FGameplayTag, TSoftObjectPtr<UFinisherDataAsset>> FinisherDAList;
 
 	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = "BaseCharacter|Config")
 	UAIActionStateDataAsset* AIActionStateDA;
+
+	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = "BaseCharacter|Config")
+	FFinisherConfig FinisherConfig;
 
 	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = "BaseCharacter|Config")
 	FGameplayTag CharacterTag;
@@ -366,6 +385,9 @@ protected:
 	UPROPERTY()
 	UWvAnimInstance* AnimInstance;
 
+	UPROPERTY()
+	FRequestAbilityAnimationData FinisherAnimationData;
+
 	// Angle threshold to determine if the input direction is vertically aligned with Actor
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input)
 	float InputDirVerThreshold = 40.0f;
@@ -377,9 +399,31 @@ protected:
 	bool bHasMovementInput = false;
 	float MovementInputAmount;
 
-
 	FTimerHandle Ragdoll_TimerHandle;
 	void EndDeathAction_Callback();
+
+#pragma region NearlestAction
+	const TArray<AActor*> FindNearlestTargets(const float Distance, const float AngleThreshold);
+	AActor* FindNearlestTarget(const float Distance, const float AngleThreshold, bool bTargetCheckBattled = true);
+	const bool CanFiniherSender();
+	const bool CanFiniherReceiver();
+#pragma endregion
+
+#pragma region AsyncLoad
+	UOverlayAnimInstanceDataAsset* OverlayAnimDAInstance;
+	TSharedPtr<FStreamableHandle> ABPStreamableHandle;
+	UFinisherDataAsset* FinisherSender;
+	UFinisherDataAsset* FinisherReceiner;
+	TSharedPtr<FStreamableHandle> FinisherStreamableHandle;
+
+	void OnABPAnimAssetLoad();
+	void OnABPAnimAssetLoadComplete();
+	void OnFinisherAnimAssetLoad();
+	void OnFinisherAnimAssetLoadComplete();
+
+	void OnLoadFinisherSender();
+	void OnLoadFinisherReceiver();
+#pragma endregion
 
 };
 

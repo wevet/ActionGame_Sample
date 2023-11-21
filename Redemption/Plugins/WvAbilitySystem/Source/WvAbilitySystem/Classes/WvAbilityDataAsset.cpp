@@ -41,6 +41,21 @@ UE_DEFINE_GAMEPLAY_TAG(TAG_Character_ShakeBone_Default_Weakness, "Character.Shak
 UE_DEFINE_GAMEPLAY_TAG(TAG_Config_HitReactFeature_Hit, "Config.HitReactFeature.Hit");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Config_HitReactFeature_Dead, "Config.HitReactFeature.Dead");
 
+// HoldUp 
+UE_DEFINE_GAMEPLAY_TAG(TAG_Weapon_HoldUp, "Weapon.HoldUp");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Weapon_HoldUp_Sender, "Weapon.HoldUp.Sender");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Weapon_HoldUp_Receiver, "Weapon.HoldUp.Receiver");
+
+// KnockOut
+UE_DEFINE_GAMEPLAY_TAG(TAG_Weapon_KnockOut, "Weapon.KnockOut");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Weapon_KnockOut_Sender, "Weapon.KnockOut.Sender");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Weapon_KnockOut_Receiver, "Weapon.KnockOut.Receiver");
+
+// Finisher
+UE_DEFINE_GAMEPLAY_TAG(TAG_Weapon_Finisher, "Weapon.Finisher");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Weapon_Finisher_Sender, "Weapon.Finisher.Sender");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Weapon_Finisher_Receiver, "Weapon.Finisher.Receiver");
+
 // GameplayCue
 UE_DEFINE_GAMEPLAY_TAG(TAG_GameplayCue_HitImpact, "GameplayCue.HitImpact");
 UE_DEFINE_GAMEPLAY_TAG(TAG_GameplayCue_HitImpact_Attack, "GameplayCue.HitImpact.Attack");

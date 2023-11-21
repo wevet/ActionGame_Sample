@@ -5,6 +5,7 @@
 #include "Engine/EngineTypes.h"
 #include "Curves/CurveFloat.h"
 #include "Components/PrimitiveComponent.h"
+#include "GameplayTagContainer.h"
 #include "LocomotionSystemTypes.generated.h"
 
 
@@ -266,24 +267,24 @@ public:
 };
 
 USTRUCT(BlueprintType)
-struct REDEMPTION_API FRequestAbilityAnimationData
+struct FRequestAbilityAnimationData
 {
 	GENERATED_BODY()
 
 public:
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float PlayRate;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float TimeToStartMontageAt;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	UAnimMontage* AnimMontage;
+
+	// receiver only params
+	bool IsTurnAround = true;
+	TWeakObjectPtr<AActor> LookAtTarget;
 
 public:
 	FRequestAbilityAnimationData()
 	{
 		PlayRate = 1.0f;
-		TimeToStartMontageAt = 1.0f;
+		TimeToStartMontageAt = 0.f;
 		AnimMontage = nullptr;
 	}
 };
@@ -476,7 +477,7 @@ public:
 	float NearlestDistance = 500.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	float WarpingTranslateThreshold = 400.0f;
+	float AngleThreshold = 45.0f;
 };
 
 

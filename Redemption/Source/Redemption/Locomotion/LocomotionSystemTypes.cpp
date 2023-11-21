@@ -4,6 +4,7 @@
 #include "Kismet/KismetSystemLibrary.h"
 #include "Kismet/KismetMathLibrary.h"
 
+#include UE_INLINE_GENERATED_CPP_BY_NAME(LocomotionSystemTypes)
 
 void FLocomotionEssencialVariables::Init(const FRotator Rotation)
 {
@@ -13,7 +14,6 @@ void FLocomotionEssencialVariables::Init(const FRotator Rotation)
 	TargetRotation = Rotation;
 	CharacterRotation = Rotation;
 }
-
 
 #pragma region Gun_Data
 FPawnAttackParam::FPawnAttackParam()
@@ -55,7 +55,6 @@ void FPawnAttackParam::Replenishment()
 	CurrentAmmo = bWasNeededAmmo ? (CurrentAmmo + MaxAmmo) : ClipType;
 }
 #pragma endregion
-
 
 #pragma region QTE
 void FCilmbingQTEData::Begin()
@@ -112,4 +111,5 @@ bool FCilmbingQTEData::IsSuccess() const
 	return false;
 }
 #pragma endregion
+
 

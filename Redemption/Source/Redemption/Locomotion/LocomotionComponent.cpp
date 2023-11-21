@@ -164,21 +164,10 @@ void ULocomotionComponent::TickComponent(float DeltaTime, ELevelTick TickType, F
 #pragma region LS_Interface
 void ULocomotionComponent::SetLSCharacterRotation_Implementation(const FRotator AddAmount)
 {
-	// @TODO
-	// delay node
-#if false
-	{
-		FLatentActionInfo ActionInfo;
-		UKismetSystemLibrary::Delay(GetWorld(), 0.0f, ActionInfo);
-	}
-	{
-		FLatentActionInfo ActionInfo;
-		UKismetSystemLibrary::Delay(GetWorld(), 0.0f, ActionInfo);
-	}
-#endif
-
 	if (!Character.IsValid())
+	{
 		return;
+	}
 
 	// Node to InvertRotator
 	const FRotator RotateAmount = UKismetMathLibrary::NegateRotator(AddAmount);
@@ -211,7 +200,6 @@ void ULocomotionComponent::SetLSMovementMode_Implementation(const ELSMovementMod
 		AbilitySystemComponent->RemoveGameplayTag(LocomotionStateDataAsset->FindMovementModeTag(LocomotionEssencialVariables.LSMovementMode));
 		AbilitySystemComponent->AddGameplayTag(LocomotionStateDataAsset->FindMovementModeTag(NewALSMovementMode));
 	}
-
 	LocomotionEssencialVariables.LSPrevMovementMode = LocomotionEssencialVariables.LSMovementMode;
 	LocomotionEssencialVariables.LSMovementMode = NewALSMovementMode;
 	OnMovementModeChange_Implementation();
@@ -229,7 +217,6 @@ void ULocomotionComponent::SetLSGaitMode_Implementation(const ELSGait NewLSGait)
 		AbilitySystemComponent->RemoveGameplayTag(LocomotionStateDataAsset->FindGaitTag(LocomotionEssencialVariables.LSGait));
 		AbilitySystemComponent->AddGameplayTag(LocomotionStateDataAsset->FindGaitTag(NewLSGait));
 	}
-
 	LocomotionEssencialVariables.LSGait = NewLSGait;
 	OnLSGaitChange_Implementation();
 }
@@ -246,7 +233,6 @@ void ULocomotionComponent::SetLSStanceMode_Implementation(const ELSStance NewLSS
 		AbilitySystemComponent->RemoveGameplayTag(LocomotionStateDataAsset->FindStanceTag(LocomotionEssencialVariables.LSStance));
 		AbilitySystemComponent->AddGameplayTag(LocomotionStateDataAsset->FindStanceTag(NewLSStance));
 	}
-
 	LocomotionEssencialVariables.LSStance = NewLSStance;
 	OnLSStanceChange_Implementation();
 }
@@ -263,7 +249,6 @@ void ULocomotionComponent::SetLSRotationMode_Implementation(const ELSRotationMod
 		AbilitySystemComponent->RemoveGameplayTag(LocomotionStateDataAsset->FindRotationModeTag(LocomotionEssencialVariables.LSRotationMode));
 		AbilitySystemComponent->AddGameplayTag(LocomotionStateDataAsset->FindRotationModeTag(NewLSRotationMode));
 	}
-
 	LocomotionEssencialVariables.LSRotationMode = NewLSRotationMode;
 	OnLSRotationModeChange_Implementation();
 }
@@ -316,6 +301,7 @@ void ULocomotionComponent::OnMovementModeChange_Implementation()
 		break;
 	}
 
+	UpdateCharacterMovementSettings();
 	if (OnMovementModeChangeDelegate.IsBound())
 	{
 		OnMovementModeChangeDelegate.Broadcast();
@@ -329,6 +315,7 @@ void ULocomotionComponent::OnLSRotationModeChange_Implementation()
 		LocomotionEssencialVariables.RotationRateMultiplier = 0.0f;
 	}
 
+	UpdateCharacterMovementSettings();
 	if (OnRotationModeChangeDelegate.IsBound())
 	{
 		OnRotationModeChangeDelegate.Broadcast();
@@ -359,8 +346,8 @@ void ULocomotionComponent::SetLSAiming_Implementation(const bool NewLSAiming)
 	{
 		return;
 	}
-	LocomotionEssencialVariables.bAiming = NewLSAiming;
 
+	LocomotionEssencialVariables.bAiming = NewLSAiming;
 	if (FindAbilitySystemComponent() && LocomotionStateDataAsset)
 	{
 		if (LocomotionEssencialVariables.bAiming)
@@ -373,6 +360,7 @@ void ULocomotionComponent::SetLSAiming_Implementation(const bool NewLSAiming)
 		}
 	}
 
+	UpdateCharacterMovementSettings();
 	if (OnAimingChangeDelegate.IsBound())
 	{
 		OnAimingChangeDelegate.Broadcast();
@@ -502,11 +490,6 @@ const FTransform ULocomotionComponent::GetPivotOverlayTansform_Implementation()
 #pragma endregion
 
 #pragma region Ability
-FRequestAbilityAnimationData ULocomotionComponent::GetRequestAbilityAnimationData() const
-{
-	return RequestAbilityAnimationData;
-}
-
 const UWvAbilitySystemComponent* ULocomotionComponent::FindAbilitySystemComponent()
 {
 	if (!AbilitySystemComponent.IsValid())

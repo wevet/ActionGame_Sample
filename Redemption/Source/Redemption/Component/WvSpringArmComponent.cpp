@@ -10,12 +10,30 @@ UWvSpringArmComponent::UWvSpringArmComponent(const FObjectInitializer& ObjectIni
 {
 }
 
+void UWvSpringArmComponent::BeginPlay()
+{
+	Super::BeginPlay();
+
+	CacheLagSpeed = CameraLagSpeed;
+}
+
+void UWvSpringArmComponent::UpdateDesiredArmLocation(bool bDoTrace, bool bDoLocationLag, bool bDoRotationLag, float DeltaTime)
+{
+	if (GetOwner())
+	{
+		const bool bHasMoving = (GetOwner()->GetVelocity().Size() > 0.f);
+		CameraLagSpeed = bHasMoving ? CacheLagSpeed : NotMovingLagSpeed;
+	}
+
+	Super::UpdateDesiredArmLocation(bDoTrace, bDoLocationLag, bDoRotationLag, DeltaTime);
+}
+
 FVector UWvSpringArmComponent::BlendLocations(const FVector& DesiredArmLocation, const FVector& TraceHitLocation, bool bHitSomething, float DeltaTime)
 {
 	if (bHitSomething)
 	{
 		// Reset CurrentHitReturnInterpTime to HitReturnInterpTime because of collision with wall
-		FVector Interp = FMath::VInterpTo(PrevHitInterpLoc, TraceHitLocation, DeltaTime, HitInterpSpeed);
+		const FVector Interp = FMath::VInterpTo(PrevHitInterpLoc, TraceHitLocation, DeltaTime, HitInterpSpeed);
 		PrevHitInterpLoc = Interp;
 		CurrentHitReturnInterpTime = HitReturnInterpTime;
 		return Interp;
@@ -25,7 +43,7 @@ FVector UWvSpringArmComponent::BlendLocations(const FVector& DesiredArmLocation,
 	if (CurrentHitReturnInterpTime > 0.0f)
 	{
 		CurrentHitReturnInterpTime -= DeltaTime;
-		FVector Interp = FMath::VInterpTo(PrevHitInterpLoc, DesiredArmLocation, 1.0f - (CurrentHitReturnInterpTime / HitReturnInterpTime), 1.0f);
+		const FVector Interp = FMath::VInterpTo(PrevHitInterpLoc, DesiredArmLocation, 1.0f - (CurrentHitReturnInterpTime / HitReturnInterpTime), 1.0f);
 		PrevHitInterpLoc = Interp;
 		return Interp;
 	}

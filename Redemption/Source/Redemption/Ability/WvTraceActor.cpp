@@ -2,6 +2,7 @@
 
 #include "Ability/WvTraceActor.h"
 
+#include UE_INLINE_GENERATED_CPP_BY_NAME(WvTraceActor)
 
 AWvTraceActor::AWvTraceActor(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
