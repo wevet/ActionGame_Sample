@@ -1,7 +1,6 @@
 #pragma once
 
 #include "CoreMinimal.h"
-
 #include "HoudiniPointCacheLoader.h"
 
 class UHoudiniPointCache;

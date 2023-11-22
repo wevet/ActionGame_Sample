@@ -2,7 +2,6 @@
 
 #include "CoreMinimal.h"
 #include "Dom/JsonObject.h"
-
 #include "HoudiniPointCacheLoaderJSONBase.h"
 
 class UHoudiniPointCache;
