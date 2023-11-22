@@ -108,7 +108,7 @@ ABaseCharacter::ABaseCharacter(const FObjectInitializer& ObjectInitializer)
 	MotionWarpingComponent = ObjectInitializer.CreateDefaultSubobject<UMotionWarpingComponent>(this, TEXT("MotionWarpingComponent"));
 	MotionWarpingComponent->bSearchForWindowsInAnimsWithinMontages = true;
 
-	CharacterMovementTrajectoryComponent = ObjectInitializer.CreateDefaultSubobject<UCharacterMovementTrajectoryComponent>(this, TEXT("CharacterMovementTrajectoryComponent"));
+	CharacterMovementTrajectoryComponent = ObjectInitializer.CreateDefaultSubobject<UCharacterTrajectoryComponent>(this, TEXT("CharacterMovementTrajectoryComponent"));
 
 	PredictionFootIKComponent = ObjectInitializer.CreateDefaultSubobject<UPredictionFootIKComponent>(this, TEXT("PredictionFootIKComponent"));
 	PredictionFootIKComponent->bAutoActivate = 1;
@@ -243,7 +243,7 @@ void ABaseCharacter::Tick(float DeltaTime)
 
 	if (IsValid(CharacterMovementTrajectoryComponent))
 	{
-		TrajectorySampleRange = CharacterMovementTrajectoryComponent->GetTrajectory();
+		//TrajectorySampleRange = CharacterMovementTrajectoryComponent->GetTrajectory();
 	}
 }
 
@@ -591,7 +591,7 @@ UMotionWarpingComponent* ABaseCharacter::GetMotionWarpingComponent() const
 	return MotionWarpingComponent; 
 }
 
-UCharacterMovementTrajectoryComponent* ABaseCharacter::GetCharacterMovementTrajectoryComponent() const
+UCharacterTrajectoryComponent* ABaseCharacter::GetCharacterMovementTrajectoryComponent() const
 {
 	return CharacterMovementTrajectoryComponent; 
 }

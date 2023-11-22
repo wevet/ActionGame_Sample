@@ -20,7 +20,7 @@ public:
 	float LeftChildSelectingRate;
 
 private:
-	int32 GetNextChildHandler(struct FBehaviorTreeSearchData& SearchData, int32 PrevChild, EBTNodeResult::Type LastResult) const;
+	virtual int32 GetNextChildHandler(struct FBehaviorTreeSearchData& SearchData, int32 PrevChild, EBTNodeResult::Type LastResult) const override;
 	virtual FString GetStaticDescription() const override;
 
 #if WITH_EDITOR

@@ -14,6 +14,7 @@
 #include "Locomotion/LocomotionSystemTypes.h"
 
 // builtin
+#include "Runtime/Launch/Resources/Version.h"
 #include "BehaviorTree/BehaviorTree.h"
 #include "AbilitySystemInterface.h"
 #include "Containers/Array.h"
@@ -23,7 +24,8 @@
 #include "GenericTeamAgentInterface.h"
 #include "Perception/AISightTargetInterface.h"
 #include "Perception/AIPerceptionStimuliSourceComponent.h"
-#include "MotionTrajectoryCharacterMovement.h"
+#include "CharacterTrajectoryComponent.h"
+
 #include "HAL/Platform.h"
 #include "GameFramework/Character.h"
 #include "UObject/UObjectGlobals.h"
@@ -187,7 +189,7 @@ public:
 	class UMotionWarpingComponent* GetMotionWarpingComponent() const;
 
 	UFUNCTION(BlueprintCallable, Category = Components)
-	class UCharacterMovementTrajectoryComponent* GetCharacterMovementTrajectoryComponent() const;
+	class UCharacterTrajectoryComponent* GetCharacterMovementTrajectoryComponent() const;
 
 	UFUNCTION(BlueprintCallable, Category = Components)
 	class ULocomotionComponent* GetLocomotionComponent() const;
@@ -296,7 +298,7 @@ protected:
 	class UMotionWarpingComponent* MotionWarpingComponent;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Component, meta = (AllowPrivateAccess = "true"))
-	class UCharacterMovementTrajectoryComponent* CharacterMovementTrajectoryComponent;
+	class UCharacterTrajectoryComponent* CharacterMovementTrajectoryComponent;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Component, meta = (AllowPrivateAccess = "true"))
 	class UWvAbilitySystemComponent* WvAbilitySystemComponent;

@@ -7,7 +7,7 @@ UBTComposite_WeightedRandom::UBTComposite_WeightedRandom(const FObjectInitialize
 	LeftChildSelectingRate(1.0f)
 {
 	NodeName = "Weighted Random";
-	OnNextChild.BindUObject(this, &UBTComposite_WeightedRandom::GetNextChildHandler);
+	//OnNextChild.BindUObject(this, &UBTComposite_WeightedRandom::GetNextChildHandler);
 }
 
 /*

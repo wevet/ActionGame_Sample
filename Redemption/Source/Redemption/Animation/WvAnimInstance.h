@@ -228,13 +228,14 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Climbing|Wall")
 	bool bIsWallClimbingJumping;
 
-	// Blueprintの変数にマッピングできるGameplayTagです。Tagが追加または削除されると、変数が自動的に更新される。
-	// GameplayTagを手動で照会する代わりに、これらを使用する必要があります。
+	// GameplayTags that can be mapped to Blueprint variables; when a Tag is added or removed, the // variable is automatically updated.
+	// Instead of querying the GameplayTag manually, these should be used.
 	UPROPERTY(EditDefaultsOnly, Category = "GameplayTags")
 	FGameplayTagBlueprintPropertyMap GameplayTagPropertyMap;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "MotionMatching")
-	FMotionMatchingSettings MotionMatchingSettings;
+	//UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "MotionMatching")
+	//FMotionMatchingSettings MotionMatchingSettings;
+
 
 
 private:

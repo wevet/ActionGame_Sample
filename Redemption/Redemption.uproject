@@ -1,6 +1,6 @@
 {
 	"FileVersion": 3,
-	"EngineAssociation": "5.2",
+	"EngineAssociation": "{002203AA-4368-4485-F540-DCBEBCE4119B}",
 	"Category": "",
 	"Description": "",
 	"Modules": [
@@ -127,7 +127,9 @@
 			"SupportedTargetPlatforms": [
 				"IOS",
 				"Win64",
-				"Mac"
+				"Mac",
+				"Linux",
+				"Android"
 			]
 		},
 		{
@@ -136,7 +138,9 @@
 			"SupportedTargetPlatforms": [
 				"IOS",
 				"Win64",
-				"Mac"
+				"Mac",
+				"Linux",
+				"Android"
 			]
 		},
 		{
@@ -161,6 +165,10 @@
 			"MarketplaceURL": "com.epicgames.launcher://ue/marketplace/product/79d2dd58387c4696a0f3458275f739d6"
 		},
 		{
+			"Name": "HoudiniEngine",
+			"Enabled": true
+		},
+		{
 			"Name": "PCGGeometryScriptInterop",
 			"Enabled": true
 		},
@@ -177,12 +185,8 @@
 			"Enabled": true
 		},
 		{
-			"Name": "RuleProcessor",
-			"Enabled": true
-		},
-		{
 			"Name": "MotoricaStudio",
-			"Enabled": true,
+			"Enabled": false,
 			"SupportedTargetPlatforms": [
 				"Win64"
 			]

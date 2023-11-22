@@ -74,8 +74,6 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	void TryActivateAbilityByInputEvent(AActor* Actor, const FGameplayTag EventTag);
-
-	UFUNCTION(BlueprintCallable)
 	void TryActivateAbilityByTag(const FGameplayTag Tag);
 
 	UFUNCTION(BlueprintCallable, Category = "Ability")

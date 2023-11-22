@@ -5,6 +5,7 @@
 #include "WvAbilitySystemTypes.h"
 #include "WvGameplayEffectContext.h"
 #include "GameplayEffect.h"
+#include "Runtime/Launch/Resources/Version.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(WvAbilitySystemGlobals)
 
@@ -26,7 +27,11 @@ void UWvAbilitySystemGlobals::InitGlobalData()
 	FCoreDelegates::OnFEngineLoopInitComplete.AddUObject(this, &UWvAbilitySystemGlobals::HandleEngineInitComplete);
 
 	// Register for PreloadMap so cleanup can occur on map transitions
+#if  (ENGINE_MAJOR_VERSION < 5 || ENGINE_MINOR_VERSION >= 3)
+	FCoreUObjectDelegates::PreLoadMapWithContext.AddUObject(this, &UWvAbilitySystemGlobals::HandlePreLoadMap);
+#else
 	FCoreUObjectDelegates::PreLoadMap.AddUObject(this, &UWvAbilitySystemGlobals::HandlePreLoadMap);
+#endif
 
 #if WITH_EDITORONLY_DATA
 	if (EffectParamTable)

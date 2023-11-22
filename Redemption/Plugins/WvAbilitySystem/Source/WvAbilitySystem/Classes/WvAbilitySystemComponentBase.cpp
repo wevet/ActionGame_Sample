@@ -780,7 +780,7 @@ bool UWvAbilitySystemComponentBase::HasActivatingAbilitiesWithTag(const FGamepla
 			continue;
 		}
 
-		UGameplayAbility* Ability = Spec.GetPrimaryInstance() ? Spec.GetPrimaryInstance() : Spec.Ability;
+		UGameplayAbility* Ability = Spec.GetPrimaryInstance() ? Spec.GetPrimaryInstance() : Spec.Ability.Get();
 		if (!Ability)
 		{
 			continue;

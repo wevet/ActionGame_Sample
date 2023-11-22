@@ -6,6 +6,7 @@
 #include "GameplayCueNotify_Actor.h"
 #include "GameplayCueNotify_Static.h"
 #include "Net/UnrealNetwork.h"
+#include "Runtime/Launch/Resources/Version.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(WvGameplayCueManager)
 
@@ -149,8 +150,14 @@ UWvGameplayCueManager* UWvGameplayCueManager::Get()
 
 void UWvGameplayCueManager::OnCreated()
 {
+#if  (ENGINE_MAJOR_VERSION < 5 || ENGINE_MINOR_VERSION >= 3)
+	FWorldDelegates::OnWorldCleanup.AddUObject(this, &UWvGameplayCueManager::OnPostWorldCleanup);
+	FWorldDelegates::OnPreWorldFinishDestroy.AddUObject(this, &UWvGameplayCueManager::OnPostWorldCleanup, true, true);
+#else
 	FWorldDelegates::OnWorldCleanup.AddUObject(this, &UWvGameplayCueManager::OnWorldCleanup);
 	FWorldDelegates::OnPreWorldFinishDestroy.AddUObject(this, &UWvGameplayCueManager::OnWorldCleanup, true, true);
+#endif
+
 	FNetworkReplayDelegates::OnPreScrub.AddUObject(this, &UWvGameplayCueManager::OnPreReplayScrub);
 
 	if (GIsRunning)

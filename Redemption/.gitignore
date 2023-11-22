@@ -68,6 +68,8 @@ Saved/*
 Intermediate/*
 Plugins/*/Intermediate/*
 Plugins/MotoricaStudio/*
+Plugins/HoudiniEngine/*
+Plugins/HoudiniNiagara/*
 
 # Cache files for the editor to use
 DerivedDataCache/*
