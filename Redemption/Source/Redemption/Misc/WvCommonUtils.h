@@ -114,6 +114,11 @@ public:
 	static const FString NormalizeFileName(const char* String);
 	static const FString NormalizeFileName(const FString& String);
 
+	static bool Probability(const float InPercent);
+
+	static const FName GetSurfaceName(TEnumAsByte<EPhysicalSurface> SurfaceType);
+
+	static AActor* FindNearestDistanceTarget(AActor* Owner, TArray<AActor*> Actors, const float ClosestTargetDistance);
 };
 
 

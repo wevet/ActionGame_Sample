@@ -15,29 +15,30 @@
 #include "Kismet/KismetMathLibrary.h"
 #include "Perception/AISense_Hearing.h"
 
+#include UE_INLINE_GENERATED_CPP_BY_NAME(WvFootstepAnimNotify)
+
 void UWvFootstepAnimNotify::Notify(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, const FAnimNotifyEventReference& EventReference)
 {
+	AActor* OwnerActor = MeshComp ? MeshComp->GetOwner() : nullptr;
+	if (OwnerActor)
+	{
+		if (ACharacter* Character = Cast<ACharacter>(OwnerActor))
+		{
+			if (!Character->GetCharacterMovement()->IsMovingOnGround())
+			{
+				return;
+			}
+		}
+		else if (APawn* Pawn = Cast<APawn>(OwnerActor))
+		{
+			if (Pawn->GetMovementComponent()->IsFalling())
+			{
+				return;
+			}
+		}
+	}
+
 	TraceFoot(MeshComp, Animation);
-}
-
-FName UWvFootstepAnimNotify::GetSurfaceName(TEnumAsByte<EPhysicalSurface> SurfaceType) const
-{
-	if (SurfaceType == SurfaceType_Default)
-	{
-		return TEXT("Default");
-	}
-
-	const FPhysicalSurfaceName* FoundSurface = UPhysicsSettings::Get()->PhysicalSurfaces.FindByPredicate([&](const FPhysicalSurfaceName& SurfaceName)
-	{
-		return SurfaceName.Type == SurfaceType;
-	});
-
-	if (FoundSurface)
-	{
-		return FoundSurface->Name;
-	}
-
-	return TEXT("Default");
 }
 
 void UWvFootstepAnimNotify::TraceFoot(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation)
@@ -77,7 +78,7 @@ void UWvFootstepAnimNotify::TraceFoot(USkeletalMeshComponent* MeshComp, UAnimSeq
 			{
 				FVector HitLocation = HitResult.Location;
 				EPhysicalSurface HitSurfaceType = SurfaceTypeInEditor;
-				TriggerEffect(OwnerActor, Animation, HitLocation, HitSurfaceType);
+				TriggerEffect(OwnerActor, Animation, HitResult);
 			}
 			else
 			{
@@ -103,15 +104,16 @@ void UWvFootstepAnimNotify::TraceFootDone(const FTraceHandle& TraceHandle, FTrac
 		}
 
 		const FHitResult& HitResult = TraceDatum.OutHits[0];
-		FVector HitLocation = HitResult.Location;
-		EPhysicalSurface HitSurfaceType = HitResult.PhysMaterial.IsValid() ? HitResult.PhysMaterial->SurfaceType.GetValue() : EPhysicalSurface::SurfaceType_Default;
-		TriggerEffect(OwnerActor, Animation, HitLocation, HitSurfaceType);
+		TriggerEffect(OwnerActor, Animation, HitResult);
 	}
 }
 
-void UWvFootstepAnimNotify::TriggerEffect(AActor* Owner, UAnimSequenceBase* Animation, const FVector Location, const TEnumAsByte<EPhysicalSurface> SurfaceType)
+void UWvFootstepAnimNotify::TriggerEffect(AActor* Owner, UAnimSequenceBase* Animation, const FHitResult& HitResult)
 {
-	FString SurfaceName = GetSurfaceName(SurfaceType).ToString();
+	const FVector HitLocation = HitResult.Location;
+	const EPhysicalSurface HitSurfaceType = HitResult.PhysMaterial.IsValid() ? HitResult.PhysMaterial->SurfaceType.GetValue() : EPhysicalSurface::SurfaceType_Default;
+
+	FString SurfaceName = UWvCommonUtils::GetSurfaceName(HitSurfaceType).ToString();
 
 	const ELSGait GaitMode = GetGaitMode(Owner);
 	FString GaitModeName = TEXT(".Running");
@@ -144,14 +146,29 @@ void UWvFootstepAnimNotify::TriggerEffect(AActor* Owner, UAnimSequenceBase* Anim
 			}
 
 			UWorld* World = Owner->GetWorld();
+
 			if (RowData->NiagaraSystems)
 			{
-				UNiagaraFunctionLibrary::SpawnSystemAtLocation(World, RowData->NiagaraSystems, Location);
+				const float Angle = UKismetMathLibrary::DegAcos(HitResult.ImpactNormal | FVector(0.0f, 0.0f, 1.0f));
+				const FVector FaceDirection = (Owner->GetActorLocation() - HitLocation).GetSafeNormal();
+				const FRotator FaceRotation = UKismetMathLibrary::MakeRotFromXZ(HitResult.ImpactNormal, Owner->GetActorForwardVector());
+
+				const FVector Direction = FaceRotation.RotateVector(FVector::UpVector);
+				DrawDebugPoint(World, HitLocation, 20, FColor::Green, false, 1.0f);
+				DrawDebugLine(World, HitLocation, HitLocation + (Direction * 100), FColor::Red, false, 1.0f);
+				DrawDebugLine(World, HitLocation, HitLocation + (HitResult.ImpactNormal * 50), FColor::Green, false, 1.0f);
+
+				UE_LOG(LogTemp, Log, TEXT("Angle => %.3f"), Angle);
+				UE_LOG(LogTemp, Log, TEXT("FaceRotation => %s"), *FaceRotation.ToString());
+
+				const FRotator EffectRot{Angle, 0.f, 0.f};
+				UWvCommonUtils::SpawnParticleAtLocation(World, RowData->NiagaraSystems, HitLocation, EffectRot, FVector::OneVector);
+
 			}
 
 			if (RowData->FootStepSound)
 			{
-				UGameplayStatics::PlaySoundAtLocation(World, RowData->FootStepSound, Location, Volume, 1.0f, 0.0f, nullptr, nullptr);
+				UGameplayStatics::PlaySoundAtLocation(World, RowData->FootStepSound, HitLocation, Volume, 1.0f, 0.0f, nullptr, nullptr);
 				const FVector2D NoiseRange = ABILITY_GLOBAL()->BotConfig.HearingRange;
 
 				if (ABaseCharacter* Character = Cast<ABaseCharacter>(Owner))
@@ -168,6 +185,8 @@ void UWvFootstepAnimNotify::TriggerEffect(AActor* Owner, UAnimSequenceBase* Anim
 					Character->ReportNoiseEvent(FVector::ZeroVector, Volume, Radius);
 				}
 			}
+
+
 		}
 	}
 

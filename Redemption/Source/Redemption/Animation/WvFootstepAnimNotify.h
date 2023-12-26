@@ -56,11 +56,9 @@ protected:
 	virtual void Notify(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, const FAnimNotifyEventReference& EventReference) override;
 
 private:
-	FName GetSurfaceName(TEnumAsByte<EPhysicalSurface> SurfaceType) const;
-
 	void TraceFoot(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation);
 	void TraceFootDone(const FTraceHandle& TraceHandle, FTraceDatum& TraceDatum, USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation);
-	void TriggerEffect(AActor* Owner, UAnimSequenceBase* Animation, const FVector Location, const TEnumAsByte<EPhysicalSurface> SurfaceType);
+	void TriggerEffect(AActor* Owner, UAnimSequenceBase* Animation, const FHitResult& HitResult);
 
 	const ELSGait GetGaitMode(AActor* Owner);
 	const bool IsInCrouch(AActor* Owner);

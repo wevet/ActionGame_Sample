@@ -32,17 +32,22 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CharacterGenerator|Config")
 	float SpawnRadius;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CharacterGenerator|Config|Leader")
+	float LeaderSpawnPercent = 20.0f;
+
 public:
 	UFUNCTION(BlueprintCallable, Category = "CharacterGenerator|Config")
 	void StartSpawn();
 
-protected:
+private:
 	void DoSpawn();
+	void GeneratedBaseCharacter(AActor* SpawningObject);
 
-protected:
 	int32 CurrentSpawnCount;
 	float SpawnTimer;
 	TArray<FVector> SpawnPoints;
 	bool bSpawnFinished;
 
+	int32 LeaderCount;
+	int32 CurrentLeaderCount;
 };

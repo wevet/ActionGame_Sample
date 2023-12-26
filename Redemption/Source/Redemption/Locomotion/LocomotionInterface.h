@@ -57,18 +57,6 @@ public:
 	ELSOverlayState GetLSOverlayState() const;
 
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "LocomotionInterface")
-	void OnMovementModeChange();
-
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "LocomotionInterface")
-	void OnLSRotationModeChange();
-
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "LocomotionInterface")
-	void OnLSStanceChange();
-
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "LocomotionInterface")
-	void OnLSGaitChange();
-
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "LocomotionInterface")
 	void SetLSAiming(const bool NewLSAiming);
 
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "LocomotionInterface")
@@ -80,38 +68,17 @@ public:
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "LocomotionInterface")
 	bool HasAiming() const;
 
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "LocomotionInterface")
-	void SetWalkingSpeed(const float InWalkingSpeed);
+	virtual void SetWalkingSpeed(const float InWalkingSpeed);
+	virtual void SetRunningSpeed(const float InRunningSpeed);
+	virtual void SetSprintingSpeed(const float InSprintingSpeed);
+	virtual void SetCrouchingSpeed(const float InCrouchingSpeed);
+	virtual void SetSwimmingSpeed(const float InSwimmingSpeed);
 
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "LocomotionInterface")
-	void SetRunningSpeed(const float InRunningSpeed);
-
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "LocomotionInterface")
-	void SetSprintingSpeed(const float InSprintingSpeed);
-
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "LocomotionInterface")
-	void SetCrouchingSpeed(const float InCrouchingSpeed);
-
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "LocomotionInterface")
-	void SetSwimmingSpeed(const float InSwimmingSpeed);
-
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "LocomotionInterface")
-	float GetWalkingSpeed() const;
-
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "LocomotionInterface")
-	float GetRunningSpeed() const;
-
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "LocomotionInterface")
-	float GetSprintingSpeed() const;
-
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "LocomotionInterface")
-	float GetCrouchingSpeed() const;
-
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "LocomotionInterface")
-	float GetSwimmingSpeed() const;
-
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "LocomotionInterface")
-	void SetRightShoulder(const bool NewRightShoulder);
+	virtual float GetWalkingSpeed() const;
+	virtual float GetRunningSpeed() const;
+	virtual float GetSprintingSpeed() const;
+	virtual float GetCrouchingSpeed() const;
+	virtual float GetSwimmingSpeed() const;
 
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "LocomotionInterface")
 	const FTransform GetPivotOverlayTansform();

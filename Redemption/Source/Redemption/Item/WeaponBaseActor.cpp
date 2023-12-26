@@ -11,6 +11,8 @@ AWeaponBaseActor::AWeaponBaseActor(const FObjectInitializer& ObjectInitializer) 
 {
 	SkeletalMeshComponent = ObjectInitializer.CreateDefaultSubobject<USkeletalMeshComponent>(this, TEXT("SkeletalMeshComponent"));
 	RootComponent = SkeletalMeshComponent;
+
+	SkeletalMeshComponent->SetCollisionResponseToChannel(ECollisionChannel::ECC_GameTraceChannel3, ECollisionResponse::ECR_Ignore);
 }
 
 void AWeaponBaseActor::DoFire()

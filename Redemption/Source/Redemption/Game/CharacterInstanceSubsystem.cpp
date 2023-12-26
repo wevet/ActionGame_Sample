@@ -2,8 +2,16 @@
 
 
 #include "Game/CharacterInstanceSubsystem.h"
+#include "Character/WvAIController.h"
+#include "Component/WvSkeletalMeshComponent.h"
+#include "Misc/WvCommonUtils.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
+
+// plugin
+#include "IAnimationBudgetAllocator.h"
+
+#include UE_INLINE_GENERATED_CPP_BY_NAME(CharacterInstanceSubsystem)
 
 UCharacterInstanceSubsystem* UCharacterInstanceSubsystem::Instance = nullptr;
 
@@ -53,13 +61,13 @@ void UCharacterInstanceSubsystem::FreezeAlCharacters(bool bFindWorldActorIterato
 
 		Characters.RemoveAll([](ABaseCharacter* Character)
 		{
-			return Character == nullptr;
+			return IsValid(Character) == false;
 		});
 	}
 
 	for (ABaseCharacter* Character : Characters)
 	{
-		if (Character)
+		if (IsValid(Character))
 		{
 			Character->Freeze();
 		}
@@ -76,13 +84,13 @@ void UCharacterInstanceSubsystem::UnFreezeAlCharacters(bool bFindWorldActorItera
 
 		Characters.RemoveAll([](ABaseCharacter* Character)
 		{
-			return Character == nullptr;
+			return IsValid(Character) == false;
 		});
 	}
 
 	for (ABaseCharacter* Character : Characters)
 	{
-		if (Character)
+		if (IsValid(Character))
 		{
 			Character->UnFreeze();
 		}
@@ -94,6 +102,8 @@ void UCharacterInstanceSubsystem::AssignAICharacter(ABaseCharacter* NewCharacter
 	if (!Characters.Contains(NewCharacter))
 	{
 		Characters.Add(NewCharacter);
+
+		IAnimationBudgetAllocator::Get(GetWorld())->RegisterComponent(NewCharacter->GetWvSkeletalMeshComponent());
 	}
 }
 
@@ -102,6 +112,51 @@ void UCharacterInstanceSubsystem::RemoveAICharacter(ABaseCharacter* InCharacter)
 	if (Characters.Contains(InCharacter))
 	{
 		Characters.Remove(InCharacter);
+
+		IAnimationBudgetAllocator::Get(GetWorld())->UnregisterComponent(InCharacter->GetWvSkeletalMeshComponent());
 	}
 }
+
+bool UCharacterInstanceSubsystem::IsInEnemyAgent(const ABaseCharacter* Other) const
+{
+	if (AWvAIController* AICtrl = Cast<AWvAIController>(Other->GetController()))
+	{
+		return AICtrl->IsInEnemyAgent(*Other);
+	}
+	return false;
+}
+
+bool UCharacterInstanceSubsystem::IsInFriendAgent(const ABaseCharacter* Other) const
+{
+	if (AWvAIController* AICtrl = Cast<AWvAIController>(Other->GetController()))
+	{
+		return AICtrl->IsInFriendAgent(*Other);
+	}
+	return false;
+}
+
+bool UCharacterInstanceSubsystem::IsInNeutralAgent(const ABaseCharacter* Other) const
+{
+	if (AWvAIController* AICtrl = Cast<AWvAIController>(Other->GetController()))
+	{
+		return AICtrl->IsInNeutralAgent(*Other);
+	}
+	return true;
+}
+
+TArray<ABaseCharacter*> UCharacterInstanceSubsystem::GetLeaderAgent() const
+{
+	TArray<ABaseCharacter*> Result = Characters;
+	Result.RemoveAll([](ABaseCharacter* Character) 
+	{
+		return !Character->IsLeader();
+	});
+
+	return Result;
+}
+
+void UCharacterInstanceSubsystem::GeneratorSpawnedFinish()
+{
+}
+
 

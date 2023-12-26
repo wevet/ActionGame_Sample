@@ -65,41 +65,62 @@ public:
 	void ResumeTree();
 	void StopTree();
 
+	void SetAIActionState(const EAIActionState NewAIActionState);
+	EAIActionState GetBlackboardActionState() const;
+
 	// BT Search Enemy
-	UFUNCTION(BlueprintCallable, Category = AI)
-	void SetBlackboardSearchNodeHolder(AActor* NewSearchNodeHolder);
-
-	UFUNCTION(BlueprintCallable, Category = AI)
-	void RemoveSearchNodeHolders();
-
-	UFUNCTION(BlueprintCallable, Category = AI)
-	void SetBlackboardDestinationLocation(const FVector NewDestination);
+	void SetBlackboardSearchNodeHolder(AActor* NewTarget);
+	void SetBlackboardDestinationLocation(const FVector NewTarget);
+	void SetBlackboardTarget(AActor* NewTarget);
+	void SetBlackboardLeader(AActor* NewTarget);
+	void SetBlackboardFriend(AActor* NewTarget);
 
 	// BT Patrol
 	UFUNCTION(BlueprintCallable, Category = AI)
 	void SetBlackboardPatrolLocation(const FVector NewLocation);
 
 	UFUNCTION(BlueprintCallable, Category = AI)
-	void SetBlackboardTarget(AActor* NewTarget);
+	void UpdateFollowPoint();
+
+	void SetBlackboardFollowLocation(const FVector NewLocation);
+	void SetBlackboardFriendLocation(const FVector NewLocation);
 
 	UFUNCTION(BlueprintCallable, Category = AI)
 	AActor* GetBlackboardTarget() const;
 
 	UFUNCTION(BlueprintCallable, Category = AI)
+	AActor* GetBlackboardLeader() const;
+
+	UFUNCTION(BlueprintCallable, Category = AI)
+	AActor* GetBlackboardFriend() const;
+
+	UFUNCTION(BlueprintCallable, Category = AI)
 	AActor* GetBlackboardSearchNodeHolder() const;
+
+	void RemoveSearchNodeHolders();
+	void SetBlackboardDead(const bool IsDead);
 
 	UFUNCTION(BlueprintCallable, Category = AI)
 	void Execute_DoAttack();
 
 	bool IsInEnemyAgent(const AActor& Other) const;
 	bool IsInFriendAgent(const AActor& Other) const;
+	bool IsInNeutralAgent(const AActor& Other) const;
 	bool IsInDeadFriendAgent(const AActor& Other) const;
-	bool CanFriendCombatSupport(const ABaseCharacter* OtherCharacter, AActor* &OutTarget) const;
+	bool IsLeaderAgent(const AActor& Other) const;
+	bool IsFriendCombatSupport(const ABaseCharacter* OtherCharacter, AActor* &OutTarget) const;
 
 	void DoSearchEnemyState(AActor* Actor);
 	void DoCombatEnemyState(AActor* Actor);
+	void DoFollowActionState(AActor* Actor);
+	void DoFriendlyActionState(AActor* Actor);
 
 	bool IsSightTaskRunning() const;
+	bool IsFollowTaskRunning() const;
+
+	void Notify_Follow();
+	void Notify_UnFollow(bool bIsInImpact = false);
+	void HandleRemoveFollow();
 #pragma endregion
 
 protected:
@@ -107,13 +128,13 @@ protected:
 	virtual void OnPlayerStateChanged();
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Components, meta = (AllowPrivateAccess = "true"))
-	class UBehaviorTreeComponent* BehaviorTreeComponent;
+	TObjectPtr<class UBehaviorTreeComponent> BehaviorTreeComponent;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Components, meta = (AllowPrivateAccess = "true"))
-	class UBlackboardComponent* BlackboardComponent;
+	TObjectPtr<class UBlackboardComponent> BlackboardComponent;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Components, meta = (AllowPrivateAccess = "true"))
-	class UAIPerceptionComponent* AIPerceptionComponent;
+	TObjectPtr<class UAIPerceptionComponent> AIPerceptionComponent;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	class UAISenseConfig_Sight* SightConfig;
@@ -154,6 +175,7 @@ private:
 	bool IsPerceptionConfigsValid() const;
 	void OnSightPerceptionUpdatedRecieve(AActor* Actor);
 	void OnHearPerceptionUpdatedRecieve(AActor* Actor);
+	void OnDamagePerceptionUpdatedRecieve(AActor* Actor);
 	void OnPredictionPerceptionUpdatedRecieve(AActor* Actor);
 
 	UPROPERTY()
@@ -194,6 +216,12 @@ private:
 
 	UPROPERTY()
 	FAIPerceptionTask HearTask;
+
+	UPROPERTY()
+	FAIPerceptionTask FollowTask;
+
+	UPROPERTY()
+	FAIPerceptionTask FriendlyTask;
 
 	FVector LastSeenLocation;
 };

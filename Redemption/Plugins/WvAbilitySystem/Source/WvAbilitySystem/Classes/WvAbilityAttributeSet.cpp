@@ -72,11 +72,7 @@ void UWvAbilityAttributeSet::PreAttributeChange(const FGameplayAttribute& Attrib
 		if (OwnedGameplayTag.HasTag(TAG_Character_DamageBlock))
 		{
 			NewValue = 0;
-			auto Act = GetOwningActor();
-			if (Act)
-			{
-				UE_LOG(LogTemp, Log, TEXT("damage block => %s, function => %s"), *Act->GetName(), *FString(__FUNCTION__));
-			}
+			UE_LOG(LogTemp, Log, TEXT("damage block => %s, function => %s"), *GetNameSafe(GetOwningActor()), *FString(__FUNCTION__));
 		}
 	}
 }

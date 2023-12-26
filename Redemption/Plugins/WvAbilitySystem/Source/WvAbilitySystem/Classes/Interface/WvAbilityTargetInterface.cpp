@@ -5,7 +5,7 @@
 #include "Engine/World.h"
 #include "GameFramework/GameStateBase.h"
 #include "GameFramework/Actor.h"
-#include "Interface/WvCombatRuleInterface.h"
+
 
 inline const FGameplayTag GetBuffDamageTag()
 {
@@ -16,59 +16,6 @@ inline const FGameplayTag GetBuffDamageTag()
 
 UWvAbilityTargetInterface::UWvAbilityTargetInterface(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
-}
-
-ECharacterRelation IWvAbilityTargetInterface::GetRelationWithSelfImpl(const IWvAbilityTargetInterface* Other) const
-{
-	if (!Other)
-	{
-		return ECharacterRelation::Friend;
-	}
-
-	const int32 OtherTeamNum = GenericTeamIdToInteger(Other->GetGenericTeamId());
-	const int32 MyTeamNum = GenericTeamIdToInteger(GetGenericTeamId());
-
-	const AActor* Actor = Cast<AActor>(this);
-	UWorld* ActorWorld = Actor ? Actor->GetWorld() : nullptr;
-
-	if (IsValid(ActorWorld))
-	{
-		AGameModeBase* GameModeBase = ActorWorld->GetAuthGameMode();
-		IWvCombatRuleInterface* CombatRuleInterface = Cast<IWvCombatRuleInterface>(GameModeBase);
-		if (CombatRuleInterface)
-		{
-			return CombatRuleInterface->GetRelationByTeamNum(MyTeamNum, OtherTeamNum);
-		}
-	}
-	return OtherTeamNum == MyTeamNum ? ECharacterRelation::Friend : ECharacterRelation::Enemy;
-}
-
-bool IWvAbilityTargetInterface::CanAsTarget(const IWvAbilityTargetInterface* Source, const FWvTargetDataFilter* TargetDataFilter) const
-{
-	bool bIsResult = true;
-	bool bIsSelf = (Source == this);
-	ECharacterRelation Relation = this->GetRelationWithSelfImpl(Source);
-	switch (TargetDataFilter->TargetRelationFilter)
-	{
-		case ETargetRelation::OnlySelf:
-		bIsResult = bIsSelf;
-		break;
-		case ETargetRelation::FriendWithSelf:
-		bIsResult = (bIsSelf || (Relation == ECharacterRelation::Friend));
-		break;
-		case ETargetRelation::FriendWithoutSelf:
-		bIsResult = (!bIsSelf && (Relation == ECharacterRelation::Friend));
-		break;
-		case ETargetRelation::Enemy:
-		bIsResult = (!bIsSelf && (Relation == ECharacterRelation::Enemy));
-		break;
-		case ETargetRelation::All:
-		bIsResult = true;
-		break;
-		default:
-		break;
-	}
-	return bIsResult;
 }
 
 FGameplayEffectQuery IWvAbilityTargetInterface::GetHitEffectQuery()

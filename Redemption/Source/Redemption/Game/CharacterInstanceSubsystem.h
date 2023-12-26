@@ -34,6 +34,13 @@ public:
 
 	void AssignAICharacter(ABaseCharacter* NewCharacter);
 	void RemoveAICharacter(ABaseCharacter* InCharacter);
+	void GeneratorSpawnedFinish();
+
+	bool IsInEnemyAgent(const ABaseCharacter* Other) const;
+	bool IsInFriendAgent(const ABaseCharacter* Other) const;
+	bool IsInNeutralAgent(const ABaseCharacter* Other) const;
+
+	TArray<ABaseCharacter*> GetLeaderAgent() const;
 
 private:
 	UPROPERTY()

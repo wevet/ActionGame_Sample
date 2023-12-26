@@ -2,6 +2,8 @@
 
 #include "WvPlayerController.h"
 #include "PlayerCharacter.h"
+#include "Vehicle/WvWheeledVehiclePawn.h"
+
 #include "Engine/World.h"
 #include "BasePlayerState.h"
 
@@ -10,6 +12,8 @@
 AWvPlayerController::AWvPlayerController(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
 	InputEventComponent = CreateDefaultSubobject<UWvInputEventComponent>(TEXT("InputComponent"));
+
+	//bCanPossessWithoutAuthority = true;
 }
 
 void AWvPlayerController::BeginPlay()
@@ -25,7 +29,6 @@ void AWvPlayerController::EndPlay(const EEndPlayReason::Type EndPlayReason)
 void AWvPlayerController::OnPossess(APawn* InPawn)
 {
 	Super::OnPossess(InPawn);
-	PC = Cast<APlayerCharacter>(InPawn);
 
 	OverrideSquadID = FMath::Clamp(OverrideSquadID, 1, 255);
 	auto PS = Cast<ABasePlayerState>(PlayerState);
@@ -42,12 +45,46 @@ void AWvPlayerController::OnPossess(APawn* InPawn)
 			TeamAgent->SetGenericTeamId(FGenericTeamId(OverrideSquadID));
 		}
 	}
+
+	if (InPawn->IsA(APlayerCharacter::StaticClass()))
+	{
+		PC = Cast<APlayerCharacter>(InPawn);
+	}
+	else if (InPawn->IsA(AWvWheeledVehiclePawn::StaticClass()))
+	{
+		VPC = Cast<AWvWheeledVehiclePawn>(InPawn);
+		OnVehilcePossess(InPawn);
+	}
 }
 
 void AWvPlayerController::OnUnPossess()
 {
-	Super::OnUnPossess();
+	if (VPC)
+	{
+		OnVehicleUnPossess();
+	}
+	if (PC)
+	{
+		// playercharacter unpossess
+	}
 	PC = nullptr;
+	VPC = nullptr;
+	Super::OnUnPossess();
+}
+
+void AWvPlayerController::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+
+	if (VPC)
+	{
+		VPCDrawHUD();
+	}
+}
+
+void AWvPlayerController::VPCDrawHUD()
+{
+	BP_VPCDrawHUD();
 }
 
 void AWvPlayerController::PostAscInitialize(UAbilitySystemComponent* ASC)
@@ -70,6 +107,16 @@ bool AWvPlayerController::InputKey(const FInputKeyParams& Params)
 class UWvInputEventComponent* AWvPlayerController::GetInputEventComponent() const
 {
 	return InputEventComponent;
+}
+
+void AWvPlayerController::SetInputModeType(const EWvInputMode NewInputMode)
+{
+	InputEventComponent->SetInputModeType(NewInputMode);
+}
+
+EWvInputMode AWvPlayerController::GetInputModeType() const
+{
+	return InputEventComponent->GetInputModeType();
 }
 
 #pragma region IWvAbilityTargetInterface
@@ -100,5 +147,15 @@ void AWvPlayerController::UnFreeze()
 {
 }
 #pragma endregion
+
+void AWvPlayerController::OnVehilcePossess(APawn* InPawn)
+{
+	BP_VehilcePossess(InPawn);
+}
+
+void AWvPlayerController::OnVehicleUnPossess()
+{
+	BP_VehicleUnPossess();
+}
 
 

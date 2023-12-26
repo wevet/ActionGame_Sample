@@ -23,7 +23,10 @@ protected:
 	virtual void EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled) override;
 
 	UPROPERTY(EditDefaultsOnly)
-	TArray<int32> GameplayEffectGroupIndexs;
+	FScalableFloat BulletCost = 1.0f;
+
+	UPROPERTY(EditDefaultsOnly)
+	int32 GameplayEffectGroupIndexs = 0;
 
 	UPROPERTY(EditDefaultsOnly)
 	UAnimMontage* Montage;

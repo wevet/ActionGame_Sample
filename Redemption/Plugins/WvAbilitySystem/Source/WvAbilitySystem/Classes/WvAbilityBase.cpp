@@ -246,7 +246,7 @@ void UWvAbilityBase::ApplyCooldown(const FGameplayAbilitySpecHandle Handle, cons
 		FGameplayEffectSpecHandle SpecHandle = MakeOutgoingGameplayEffectSpec(Handle, ActorInfo, ActivationInfo, CooldownGE->GetClass(), 1);
 		if (SpecHandle.IsValid())
 		{
-			SpecHandle.Data->StackCount = 1;
+			SpecHandle.Data->SetStackCount(1);
 			SpecHandle.Data->SetDuration(AbilityData->Cooldown, true);
 			ApplyGameplayEffectSpecToOwner(Handle, ActorInfo, ActivationInfo, SpecHandle);
 		}

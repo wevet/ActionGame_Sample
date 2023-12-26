@@ -164,7 +164,7 @@ void UWvGameplayCue_HitImpact::HandleBeHit(ABaseCharacter* BeHitActor, ABaseChar
 	//BeHitActor->OnHitBone(Attacker->GetMesh(), *HitResult, true);
 }
 
-void UWvGameplayCue_HitImpact::GetHitImpactParticleLocation(ABaseCharacter* BeHitActor, ABaseCharacter* Attacker, const FHitResult* HitResult, FName FixedAttachBoneName, FVector locationOffset, FVector& OutLocation)
+void UWvGameplayCue_HitImpact::GetHitImpactParticleLocation(ABaseCharacter* BeHitActor, ABaseCharacter* Attacker, const FHitResult* HitResult, FName FixedAttachBoneName, FVector LocationOffset, FVector& OutLocation)
 {
 	FVector* LocationPtr = nullptr;
 
@@ -202,7 +202,7 @@ void UWvGameplayCue_HitImpact::GetHitImpactParticleLocation(ABaseCharacter* BeHi
 	{
 		OutLocation = FVector::ZeroVector;
 	}
-	OutLocation += locationOffset;
+	OutLocation += LocationOffset;
 }
 
 void UWvGameplayCue_HitImpact::GetHitImpactParticleRotation(ABaseCharacter* BeHitActor, ABaseCharacter* Attacker, const FGameplayCueParameters& Parameters, const FHitResult* HitResult, EParticleRotationMode RotationMode, bool isOnlyYaw, FRotator RotatorOffset, FRotator& OutRotation)

@@ -5,6 +5,7 @@
 #include "Animation/InputScaleBias.h"
 #include "Animation/AnimNodeBase.h"
 #include "AnimNode_CustomIKControlBase.h"
+#include "PredictionAnimInstance.h"
 #include "AnimNode_CustomSpineSolver.generated.h"
 
 
@@ -97,7 +98,7 @@ public:
 	bool bRotateAroundTranslate = true;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = AdvancedSettings, meta = (PinHiddenByDefault))
-	ESolverComplexityType SolverComplexityType = ESolverComplexityType::Complex;
+	ESolverComplexityType SolverComplexityType = ESolverComplexityType::Simple;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = AdvancedSettings, meta = (PinHiddenByDefault))
 	bool bIgnoreLerping = false;
@@ -298,9 +299,6 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = ComponentDirectionSettings, meta = (PinHiddenByDefault))
 	bool bFlipForwardAndRight = false;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Miscellaneous)
-	ECustomRefPoseType SolverReferencePose = ECustomRefPoseType::Animated;
-
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Miscellaneous, meta = (PinHiddenByDefault))
 	bool bSpineFeetConnect = true;
 #pragma endregion
@@ -433,5 +431,7 @@ protected:
 
 private:
 	bool LineTraceInitialized = false;
+
+	TObjectPtr<UPredictionAnimInstance> PredictionAnimInstance;
 };
 

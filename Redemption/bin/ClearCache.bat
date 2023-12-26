@@ -10,14 +10,14 @@ rmdir /q /s ..\\.vs
 rmdir /q /s ..\\Binaries
 rmdir /q /s ..\\DerivedDataCache
 
+rmdir /q /s ..\\Plugins\\BrokenGlassEffects\\Binaries
+rmdir /q /s ..\\Plugins\\BrokenGlassEffects\\Intermediate
 rmdir /q /s ..\\Plugins\\RopeCutting\\Binaries
 rmdir /q /s ..\\Plugins\\RopeCutting\\Intermediate
 rmdir /q /s ..\\Plugins\\QuadrupedIK\\Binaries
 rmdir /q /s ..\\Plugins\\QuadrupedIK\\Intermediate
 rmdir /q /s ..\\Plugins\\WvAbilitySystem\\Binaries
 rmdir /q /s ..\\Plugins\\WvAbilitySystem\\Intermediate
-rmdir /q /s ..\\Plugins\\RuleProcessor\\Binaries
-rmdir /q /s ..\\Plugins\\RuleProcessor\\Intermediate
 
 del ..\\.vsconfig
 del ..\\Redemption.sln

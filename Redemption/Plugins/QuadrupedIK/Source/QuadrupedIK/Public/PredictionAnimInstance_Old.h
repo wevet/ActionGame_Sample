@@ -107,7 +107,6 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Config")
 	FName LeftToeName;
 
-public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "TraceSettings")
 	TEnumAsByte<ETraceTypeQuery> TraceChannel = ETraceTypeQuery::TraceTypeQuery1;
 

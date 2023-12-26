@@ -110,7 +110,7 @@ protected:
 	FWvCharacterGroundInfo CachedGroundInfo;
 
 	UPROPERTY(Transient, DuplicateTransient)
-	class ABaseCharacter* BaseCharacter;
+	TObjectPtr<class ABaseCharacter> BaseCharacter;
 
 	UPROPERTY(Transient)
 	bool bHasReplicatedAcceleration = false;

@@ -35,6 +35,6 @@ public:
 private:
 	void HandleAttack(ABaseCharacter* BeHitActor, ABaseCharacter* Attacker, const FGameplayCueParameters& Parameters, FOnceApplyEffect& OnceApplyEffect, const FHitResult* HitResult);
 	void HandleBeHit(ABaseCharacter* BeHitActor, ABaseCharacter* Attacker, const FGameplayCueParameters& Parameters, FOnceApplyEffect& OnceApplyEffect, const FHitResult* HitResult);
-	void GetHitImpactParticleLocation(ABaseCharacter* BeHitActor, ABaseCharacter* Attacker, const FHitResult* HitResult, FName FixedAttachBoneName, FVector locationOffset, FVector& OutLocation);
+	void GetHitImpactParticleLocation(ABaseCharacter* BeHitActor, ABaseCharacter* Attacker, const FHitResult* HitResult, FName FixedAttachBoneName, FVector LocationOffset, FVector& OutLocation);
 	void GetHitImpactParticleRotation(ABaseCharacter* BeHitActor, ABaseCharacter* Attacker, const FGameplayCueParameters& Parameters, const FHitResult* HitResult, EParticleRotationMode RotationMode, bool isOnlyYaw, FRotator RotatorOffset, FRotator& OutRotation);
 };

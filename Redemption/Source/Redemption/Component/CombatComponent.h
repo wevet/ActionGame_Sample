@@ -30,14 +30,16 @@ protected:
 
 
 protected:
-	UPROPERTY(EditDefaultsOnly)
-	TEnumAsByte<enum ETraceTypeQuery> AbilityTraceChannel;
-
-	UPROPERTY(EditDefaultsOnly)
+	UPROPERTY(EditDefaultsOnly, Category = "Combat|Config")
 	float DrawTime = 0.5f;
 
-	UPROPERTY(EditDefaultsOnly)
+	UPROPERTY(EditDefaultsOnly, Category = "Combat|Config")
 	class UHitReactBoneShakeDataAsset* HitReactBoneShakeDA;
+
+	UPROPERTY(EditDefaultsOnly, Category="Combat|Follow")
+	float FormationRadius = 200.0f;
+
+	int32 FollowStackCount = 5;
 
 public:
 	bool AbilityDamageBoxTrace(class UWvAbilityBase* Ability, const int32 EffectGroupIndex, const FVector Start, const FVector End, FVector HalfSize, const FRotator Orientation, TArray<AActor*>& ActorsToIgnore);
@@ -45,6 +47,7 @@ public:
 	const bool BulletTraceAttackToAbilitySystemComponent(const int32 WeaponID, class UWvAbilityBase* Ability, const int32 EffectGroupIndex, TArray<FHitResult>& Hits, const FVector SourceLocation);
 
 	const bool LineOfSightTraceOuter(class UWvAbilityBase* Ability, const int32 EffectGroupIndex, TArray<FHitResult>& Hits, const FVector SourceLocation);
+	const bool LineOfSightTraceOuterEnvironment(class UWvAbilityBase* Ability, const int32 EffectGroupIndex, const FHitResult& HitResult, const FVector SourceLocation);
 
 	UFUNCTION(BlueprintCallable)
 	FGameplayTag GetHitReactFeature();
@@ -61,6 +64,11 @@ public:
 
 	FGameplayTag GetWeaknessHitReactFeature() const;
 	TArray<class UBoneShakeExecuteData*> GetBoneShakeDatas() const;
+	const bool HasEnvironmentFilterClass(const FHitResult& HitResult);
+
+	const FVector GetFormationPoint(const APawn* InPawn);
+
+	bool CanFollow() const;
 
 #pragma region BattleCommand
 	UFUNCTION(BlueprintCallable, Category = "CombatComponent|BattleCommand")
@@ -74,6 +82,10 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "CombatComponent|BattleCommand")
 	void EquipKnife();
+
+	void AddFollower(APawn* NewPawn);
+	void RemoveFollower(APawn* RemovePawn);
+	void RemoveAllFollowers();
 #pragma endregion
 
 private:
@@ -96,11 +108,14 @@ private:
 	void TickUpdateUpdateBoneShake();
 	bool UpdateBoneShake(const float DeltaTime);
 
+
 #pragma region BattleCommand
 	void Modify_Weapon(const ELSOverlayState LSOverlayState);
 #pragma endregion
 
 private:
+	TArray<TWeakObjectPtr<class APawn>> Followers;
+
 	TWeakObjectPtr<UWvAbilitySystemComponent> ASC;
 	TWeakObjectPtr<ABaseCharacter> Character;
 

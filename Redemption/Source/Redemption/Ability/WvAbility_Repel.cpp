@@ -39,6 +39,13 @@ void UWvAbility_Repel::ActivateAbility(const FGameplayAbilitySpecHandle Handle, 
 		return;
 	}
 
+	if (!TriggerEventData)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[%s : TriggerEventData is null.]"), *FString(__FUNCTION__));
+		CancelAbility(Handle, ActorInfo, ActivationInfo, false);
+		return;
+	}
+
 	const FVector ActorLocation = Character->GetActorLocation();
 	const FVector AttackDirection = UWvAbilitySystemBlueprintFunctionLibrary::GetAttackDirection(TriggerEventData->ContextHandle, ActorLocation);
 	const FVector HitDirection = -AttackDirection;

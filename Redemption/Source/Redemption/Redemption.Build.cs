@@ -29,6 +29,9 @@ public class Redemption : ModuleRules
 				"ReplicationGraph",
 				"Json",
 				//"AnimationLocomotionLibraryRuntime",
+				"AnimationBudgetAllocator", // budget
+				"SignificanceManager", // budget
+				"ChaosVehicles", // vehicle system
 				"PoseSearch",
 				"ControlRig",
 				"MotionWarping",
@@ -48,7 +51,7 @@ public class Redemption : ModuleRules
 				"Niagara",
 				"WvAbilitySystem",
 				"QuadrupedIK",
-				"RopeCutting",
+				"RopeCutting",		
 			}
 		);
 

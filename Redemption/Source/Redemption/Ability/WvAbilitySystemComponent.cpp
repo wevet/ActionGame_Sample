@@ -60,30 +60,6 @@ ABaseCharacter* UWvAbilitySystemComponent::GetAvatarCharacter() const
 	return nullptr;
 }
 
-void UWvAbilitySystemComponent::ApplyEffectToSelf(UWvAbilitySystemComponent* InstigatorASC, UWvAbilityEffectDataAsset* EffectData, const int32 EffectGroupIndex)
-{
-	if (!InstigatorASC)
-	{
-		return;
-	}
-
-	FGameplayAbilityTargetDataHandle TargetDataHandle;
-
-	FWvOverlapResult Overlap;
-	Overlap.Actor = GetAvatarActor();
-
-	FWvGameplayAbilityTargetData_SingleTarget* NewData = new FWvGameplayAbilityTargetData_SingleTarget();
-	NewData->Overlap = Overlap;
-	NewData->SourceLocation = FVector::ZeroVector;
-	TargetDataHandle.Add(NewData);
-
-	FGameplayEffectContextHandle EffectContextHandle = InstigatorASC->MakeEffectContext();
-	UWvAbilitySystemBlueprintFunctionLibrary::EffectContextSetEffectDataAsset(EffectContextHandle, EffectData, EffectGroupIndex);
-
-	UE_LOG(LogTemp, Log, TEXT("%s"), *FString(__FUNCTION__));
-	MakeEffectToTargetData(EffectContextHandle, TargetDataHandle, FGameplayEffectQuery());
-}
-
 
 const bool UWvAbilitySystemComponent::TryActivateAbilityByClassPressing(TSubclassOf<UGameplayAbility> InAbilityToActivate, bool bAllowRemoteActivation)
 {

@@ -5,6 +5,7 @@
 #include "Redemption.h"
 #include "Misc/WvCommonUtils.h"
 #include "Component/WvCharacterMovementComponent.h"
+#include "Component/WvSkeletalMeshComponent.h"
 #include "Locomotion/LocomotionComponent.h"
 #include "PredictionFootIKComponent.h"
 #include "Component/InventoryComponent.h"
@@ -12,9 +13,11 @@
 #include "Component/StatusComponent.h"
 #include "Component/WeaknessComponent.h"
 #include "WvPlayerController.h"
+#include "WvAIController.h"
 #include "Animation/WvAnimInstance.h"
 #include "Ability/WvInheritanceAttributeSet.h"
 #include "Game/WvGameInstance.h"
+#include "Vehicle/WvWheeledVehiclePawn.h"
 
 #include "Components/CapsuleComponent.h"
 #include "Components/InputComponent.h"
@@ -43,13 +46,12 @@
 #include "Animation/AnimInstance.h"
 #include "Perception/AISense_Hearing.h"
 #include "Perception/AISense_Prediction.h"
+#include "AbilitySystemBlueprintLibrary.h"
 
 // Misc
 #include "Engine/SkeletalMeshSocket.h"
 
-
 #include UE_INLINE_GENERATED_CPP_BY_NAME(BaseCharacter)
-
 
 TSubclassOf<UAnimInstance> UOverlayAnimInstanceDataAsset::FindAnimInstance(const ELSOverlayState InOverlayState) const
 {
@@ -66,7 +68,8 @@ TSubclassOf<UAnimInstance> UOverlayAnimInstanceDataAsset::FindAnimInstance(const
 }
 
 ABaseCharacter::ABaseCharacter(const FObjectInitializer& ObjectInitializer)
-	: Super(ObjectInitializer.SetDefaultSubobjectClass<UWvCharacterMovementComponent>(ACharacter::CharacterMovementComponentName))
+	: Super(ObjectInitializer.SetDefaultSubobjectClass<UWvCharacterMovementComponent>(ACharacter::CharacterMovementComponentName) 
+							 .SetDefaultSubobjectClass<UWvSkeletalMeshComponent>(ACharacter::MeshComponentName))
 {
 	PrimaryActorTick.bCanEverTick = true;
 
@@ -79,9 +82,11 @@ ABaseCharacter::ABaseCharacter(const FObjectInitializer& ObjectInitializer)
 	bUseControllerRotationRoll = false;
 	AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;
 
-	USkeletalMeshComponent* MeshComp = GetMesh();
-	check(MeshComp);
-	MeshComp->SetRelativeRotation(FRotator(0.0f, -90.0f, 0.0f));  // Rotate mesh to be X forward since it is exported as Y forward.
+	UWvSkeletalMeshComponent* WvMeshComp = CastChecked<UWvSkeletalMeshComponent>(GetMesh());
+	check(WvMeshComp);
+	// Rotate mesh to be X forward since it is exported as Y forward.
+	WvMeshComp->SetRelativeRotation(FRotator(0.0f, -90.0f, 0.0f));
+	WvMeshComp->SetReceivesDecals(true);
 
 	UWvCharacterMovementComponent* WvMoveComp = CastChecked<UWvCharacterMovementComponent>(GetCharacterMovement());
 	WvMoveComp->GravityScale = 1.0f;
@@ -97,25 +102,36 @@ ABaseCharacter::ABaseCharacter(const FObjectInitializer& ObjectInitializer)
 	WvMoveComp->GetNavAgentPropertiesRef().bCanCrouch = true;
 	WvMoveComp->bCanWalkOffLedgesWhenCrouching = true;
 	WvMoveComp->SetCrouchedHalfHeight(55.0f);
-
 	WvMoveComp->JumpZVelocity = 500.f;
 	WvMoveComp->AirControl = 0.35f;
 	WvMoveComp->MinAnalogWalkSpeed = 20.f;
 
-
 	SetReplicateMovement(true);
 
+	// @NOTE
+	// always ticking component
+	// 1. UCharacterTrajectoryComponent
+	// 2. ULocomotionComponent
+	// 3. UPawnNoiseEmitterComponent
+	// 4. USceneComponent() HeldObjectRoot
+
+	// motion warping
 	MotionWarpingComponent = ObjectInitializer.CreateDefaultSubobject<UMotionWarpingComponent>(this, TEXT("MotionWarpingComponent"));
 	MotionWarpingComponent->bSearchForWindowsInAnimsWithinMontages = true;
 
-	CharacterMovementTrajectoryComponent = ObjectInitializer.CreateDefaultSubobject<UCharacterTrajectoryComponent>(this, TEXT("CharacterMovementTrajectoryComponent"));
+	// motion mathing
+	CharacterTrajectoryComponent = ObjectInitializer.CreateDefaultSubobject<UCharacterTrajectoryComponent>(this, TEXT("CharacterTrajectoryComponent"));
+	CharacterTrajectoryComponent->bAutoActivate = 1;
 
+	// ik prediction component
 	PredictionFootIKComponent = ObjectInitializer.CreateDefaultSubobject<UPredictionFootIKComponent>(this, TEXT("PredictionFootIKComponent"));
 	PredictionFootIKComponent->bAutoActivate = 1;
 
+	// asc
 	WvAbilitySystemComponent = ObjectInitializer.CreateDefaultSubobject<UWvAbilitySystemComponent>(this, TEXT("WvAbilitySystemComponent"));
 	WvAbilitySystemComponent->bAutoActivate = 1;
 
+	// movement managed component
 	LocomotionComponent = ObjectInitializer.CreateDefaultSubobject<ULocomotionComponent>(this, TEXT("LocomotionComponent"));
 	LocomotionComponent->bAutoActivate = 1;
 
@@ -139,21 +155,23 @@ ABaseCharacter::ABaseCharacter(const FObjectInitializer& ObjectInitializer)
 	PawnNoiseEmitterComponent = ObjectInitializer.CreateDefaultSubobject<UPawnNoiseEmitterComponent>(this, TEXT("PawnNoiseEmitterComponent"));
 	PawnNoiseEmitterComponent->bAutoActivate = 1;
 
+	// item attach helper
 	HeldObjectRoot = ObjectInitializer.CreateDefaultSubobject<USceneComponent>(this, TEXT("HeldObjectRoot"));
 	HeldObjectRoot->bAutoActivate = 1;
-	HeldObjectRoot->SetupAttachment(GetMesh());
+	HeldObjectRoot->SetupAttachment(WvMeshComp);
 
 	MyTeamID = FGenericTeamId(0);
 	CharacterTag = FGameplayTag::RequestGameplayTag(TAG_Character_Default.GetTag().GetTagName());
-	CharacterRelation = ECharacterRelation::Friend;
 
 	GetCapsuleComponent()->SetCollisionResponseToChannel(ECollisionChannel::ECC_GameTraceChannel1, ECollisionResponse::ECR_Ignore);
 	GetCapsuleComponent()->SetCollisionResponseToChannel(ECollisionChannel::ECC_GameTraceChannel2, ECollisionResponse::ECR_Ignore);
 	GetCapsuleComponent()->SetCollisionResponseToChannel(ECollisionChannel::ECC_GameTraceChannel3, ECollisionResponse::ECR_Ignore);
-	GetMesh()->SetCollisionResponseToChannel(ECollisionChannel::ECC_GameTraceChannel1, ECollisionResponse::ECR_Ignore);
-	GetMesh()->SetCollisionResponseToChannel(ECollisionChannel::ECC_GameTraceChannel2, ECollisionResponse::ECR_Ignore);
+
+	WvMeshComp->SetCollisionResponseToChannel(ECollisionChannel::ECC_GameTraceChannel1, ECollisionResponse::ECR_Ignore);
+	WvMeshComp->SetCollisionResponseToChannel(ECollisionChannel::ECC_GameTraceChannel2, ECollisionResponse::ECR_Ignore);
 	// sets Damage
-	GetMesh()->SetCollisionResponseToChannel(ECollisionChannel::ECC_GameTraceChannel3, ECollisionResponse::ECR_Block);
+	WvMeshComp->SetCollisionResponseToChannel(ECollisionChannel::ECC_GameTraceChannel3, ECollisionResponse::ECR_Block);
+	WvMeshComp->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 }
 
 void ABaseCharacter::BeginPlay()
@@ -226,24 +244,26 @@ void ABaseCharacter::UnPossessed()
 	// Determine what the new team ID should be afterwards
 	MyTeamID = DetermineNewTeamAfterPossessionEnds(OldTeamID);
 	ConditionalBroadcastTeamChanged(this, OldTeamID, MyTeamID);
+
+	UE_LOG(LogTemp, Log, TEXT("%s"), *FString(__FUNCTION__));
 }
 
 void ABaseCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	auto CMC = GetCharacterMovement();
+	UWvCharacterMovementComponent* CMC = GetWvCharacterMovementComponent();
 	if (IsValid(CMC))
 	{
 		const float Acc = CMC->GetCurrentAcceleration().Length();
 		const float MaxAcc = CMC->GetMaxAcceleration();
 		MovementInputAmount = Acc / MaxAcc;
 		bHasMovementInput = (MovementInputAmount > 0.0f);
-	}
 
-	if (IsValid(CharacterMovementTrajectoryComponent))
-	{
-		//TrajectorySampleRange = CharacterMovementTrajectoryComponent->GetTrajectory();
+		if (CMC->IsFalling())
+		{
+			CMC->FallingMantling();
+		}
 	}
 }
 
@@ -261,11 +281,14 @@ void ABaseCharacter::OnEndCrouch(float HalfHeightAdjust, float ScaledHalfHeightA
 
 void ABaseCharacter::InitAbilitySystemComponent()
 {
-	WvAbilitySystemComponent->InitAbilityActorInfo(this, this);
-
-	if (GetLocalRole() == ROLE_Authority)
+	if (!bIsAbilityInitializeResult)
 	{
-		WvAbilitySystemComponent->AddStartupGameplayAbilities();
+		bIsAbilityInitializeResult = true;
+		WvAbilitySystemComponent->InitAbilityActorInfo(this, this);
+		if (GetLocalRole() == ROLE_Authority)
+		{
+			WvAbilitySystemComponent->AddStartupGameplayAbilities();
+		}
 	}
 
 	auto* PC = Cast<AWvPlayerController>(Controller);
@@ -308,7 +331,7 @@ void ABaseCharacter::PreReplication(IRepChangedPropertyTracker& ChangedPropertyT
 
 void ABaseCharacter::OnRep_ReplicatedAcceleration()
 {
-	if (UWvCharacterMovementComponent* WvCharacterMovementComponent = Cast<UWvCharacterMovementComponent>(GetCharacterMovement()))
+	if (UWvCharacterMovementComponent* WvCharacterMovementComponent = CastChecked<UWvCharacterMovementComponent>(GetCharacterMovement()))
 	{
 		// Decompress Acceleration
 		const double MaxAccel = WvCharacterMovementComponent->MaxAcceleration;
@@ -437,11 +460,6 @@ FOnTeamIndexChangedDelegate* ABaseCharacter::GetOnTeamIndexChangedDelegate()
 	return &OnTeamChangedDelegate;
 }
 
-ECharacterRelation ABaseCharacter::GetRelationWithSelfImpl(const IWvAbilityTargetInterface* Other) const
-{
-	return CharacterRelation;
-}
-
 FGameplayTag ABaseCharacter::GetAvatarTag() const
 {
 	return CharacterTag;
@@ -545,6 +563,32 @@ void ABaseCharacter::UnFreeze()
 	WvAbilitySystemComponent->RemoveGameplayTag(TAG_Character_ActionCrouch_Forbid, 1);
 	WvAbilitySystemComponent->RemoveGameplayTag(TAG_Character_TargetLock_Forbid, 1);
 }
+
+void ABaseCharacter::DoAttack()
+{
+	if (WvAbilitySystemComponent->HasMatchingGameplayTag(TAG_Character_ActionMelee_Forbid))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("has tag TAG_Character_StateMelee_Forbid => %s"), *FString(__FUNCTION__));
+		return;
+	}
+
+	const auto Weapon = ItemInventoryComponent->GetEquipWeapon();
+	if (Weapon)
+	{
+		const FGameplayTag TriggerTag = Weapon->GetPluralInputTriggerTag();
+		WvAbilitySystemComponent->TryActivateAbilityByTag(TriggerTag);
+	}
+}
+
+void ABaseCharacter::DoResumeAttack()
+{
+	WvAbilitySystemComponent->RemoveGameplayTag(TAG_Character_ActionMelee_Forbid, 1);
+}
+
+void ABaseCharacter::DoStopAttack()
+{
+	WvAbilitySystemComponent->AddGameplayTag(TAG_Character_ActionMelee_Forbid, 1);
+}
 #pragma endregion
 
 #pragma region IWvAIActionStateInterface
@@ -572,6 +616,14 @@ void ABaseCharacter::SetAIActionState(const EAIActionState NewAIActionState)
 			WvAbilitySystemComponent->AddGameplayTag(CurStateTag, 1);
 		}
 	}
+
+	if (IsLeader())
+	{
+		// no change state color
+		return;
+	}
+
+	UpdateDisplayTeamColor();
 }
 
 EAIActionState ABaseCharacter::GetAIActionState() const
@@ -591,14 +643,19 @@ UMotionWarpingComponent* ABaseCharacter::GetMotionWarpingComponent() const
 	return MotionWarpingComponent; 
 }
 
-UCharacterTrajectoryComponent* ABaseCharacter::GetCharacterMovementTrajectoryComponent() const
+UCharacterTrajectoryComponent* ABaseCharacter::GetCharacterTrajectoryComponent() const
 {
-	return CharacterMovementTrajectoryComponent; 
+	return CharacterTrajectoryComponent; 
 }
 
 UWvCharacterMovementComponent* ABaseCharacter::GetWvCharacterMovementComponent() const
 {
 	return CastChecked<UWvCharacterMovementComponent>(GetCharacterMovement());
+}
+
+UWvSkeletalMeshComponent* ABaseCharacter::GetWvSkeletalMeshComponent() const
+{
+	return CastChecked<UWvSkeletalMeshComponent>(GetMesh());
 }
 
 UWvAbilitySystemComponent* ABaseCharacter::GetWvAbilitySystemComponent() const
@@ -671,9 +728,6 @@ void ABaseCharacter::Jump()
 			}
 			break;
 			case MOVE_Falling:
-			{
-				CMC->FallingMantling();
-			}
 			break;
 			case MOVE_Flying:
 			break;
@@ -701,32 +755,6 @@ void ABaseCharacter::Jump()
 void ABaseCharacter::StopJumping()
 {
 	Super::StopJumping();
-}
-
-void ABaseCharacter::DoAttack()
-{
-	if (WvAbilitySystemComponent->HasMatchingGameplayTag(TAG_Character_ActionMelee_Forbid))
-	{
-		UE_LOG(LogTemp, Warning, TEXT("has tag TAG_Character_StateMelee_Forbid => %s"), *FString(__FUNCTION__));
-		return;
-	}
-
-	const auto Weapon = ItemInventoryComponent->GetEquipWeapon();
-	if (Weapon)
-	{
-		const FGameplayTag TriggerTag = Weapon->GetPluralInputTriggerTag();
-		WvAbilitySystemComponent->TryActivateAbilityByTag(TriggerTag);
-	}
-}
-
-void ABaseCharacter::DoResumeAttack()
-{
-	WvAbilitySystemComponent->RemoveGameplayTag(TAG_Character_ActionMelee_Forbid, 1);
-}
-
-void ABaseCharacter::DoStopAttack()
-{
-	WvAbilitySystemComponent->AddGameplayTag(TAG_Character_ActionMelee_Forbid, 1);
 }
 
 void ABaseCharacter::VelocityMovement()
@@ -861,11 +889,6 @@ FTransform ABaseCharacter::GetChestTransform(const FName BoneName) const
 	return GetMesh()->GetSocketTransform(BoneName);
 }
 
-FTrajectorySampleRange ABaseCharacter::GetTrajectorySampleRange() const
-{
-	return TrajectorySampleRange;
-}
-
 FVector2D ABaseCharacter::GetInputAxis() const
 {
 	return InputAxis;
@@ -963,7 +986,7 @@ void ABaseCharacter::EndDeathAction_Callback()
 	if (IsBotCharacter())
 	{
 		//DetachFromControllerPendingDestroy();
-		Super::SetLifeSpan(DEFAULT_LIFESPAN);
+		//Super::SetLifeSpan(DEFAULT_LIFESPAN);
 	}
 	UE_LOG(LogTemp, Log, TEXT("Owner => %s, function => %s"), *GetName(), *FString(__FUNCTION__));
 }
@@ -972,7 +995,7 @@ void ABaseCharacter::OverlayStateChange(const ELSOverlayState CurrentOverlay)
 {
 	if (!IsValid(OverlayAnimDAInstance))
 	{
-		OverlayAnimDAInstance = OverlayAnimInstanceDA.LoadSynchronous();
+		OnLoadOverlayABP();
 		return;
 	}
 
@@ -1040,6 +1063,27 @@ bool ABaseCharacter::CanBeSeenFrom(const FVector& ObserverLocation, FVector& Out
 class UBehaviorTree* ABaseCharacter::GetBehaviorTree() const
 {
 	return BehaviorTree;
+}
+
+bool ABaseCharacter::IsLeader() const
+{
+	return WvAbilitySystemComponent->HasMatchingGameplayTag(TAG_AI_Character_Leader);
+}
+
+void ABaseCharacter::SetLeaderTag()
+{
+	WvAbilitySystemComponent->AddGameplayTag(TAG_AI_Character_Leader, 1);
+	SetLeaderDisplay();
+}
+
+ABaseCharacter* ABaseCharacter::GetLeaderCharacterFromController() const
+{
+	AWvAIController* AIC = Cast<AWvAIController>(GetController());
+	if (IsValid(AIC))
+	{
+		return Cast<ABaseCharacter>(AIC->GetBlackboardLeader());
+	}
+	return nullptr;
 }
 #pragma endregion
 
@@ -1368,9 +1412,9 @@ void ABaseCharacter::BuildFinisherAnimationReceiver(const FGameplayTag RequireTa
 void ABaseCharacter::BuildFinisherAnimationData(UAnimMontage* InMontage, const bool IsTurnAround, AActor* TurnActor, float PlayRate/* = 1.0f*/)
 {
 	FinisherAnimationData.AnimMontage = InMontage;
-	FinisherAnimationData.PlayRate = PlayRate;
 	FinisherAnimationData.IsTurnAround = IsTurnAround;
 	FinisherAnimationData.LookAtTarget = TurnActor;
+	FinisherAnimationData.PlayRate = PlayRate;
 	FinisherAnimationData.TimeToStartMontageAt = 0.f;
 }
 
@@ -1406,9 +1450,8 @@ void ABaseCharacter::OnABPAnimAssetLoad()
 
 void ABaseCharacter::OnABPAnimAssetLoadComplete()
 {
-	OverlayAnimDAInstance = OverlayAnimInstanceDA.LoadSynchronous();
+	OnLoadOverlayABP();
 	ABPStreamableHandle.Reset();
-	UE_LOG(LogTemp, Log, TEXT("%s"), *FString(__FUNCTION__));
 }
 
 void ABaseCharacter::OnFinisherAnimAssetLoad()
@@ -1431,7 +1474,6 @@ void ABaseCharacter::OnFinisherAnimAssetLoadComplete()
 	OnLoadFinisherSender();
 	OnLoadFinisherReceiver();
 	FinisherStreamableHandle.Reset();
-	UE_LOG(LogTemp, Log, TEXT("%s"), *FString(__FUNCTION__));
 }
 
 void ABaseCharacter::OnLoadFinisherSender()
@@ -1443,6 +1485,85 @@ void ABaseCharacter::OnLoadFinisherReceiver()
 {
 	FinisherReceiner = FinisherDAList[TAG_Weapon_Finisher_Receiver].LoadSynchronous();
 }
+
+void ABaseCharacter::OnLoadOverlayABP()
+{
+	OverlayAnimDAInstance = OverlayAnimInstanceDA.LoadSynchronous();
+}
 #pragma endregion
 
+#pragma region VehicleAction
+bool ABaseCharacter::IsVehicleDriving() const
+{
+	return WvAbilitySystemComponent->HasMatchingGameplayTag(TAG_Vehicle_State_Drive);
+}
+
+void ABaseCharacter::BeginVehicleAction()
+{
+	GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_None);
+	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	GetMesh()->SetCollisionEnabled(ECollisionEnabled::PhysicsOnly);
+	GetMesh()->SetVisibility(false);
+
+	WvAbilitySystemComponent->AddGameplayTag(TAG_Vehicle_State_Drive, 1);
+}
+
+void ABaseCharacter::EndVehicleAction()
+{
+	GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_Walking);
+	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+	GetMesh()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+	GetMesh()->SetVisibility(true);
+	WvAbilitySystemComponent->RemoveGameplayTag(TAG_Vehicle_State_Drive, 1);
+
+}
+
+void ABaseCharacter::HandleDriveAction()
+{
+	if (IsVehicleDriving())
+	{
+		return;
+	}
+
+	const FVehicleTraceConfig VehicleTraceConfig = ABILITY_GLOBAL()->VehicleTraceConfig;
+	const float ClosestTargetDistance = VehicleTraceConfig.ClosestTargetDistance;
+	const float NearestDistance = VehicleTraceConfig.NearestDistance;
+	const FVector2D ViewRange = VehicleTraceConfig.ViewRange;
+
+	TArray<AActor*> IgnoreActors({ this });
+	TArray<AActor*> OutActors;
+
+	// debug
+	//UKismetSystemLibrary::DrawDebugSphere(GetWorld(), GetActorLocation(), ClosestTargetDistance, 12, FLinearColor::Blue, 4.0f, 1.0f);
+
+	const bool bHitResult = UKismetSystemLibrary::SphereOverlapActors(GetWorld(), GetActorLocation(), ClosestTargetDistance,
+		ABILITY_GLOBAL()->VehicleTraceChannel, AWvWheeledVehiclePawn::StaticClass(), IgnoreActors, OutActors);
+
+	const AWvWheeledVehiclePawn* VehicleTarget = Cast<AWvWheeledVehiclePawn>(UWvCommonUtils::FindNearestDistanceTarget(this, OutActors, NearestDistance));
+
+	if (!IsValid(VehicleTarget))
+	{
+		return;
+	}
+
+	const FRotator DeltaRot = UKismetMathLibrary::NormalizedDeltaRotator(VehicleTarget->GetActorRotation(), GetActorRotation());
+
+	const FVector NormalizePos = (VehicleTarget->GetActorLocation() - GetActorLocation()).GetSafeNormal();
+	const FVector Forward = GetActorForwardVector();
+	const float Angle = UKismetMathLibrary::DegAcos(FVector::DotProduct(Forward, NormalizePos));
+	const float Yaw = FMath::Abs(DeltaRot.Yaw);
+
+	UE_LOG(LogTemp, Log, TEXT("Angle => %.3f"), Angle);
+	UE_LOG(LogTemp, Log, TEXT("Yaw => %.3f"), Yaw);
+
+	if (ViewRange.X <= Yaw && ViewRange.Y >= Yaw)
+	{
+		UE_LOG(LogTemp, Log, TEXT("DriveIn => %s"), *FString(__FUNCTION__));
+		FGameplayEventData EventData;
+		EventData.Instigator = this;
+		EventData.Target = VehicleTarget;
+		UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(this, TAG_Vehicle_Drive, EventData);
+	}
+}
+#pragma endregion
 

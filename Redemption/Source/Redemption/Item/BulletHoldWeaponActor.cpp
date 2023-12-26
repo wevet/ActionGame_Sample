@@ -98,11 +98,22 @@ const bool ABulletHoldWeaponActor::LineOfSight(const FVector TraceStart, const F
 	TArray<AActor*> IgnoreActors({ Character.Get(), });
 	auto TraceType = ABILITY_GLOBAL()->bWeaponTraceDebug ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None;
 
+	ECollisionChannel CollisionChannel = UEngineTypes::ConvertToCollisionChannel(ABILITY_GLOBAL()->WeaponTraceChannel);
+
 	FHitResult HitResult(ForceInit);
 	const bool bHitResult = UKismetSystemLibrary::LineTraceSingle(GetWorld(), TraceStart, TraceEndPosition, 
-		ABILITY_GLOBAL()->WeaponTraceChannel, 
-		false, IgnoreActors,
-		TraceType, HitResult, true, FLinearColor::Red, FLinearColor::Green, 5.0f);
+		ABILITY_GLOBAL()->WeaponTraceChannel, false, IgnoreActors, TraceType, HitResult, true, FLinearColor::Red, FLinearColor::Green, 5.0f);
+
+#if false
+	FCollisionQueryParams QueryParams;
+	QueryParams.AddIgnoredActor(Character.Get());
+	QueryParams.bReturnPhysicalMaterial = true;
+	const bool bHitResult = GetWorld()->LineTraceSingleByChannel(HitResult, TraceStart, TraceEndPosition, CollisionChannel, QueryParams);
+	if (ABILITY_GLOBAL()->bWeaponTraceDebug)
+	{
+		DrawDebugLine(GetWorld(), TraceStart, TraceEndPosition, FColor::Green, false, 5.0f);
+	}
+#endif
 
 	OutHitResult = HitResult;
 	OutTraceEnd = TraceEndPosition;

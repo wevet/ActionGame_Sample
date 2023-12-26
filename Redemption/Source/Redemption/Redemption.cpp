@@ -26,6 +26,10 @@ UE_DEFINE_GAMEPLAY_TAG(TAG_Character_ActionDash_Forbid, "Character.Action.Dash.F
 UE_DEFINE_GAMEPLAY_TAG(TAG_Character_ActionCrouch, "Character.Action.Crouch");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Character_ActionCrouch_Forbid, "Character.Action.Crouch.Forbid");
 
+// Drive
+UE_DEFINE_GAMEPLAY_TAG(TAG_Character_ActionDrive, "Character.Action.Drive");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Character_ActionDrive_Forbid, "Character.Action.Drive.Forbid");
+
 // TargetLock
 UE_DEFINE_GAMEPLAY_TAG(TAG_Character_TargetLock, "Character.Action.TargetLock");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Character_TargetLocking, "Character.Action.TargetLocking");
@@ -62,6 +66,15 @@ UE_DEFINE_GAMEPLAY_TAG(TAG_AI_Waypoint_UnVisited, "AI.Waypoint.UnVisited");
 UE_DEFINE_GAMEPLAY_TAG(TAG_AI_State_Search, "AI.State.Search");
 UE_DEFINE_GAMEPLAY_TAG(TAG_AI_State_Combat, "AI.State.Combat");
 UE_DEFINE_GAMEPLAY_TAG(TAG_AI_State_Patrol, "AI.State.Patrol");
+UE_DEFINE_GAMEPLAY_TAG(TAG_AI_State_Follow, "AI.State.Follow");
+UE_DEFINE_GAMEPLAY_TAG(TAG_AI_State_Friend, "AI.State.Friend");
+UE_DEFINE_GAMEPLAY_TAG(TAG_AI_Character_Leader, "AI.Character.Leader");
+
+// vehicle
+UE_DEFINE_GAMEPLAY_TAG(TAG_Vehicle_Drive, "Vehicle.Drive");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Vehicle_UnDrive, "Vehicle.UnDrive");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Vehicle_State_Drive, "Vehicle.State.Drive");
+
 
 IMPLEMENT_PRIMARY_GAME_MODULE( FDefaultGameModuleImpl, Redemption, "Redemption" );
 

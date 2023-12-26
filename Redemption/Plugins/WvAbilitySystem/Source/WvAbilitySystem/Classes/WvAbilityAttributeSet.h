@@ -30,12 +30,14 @@ public:
 
 protected:
 	void PostGameplayEffectExecute_HP(const FGameplayEffectModCallbackData& Data);
-	void PostGameplayEffectExecute_Stamina(const FGameplayEffectModCallbackData& Data);
 	void HpChangeFromDamage(const float InDamage, const FGameplayEffectModCallbackData& Data);
 
 	virtual void PostDamageEffectExecute(const FGameplayEffectModCallbackData& Data, const float InDamage);
 	virtual void HandleHitReactEvent(const FGameplayEffectModCallbackData& Data, const float InDamage);
 	virtual void HandleDeadEvent(const FGameplayEffectModCallbackData& Data);
+
+
+	void PostGameplayEffectExecute_Stamina(const FGameplayEffectModCallbackData& Data);
 
 public:
 	UPROPERTY(BlueprintReadOnly)

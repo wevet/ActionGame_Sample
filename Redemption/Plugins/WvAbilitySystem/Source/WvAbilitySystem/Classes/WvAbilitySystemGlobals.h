@@ -66,7 +66,19 @@ public:
 	FBotConfig BotConfig;
 
 	UPROPERTY(EditDefaultsOnly)
+	FEnvironmentConfig EnvironmentConfig;
+
+	UPROPERTY(EditDefaultsOnly)
 	TEnumAsByte<ETraceTypeQuery> WeaponTraceChannel;
+
+	UPROPERTY(EditDefaultsOnly)
+	FVehicleTraceConfig VehicleTraceConfig;
+
+	UPROPERTY(EditDefaultsOnly)
+	TArray<TEnumAsByte<EObjectTypeQuery> > VehicleTraceChannel;
+
+	UPROPERTY(EditDefaultsOnly)
+	TArray<UClass*> BulletHitFilterClasses;
 
 	UPROPERTY(EditDefaultsOnly)
 	bool bWeaponTraceDebug = false;

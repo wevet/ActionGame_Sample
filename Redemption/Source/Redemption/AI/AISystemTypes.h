@@ -24,7 +24,25 @@ public:
 	FName DestinationKeyName = FName(TEXT("Destination"));
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FName FollowLocationKeyName = FName(TEXT("FollowLocation"));
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FName FriendLocationKeyName = FName(TEXT("FriendLocation"));
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FName LeaderKeyName = FName(TEXT("Leader"));
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FName FriendKeyName = FName(TEXT("Friend"));
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FName TargetKeyName = FName(TEXT("Target"));
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FName AIActionStateKeyName = FName(TEXT("AIActionState"));
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FName IsDeadKeyName = FName(TEXT("IsDead"));
 };
 
 USTRUCT(BlueprintType)
@@ -34,19 +52,31 @@ struct REDEMPTION_API FAIPerceptionTask
 
 private:
 	float Timer;
-	float Interval;
-	bool bIsTimerUpdate = true;
+	bool bIsNeedTimer = true;
 	bool bIsValid = false;
+	FName TaskName;
 	TFunction<void(void)> FinishDelegate;
+	void Finish_Internal();
 
 public:
 	FAIPerceptionTask() {}
-	FAIPerceptionTask(const float InTimer, const bool IsTimerUpdate, TFunction<void(void)> InFinishDelegate);
-	void Update(const float DeltaTime);
+	FAIPerceptionTask(const float InTimer, const FName InTaskName, TFunction<void(void)> InFinishDelegate);
+	void Start();
 	void Finish();
-	void Initialize();
 	void Abort();
-
 	bool IsRunning() const;
 };
 
+
+USTRUCT(BlueprintType)
+struct REDEMPTION_API FAILeaderTask
+{
+	GENERATED_BODY()
+
+private:
+
+public:
+	FAILeaderTask();
+
+	void Notify();
+};

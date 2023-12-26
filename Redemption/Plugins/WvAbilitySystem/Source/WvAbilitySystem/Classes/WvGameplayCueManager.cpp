@@ -88,17 +88,13 @@ bool UWvGameplayCueSet::HandleGameplayCueNotify_Internal(AActor* TargetActor, in
 				else if (EventType == EGameplayCueEvent::Executed)
 				{
 					AGameplayCueNotify_Actor* CDO = Cast<AGameplayCueNotify_Actor>(CueData.LoadedGameplayCueClass->ClassDefaultObject);
-					FGCNotifyActorKey NotifyKey(TargetActor, CueData.LoadedGameplayCueClass,
-						CDO->bUniqueInstancePerInstigator ? Parameters.GetInstigator() : nullptr,
-						CDO->bUniqueInstancePerSourceObject ? Parameters.GetSourceObject() : nullptr);
-
+					FGCNotifyActorKey NotifyKey(TargetActor, CueData.LoadedGameplayCueClass, CDO->bUniqueInstancePerInstigator ? Parameters.GetInstigator() : nullptr, CDO->bUniqueInstancePerSourceObject ? Parameters.GetSourceObject() : nullptr);
 					if (const TSet<AGameplayCueNotify_Actor*>* CueList = CueManager->NotifyMapActorList.Find(NotifyKey))
 					{
-						for (auto it = CueList->CreateConstIterator(); it; ++it)
+						for (auto It = CueList->CreateConstIterator(); It; ++It)
 						{
-							AGameplayCueNotify_Actor* Cue = *it;
+							AGameplayCueNotify_Actor* Cue = *It;
 							Cue->HandleGameplayCue(TargetActor, EventType, Parameters);
-
 							if (!Cue->IsOverride)
 							{
 								HandleGameplayCueNotify_Internal(TargetActor, CueData.ParentDataIdx, EventType, Parameters);
@@ -109,25 +105,20 @@ bool UWvGameplayCueSet::HandleGameplayCueNotify_Internal(AActor* TargetActor, in
 				else if (EventType == EGameplayCueEvent::Removed)
 				{
 					AGameplayCueNotify_Actor* CDO = Cast<AGameplayCueNotify_Actor>(CueData.LoadedGameplayCueClass->ClassDefaultObject);
-					FGCNotifyActorKey NotifyKey(TargetActor, CueData.LoadedGameplayCueClass,
-						CDO->bUniqueInstancePerInstigator ? Parameters.GetInstigator() : nullptr,
-						CDO->bUniqueInstancePerSourceObject ? Parameters.GetSourceObject() : nullptr);
-
+					FGCNotifyActorKey NotifyKey(TargetActor, CueData.LoadedGameplayCueClass, CDO->bUniqueInstancePerInstigator ? Parameters.GetInstigator() : nullptr, CDO->bUniqueInstancePerSourceObject ? Parameters.GetSourceObject() : nullptr);
 					TSet<AGameplayCueNotify_Actor*> CueList;
 					if (CueManager->NotifyMapActorList.RemoveAndCopyValue(NotifyKey, CueList))
 					{
-						for (auto it = CueList.CreateConstIterator(); it; ++it)
+						for (auto It = CueList.CreateConstIterator(); It; ++It)
 						{
-							AGameplayCueNotify_Actor* Cue = *it;
+							AGameplayCueNotify_Actor* Cue = *It;
 							Cue->bAutoDestroyOnRemove = true;
 							Cue->HandleGameplayCue(TargetActor, EventType, Parameters);
-							
 							if (!Cue->IsOverride)
 							{
 								HandleGameplayCueNotify_Internal(TargetActor, CueData.ParentDataIdx, EventType, Parameters);
 							}
 						}
-
 						bReturnVal = true;
 					}
 				}
@@ -197,13 +188,11 @@ void UWvGameplayCueManager::ActInitializeRuntimeObjectLibrary()
 
 AGameplayCueNotify_Actor* UWvGameplayCueManager::GetInstancedCueActor(AActor* TargetActor, UClass* CueClass, const FGameplayCueParameters& Parameters)
 {
-	QUICK_SCOPE_CYCLE_COUNTER(STAT_SakuraGameplayCueManager_GetInstancedCueActor);
+	QUICK_SCOPE_CYCLE_COUNTER(STAT_WvGameplayCueManager_GetInstancedCueActor);
 
 	// First, see if this actor already have a GameplayCueNotifyActor already going for this CueClass
 	AGameplayCueNotify_Actor* CDO = Cast<AGameplayCueNotify_Actor>(CueClass->ClassDefaultObject);
-	FGCNotifyActorKey NotifyKey(TargetActor, CueClass,
-		CDO->bUniqueInstancePerInstigator ? Parameters.GetInstigator() : nullptr,
-		CDO->bUniqueInstancePerSourceObject ? Parameters.GetSourceObject() : nullptr);
+	FGCNotifyActorKey NotifyKey(TargetActor, CueClass, CDO->bUniqueInstancePerInstigator ? Parameters.GetInstigator() : nullptr, CDO->bUniqueInstancePerSourceObject ? Parameters.GetSourceObject() : nullptr);
 
 	AGameplayCueNotify_Actor* SpawnedCue = nullptr;
 	FVector  CueLocation = Parameters.Location;
@@ -359,4 +348,9 @@ void UWvGameplayCueManager::NotifyGameplayCueActorFinished(AGameplayCueNotify_Ac
 	Actor->Destroy();
 }
 
+
+AGameplayCueNotify_Actor* UWvGameplayCueManager::FindExistingCueOnActorContainer(const AActor& TargetActor, const TSubclassOf<AGameplayCueNotify_Actor>& CueClass, const FGameplayCueParameters& Parameters) const
+{
+	return FindExistingCueOnActor(TargetActor, CueClass, Parameters);
+}
 

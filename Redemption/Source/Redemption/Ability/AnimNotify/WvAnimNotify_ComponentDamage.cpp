@@ -46,9 +46,7 @@ void UWvAnimNotify_ComponentDamage::AbilityNotifyBegin(USkeletalMeshComponent* M
 				TracableActor->ShapeComponents
 			);
 
-			UE_LOG(LogTemp, Log, TEXT("TracableActor => %s, Animation => %s"), 
-				TracableActor ? *TracableActor->GetName() : TEXT("nullptr"), 
-				Animation ? *Animation->GetName() : TEXT("nullptr"));
+			//UE_LOG(LogTemp, Log, TEXT("TracableActor => %s, Animation => %s"), TracableActor ? *TracableActor->GetName() : TEXT("nullptr"), Animation ? *Animation->GetName() : TEXT("nullptr"));
 			BoneFrameTask->ReadyForActivation();
 			NotifyWeapon_Fire(MeshComp);
 		}

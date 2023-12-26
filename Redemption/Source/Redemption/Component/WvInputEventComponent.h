@@ -4,106 +4,11 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
-#include "GameplayTagContainer.h"
+#include "WvInputEventTypes.h"
 #include "WvAbilitySystemGlobals.h"
 #include "WvAbilitySystemComponentBase.h"
-#include "GameFramework/PlayerInput.h"
 #include "Character/PlayerCharacter.h"
 #include "WvInputEventComponent.generated.h"
-
-UENUM(BlueprintType)
-enum class EWvInputEventType : uint8
-{
-	Pressed	UMETA(DisplayName = "Pressed"),
-	Released UMETA(DisplayName = "Released"),
-	Clicked UMETA(DisplayName = "Clicked"),
-};
-
-USTRUCT(BlueprintType)
-struct FWvKey
-{
-	GENERATED_BODY()
-
-public:
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
-	FKey TriggerKey;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
-	FKey GamepadKey;
-};
-
-USTRUCT(BlueprintType)
-struct FWvPluralInputEventInfo
-{
-	GENERATED_BODY()
-
-public:
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
-	TArray<FWvKey> PrepositionInputKey;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
-	FWvKey TriggerInputKey;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
-	EWvInputEventType TriggerInputEventType;
-
-public:
-	FWvPluralInputEventInfo() : TriggerInputEventType(EWvInputEventType::Pressed) {}
-
-};
-
-USTRUCT(BlueprintType)
-struct FWvInputEvent : public FTableRowBase
-{
-	GENERATED_BODY()
-
-public:
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
-	FGameplayTag EventTag;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
-	FKey TriggerKey;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
-	FKey GamepadKey;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
-	FWvPluralInputEventInfo PluralInputEvent;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
-	bool bConsumeInput = true;
-
-protected:
-	FString Extend;
-	bool IsUseExtend{ false };
-	TArray<int32> BindingIndexs;
-	UPROPERTY()
-	TArray<FInputActionKeyMapping> ActionKeyMappings;
-
-public:
-	void AddBindingIndex(const int32 BindingIndex);
-	void AddInputActionKeyMapping(FInputActionKeyMapping& InputActionKeyMapping);
-	void SetAttachExtendToEventTag(const FString InExtend);
-
-	TArray<int32> GetBindingIndexs() const;
-	TArray<FInputActionKeyMapping> GetActionKeyMappings() const;
-	FString GetExtend() const;
-	FString GetEventTagNameWithExtend() const;
-	bool GetIsUseExtend() const;
-};
-
-UCLASS()
-class UWvInputEventCallbackInfo :public UObject
-{
-	GENERATED_BODY()
-
-public:
-	int PluralInputEventCount;
-	int CurInputEventCount;
-	FDateTime LastPressedTime;
-	FGameplayTag EventTag;
-	bool IsPress;
-};
 
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
@@ -113,21 +18,9 @@ class REDEMPTION_API UWvInputEventComponent : public UActorComponent
 
 public:	
 	UWvInputEventComponent();
-
-protected:
-	virtual void BeginPlay() override;
-
-public:	
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
-		
-protected:
-	virtual void InputCallBack(const FKey InputKey, const FName Key, const bool bPress);
-	virtual void PluralInputCallBack(const FKey InputKey, const FName Key, const bool bPress);
-	void PluralInputCallBackExecute(FGameplayTag EventTag, bool bPress);
-	void UpdateCachePluralInput();
-
-public:
 	void PostAscInitialize(class UAbilitySystemComponent* NewASC);
 	void BindInputEvent(UInputComponent* InInputComponent);
 	void InputKey(const FInputKeyParams& Params);
@@ -150,9 +43,17 @@ public:
 	void SetPermanentCacheInput(bool Enable);
 	void DynamicRegistInputKey(const FName Name, FWvInputEvent& InputEvent);
 	void DynamicUnRegistInputKey(const FName Name);
-
+	void SetInputModeType(const EWvInputMode NewInputMode);
+	EWvInputMode GetInputModeType() const;
 
 protected:
+	virtual void BeginPlay() override;
+
+	virtual void InputCallBack(const FKey InputKey, const FName Key, const bool bPress);
+	virtual void PluralInputCallBack(const FKey InputKey, const FName Key, const bool bPress);
+	void PluralInputCallBackExecute(FGameplayTag EventTag, bool bPress);
+	void UpdateCachePluralInput();
+
 	void ResetWaitTillEnd(class UGameplayAbility* WaitEndAbility = nullptr);
 	void WaitAbilityEnd(class UGameplayAbility* CallFromAbility, const struct FAbilityEndedData& EndedData);
 	void BindTableInput(const FName Key, FWvInputEvent& InputEvent);
@@ -160,7 +61,8 @@ protected:
 	void AddRegisterInputKey(const FName Key, const FWvKey KeyInfo);
 	FWvInputEvent* FindInputEvent(const FName Key);
 
-protected:
+	EWvInputMode InputMode;
+
 	UPROPERTY(EditDefaultsOnly, Category = "Table")
 	UDataTable* GeneralActionEventTable;
 
@@ -176,30 +78,21 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, config)
 	float CacheInputDuration;
 
-	bool IsNeedForceRebuildKeymaps{ false };
-
+private:
 	UPROPERTY()
 	TObjectPtr<class AWvPlayerController> PlayerController;
-	TWeakObjectPtr <class APlayerCharacter> PlayerCharacter;
-	TWeakObjectPtr<class UWvAbilitySystemComponent> AbilitySystemComponent;
-
-	FGameplayTagContainer RestrictInputEventTags;
-
-	bool bPermanentCacheInput = false;
-
-	FGameplayTag CacheInput = FGameplayTag::EmptyTag;
-
-	FCriticalSection CacheInputMutex;
-	FCriticalSection WaitMutex;
-	FDelegateHandle WaitCacheInputResetHandle;
 
 	UPROPERTY()
 	TArray<UDataTable*> AllRegistTables;
 
 	UPROPERTY()
 	TMap<FString, UDataTable*> Name2RegistTableDict;
-	TMap<FName, FWvInputEvent> DynamicRegistInputDict;
-	TMap<FName, FWvInputEvent> WaitDynamicRegistInputDict;
+
+	UPROPERTY()
+	TWeakObjectPtr <class APlayerCharacter> PlayerCharacter;
+
+	UPROPERTY()
+	TWeakObjectPtr<class UWvAbilitySystemComponent> ASC;
 
 	UPROPERTY()
 	class UInputComponent* InputComponent;
@@ -208,13 +101,25 @@ protected:
 	class UInputSettings* InputSettingsCDO;
 
 	UPROPERTY()
+	TArray<UWvInputEventCallbackInfo*> CachePluralInputArray;
+
+	bool IsNeedForceRebuildKeymaps{ false };
+	bool bPermanentCacheInput = false;
+
+	FGameplayTagContainer RestrictInputEventTags;
+	FGameplayTag CacheInput = FGameplayTag::EmptyTag;
+	FCriticalSection CacheInputMutex;
+	FCriticalSection WaitMutex;
+	FDelegateHandle WaitCacheInputResetHandle;
+
+	TMap<FName, FWvInputEvent> DynamicRegistInputDict;
+	TMap<FName, FWvInputEvent> WaitDynamicRegistInputDict;
+
+	UPROPERTY()
 	TMap<FName, UWvInputEventCallbackInfo*> InputEventCallbackInfoMap;
 	TMap<FKey, TArray<FName>> RegisterInputKeyMap;
 
-private:
-	FTimerHandle ClearCacheInputTimerHandle;
+	FTimerHandle ClearCacheInput_TimerHandle;
 	float InputDelayTime = 0.1f; //s
 
-	UPROPERTY()
-	TArray<UWvInputEventCallbackInfo*> CachePluralInputArray;
 };

@@ -54,11 +54,6 @@ void APlayerCharacter::BeginPlay()
 	//Add Input Mapping Context
 	if (AWvPlayerController* PC = Cast<AWvPlayerController>(Controller))
 	{
-		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PC->GetLocalPlayer()))
-		{
-			Subsystem->AddMappingContext(DefaultMappingContext, 0);
-		}
-
 		PC->OnInputEventGameplayTagTrigger_Game.AddDynamic(this, &APlayerCharacter::GameplayTagTrigger_Callback);
 		PC->OnPluralInputEventTrigger.AddDynamic(this, &APlayerCharacter::OnPluralInputEventTrigger_Callback);
 	}
@@ -79,7 +74,35 @@ void APlayerCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	WvCameraFollowComponent->OnTargetLockedOn.RemoveDynamic(this, &APlayerCharacter::OnTargetLockedOn_Callback);
 	WvCameraFollowComponent->OnTargetLockedOff.RemoveDynamic(this, &APlayerCharacter::OnTargetLockedOff_Callback);
 	LocomotionComponent->OnOverlayChangeDelegate.RemoveDynamic(this, &APlayerCharacter::OverlayStateChange_Callback);
+
 	Super::EndPlay(EndPlayReason);
+}
+
+void APlayerCharacter::PossessedBy(AController* NewController)
+{
+	Super::PossessedBy(NewController);
+
+	if (AWvPlayerController* PC = Cast<AWvPlayerController>(Controller))
+	{
+		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PC->GetLocalPlayer()))
+		{
+			Subsystem->AddMappingContext(DefaultMappingContext, 0);
+		}
+	}
+}
+
+void APlayerCharacter::UnPossessed()
+{
+	if (AWvPlayerController* PC = Cast<AWvPlayerController>(Controller))
+	{
+		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PC->GetLocalPlayer()))
+		{
+			FModifyContextOptions Options;
+			Subsystem->RemoveMappingContext(DefaultMappingContext, Options);
+		}
+	}
+
+	Super::UnPossessed();
 }
 
 void APlayerCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent)
@@ -159,17 +182,20 @@ void APlayerCharacter::ToggleRotationMode(const FInputActionValue& Value)
 void APlayerCharacter::ToggleAimMode(const FInputActionValue& Value)
 {
 	float HoldValue = Value.Get<float>();
-
 	const auto LocomotionEssencialVariables = LocomotionComponent->GetLocomotionEssencialVariables();
 	DoStartAiming();
-	//if (!LocomotionEssencialVariables.bAiming)
-	//{
-	//	DoStartAiming();
-	//}
-	//else
-	//{
-	//	DoStopAiming();
-	//}
+
+#if false
+	if (!LocomotionEssencialVariables.bAiming)
+	{
+		DoStartAiming();
+	}
+	else
+	{
+		DoStopAiming();
+	}
+#endif
+
 }
 
 void APlayerCharacter::ToggleStanceMode()
@@ -254,6 +280,13 @@ void APlayerCharacter::GameplayTagTrigger_Callback(const FGameplayTag Tag, const
 	else if (Tag == TAG_Character_ActionDash)
 	{
 		HandleSprinting(bIsPress);
+	}
+	else if (Tag == TAG_Character_ActionDrive)
+	{
+		if (bIsPress)
+		{
+			HandleDriveAction();
+		}
 	}
 }
 

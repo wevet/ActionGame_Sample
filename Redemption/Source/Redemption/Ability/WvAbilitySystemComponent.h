@@ -42,7 +42,6 @@ public:
 
 	TArray<FAnimatingAbilityNotify> AnimatingAbilityNotifys;
 
-	void ApplyEffectToSelf(UWvAbilitySystemComponent* InstigatorASC, UWvAbilityEffectDataAsset* EffectData, const int32 EffectGroupIndex);
 	void AbilityNotifyBegin(class UWvAnimNotifyState* Notify, class UWvGameplayAbility* DebugAbility = nullptr);
 	void AbilityNotifyEnd(class UWvAnimNotifyState* Notify);
 	int32 GetDefaultAbilityLevel() const;

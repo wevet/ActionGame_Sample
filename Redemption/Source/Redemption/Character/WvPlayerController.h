@@ -14,6 +14,8 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FPluralInputEventTriggerDelegate, F
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FInputEventGameplayTagExtendDelegate, FString, GameplayTagWithExtend, bool, IsPressed);
 
 class APlayerCharacter;
+class AWvWheeledVehiclePawn;
+
 /**
  * 
  */
@@ -25,6 +27,7 @@ class REDEMPTION_API AWvPlayerController : public APlayerController, public IWvA
 public:
 	AWvPlayerController(const FObjectInitializer& ObjectInitializer);
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+	virtual void Tick(float DeltaTime) override;
 
 	//~IWvAbilityTargetInterface interface
 	virtual void SetGenericTeamId(const FGenericTeamId& NewTeamID) override;
@@ -44,6 +47,11 @@ protected:
 public:
 	class UWvInputEventComponent* GetInputEventComponent() const;
 	void PostAscInitialize(UAbilitySystemComponent* ASC);
+	void SetInputModeType(const EWvInputMode NewInputMode);
+	EWvInputMode GetInputModeType() const;
+
+	void OnVehilcePossess(APawn* InPawn);
+	void OnVehicleUnPossess();
 
 public:
 	//All keys pressed will be notified
@@ -71,10 +79,25 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PlayerController|Config")
 	int32 OverrideSquadID = 1;
 
+	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "Vehicle")
+	void BP_VehilcePossess(APawn* InPawn);
+
+	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "Vehicle")
+	void BP_VehicleUnPossess();
+
+	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "Vehicle")
+	void BP_VPCDrawHUD();
+
 private:
-	class APlayerCharacter* PC;
+	UPROPERTY()
+	TObjectPtr<class APlayerCharacter> PC;
+
+	UPROPERTY()
+	TObjectPtr<class AWvWheeledVehiclePawn> VPC;
 
 	UPROPERTY()
 	FOnTeamIndexChangedDelegate OnTeamChangedDelegate;
+
+	void VPCDrawHUD();
 };
 

@@ -18,13 +18,6 @@ enum class EIKType : uint8
 };
 
 UENUM(BlueprintType)
-enum class ECustomRefPoseType : uint8
-{
-	Animated UMETA(DisplayName = "Animated"),
-	Rest UMETA(DisplayName = "Rest")
-};
-
-UENUM(BlueprintType)
 enum class ESolverComplexityType : uint8
 {
 	/*

@@ -130,10 +130,6 @@ void UWvAnimInstance::NativeThreadSafeUpdateAnimation(float DeltaSeconds)
 {
 	Super::NativeThreadSafeUpdateAnimation(DeltaSeconds);
 
-	if (Character.IsValid())
-	{
-		TrajectorySampleRange = Character->GetTrajectorySampleRange();
-	}
 
 	if (IsValid(CharacterMovementComponent))
 	{
@@ -147,6 +143,7 @@ void UWvAnimInstance::NativeThreadSafeUpdateAnimation(float DeltaSeconds)
 		CharacterOverlayInfo.ChooseStanceMode(LocomotionEssencialVariables.LSStance == ELSStance::Standing);
 		CharacterOverlayInfo.ModifyAnimCurveValue(this);
 		Speed = LocomotionEssencialVariables.Velocity.Size();
+
 		bHasVelocity = LocomotionEssencialVariables.bWasMoving;
 		OverlayState = LocomotionEssencialVariables.OverlayState;
 
@@ -166,9 +163,9 @@ void UWvAnimInstance::NativeThreadSafeUpdateAnimation(float DeltaSeconds)
 			LSMovementMode = CurMovementMode;
 		}
 
-		WalkingSpeed = LocomotionComponent->GetWalkingSpeed_Implementation();
-		RunningSpeed = LocomotionComponent->GetRunningSpeed_Implementation();
-		SprintingSpeed = LocomotionComponent->GetSprintingSpeed_Implementation();
+		WalkingSpeed = LocomotionComponent->GetWalkingSpeed();
+		RunningSpeed = LocomotionComponent->GetRunningSpeed();
+		SprintingSpeed = LocomotionComponent->GetSprintingSpeed();
 	}
 
 	switch (LSMovementMode)
@@ -210,11 +207,11 @@ void UWvAnimInstance::InitializeWithAbilitySystem(UAbilitySystemComponent* ASC)
 }
 
 #if WITH_EDITOR
-EDataValidationResult UWvAnimInstance::IsDataValid(TArray<FText>& ValidationErrors)
+EDataValidationResult UWvAnimInstance::IsDataValid(class FDataValidationContext& Context) const
 {
-	Super::IsDataValid(ValidationErrors);
-	GameplayTagPropertyMap.IsDataValid(this, ValidationErrors);
-	return ((ValidationErrors.Num() > 0) ? EDataValidationResult::Invalid : EDataValidationResult::Valid);
+	auto Result = Super::IsDataValid(Context);
+	GameplayTagPropertyMap.IsDataValid(this, Context);
+	return Result;
 }
 #endif
 

@@ -45,8 +45,6 @@ class WVABILITYSYSTEM_API IWvAbilityTargetInterface : public IGenericTeamAgentIn
 	GENERATED_IINTERFACE_BODY()
 
 public:
-	virtual ECharacterRelation GetRelationWithSelfImpl(const IWvAbilityTargetInterface* Other) const;
-    virtual bool CanAsTarget(const IWvAbilityTargetInterface* Source, const FWvTargetDataFilter* TargetDataFilter) const;
     virtual USceneComponent* GetOverlapBaseComponent();
 	virtual FGameplayTag GetAvatarTag() const;
 	virtual FGameplayEffectQuery GetHitEffectQuery();
@@ -66,6 +64,10 @@ public:
 
 	virtual void Freeze() {};
 	virtual void UnFreeze() {};
+
+	virtual void DoAttack() {};
+	virtual void DoResumeAttack() {};
+	virtual void DoStopAttack() {};
 
 	FAbilityDeadAnimProcessForEventDelegate OnDeadAnimBeginPlay;
 	FAbilityDeadAnimProcessForEventDelegate OnDeadAnimFinish;
@@ -108,6 +110,9 @@ class WVABILITYSYSTEM_API UWvEnvironmentInterface : public UInterface
 class WVABILITYSYSTEM_API IWvEnvironmentInterface
 {
 	GENERATED_IINTERFACE_BODY()
+
+public:
+	virtual void OnReceiveAbilityAttack(AActor* Attacker, const FHitResult& HitResult) {};
 };
 
 

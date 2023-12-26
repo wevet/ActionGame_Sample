@@ -18,6 +18,8 @@
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemGlobals.h"
 #include "Materials/MaterialInstanceDynamic.h"
+#include "PhysicsEngine/PhysicsSettings.h"
+#include "PhysicalMaterials/PhysicalMaterial.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(WvCommonUtils)
 
@@ -367,4 +369,61 @@ const FString UWvCommonUtils::NormalizeFileName(const FString& String)
 	return Ret;
 }
 
+bool UWvCommonUtils::Probability(const float InPercent)
+{
+	const float ProbabilityRate = FMath::RandRange(0.f, 100.0f);
+	if (InPercent == 100.0f && ProbabilityRate == InPercent)
+	{
+		return true;
+	}
+	else if (ProbabilityRate < InPercent)
+	{
+		return true;
+	}
+	return false;
+}
+
+const FName UWvCommonUtils::GetSurfaceName(TEnumAsByte<EPhysicalSurface> SurfaceType)
+{
+	if (SurfaceType == SurfaceType_Default)
+	{
+		return TEXT("Default");
+	}
+
+	const FPhysicalSurfaceName* FoundSurface = UPhysicsSettings::Get()->PhysicalSurfaces.FindByPredicate([&](const FPhysicalSurfaceName& SurfaceName)
+	{
+		return SurfaceName.Type == SurfaceType;
+	});
+
+	if (FoundSurface)
+	{
+		return FoundSurface->Name;
+	}
+
+	return TEXT("Default");
+}
+
+AActor* UWvCommonUtils::FindNearestDistanceTarget(AActor* Owner, TArray<AActor*> Actors, const float ClosestTargetDistance)
+{
+	// From the hit actors, check distance and return the nearest
+	if (Actors.Num() <= 0)
+	{
+		return nullptr;
+	}
+
+	float ClosestDistance = ClosestTargetDistance;
+	AActor* Target = nullptr;
+	for (int32 Index = 0; Index < Actors.Num(); ++Index)
+	{
+		const float Distance2D = (Owner->GetActorLocation() - Actors[Index]->GetActorLocation()).Size2D();
+		UE_LOG(LogTemp, Log, TEXT("ClosestDistance => %.3f, Distance2D => %.3f"), ClosestDistance, Distance2D);
+
+		if (Distance2D < ClosestDistance)
+		{
+			ClosestDistance = Distance2D;
+			Target = Actors[Index];
+		}
+	}
+	return Target;
+}
 

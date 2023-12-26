@@ -20,7 +20,7 @@ class REDEMPTION_API UWvAT_BulletDamage : public UWvAbilityTask
 	
 public:
 	UFUNCTION(BlueprintCallable, Category = "Ability|Tasks", meta = (HidePin = "OwningAbility", DefaultToSelf = "OwningAbility", BlueprintInternalUseOnly = "TRUE"))
-	static UWvAT_BulletDamage* ComponentFrameAction(UGameplayAbility* OwningAbility, const FName TaskName, const float TotalDuration, const float Randomize, const TArray<int32> EffectIdxs);
+	static UWvAT_BulletDamage* ComponentFrameAction(UGameplayAbility* OwningAbility, const FName TaskName, const float TotalDuration, const float Randomize, const int32 EffectIdx);
 
 	virtual void Activate() override;
 
@@ -31,7 +31,7 @@ public:
 	
 
 protected:
-	TArray<int32> EffectGroupIndexs;
+	int32 EffectGroupIndex = 0;
 	float DurationTime;
 	float NotifyTime;
 	float Randomize;
@@ -51,7 +51,7 @@ protected:
 
 private:
 	void Execute();
-	void LineOfSightTraceExecute(const int32 EffectGroupIndex);
+	void LineOfSightTraceExecute();
 
 	void InternalEndTask();
 };

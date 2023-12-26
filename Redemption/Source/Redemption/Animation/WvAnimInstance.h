@@ -93,7 +93,7 @@ public:
 	UWvAnimInstance(const FObjectInitializer& ObjectInitializer);
 
 #if WITH_EDITOR
-	virtual EDataValidationResult IsDataValid(TArray<FText>& ValidationErrors) override;
+	virtual EDataValidationResult IsDataValid(class FDataValidationContext& Context) const override;
 #endif
 	virtual void NativeInitializeAnimation() override;
 	virtual void NativeUpdateAnimation(float DeltaSeconds) override;
@@ -215,9 +215,6 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "DistanceMatching")
 	float GroundDistanceThreshold = 150.0f;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "MotionMatching")
-	FTrajectorySampleRange TrajectorySampleRange;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Climbing")
 	bool bIsClimbing;

@@ -10,6 +10,9 @@
 #include "Framework/Commands/UIAction.h"
 #include "ToolMenus.h"
 #include "Kismet2/BlueprintEditorUtils.h"
+#include "Framework/Application/SlateApplication.h"
+#include "Widgets/Input/STextEntryPopup.h"
+#include "PersonaModule.h"
 
 #define LOCTEXT_NAMESPACE "CacheCurveForFootIK"
 
@@ -38,6 +41,9 @@ TArray<FName> UAnimGraphNode_CacheCurveForFootIK::GetCurvesToAdd() const
 {
 	TArray<FName> CurvesToAdd;
 
+#if  (ENGINE_MAJOR_VERSION < 5 || ENGINE_MINOR_VERSION >= 3)
+
+#else
 	const FSmartNameMapping* Mapping = GetAnimBlueprint()->TargetSkeleton->GetSmartNameContainer(USkeleton::AnimCurveMappingName);
 	if (Mapping)
 	{
@@ -50,18 +56,64 @@ TArray<FName> UAnimGraphNode_CacheCurveForFootIK::GetCurvesToAdd() const
 
 		CurvesToAdd.Sort(FNameLexicalLess());
 	}
-
+#endif
 	return CurvesToAdd;
 }
 
 void UAnimGraphNode_CacheCurveForFootIK::GetAddCurveMenuActions(FMenuBuilder& MenuBuilder) const
 {
+#if  (ENGINE_MAJOR_VERSION < 5 || ENGINE_MINOR_VERSION >= 3)
+
+	MenuBuilder.AddMenuEntry(
+		LOCTEXT("NewCurveLabel", "New Curve..."),
+		LOCTEXT("NewCurveToolTip", "Adds a new curve to modify"),
+		FSlateIcon(),
+		FUIAction(FExecuteAction::CreateLambda([this]()
+	{
+		FSlateApplication::Get().DismissAllMenus();
+
+		TSharedRef<STextEntryPopup> TextEntry =
+			SNew(STextEntryPopup)
+			.Label(LOCTEXT("NewCurvePopupLabel", "New Curve Name"))
+			.OnTextCommitted_Lambda([this](FText InText, ETextCommit::Type InCommitType)
+		{
+			FSlateApplication::Get().DismissAllMenus();
+			const_cast<UAnimGraphNode_CacheCurveForFootIK*>(this)->AddCurvePin(*InText.ToString());
+		});
+
+			FSlateApplication& SlateApp = FSlateApplication::Get();
+			SlateApp.PushMenu(
+				SlateApp.GetInteractiveTopLevelWindows()[0],
+				FWidgetPath(),
+				TextEntry,
+				SlateApp.GetCursorPos(),
+				FPopupTransitionEffect::TypeInPopup
+			);
+		}))
+	);
+
+	FPersonaModule& PersonaModule = FModuleManager::LoadModuleChecked<FPersonaModule>("Persona");
+	TSharedRef<SWidget> CurvePicker = PersonaModule.CreateCurvePicker(GetAnimBlueprint()->TargetSkeleton,
+		FOnCurvePicked::CreateLambda([this](const FName& InName)
+	{
+		FSlateApplication::Get().DismissAllMenus();
+		const_cast<UAnimGraphNode_CacheCurveForFootIK*>(this)->AddCurvePin(InName);
+	}),
+		FIsCurveNameMarkedForExclusion::CreateLambda([this](const FName& InName)
+	{
+		return Node.CurveNames.Contains(InName);
+	}));
+
+	MenuBuilder.AddWidget(CurvePicker, FText::GetEmpty(), true, false);
+
+#else
 	TArray<FName> CurvesToAdd = GetCurvesToAdd();
 	for (FName CurveName : CurvesToAdd)
 	{
 		FUIAction Action = FUIAction(FExecuteAction::CreateUObject(const_cast<UAnimGraphNode_CacheCurveForFootIK*>(this), &UAnimGraphNode_CacheCurveForFootIK::AddCurvePin, CurveName));
 		MenuBuilder.AddMenuEntry(FText::FromName(CurveName), FText::GetEmpty(), FSlateIcon(), Action);
 	}
+#endif
 }
 
 void UAnimGraphNode_CacheCurveForFootIK::GetRemoveCurveMenuActions(FMenuBuilder& MenuBuilder) const

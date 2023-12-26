@@ -3,6 +3,8 @@
 #include "AnimNode_CacheCurveForFootIK.h"
 #include "AnimationRuntime.h"
 #include "Animation/AnimInstanceProxy.h"
+#include "Animation/AnimBulkCurves.h"
+#include "Runtime/Launch/Resources/Version.h"
 
 FAnimNode_CacheCurveForFootIK::FAnimNode_CacheCurveForFootIK()
 {
@@ -55,9 +57,24 @@ void FAnimNode_CacheCurveForFootIK::Evaluate_AnyThread(FPoseContext& Output)
 	USkeleton* Skeleton = Output.AnimInstanceProxy->GetSkeleton();
 	check(CurveNames.Num() == CurveValues.Num());
 
+#if  (ENGINE_MAJOR_VERSION < 5 || ENGINE_MINOR_VERSION >= 3)
+	UAnimInstance* AnimInstance = Cast<UAnimInstance>(Output.AnimInstanceProxy->GetAnimInstanceObject());
+	if (AnimInstance)
+	{
+		for (int32 ModIdx = 0; ModIdx < CurveNames.Num(); ModIdx++)
+		{
+			FName CurveName = CurveNames[ModIdx];
+			float CurrentValue = 0.f;
+			AnimInstance->GetCurveValue(CurveName, CurrentValue);
+			PredictionFootIKComponent->SetCurveValue(Gait, FinalWeight, CurveName, CurrentValue);
+		}
+	}
+
+#else
 	for (int32 ModIdx = 0; ModIdx < CurveNames.Num(); ModIdx++)
 	{
 		FName CurveName = CurveNames[ModIdx];
+
 		SmartName::UID_Type NameUID = Skeleton->GetUIDByName(USkeleton::AnimCurveMappingName, CurveName);
 		if (NameUID != SmartName::MaxUID)
 		{
@@ -65,6 +82,8 @@ void FAnimNode_CacheCurveForFootIK::Evaluate_AnyThread(FPoseContext& Output)
 			PredictionFootIKComponent->SetCurveValue(Gait, FinalWeight, CurveName, CurrentValue);
 		}
 	}
+#endif
+
 }
 
 void FAnimNode_CacheCurveForFootIK::GatherDebugData(FNodeDebugData& DebugData)

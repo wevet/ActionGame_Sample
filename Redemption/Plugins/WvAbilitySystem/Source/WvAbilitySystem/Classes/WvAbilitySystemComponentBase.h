@@ -18,6 +18,9 @@ class WVABILITYSYSTEM_API UWvAbilitySystemComponentBase : public UAbilitySystemC
 	GENERATED_BODY()
 
 public:
+	UWvAbilitySystemComponentBase();
+
+public:
 	UFUNCTION(BlueprintCallable)
 	FGameplayAbilitySpecHandle ApplyGiveAbility(class UWvAbilityDataAsset* AbilityData, float DamageMotion = 1.0f);
 
@@ -59,9 +62,6 @@ public:
 	void GetGameplayEffectGameplayCues(FActiveGameplayEffectHandle Handle, TArray<FGameplayEffectCue>& OutGameplayCues);
 
 	UFUNCTION(BlueprintCallable)
-	class UGameplayEffectUIData* GetGameplayEffectUIData(FActiveGameplayEffectHandle Handle) const;
-
-	UFUNCTION(BlueprintCallable)
 	TArray<FActiveGameplayEffectHandle> GetActiveEffectsWithAnyTags(FGameplayTagContainer Tags) const;
 
 	FGameplayAbilitySpec* FindAbilitySpecFromDataAsset(class UWvAbilityDataAsset* InAbilityData);
@@ -85,10 +85,10 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Ability")
 	void RemoveGameplayTag(const FGameplayTag& GameplayTag, int32 Count = 1);
 
-	virtual void PluralInputTriggerInputEvent(const FGameplayTag Tag);
-
 	bool SetNumericAttributeBaseByName(const FString& AttributeName, float NewBaseValue);
 	float GetNumericAttributeBaseByName(const FString& AttributeName) const;
+
+	void ApplyEffectToSelf(UWvAbilitySystemComponentBase* InstigatorASC, UWvAbilityEffectDataAsset* EffectData, const int32 EffectGroupIndex);
 
 	TArray<FActiveGameplayEffectHandle> MakeEffectToTargetData(FGameplayEffectContextHandle& EffectContexHandle, FGameplayAbilityTargetDataHandle& TargetDataHandle, const FGameplayEffectQuery& Query);
 

@@ -3,32 +3,18 @@
 #include "AISystemTypes.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Kismet/KismetMathLibrary.h"
+#include "Tasks/Task.h"
 
+using namespace UE::Tasks;
 
-FAIPerceptionTask::FAIPerceptionTask(const float InTimer, const bool IsTimerUpdate, TFunction<void(void)> InFinishDelegate)
+#pragma region PerceptionTask
+FAIPerceptionTask::FAIPerceptionTask(const float InTimer, const FName InTaskName, TFunction<void(void)> InFinishDelegate)
 {
 	Timer = InTimer;
-	bIsTimerUpdate = IsTimerUpdate;
 	FinishDelegate = InFinishDelegate;
-	Interval = 0.f;
+	TaskName = InTaskName;
 	bIsValid = false;
-}
-
-void FAIPerceptionTask::Initialize()
-{
-	bIsValid = true;
-}
-
-void FAIPerceptionTask::Update(const float DeltaTime)
-{
-	if (bIsTimerUpdate)
-	{
-		Interval += DeltaTime;
-		if (Interval >= Timer)
-		{
-			Finish();
-		}
-	}
+	bIsNeedTimer = (InTimer > 0.f);
 }
 
 /// <summary>
@@ -36,25 +22,107 @@ void FAIPerceptionTask::Update(const float DeltaTime)
 /// </summary>
 void FAIPerceptionTask::Abort()
 {
-	Finish();
+	Finish_Internal();
 }
 
 void FAIPerceptionTask::Finish()
 {
-	bIsValid = false;
-	if (FinishDelegate)
+	Finish_Internal();
+}
+
+void FAIPerceptionTask::Finish_Internal()
+{
+	if (IsInGameThread())
 	{
-		FinishDelegate();
+		bIsValid = false;
+		if (FinishDelegate)
+		{
+			FinishDelegate();
+			UE_LOG(LogTemp, Log, TEXT("Finish => %s"), *TaskName.ToString());
+		}
 	}
 }
 
 bool FAIPerceptionTask::IsRunning() const
 {
-	if (bIsTimerUpdate)
+	if (!bIsNeedTimer)
 	{
-		return (Interval < Timer) && bIsValid;
+		return true;
 	}
 	return bIsValid;
 }
+
+void FAIPerceptionTask::Start()
+{
+	bIsValid = true;
+	if (!bIsNeedTimer)
+	{
+		UE_LOG(LogTemp, Log, TEXT("infinity task => %s"), *TaskName.ToString());
+		return;
+	}
+
+	Launch(TEXT("AIPerceptionTask Launch"), [&]
+	{
+		FPlatformProcess::Sleep(Timer);
+		Finish_Internal();
+	});
+}
+#pragma endregion
+
+
+#pragma region LeaderTask
+/// <summary>
+/// leader task wip
+/// </summary>
+FAILeaderTask::FAILeaderTask()
+{
+	FTaskEvent Event{ TEXT("Event") };
+
+	// TaskEventをLaunchで引数の最後に渡す
+	Launch(TEXT("Task Event"), []
+	{
+		UE_LOG(LogTemp, Log, TEXT("TaskEvent Completed"));
+	}, 
+	Event);
+
+	// イベントとして登録されているタスクをトリガーして実行する
+	Event.Trigger();
+}
+
+void FAILeaderTask::Notify()
+{
+	// タスクAを起動
+	FTask TaskA = Launch(TEXT("Task Prereqs TaskA"), []
+	{
+		FPlatformProcess::Sleep(1.0f);
+		UE_LOG(LogTemp, Log, TEXT("TaskA End"));
+	});
+
+	// タスクBとタスクCはタスクAが完了するまでは起動しない
+	FTask TaskB = Launch(TEXT("Task Prereqs TaskB"), [] 
+	{
+		FPlatformProcess::Sleep(0.2f);
+		UE_LOG(LogTemp, Log, TEXT("TaskB End"));
+	}, 
+	TaskA);
+
+	FTask TaskC = Launch(TEXT("Task Prereqs TaskC"), []
+	{
+		FPlatformProcess::Sleep(0.5f);
+		UE_LOG(LogTemp, Log, TEXT("TaskC End"));
+	}, 
+	TaskA);
+
+	// タスクDはタスクBとタスクCが完了するまでは起動しない
+	FTask TaskD = Launch(TEXT("Task Prereqs TaskD"), []
+	{
+		UE_LOG(LogTemp, Log, TEXT("TaskD End"));
+	}, 
+	Prerequisites(TaskB, TaskC));
+
+	TaskD.Wait();
+	UE_LOG(LogTemp, Log, TEXT("Task Prerequisites End"));
+}
+#pragma endregion
 
 

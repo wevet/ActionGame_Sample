@@ -15,8 +15,7 @@ class WVABILITYSYSTEM_API UWvGameplayCueSet : public UGameplayCueSet
 	GENERATED_BODY()
 
 protected:
-
-	virtual bool HandleGameplayCueNotify_Internal(AActor* TargetActor, int32 DataIdx, EGameplayCueEvent::Type EventType, FGameplayCueParameters& Parameters);
+	virtual bool HandleGameplayCueNotify_Internal(AActor* TargetActor, int32 DataIdx, EGameplayCueEvent::Type EventType, FGameplayCueParameters& Parameters) override;
 };
 
 
@@ -37,9 +36,13 @@ public:
 
 	virtual void OnCreated() override;
 	virtual bool ShouldAsyncLoadObjectLibrariesAtStart() const override { return false; }
-	// @TODO
-	//virtual bool ShouldAsyncLoadRuntimeObjectLibraries() const override { return false; }
+
+	AGameplayCueNotify_Actor* FindExistingCueOnActorContainer(const AActor& TargetActor, const TSubclassOf<AGameplayCueNotify_Actor>& CueClass, const FGameplayCueParameters& Parameters) const;
 
 public:
+	// @TODO
 	TMap<FGCNotifyActorKey, TSet<AGameplayCueNotify_Actor*> > NotifyMapActorList;
+
+	// wip
+	TSet<AGameplayCueNotify_Actor*> NotifyMapActorHash;
 };

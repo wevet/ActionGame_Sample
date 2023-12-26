@@ -37,6 +37,8 @@ bool UWvCueConfigDataAssest::GetDamageCueConfigRow(const FGameplayTag& AvatarTag
 		return false;
 	}
 
+	//UE_LOG(LogTemp, Log, TEXT("AvatarTag => %s, CueTag => %s"), *AvatarTag.GetTagName().ToString(), *CueTag.GetTagName().ToString());
+
 	bool bIsSuccess = false;
 	TArray<FWvDamageCueConfigRow*> AllRows;
 	DamageCueConfigTable->GetAllRows<FWvDamageCueConfigRow>(TEXT("FWvDamageCueConfigRow"), AllRows);

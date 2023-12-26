@@ -5,55 +5,14 @@
 #include "GameFramework/InputSettings.h"
 #include "Redemption.h"
 
-#pragma region FWvInputEvent
-TArray<int32> FWvInputEvent::GetBindingIndexs() const
-{
-	return BindingIndexs; 
-}
-
-TArray<FInputActionKeyMapping> FWvInputEvent::GetActionKeyMappings() const
-{
-	return ActionKeyMappings; 
-}
-
-FString FWvInputEvent::GetExtend() const
-{
-	return Extend; 
-}
-
-FString FWvInputEvent::GetEventTagNameWithExtend() const
-{
-	return EventTag.ToString() + GetExtend(); 
-}
-
-bool FWvInputEvent::GetIsUseExtend() const
-{
-	return IsUseExtend; 
-}
-
-void FWvInputEvent::AddBindingIndex(const int32 BindingIndex)
-{
-	BindingIndexs.Add(BindingIndex);
-}
-
-void FWvInputEvent::AddInputActionKeyMapping(FInputActionKeyMapping& InputActionKeyMapping)
-{
-	ActionKeyMappings.Add(InputActionKeyMapping);
-}
-
-void FWvInputEvent::SetAttachExtendToEventTag(const FString InExtend)
-{
-	Extend = InExtend;
-	IsUseExtend = true;
-}
-#pragma endregion
-
 #include UE_INLINE_GENERATED_CPP_BY_NAME(WvInputEventComponent)
 
 UWvInputEventComponent::UWvInputEventComponent()
 {
 	PrimaryComponentTick.bCanEverTick = true;
-	ClearCacheInputTimerHandle.Invalidate();
+	ClearCacheInput_TimerHandle.Invalidate();
+
+	InputMode = EWvInputMode::GameOnly;
 }
 
 void UWvInputEventComponent::BeginPlay()
@@ -61,6 +20,16 @@ void UWvInputEventComponent::BeginPlay()
 	Super::BeginPlay();
 	bPermanentCacheInput = false;
 	PlayerController = Cast<AWvPlayerController>(GetOuter());
+}
+
+void UWvInputEventComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	FTimerManager& TM = GetWorld()->GetTimerManager();
+	TM.ClearTimer(ClearCacheInput_TimerHandle);
+
+	PlayerCharacter.Reset();
+	ASC.Reset();
+	Super::EndPlay(EndPlayReason);
 }
 
 void UWvInputEventComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
@@ -78,19 +47,19 @@ void UWvInputEventComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 
 void UWvInputEventComponent::PostAscInitialize(UAbilitySystemComponent* NewASC)
 {
-	if (AbilitySystemComponent.IsValid())
+	if (ASC.IsValid())
 	{
-		AbilitySystemComponent.Reset();
+		ASC.Reset();
 	}
 
-	AbilitySystemComponent = Cast<UWvAbilitySystemComponent>(NewASC);
+	ASC = Cast<UWvAbilitySystemComponent>(NewASC);
 
 	if (RestrictInputEventTags.IsEmpty())
 	{
 		//RestrictInputEventTags = ABILITY_GLOBAL()->RestrictInputEventTags;
 	}
 
-	PlayerCharacter = Cast<APlayerCharacter>(AbilitySystemComponent->GetAvatarActor());
+	PlayerCharacter = Cast<APlayerCharacter>(ASC->GetAvatarActor());
 }
 
 void UWvInputEventComponent::BindInputEvent(UInputComponent* InInputComponent)
@@ -124,7 +93,6 @@ void UWvInputEventComponent::BindInputEvent(UInputComponent* InInputComponent)
 		InputTable->GetAllRows<FWvInputEvent>("FWvInputEvent", InputEvents);
 
 		TArray<FName> InputEventNames = InputTable->GetRowNames();
-
 		for (int32 JIndex = 0; JIndex < InputEvents.Num(); ++JIndex)
 		{
 			FWvInputEvent InputEvent = *InputEvents[JIndex];
@@ -140,12 +108,6 @@ void UWvInputEventComponent::BindInputEvent(UInputComponent* InInputComponent)
 		{
 			DynamicRegistInputKey(Pair.Key, Pair.Value);
 		}
-		//for (TMap<FName, FWvInputEvent>::TConstIterator It = WaitDynamicRegistInputDict; It; ++It)
-		//{
-		//	FWvInputEvent Value = It.Value();
-		//	DynamicRegistInputKey(It.Key(), Value);
-		//}
-
 		WaitDynamicRegistInputDict.Empty();
 	}
 
@@ -253,7 +215,6 @@ void UWvInputEventComponent::BindTableInput(const FName Key, FWvInputEvent& Inpu
 		{
 			InputCallBack(inputKey, Key, true); 
 		});
-
 		ActionBinding.ActionDelegate = ActionHandler;
 		ActionBinding.bConsumeInput = InputEvent.bConsumeInput;
 		InputEvent.AddBindingIndex(InputComponent->AddActionBinding(ActionBinding).GetHandle());
@@ -265,7 +226,6 @@ void UWvInputEventComponent::BindTableInput(const FName Key, FWvInputEvent& Inpu
 		{
 			InputCallBack(inputKey, Key, false); 
 		});
-
 		ActionBinding.ActionDelegate = ActionHandler;
 		ActionBinding.bConsumeInput = InputEvent.bConsumeInput;
 		InputEvent.AddBindingIndex(InputComponent->AddActionBinding(ActionBinding).GetHandle());
@@ -332,36 +292,30 @@ void UWvInputEventComponent::AddRegisterInputKey(const FName Key, const FWvKey K
 void UWvInputEventComponent::TriggerCacheInputEvent(UGameplayAbility* CallFromAbility)
 {
 	//only local has valid data
-	if (CacheInput == FGameplayTag::EmptyTag || !AbilitySystemComponent.IsValid() || !PlayerController.Get())
+	if (CacheInput == FGameplayTag::EmptyTag || !ASC.IsValid() || !PlayerController.Get())
 	{
 		return;
 	}
 
 	const bool bHasStillPressing = InputKeyDownControl(CacheInput);
-	AbilitySystemComponent->PressTriggerInputEvent(CacheInput, true, bHasStillPressing);
+	ASC->PressTriggerInputEvent(CacheInput, true, bHasStillPressing);
 	PlayerController->OnInputEventGameplayTagTrigger_Game.Broadcast(CacheInput, true);
-	auto AnimatingAbility = AbilitySystemComponent->GetAnimatingAbility();
+	const UGameplayAbility* AnimatingAbility = ASC->GetAnimatingAbility();
 
 	if (AnimatingAbility != CallFromAbility)
 	{
 		//comsumed, cache finished
-		//UE_LOG(LogTemp, Log, TEXT("comsumed, cache finished"));
+		UE_LOG(LogTemp, Log, TEXT("comsumed, cache finished"));
 		ResetCacheInput();
 		ResetWaitTillEnd();
 	}
 	else
 	{
-		//UE_LOG(LogTemp, Log, TEXT("same AnimatingAbility"));
-
+		UE_LOG(LogTemp, Log, TEXT("same AnimatingAbility"));
 		if (CallFromAbility)
 		{
 			ResetWaitTillEnd(CallFromAbility);
 		}
-	}
-
-	if (AnimatingAbility)
-	{
-		UE_LOG(LogTemp, Log, TEXT("AnimatingAbility => %s"), *AnimatingAbility->GetName());
 	}
 }
 
@@ -412,32 +366,40 @@ void UWvInputEventComponent::InputCallBack(const FKey InputKey, const FName Key,
 	}
 
 	PlayerController->OnInputEventGameplayTagTrigger_All.Broadcast(InputEvent->EventTag, bPress);
-	//EWvInputMode InputCache = InputMode;
+	const EWvInputMode InputCache = InputMode;
 
 	if (bPress)
 	{
-		//switch (InputCache)
-		//{
-		//case EWvInputMode::GameOnly:
-		//	ProcessGameEvent(InputEvent->EventTag, true);
-		//	break;
-		//case EWvInputMode::UIOnly:
-		//	PlayerController->OnInputEventGameplayTagTrigger_UI.Broadcast(InputEvent->EventTag, true);
-		//	break;
-		//case EWvInputMode::GameAndUI:
-		//	PlayerController->OnInputEventGameplayTagTrigger_UI.Broadcast(InputEvent->EventTag, true);
-		//	ProcessGameEvent(InputEvent->EventTag, true);
-		//	break;
-		//}
+		switch (InputCache)
+		{
+		case EWvInputMode::GameOnly:
+			ProcessGameEvent(InputEvent->EventTag, true);
+			break;
+		case EWvInputMode::UIOnly:
+			PlayerController->OnInputEventGameplayTagTrigger_UI.Broadcast(InputEvent->EventTag, true);
+			break;
+		case EWvInputMode::GameAndUI:
+			PlayerController->OnInputEventGameplayTagTrigger_UI.Broadcast(InputEvent->EventTag, true);
+			ProcessGameEvent(InputEvent->EventTag, true);
+			break;
+		}
 
-		ProcessGameEvent(InputEvent->EventTag, true);
-		PlayerController->OnInputEventGameplayTagTrigger_UI.Broadcast(InputEvent->EventTag, true);
 	}
 	else
 	{
 		ProcessGameEvent(InputEvent->EventTag, false);
 		PlayerController->OnInputEventGameplayTagTrigger_UI.Broadcast(InputEvent->EventTag, false);
 	}
+}
+
+void UWvInputEventComponent::SetInputModeType(const EWvInputMode NewInputMode)
+{
+	InputMode = NewInputMode;
+}
+
+EWvInputMode UWvInputEventComponent::GetInputModeType() const
+{
+	return InputMode;
 }
 
 void UWvInputEventComponent::InputKey(const FInputKeyParams& Params)
@@ -600,12 +562,13 @@ void UWvInputEventComponent::PluralInputCallBack(const FKey InputKey, const FNam
 
 void UWvInputEventComponent::PluralInputCallBackExecute(FGameplayTag EventTag, bool bPress)
 {
-	if (!PlayerController.Get() || !AbilitySystemComponent.Get())
+	if (!PlayerController.Get() || !ASC.Get())
 	{
 		return;
 	}
 
-	AbilitySystemComponent->PluralInputTriggerInputEvent(EventTag);
+	//ASC->PluralInputTriggerInputEvent(EventTag);
+	ASC->TryActivateAbilityByTag(EventTag);
 	PlayerController->OnPluralInputEventTrigger.Broadcast(EventTag, bPress);
 }
 
@@ -671,19 +634,19 @@ FWvInputEvent* UWvInputEventComponent::FindInputEvent(const FName Key)
 
 void UWvInputEventComponent::ProcessGameEvent(const FGameplayTag& Tag, bool bPress)
 {
-	if (!PlayerController.Get() || !AbilitySystemComponent.IsValid())
+	if (!PlayerController.Get() || !ASC.IsValid())
 	{
 		return;
 	}
 
 	if (!bPress)
 	{
-		AbilitySystemComponent->ReleasedTriggerInputEvent(Tag);
+		ASC->ReleasedTriggerInputEvent(Tag);
 	}
 	else
 	{
-		UGameplayAbility* CacheAnimatingAbility = AbilitySystemComponent->GetAnimatingAbility();
-		const int32 TriggerAbilityCount = AbilitySystemComponent->PressTriggerInputEvent(Tag);
+		UGameplayAbility* CacheAnimatingAbility = ASC->GetAnimatingAbility();
+		const int32 TriggerAbilityCount = ASC->PressTriggerInputEvent(Tag);
 		FScopeLock ScopeLock(&CacheInputMutex);
 
 		//UE_LOG(LogTemp, Log, TEXT("TriggerAbilityCount => %d"), TriggerAbilityCount);
@@ -692,7 +655,7 @@ void UWvInputEventComponent::ProcessGameEvent(const FGameplayTag& Tag, bool bPre
 		if (CacheAnimatingAbility)
 		{
 			// Input Event failed then cache, otherwise clear
-			if (CacheAnimatingAbility == AbilitySystemComponent->GetAnimatingAbility())
+			if (CacheAnimatingAbility == ASC->GetAnimatingAbility())
 			{
 				CacheInput = Tag;
 				ResetWaitTillEnd(CacheAnimatingAbility);
@@ -703,7 +666,9 @@ void UWvInputEventComponent::ProcessGameEvent(const FGameplayTag& Tag, bool bPre
 					{
 						FTimerDelegate TimerDelegate;
 						TimerDelegate.BindUFunction(this, FName(TEXT("ResetCacheInput_ClearTimer")));
-						GetWorld()->GetTimerManager().SetTimer(ClearCacheInputTimerHandle, TimerDelegate, 0.01666f, false);
+						// 0.01666f
+						const float Frame = (1.0f / 60.0f);
+						GetWorld()->GetTimerManager().SetTimer(ClearCacheInput_TimerHandle, TimerDelegate, Frame, false);
 					}
 				}
 
@@ -711,9 +676,9 @@ void UWvInputEventComponent::ProcessGameEvent(const FGameplayTag& Tag, bool bPre
 			}
 			else
 			{
-				UWvAbilityBase* CurrentAbility = Cast<UWvAbilityBase>(AbilitySystemComponent->GetAnimatingAbility());
+				UWvAbilityBase* CurrentAbility = Cast<UWvAbilityBase>(ASC->GetAnimatingAbility());
 				UWvAbilityBase* LastAbility = Cast<UWvAbilityBase>(CacheAnimatingAbility);
-				const bool bIsAnimatingCombo = AbilitySystemComponent->IsAnimatingCombo();
+				const bool bIsAnimatingCombo = ASC->IsAnimatingCombo();
 				const bool bIsComboTagEqual = (CurrentAbility && LastAbility) ? CurrentAbility->GetComboRequiredTag() == LastAbility->GetComboRequiredTag() : false;
 				const bool bIsSameCombo = CurrentAbility && LastAbility && bIsAnimatingCombo && bIsComboTagEqual;
 
@@ -747,16 +712,16 @@ void UWvInputEventComponent::ResetWaitTillEnd(UGameplayAbility* WaitEndAbility)
 {
 	FScopeLock ScopeLock(&WaitMutex);
 
-	if (WaitCacheInputResetHandle.IsValid() && AbilitySystemComponent.IsValid())
+	if (WaitCacheInputResetHandle.IsValid() && ASC.IsValid())
 	{
-		AbilitySystemComponent->OnAbilityEnded.Remove(WaitCacheInputResetHandle);
+		ASC->OnAbilityEnded.Remove(WaitCacheInputResetHandle);
 		WaitCacheInputResetHandle.Reset();
 	}
 
-	if (WaitEndAbility && AbilitySystemComponent.IsValid())
+	if (WaitEndAbility && ASC.IsValid())
 	{
 		auto WaitEndAbilityPtr = MakeWeakObjectPtr<UGameplayAbility>(WaitEndAbility);
-		WaitCacheInputResetHandle = AbilitySystemComponent->OnAbilityEnded.AddLambda([this, WaitEndAbilityPtr](const FAbilityEndedData& EndedData)
+		WaitCacheInputResetHandle = ASC->OnAbilityEnded.AddLambda([this, WaitEndAbilityPtr](const FAbilityEndedData& EndedData)
 		{
 			if (WaitEndAbilityPtr.IsValid())
 			{
@@ -768,18 +733,18 @@ void UWvInputEventComponent::ResetWaitTillEnd(UGameplayAbility* WaitEndAbility)
 
 void UWvInputEventComponent::WaitAbilityEnd(UGameplayAbility* CallFromAbility, const FAbilityEndedData& EndedData)
 {
-	if (!AbilitySystemComponent.IsValid())
+	if (!ASC.IsValid())
 	{
 		return;
 	}
 
-	UWvAbilityBase* CurrentAbility = Cast<UWvAbilityBase>(AbilitySystemComponent->GetAnimatingAbility());
-	UWvAbilityBase* LastAbility = Cast<UWvAbilityBase>(CallFromAbility);
+	UWvAbilityBase* CurrentAbility = Cast<UWvAbilityBase>(ASC->GetAnimatingAbility());
+	const UWvAbilityBase* LastAbility = Cast<UWvAbilityBase>(CallFromAbility);
 
 	if (EndedData.AbilityThatEnded == CallFromAbility)
 	{
 		const bool bIsAbilitySwitching = CurrentAbility && LastAbility;
-		const bool bIsSameCombo = bIsAbilitySwitching && AbilitySystemComponent->IsAnimatingCombo() &&
+		const bool bIsSameCombo = bIsAbilitySwitching && ASC->IsAnimatingCombo() &&
 			CurrentAbility->GetComboRequiredTag() == LastAbility->GetComboRequiredTag();
 
 		if (bIsAbilitySwitching && !bIsSameCombo)
@@ -812,10 +777,10 @@ void UWvInputEventComponent::ResetCacheInput_ClearTimer()
 	ResetCacheInput();
 	if (GetWorld())
 	{
-		if (ClearCacheInputTimerHandle.IsValid() && GetWorld()->IsValidLowLevel())
+		if (ClearCacheInput_TimerHandle.IsValid() && GetWorld()->IsValidLowLevel())
 		{
-			GetWorld()->GetTimerManager().ClearTimer(ClearCacheInputTimerHandle);
-			ClearCacheInputTimerHandle.Invalidate();
+			GetWorld()->GetTimerManager().ClearTimer(ClearCacheInput_TimerHandle);
+			ClearCacheInput_TimerHandle.Invalidate();
 		}
 	}
 }

@@ -42,6 +42,7 @@ public class QuadrupedIK : ModuleRules
 				"SlateCore",
 				"AnimGraphRuntime",
 				"AnimationCore",
+				"Persona",
 			}
 		);
 

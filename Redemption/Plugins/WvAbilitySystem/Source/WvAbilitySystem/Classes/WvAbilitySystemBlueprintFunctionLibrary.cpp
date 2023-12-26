@@ -15,6 +15,8 @@
 #include "GameplayAbilitySpec.h"
 #include "DrawDebugHelpers.h"
 #include "AbilitySystemInterface.h"
+#include "GameplayEffectComponents/AssetTagsGameplayEffectComponent.h"
+#include "Runtime/Launch/Resources/Version.h"
 
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(WvAbilitySystemBlueprintFunctionLibrary)
@@ -44,7 +46,16 @@ UGameplayEffect* UWvAbilitySystemBlueprintFunctionLibrary::NewModifyAttributeGE(
 	Info.ModifierMagnitude = FScalableFloat(Magnitude);
 	Info.ModifierOp = EGameplayModOp::Additive;
 	Info.Attribute = Attribute;
+
+#if (ENGINE_MAJOR_VERSION < 5 || ENGINE_MINOR_VERSION >= 3)
+	FInheritedTagContainer Container;
+	Container.AddTag(GETag);
+	UAssetTagsGameplayEffectComponent& AssetTagsComponent = InstanceGE->FindOrAddComponent<UAssetTagsGameplayEffectComponent>();
+	AssetTagsComponent.SetAndApplyAssetTagChanges(Container);
+#else
 	InstanceGE->InheritableGameplayEffectTags.AddTag(GETag);
+#endif
+
 	InstanceGE->DurationPolicy = EGameplayEffectDurationType::Instant;
 	return InstanceGE;
 }

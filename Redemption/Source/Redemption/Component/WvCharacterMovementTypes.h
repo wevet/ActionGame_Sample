@@ -10,6 +10,25 @@
 #include "Engine/DataAsset.h"
 #include "WvCharacterMovementTypes.generated.h"
 
+UENUM(BlueprintType)
+enum ECustomMovementMode
+{
+	CUSTOM_MOVE_Default UMETA(DisplayName = "CustomDefault"),
+	CUSTOM_MOVE_Climbing UMETA(DisplayName = "CustomClimbing"),
+	CUSTOM_MOVE_Mantling UMETA(DisplayName = "CustomMantling"),
+	CUSTOM_MOVE_WallClimbing UMETA(DisplayName = "CustomWallClimbing"),
+	CUSTOM_MOVE_MAX	UMETA(Hidden),
+};
+
+UENUM(BlueprintType)
+enum class EMantleType : uint8
+{
+	HighMantle   UMETA(DisplayName = "HighMantle"),
+	LowMantle    UMETA(DisplayName = "LowMantle"),
+	FallingCatch UMETA(DisplayName = "FallingCatch"),
+};
+
+
 /**
  * FWvCharacterGroundInfo
  * Information about the ground under the character.  It only gets updated as needed.
@@ -72,16 +91,6 @@ struct FWvEdgeDetectionInfo
 	float VerticalFallEdgeThreshold = 10.0f;
 
 	FTraceDelegate EdgeTraceDelegate;
-};
-
-UENUM(BlueprintType)
-enum ECustomMovementMode
-{
-	CUSTOM_MOVE_Default UMETA(DisplayName = "CustomDefault"),
-	CUSTOM_MOVE_Climbing UMETA(DisplayName = "CustomClimbing"),
-	CUSTOM_MOVE_Mantling UMETA(DisplayName = "CustomMantling"),
-	CUSTOM_MOVE_WallClimbing UMETA(DisplayName = "CustomWallClimbing"),
-	CUSTOM_MOVE_MAX	UMETA(Hidden),
 };
 
 UCLASS(BlueprintType)
@@ -148,14 +157,6 @@ public:
 	UAnimMontage* LedgeClimbMontage;
 
 	UClimbingDataAsset() {}
-};
-
-UENUM(BlueprintType)
-enum class EMantleType : uint8
-{
-	HighMantle   UMETA(DisplayName = "HighMantle"),
-	LowMantle    UMETA(DisplayName = "LowMantle"),
-	FallingCatch UMETA(DisplayName = "FallingCatch"),
 };
 
 USTRUCT(BlueprintType)
@@ -285,9 +286,6 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	TEnumAsByte<ETraceTypeQuery> MantleTraceChannel;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	bool bDebugDrawTrace = false;
 
 	UMantleAnimationDataAsset()
 	{

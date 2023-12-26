@@ -6,6 +6,7 @@
 #include "Component/InventoryComponent.h"
 #include "Misc/WvCommonUtils.h"
 #include "Item/BulletHoldWeaponActor.h"
+#include "WvAbilitySystemGlobals.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(WvAT_BulletDamage)
 
@@ -14,10 +15,10 @@ UWvAT_BulletDamage::UWvAT_BulletDamage(const FObjectInitializer& ObjectInitializ
 	bTickingTask = true;
 }
 
-UWvAT_BulletDamage* UWvAT_BulletDamage::ComponentFrameAction(UGameplayAbility* OwningAbility, const FName TaskName, const float TotalDuration, const float Randomize, const TArray<int32> EffectIdxs)
+UWvAT_BulletDamage* UWvAT_BulletDamage::ComponentFrameAction(UGameplayAbility* OwningAbility, const FName TaskName, const float TotalDuration, const float Randomize, const int32 EffectIdx)
 {
 	UWvAT_BulletDamage* Task = NewAbilityTask<UWvAT_BulletDamage>(OwningAbility, TaskName);
-	Task->EffectGroupIndexs = EffectIdxs;
+	Task->EffectGroupIndex = EffectIdx;
 	Task->DurationTime = TotalDuration;
 	Task->Randomize = Randomize;
 	Task->bWasEndedTask = false;
@@ -56,12 +57,7 @@ void UWvAT_BulletDamage::Activate()
 
 void UWvAT_BulletDamage::Execute()
 {
-	for (int32 JIndex = 0; JIndex < EffectGroupIndexs.Num(); ++JIndex)
-	{
-		const int32 EffectGroupIndex = EffectGroupIndexs[JIndex];
-		LineOfSightTraceExecute(EffectGroupIndex);
-	}
-
+	LineOfSightTraceExecute();
 	InternalEndTask();
 }
 
@@ -80,7 +76,7 @@ void UWvAT_BulletDamage::InternalEndTask()
 	EndTask();
 }
 
-void UWvAT_BulletDamage::LineOfSightTraceExecute(const int32 EffectGroupIndex)
+void UWvAT_BulletDamage::LineOfSightTraceExecute()
 {
 	if (!IsValid(CombatComponent))
 	{
@@ -94,7 +90,7 @@ void UWvAT_BulletDamage::LineOfSightTraceExecute(const int32 EffectGroupIndex)
 		return;
 	}
 
-	const float Interval = HoldWeapon->GetGunFireAnimationLength();
+	//const float Interval = HoldWeapon->GetGunFireAnimationLength();
 	HoldWeapon->SetGunFirePrepareParameters(Randomize);
 	HoldWeapon->DoFire();
 
@@ -104,8 +100,16 @@ void UWvAT_BulletDamage::LineOfSightTraceExecute(const int32 EffectGroupIndex)
 
 	if (bHitResult)
 	{
-		TArray<FHitResult> Hits({HitResult});
-		CombatComponent->LineOfSightTraceOuter(WvAbility, EffectGroupIndex, Hits, HoldWeapon->GetActorLocation());
+		auto WeaponLoc = HoldWeapon->GetActorLocation();
+		if (CombatComponent->HasEnvironmentFilterClass(HitResult))
+		{
+			CombatComponent->LineOfSightTraceOuterEnvironment(WvAbility, EffectGroupIndex, HitResult, WeaponLoc);
+		}
+		else
+		{
+			TArray<FHitResult> Hits({ HitResult });
+			CombatComponent->LineOfSightTraceOuter(WvAbility, EffectGroupIndex, Hits, WeaponLoc);
+		}
 	}
 
 }

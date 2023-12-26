@@ -82,6 +82,7 @@ class UMotionWarpingComponent;
 class UPawnNoiseEmitterComponent;
 
 class UWvCharacterMovementComponent;
+class UWvSkeletalMeshComponent;
 class ULocomotionComponent;
 class UInventoryComponent;
 class UCombatComponent;
@@ -137,13 +138,12 @@ public:
 	virtual void SetGenericTeamId(const FGenericTeamId& NewTeamID) override;
 
 	virtual FGameplayTag GetAvatarTag() const override;
-	virtual ECharacterRelation GetRelationWithSelfImpl(const IWvAbilityTargetInterface* Other) const override;
+	virtual USceneComponent* GetOverlapBaseComponent() override;
+	virtual FOnTeamIndexChangedDelegate* GetOnTeamIndexChangedDelegate() override;
+
 	virtual bool IsDead() const override;
 	virtual bool IsTargetable() const override;
 	virtual bool IsInBattled() const override;
-
-	virtual USceneComponent* GetOverlapBaseComponent() override;
-	virtual FOnTeamIndexChangedDelegate* GetOnTeamIndexChangedDelegate() override;
 
 	virtual void OnSendAbilityAttack(AActor* Actor, const FWvBattleDamageAttackSourceInfo SourceInfo, const float Damage) override;
 	virtual void OnSendWeaknessAttack(AActor* Actor, const FName WeaknessName, const float Damage) override;
@@ -156,6 +156,10 @@ public:
 
 	virtual void Freeze() override;
 	virtual void UnFreeze() override;
+
+	virtual void DoAttack() override;
+	virtual void DoResumeAttack() override;
+	virtual void DoStopAttack() override;
 #pragma endregion
 
 #pragma region IWvAIActionStateInterface
@@ -189,13 +193,16 @@ public:
 	class UMotionWarpingComponent* GetMotionWarpingComponent() const;
 
 	UFUNCTION(BlueprintCallable, Category = Components)
-	class UCharacterTrajectoryComponent* GetCharacterMovementTrajectoryComponent() const;
+	class UCharacterTrajectoryComponent* GetCharacterTrajectoryComponent() const;
 
 	UFUNCTION(BlueprintCallable, Category = Components)
 	class ULocomotionComponent* GetLocomotionComponent() const;
 
 	UFUNCTION(BlueprintCallable, Category = Components)
 	class UWvCharacterMovementComponent* GetWvCharacterMovementComponent() const;
+
+	UFUNCTION(BlueprintCallable, Category = Components)
+	class UWvSkeletalMeshComponent* GetWvSkeletalMeshComponent() const;
 
 	UFUNCTION(BlueprintCallable, Category = Components)
 	class UCombatComponent* GetCombatComponent() const;
@@ -208,9 +215,6 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = Components)
 	USceneComponent* GetHeldObjectRoot() const;
-
-	UFUNCTION(BlueprintCallable, Category = Movement)
-	FTrajectorySampleRange GetTrajectorySampleRange() const;
 
 	UFUNCTION(BlueprintCallable, Category = Movement)
 	float GetDistanceFromToeToKnee(FName KneeL = TEXT("calf_l"), FName BallL = TEXT("ball_l"), FName KneeR = TEXT("calf_r"), FName BallR = TEXT("ball_r")) const;
@@ -231,8 +235,6 @@ public:
 	void DoStartAiming();
 	void DoStopAiming();
 
-	virtual void DoAttack();
-
 	UFUNCTION(BlueprintCallable, Category = Action)
 	void HandleCrouchAction(const bool bCanCrouch);
 
@@ -241,9 +243,6 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = Action)
 	FTransform GetChestTransform(const FName BoneName) const;
-
-	void DoResumeAttack();
-	void DoStopAttack();
 
 	UFUNCTION(BlueprintCallable, Category = Movement)
 	virtual void DoWalking();
@@ -276,6 +275,18 @@ public:
 	/// </summary>
 	void RequestAsyncLoad();
 
+	// leader setting
+	bool IsLeader() const;
+	void SetLeaderTag();
+
+	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "AI")
+	void SetLeaderDisplay();
+
+	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "AI")
+	void UpdateDisplayTeamColor();
+
+	ABaseCharacter* GetLeaderCharacterFromController() const;
+
 #pragma region NearlestAction
 	void FindNearlestTarget(const FAttackMotionWarpingData AttackMotionWarpingData);
 	void BuildFinisherAbility(const FGameplayTag RequireTag);
@@ -286,40 +297,45 @@ public:
 	FRequestAbilityAnimationData GetFinisherAnimationData() const;
 #pragma endregion
 
+#pragma region VehicleAction
+	bool IsVehicleDriving() const;
+	void BeginVehicleAction();
+	void EndVehicleAction();
+#pragma endregion
 
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Component, meta = (AllowPrivateAccess = "true"))
-	class ULocomotionComponent* LocomotionComponent;
+	TObjectPtr<class ULocomotionComponent> LocomotionComponent;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Component, meta = (AllowPrivateAccess = "true"))
-	class UPredictionFootIKComponent* PredictionFootIKComponent;
+	TObjectPtr<class UPredictionFootIKComponent> PredictionFootIKComponent;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Component, meta = (AllowPrivateAccess = "true"))
-	class UMotionWarpingComponent* MotionWarpingComponent;
+	TObjectPtr<class UMotionWarpingComponent> MotionWarpingComponent;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Component, meta = (AllowPrivateAccess = "true"))
-	class UCharacterTrajectoryComponent* CharacterMovementTrajectoryComponent;
+	TObjectPtr<class UCharacterTrajectoryComponent> CharacterTrajectoryComponent;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Component, meta = (AllowPrivateAccess = "true"))
-	class UWvAbilitySystemComponent* WvAbilitySystemComponent;
+	TObjectPtr<class UWvAbilitySystemComponent> WvAbilitySystemComponent;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Component, meta = (AllowPrivateAccess = "true"))
-	class UInventoryComponent* ItemInventoryComponent;
+	TObjectPtr<class UInventoryComponent> ItemInventoryComponent;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Component, meta = (AllowPrivateAccess = "true"))
-	class UCombatComponent* CombatComponent;
+	TObjectPtr<class UCombatComponent> CombatComponent;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Component, meta = (AllowPrivateAccess = "true"))
-	class UStatusComponent* StatusComponent;
+	TObjectPtr<class UStatusComponent> StatusComponent;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Component, meta = (AllowPrivateAccess = "true"))
-	class UWeaknessComponent* WeaknessComponent;
+	TObjectPtr<class UWeaknessComponent> WeaknessComponent;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Component, meta = (AllowPrivateAccess = "true"))
-	class UPawnNoiseEmitterComponent* PawnNoiseEmitterComponent;
+	TObjectPtr<class UPawnNoiseEmitterComponent> PawnNoiseEmitterComponent;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Component, meta = (AllowPrivateAccess = "true"))
-	class USceneComponent* HeldObjectRoot;
+	TObjectPtr<class USceneComponent> HeldObjectRoot;
 
 	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = "BaseCharacter|Config")
 	FCustomWvAbilitySystemAvatarData AbilitySystemData;
@@ -340,9 +356,6 @@ protected:
 	FGameplayTag CharacterTag;
 
 	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = "BaseCharacter|Config")
-	ECharacterRelation CharacterRelation;
-
-	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = "BaseCharacter|Config")
 	class UBehaviorTree* BehaviorTree;
 
 	UPROPERTY(Transient, ReplicatedUsing = OnRep_ReplicatedAcceleration)
@@ -351,7 +364,7 @@ protected:
 	UPROPERTY(ReplicatedUsing = OnRep_MyTeamID)
 	FGenericTeamId MyTeamID;
 
-	UPROPERTY()
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AI")
 	EAIActionState AIActionState;
 
 	UFUNCTION()
@@ -379,13 +392,10 @@ protected:
 	virtual void InitAbilitySystemComponent();
 
 	UPROPERTY()
-	FTrajectorySampleRange TrajectorySampleRange;
-
-	UPROPERTY()
 	FOnTeamIndexChangedDelegate OnTeamChangedDelegate;
 
 	UPROPERTY()
-	UWvAnimInstance* AnimInstance;
+	TObjectPtr<UWvAnimInstance> AnimInstance;
 
 	UPROPERTY()
 	FRequestAbilityAnimationData FinisherAnimationData;
@@ -404,6 +414,10 @@ protected:
 	FTimerHandle Ragdoll_TimerHandle;
 	void EndDeathAction_Callback();
 
+	void HandleDriveAction();
+
+	bool bIsAbilityInitializeResult = false;
+
 #pragma region NearlestAction
 	const TArray<AActor*> FindNearlestTargets(const float Distance, const float AngleThreshold);
 	AActor* FindNearlestTarget(const float Distance, const float AngleThreshold, bool bTargetCheckBattled = true);
@@ -412,10 +426,16 @@ protected:
 #pragma endregion
 
 #pragma region AsyncLoad
-	UOverlayAnimInstanceDataAsset* OverlayAnimDAInstance;
+	UPROPERTY()
+	TObjectPtr<UOverlayAnimInstanceDataAsset> OverlayAnimDAInstance;
+
+	UPROPERTY()
+	TObjectPtr<UFinisherDataAsset> FinisherSender;
+
+	UPROPERTY()
+	TObjectPtr<UFinisherDataAsset> FinisherReceiner;
+
 	TSharedPtr<FStreamableHandle> ABPStreamableHandle;
-	UFinisherDataAsset* FinisherSender;
-	UFinisherDataAsset* FinisherReceiner;
 	TSharedPtr<FStreamableHandle> FinisherStreamableHandle;
 
 	void OnABPAnimAssetLoad();
@@ -425,6 +445,7 @@ protected:
 
 	void OnLoadFinisherSender();
 	void OnLoadFinisherReceiver();
+	void OnLoadOverlayABP();
 #pragma endregion
 
 };

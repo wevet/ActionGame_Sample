@@ -53,6 +53,11 @@ void ACharacterGenerator::StartSpawn()
 	CurrentSpawnCount = 0;
 	SpawnTimer = 0.f;
 	bSpawnFinished = false;
+	LeaderCount = FMath::Max((int32)SpawnCount / 5, 1);
+	CurrentLeaderCount = 0;
+
+	UE_LOG(LogTemp, Log, TEXT("LeaderCount => %d, function => %s"), LeaderCount, *FString(__FUNCTION__));
+
 	UWvCommonUtils::CircleSpawnPoints(SpawnCount, SpawnRadius, GetActorLocation(), SpawnPoints);
 
 	if (SpawnClasses == nullptr)
@@ -64,13 +69,13 @@ void ACharacterGenerator::StartSpawn()
 	Super::SetActorTickEnabled(true);
 }
 
-
 void ACharacterGenerator::DoSpawn()
 {
 	bSpawnFinished = (CurrentSpawnCount >= SpawnCount);
 	if (bSpawnFinished)
 	{
 		Super::SetActorTickEnabled(false);
+		UCharacterInstanceSubsystem::Get()->GeneratorSpawnedFinish();
 		return;
 	}
 
@@ -88,10 +93,28 @@ void ACharacterGenerator::DoSpawn()
 #if WITH_EDITOR
 		SpawningObject->SetFolderPath("CharacterGenerator");
 #endif
-		if (ABaseCharacter* Character = Cast<ABaseCharacter>(SpawningObject))
+		GeneratedBaseCharacter(SpawningObject);
+	}
+}
+
+void ACharacterGenerator::GeneratedBaseCharacter(AActor* SpawningObject)
+{
+	if (ABaseCharacter* Character = Cast<ABaseCharacter>(SpawningObject))
+	{
+		UCharacterInstanceSubsystem::Get()->AssignAICharacter(Character);
+		if (LeaderCount > CurrentLeaderCount)
 		{
-			UCharacterInstanceSubsystem::Get()->AssignAICharacter(Character);
+			if (UWvCommonUtils::Probability(LeaderSpawnPercent))
+			{
+				Character->SetLeaderTag();
+				++CurrentLeaderCount;
+			}
+		}
+		else
+		{
+			// already automation leader setup
 		}
 	}
 }
+
 

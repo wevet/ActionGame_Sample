@@ -4,8 +4,10 @@
 #include "WvGameplayCueManager.h"
 #include "WvAbilitySystemGlobals.h"
 #include "WvAbilityDataAsset.h"
+#include "WvGameplayTargetData.h"
 #include "WvGameplayEffectContext.h"
 #include "WvAbilityAttributeSet.h"
+#include "WvAbilitySystemBlueprintFunctionLibrary.h"
 #include "Interface/WvAbilitySystemAvatarInterface.h"
 
 #include "AbilitySystemInterface.h"
@@ -15,6 +17,10 @@
 //#include "GameFramework/PlayerController.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(WvAbilitySystemComponentBase)
+
+UWvAbilitySystemComponentBase::UWvAbilitySystemComponentBase() : Super()
+{
+}
 
 FGameplayAbilitySpecHandle UWvAbilitySystemComponentBase::ApplyGiveAbility(class UWvAbilityDataAsset* AbilityData, float DamageMotion)
 {
@@ -32,7 +38,7 @@ FGameplayAbilitySpecHandle UWvAbilitySystemComponentBase::ApplyGiveMagicAbility(
 
 float UWvAbilitySystemComponentBase::AbilityGetCooldownTimeRemaining(const UGameplayAbility* AbilityIns)
 {
-	float TimeRemaining = -1;
+	float TimeRemaining = -1.0f;
 	if (!AbilityIns)
 	{
 		return TimeRemaining;
@@ -377,16 +383,6 @@ bool UWvAbilitySystemComponentBase::GetGameplayEffectRemainTimeAndDuration(FActi
 	return true;
 }
 
-class UGameplayEffectUIData* UWvAbilitySystemComponentBase::GetGameplayEffectUIData(FActiveGameplayEffectHandle Handle) const
-{
-	const FActiveGameplayEffect* ActiveGameplayEffect = GetActiveGameplayEffect(Handle);
-	if (!ActiveGameplayEffect)
-	{
-		return nullptr;
-	}
-	return ActiveGameplayEffect->Spec.Def->UIData;
-}
-
 void UWvAbilitySystemComponentBase::GetGameplayEffectGameplayCues(FActiveGameplayEffectHandle Handle, TArray<FGameplayEffectCue>& OutGameplayCues)
 {
 	const FActiveGameplayEffect* ActiveGameplayEffect = GetActiveGameplayEffect(Handle);
@@ -403,7 +399,7 @@ TArray<FActiveGameplayEffectHandle> UWvAbilitySystemComponentBase::GetActiveEffe
 
 bool UWvAbilitySystemComponentBase::TryActivateAbilityByDataAsset(class UWvAbilityDataAsset* InAbilityDataToActivate, bool bAllowRemoteActivation /*= true*/)
 {
-	FGameplayAbilitySpec* Spec = FindAbilitySpecFromDataAsset(InAbilityDataToActivate);
+	const FGameplayAbilitySpec* Spec = FindAbilitySpecFromDataAsset(InAbilityDataToActivate);
 	if (Spec)
 	{
 		return TryActivateAbility(Spec->Handle, bAllowRemoteActivation);
@@ -447,31 +443,11 @@ void UWvAbilitySystemComponentBase::TryActivateAbilityByTag(const FGameplayTag T
 		}
 
 		UWvAbilityDataAsset* AbilityData = CastChecked<UWvAbilityDataAsset>(Spec.SourceObject);
-
 		if (AbilityData->ActiveTriggerTag != Tag)
 		{
 			continue;
 		}
 
-		TryActivateAbility(Spec.Handle);
-	}
-}
-
-void UWvAbilitySystemComponentBase::PluralInputTriggerInputEvent(const FGameplayTag Tag)
-{
-	ABILITYLIST_SCOPE_LOCK();
-	for (FGameplayAbilitySpec& Spec : ActivatableAbilities.Items)
-	{
-		if (!Spec.Ability)
-		{
-			continue;
-		}
-
-		UWvAbilityDataAsset* AbilityData = CastChecked<UWvAbilityDataAsset>(Spec.SourceObject);
-		if (AbilityData->ActiveTriggerTag != Tag)
-		{
-			continue;
-		}
 		TryActivateAbility(Spec.Handle);
 	}
 }
@@ -541,6 +517,7 @@ TArray<FActiveGameplayEffectHandle> UWvAbilitySystemComponentBase::MakeEffectToT
 			}
 		}
 	}
+
 
 	if (!bIsApplyEffect)
 	{
@@ -628,6 +605,7 @@ TArray<FActiveGameplayEffectHandle> UWvAbilitySystemComponentBase::MakeEffectToT
 		}
 	}
 
+	UE_LOG(LogTemp, Log, TEXT("function => %s, MakeEffectHandleList => %d"), *FString(__FUNCTION__), MakeEffectHandleList.Num());
 	return MakeEffectHandleList;
 }
 
@@ -688,6 +666,31 @@ float UWvAbilitySystemComponentBase::GetNumericAttributeBaseByName(const FString
 	}
 	return 0;
 }
+
+void UWvAbilitySystemComponentBase::ApplyEffectToSelf(UWvAbilitySystemComponentBase* InstigatorASC, UWvAbilityEffectDataAsset* EffectData, const int32 EffectGroupIndex)
+{
+	if (!InstigatorASC)
+	{
+		return;
+	}
+
+	FGameplayAbilityTargetDataHandle TargetDataHandle;
+
+	FWvOverlapResult Overlap;
+	Overlap.Actor = GetAvatarActor();
+
+	FWvGameplayAbilityTargetData_SingleTarget* NewData = new FWvGameplayAbilityTargetData_SingleTarget();
+	NewData->Overlap = Overlap;
+	NewData->SourceLocation = FVector::ZeroVector;
+	TargetDataHandle.Add(NewData);
+
+	FGameplayEffectContextHandle EffectContextHandle = InstigatorASC->MakeEffectContext();
+	UWvAbilitySystemBlueprintFunctionLibrary::EffectContextSetEffectDataAsset(EffectContextHandle, EffectData, EffectGroupIndex);
+
+	UE_LOG(LogTemp, Log, TEXT("%s"), *FString(__FUNCTION__));
+	MakeEffectToTargetData(EffectContextHandle, TargetDataHandle, FGameplayEffectQuery());
+}
+
 
 UWvAbilityAttributeSet* UWvAbilitySystemComponentBase::GetStatusAttributeSet(TSubclassOf<UAttributeSet> AttributeSetClass) const
 {

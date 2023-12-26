@@ -43,6 +43,7 @@ DECLARE_CYCLE_STAT(TEXT("Char PhysWalking"), STAT_CharPhysWalking, STATGROUP_Cha
 #if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
 static TAutoConsoleVariable<int32> CVarDebugCharacterMovementFallEdge(TEXT("wv.DebugCharacterMovementFallEdge"), 0, TEXT("Charactermovement ledge end\n") TEXT("<=0: Debug off\n") TEXT(">=1: Debug on\n"), ECVF_Default);
 static TAutoConsoleVariable<int32> CVarDebugVaultingSystem(TEXT("wv.VaultingSystem.Debug"), 0, TEXT("VaultingSystem Debug .\n") TEXT("<=0: off\n") TEXT("  1: on\n"), ECVF_Default);
+static TAutoConsoleVariable<int32> CVarDebugMantlingSystem(TEXT("wv.MantlingSystem.Debug"), 0, TEXT("MantlingSystem Debug .\n") TEXT("<=0: off\n") TEXT("  1: on\n"), ECVF_Default);
 static TAutoConsoleVariable<int32> CVarDebugWallClimbingSystem(TEXT("wv.WallClimbingSystem.Debug"), 0, TEXT("WallClimbingSystem Debug .\n") TEXT("<=0: off\n") TEXT("  1: on\n"), ECVF_Default);
 #endif
 
@@ -56,6 +57,8 @@ static TAutoConsoleVariable<int32> CVarDebugWallClimbingSystem(TEXT("wv.WallClim
 // maximum z value for the normal on the vertical side of steps
 const float MAX_STEP_SIDE_Z = 0.08f;
 const float VERTICAL_SLOPE_NORMAL_Z = 0.001f;
+
+#define WV_CUSTOM_MOVEMENT 1
 
 FName UWvCharacterMovementComponent::ClimbSyncPoint = FName(TEXT("ClimbSyncPoint"));
 FName UWvCharacterMovementComponent::MantleSyncPoint = FName(TEXT("MantleSyncPoint"));
@@ -487,7 +490,6 @@ bool UWvCharacterMovementComponent::StepUp(const FVector& GravDir, const FVector
 
 	if (!CanStepUp(InHit) || MaxStepHeight <= 0.f)
 	{
-		//Super::StepUp(GravDir, Delta, InHit, OutStepDownResult);
 		return false;
 	}
 
@@ -636,11 +638,14 @@ bool UWvCharacterMovementComponent::StepUp(const FVector& GravDir, const FVector
 			const bool bNormalTowardsMe = (Delta | Hit.ImpactNormal) < 0.f;
 			if (bNormalTowardsMe)
 			{
+#if WV_CUSTOM_MOVEMENT
 				UE_LOG(LogCharacterMovement, Verbose, TEXT("- Reject StepUp (unwalkable normal %s opposed to movement)"), *Hit.ImpactNormal.ToString());
 				//ScopedStepUpMovement.RevertMove();
 				//return false;
+#endif
 			}
 
+#if WV_CUSTOM_MOVEMENT
 			// Also reject if we would end up being higher than our starting location by stepping down.
 			// It's fine to step down onto an unwalkable normal below us, we will just slide off. Rejecting those moves would prevent us from being able to walk off the edge.
 			const float HitLocationDiff = (Hit.Location.Z - OldLocation.Z);
@@ -650,6 +655,8 @@ bool UWvCharacterMovementComponent::StepUp(const FVector& GravDir, const FVector
 				ScopedStepUpMovement.RevertMove();
 				return false;
 			}
+#endif
+
 		}
 
 		// Reject moves where the downward sweep hit something very close to the edge of the capsule. This maintains consistency with FindFloor as well.
@@ -690,6 +697,7 @@ bool UWvCharacterMovementComponent::StepUp(const FVector& GravDir, const FVector
 			StepDownResult.bComputedFloor = true;
 		}
 	}
+
 	// Copy step down result.
 	if (OutStepDownResult != nullptr)
 	{
@@ -740,19 +748,18 @@ float UWvCharacterMovementComponent::SlideAlongSurface(const FVector& Delta, flo
 		return 0.0f;
 	}
 
+#if WV_CUSTOM_MOVEMENT
 	float PercentTimeApplied = 0.f;
 	const FVector OldHitNormal = Normal;
 
 	FVector SlideDelta = ComputeSlideVector(Delta, Time, Normal, Hit);
 	const float Dot = SlideDelta.GetSafeNormal() | Delta.GetSafeNormal();
-
 	//UE_LOG(LogTemp, Log, TEXT("Dot => %.3f, AllowSlideCosAngle => %.3f"), Dot, AllowSlideCosAngle);
 
 	if (Dot >= AllowSlideCosAngle)
 	{
 		const FQuat Rotation = UpdatedComponent->GetComponentQuat();
 		SafeMoveUpdatedComponent(SlideDelta, Rotation, true, Hit);
-
 		const float FirstHitPercent = Hit.Time;
 		PercentTimeApplied = FirstHitPercent;
 
@@ -783,6 +790,7 @@ float UWvCharacterMovementComponent::SlideAlongSurface(const FVector& Delta, flo
 		}
 		return FMath::Clamp(PercentTimeApplied, 0.f, 1.f);
 	}
+#endif
 
 	return 0.f;
 
@@ -831,8 +839,9 @@ void UWvCharacterMovementComponent::PhysWalking(float deltaTime, int32 Iteration
 		const FVector OldLocation = UpdatedComponent->GetComponentLocation();
 		const FFindFloorResult OldFloor = CurrentFloor;
 
+#if WV_CUSTOM_MOVEMENT
 		RestorePreAdditiveRootMotionVelocity();
-
+#endif
 		// Ensure velocity is horizontal.
 		MaintainHorizontalGroundVelocity();
 		const FVector OldVelocity = Velocity;
@@ -946,9 +955,9 @@ void UWvCharacterMovementComponent::PhysWalking(float deltaTime, int32 Iteration
 					HandleWalkingOffLedge(OldFloor.HitResult.ImpactNormal, OldFloor.HitResult.Normal, OldLocation, timeTick);
 					if (IsMovingOnGround())
 					{
-						// TODO Start of custom code block.
+#if WV_CUSTOM_MOVEMENT
 						ApplyPendingPenetrationAdjustment();
-						// TODO End of custom code block.
+#endif
 
 						// まだ歩いているならば、転倒する。そうでない場合は、ユーザが保持したい別のモードを設定したと仮定する。
 						StartFalling(Iterations, remainingTime, timeTick, Delta, OldLocation);
@@ -1019,10 +1028,13 @@ void UWvCharacterMovementComponent::PhysWalking(float deltaTime, int32 Iteration
 
 	if (IsMovingOnGround())
 	{
+
+#if WV_CUSTOM_MOVEMENT
 		if (bWantsToLedgeEnd)
 		{
 			DetectLedgeEnd();
 		}
+#endif
 
 		MaintainHorizontalGroundVelocity();
 	}
@@ -1207,6 +1219,7 @@ void UWvCharacterMovementComponent::SavePenetrationAdjustment(const FHitResult& 
 	if (Hit.bStartPenetrating)
 	{
 		PendingPenetrationAdjustment = Hit.Normal * Hit.PenetrationDepth;
+		UE_LOG(LogCharacterMovement, VeryVerbose, TEXT("[Role:%d] SavePenetrationAdjustment: %s"), (int32)CharacterOwner->GetLocalRole(), *GetNameSafe(CharacterOwner));
 	}
 }
 
@@ -1219,6 +1232,7 @@ void UWvCharacterMovementComponent::ApplyPendingPenetrationAdjustment()
 
 	ResolvePenetration(ConstrainDirectionToPlane(PendingPenetrationAdjustment), CurrentFloor.HitResult, UpdatedComponent->GetComponentQuat());
 	PendingPenetrationAdjustment = FVector::ZeroVector;
+	UE_LOG(LogCharacterMovement, VeryVerbose, TEXT("[Role:%d] ApplyPendingPenetrationAdjustment: %s"), (int32)CharacterOwner->GetLocalRole(), *GetNameSafe(CharacterOwner));
 }
 
 float UWvCharacterMovementComponent::GetSlopeAngle(const FHitResult& InHitResult) const
@@ -1624,30 +1638,36 @@ const bool UWvCharacterMovementComponent::MantleCheck(const FMantleTraceSettings
 	TraceForwardToFindWall(InTraceSetting, TracePoint, TraceNormal, OutHitResult);
 	if (!OutHitResult)
 	{
-		if (MantleDataAsset->bDebugDrawTrace)
+#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
+		if (CVarDebugMantlingSystem.GetValueOnGameThread() > 0)
 		{
 			UE_LOG(LogTemp, Warning, TEXT("TraceForwardToFindWall => false"));
 		}
+#endif
 		return false;
 	}
 
 	SphereTraceByMantleCheck(InTraceSetting, TracePoint, TraceNormal, OutHitResult, DownTraceLocation, HitComponent);
 	if (!OutHitResult)
 	{
-		if (MantleDataAsset->bDebugDrawTrace)
+#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
+		if (CVarDebugMantlingSystem.GetValueOnGameThread() > 0)
 		{
 			UE_LOG(LogTemp, Warning, TEXT("SphereTraceByMantleCheck => false"));
 		}
+#endif
 		return false;
 	}
 
 	ConvertMantleHeight(DownTraceLocation, TraceNormal, OutHitResult, TargetTransform, MantleHeight);
 	if (!OutHitResult)
 	{
-		if (MantleDataAsset->bDebugDrawTrace)
+#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
+		if (CVarDebugMantlingSystem.GetValueOnGameThread() > 0)
 		{
 			UE_LOG(LogTemp, Warning, TEXT("ConvertMantleHeight => false"));
 		}
+#endif
 		return false;
 	}
 
@@ -1695,6 +1715,14 @@ bool UWvCharacterMovementComponent::CapsuleHasRoomCheck(const FVector TargetLoca
 	TArray<AActor*> Ignore;
 	const float DrawTime = 1.0f;
 
+	auto TraceType = EDrawDebugTrace::Type::None;
+#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
+	if (CVarDebugMantlingSystem.GetValueOnGameThread() > 0)
+	{
+		TraceType = EDrawDebugTrace::Type::ForDuration;
+	}
+#endif
+
 	const bool bWasHitResult = UKismetSystemLibrary::SphereTraceSingleByProfile(
 		CharacterOwner->GetWorld(),
 		StartLocation,
@@ -1703,7 +1731,7 @@ bool UWvCharacterMovementComponent::CapsuleHasRoomCheck(const FVector TargetLoca
 		ProfileName,
 		false,
 		Ignore,
-		MantleDataAsset->bDebugDrawTrace ? EDrawDebugTrace::Type::ForDuration : EDrawDebugTrace::Type::None,
+		TraceType,
 		HitData,
 		true,
 		FLinearColor::Green,
@@ -1738,6 +1766,14 @@ void UWvCharacterMovementComponent::TraceForwardToFindWall(const FMantleTraceSet
 	TArray<AActor*> Ignore;
 	const float DrawTime = 5.0f;
 
+	auto TraceType = EDrawDebugTrace::Type::None;
+#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
+	if (CVarDebugMantlingSystem.GetValueOnGameThread() > 0)
+	{
+		TraceType = EDrawDebugTrace::Type::ForDuration;
+	}
+#endif
+
 	const bool bWasHitResult = UKismetSystemLibrary::CapsuleTraceSingle(
 		CharacterOwner->GetWorld(),
 		StartLocation,
@@ -1747,7 +1783,7 @@ void UWvCharacterMovementComponent::TraceForwardToFindWall(const FMantleTraceSet
 		MantleDataAsset->MantleTraceChannel,
 		false,
 		Ignore,
-		MantleDataAsset->bDebugDrawTrace ? EDrawDebugTrace::Type::ForDuration : EDrawDebugTrace::Type::None,
+		TraceType,
 		HitData,
 		true,
 		FLinearColor::Red,
@@ -1792,6 +1828,14 @@ void UWvCharacterMovementComponent::SphereTraceByMantleCheck(const FMantleTraceS
 	TArray<AActor*> Ignore;
 	const float DrawTime = 5.0f;
 
+	auto TraceType = EDrawDebugTrace::Type::None;
+#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
+	if (CVarDebugMantlingSystem.GetValueOnGameThread() > 0)
+	{
+		TraceType = EDrawDebugTrace::Type::ForDuration;
+	}
+#endif
+
 	const bool bWasHitResult = UKismetSystemLibrary::SphereTraceSingle(
 		CharacterOwner->GetWorld(),
 		StartLocation,
@@ -1800,7 +1844,7 @@ void UWvCharacterMovementComponent::SphereTraceByMantleCheck(const FMantleTraceS
 		MantleDataAsset->MantleTraceChannel,
 		false,
 		Ignore,
-		MantleDataAsset->bDebugDrawTrace ? EDrawDebugTrace::Type::ForDuration : EDrawDebugTrace::Type::None,
+		TraceType,
 		HitData,
 		true,
 		FLinearColor::Red,
@@ -1835,11 +1879,13 @@ void UWvCharacterMovementComponent::ConvertMantleHeight(const FVector DownTraceL
 	const FVector Diff = (RelativeLocation - GetActorLocation());
 	OutMantleHeight = Diff.Z;
 
-	if (MantleDataAsset->bDebugDrawTrace)
+#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
+	if (CVarDebugMantlingSystem.GetValueOnGameThread() > 0)
 	{
 		DrawDebugPoint(GetWorld(), RelativeLocation, 30.0f, FColor::Blue, false, 5.0f);
 		DrawDebugPoint(GetWorld(), DownTraceLocation, 30.0f, FColor::Cyan, false, 5.0f);
 	}
+#endif
 }
 
 // step4 Determine the Mantle Type by checking the movement mode and Mantle Height.
@@ -1921,10 +1967,12 @@ void UWvCharacterMovementComponent::MantleStart(const float InMantleHeight, cons
 		MotionWarpingComponent->AddOrUpdateWarpTarget(WarpingTarget);
 	}
 
-	if (MantleDataAsset->bDebugDrawTrace)
+#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
+	if (CVarDebugMantlingSystem.GetValueOnGameThread() > 0)
 	{
 		DrawDebugLine(GetWorld(), UpdatedComponent->GetComponentLocation(), MantleTarget.GetLocation(), FColor::Blue, false, 5.0f);
 	}
+#endif
 
 	MantleMovementParams.IsMovingDetectChecked = true;
 	UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(CharacterOwner, TAG_Locomotion_Mantling, FGameplayEventData());
@@ -2115,7 +2163,14 @@ void UWvCharacterMovementComponent::SweepAndStoreWallHits()
 	const bool bHitWallResult = GetWorld()->SweepMultiByChannel(HitResults, StartLocation, EndLocation, FQuat::Identity,
 		ClimbingDataAsset->ClimbTraceChannel, CollisionShape, ClimbQueryParams);
 
-	bHitWallResult ? CurrentWallHits = HitResults : CurrentWallHits.Reset();
+	if (bHitWallResult)
+	{
+		CurrentWallHits = HitResults;
+	}
+	else
+	{
+		CurrentWallHits.Reset();
+	}
 }
 
 bool UWvCharacterMovementComponent::CanStartClimbing()

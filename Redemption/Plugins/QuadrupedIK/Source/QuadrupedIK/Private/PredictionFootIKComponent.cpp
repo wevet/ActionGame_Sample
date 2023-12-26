@@ -104,7 +104,7 @@ float FPredictionToePathInfo::GetDefaultPathDistance() const
 
 UPredictionFootIKComponent::UPredictionFootIKComponent()
 {
-	PrimaryComponentTick.bCanEverTick = false;
+	PrimaryComponentTick.bCanEverTick = true;
 	PrimaryComponentTick.TickGroup = ETickingGroup::TG_PrePhysics;
 
 	RightFootCurveName = FName(TEXT("RightFootCurve"));
@@ -125,10 +125,13 @@ void UPredictionFootIKComponent::BeginPlay()
 		Info.CurveMap.Add(MoveSpeedCurveName, 0.f);
 		GaitCurveArray.Add(Info);
 	}
+
+	Super::SetComponentTickEnabled(false);
 }
 
 void UPredictionFootIKComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
+	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 }
 
 void UPredictionFootIKComponent::SetCurveValue(EPredictionGait InGait, float InWeight, FName InCurveName, float InCurveValue)

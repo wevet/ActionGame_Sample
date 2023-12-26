@@ -15,5 +15,4 @@ class REDEMPTION_API UWvInheritanceAttributeSet : public UWvAbilityAttributeSet
 	GENERATED_UCLASS_BODY()
 	
 
-
 };

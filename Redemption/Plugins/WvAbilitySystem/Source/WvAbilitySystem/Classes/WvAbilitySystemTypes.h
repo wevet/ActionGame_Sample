@@ -3,20 +3,89 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Abilities/GameplayAbility.h"
-#include "GameplayTagContainer.h"
+#include "WvAbilityBase.h"
+
 #include "AttributeSet.h"
 #include "AbilitySystemComponent.h"
 #include "Engine/DataAsset.h"
 #include "Engine/DataTable.h"
-#include "Curves/CurveFloat.h"
-#include "Components/PrimitiveComponent.h"
 #include "LegacyCameraShake.h"
-#include "WvAbilityBase.h"
+#include "NativeGameplayTags.h"
 #include "WvAbilitySystemTypes.generated.h"
 
 
+// Avatar
+WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Character_Default);
+
+// Character
+WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Character_Player);
+WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Character_Enemy);
+WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Character_Neutral);
+
+WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Common_Attack_Ability);
+WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Common_Passive_Ability);
+WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Common_EffectContext_Damage_Value);
+
+// State
+WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Character_StateMelee);
+WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Character_StateHitReact);
+WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Character_StateDead);
+WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Character_StateDead_Action);
+
+// Damage
+WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Character_DamageBlock);
+WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Character_DamageKill);
+WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Character_DamageReaction);
+
+// HitReact
+WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Character_HitReact_Default_Character);
+WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Character_HitReact_Default_Trigger);
+WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Character_HitReact_Default_Streangth);
+WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Character_HitReact_Default_Weakness);
+
+// ShakeBone
+WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Character_ShakeBone_Default_Character);
+WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Character_ShakeBone_Default_Trigger);
+WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Character_ShakeBone_Default_Streangth);
+WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Character_ShakeBone_Default_Weakness);
+
+// FWvHitReact set config tag
+WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Config_HitReactFeature_Hit);
+WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Config_HitReactFeature_Dead);
+
+// HoldUp 
+WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Weapon_HoldUp);
+WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Weapon_HoldUp_Sender);
+WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Weapon_HoldUp_Receiver);
+
+// KnockOut
+WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Weapon_KnockOut);
+WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Weapon_KnockOut_Sender);
+WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Weapon_KnockOut_Receiver);
+
+// Finisher
+WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Weapon_Finisher);
+WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Weapon_Finisher_Sender);
+WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Weapon_Finisher_Receiver);
+
+// GameplayCue
+WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_GameplayCue_HitImpact);
+WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_GameplayCue_HitImpact_Attack);
+WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_GameplayCue_HitImpact_Damage);
+WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_GameplayCue_HitImpact_Weakness);
+WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_GameplayCue_HitImpact_Bullet);
+WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_GameplayCue_HitImpact_Scar);
+WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_GameplayCue_HitImpact_Environment_BulletHit);
+
+// Throw HitReaction
+WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Common_PassiveAbilityTrigger_HitReact);
+WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Common_PassiveAbilityTrigger_KillReact);
+WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Common_PassiveAbilityTrigger_KillTarget);
+
+
 class USkeletalMeshComponent;
+class UPrimitiveComponent;
+
 
 #define ATTRIBUTE_ACCESSORS(ClassName, PropertyName) \
 	GAMEPLAYATTRIBUTE_PROPERTY_GETTER(ClassName, PropertyName) \
@@ -24,13 +93,6 @@ class USkeletalMeshComponent;
 	GAMEPLAYATTRIBUTE_VALUE_SETTER(PropertyName) \
 	GAMEPLAYATTRIBUTE_VALUE_INITTER(PropertyName)
 
-
-UENUM(BlueprintType)
-enum class ECharacterRelation : uint8
-{
-	Friend UMETA(DisplayName = "Friend"),
-	Enemy UMETA(DisplayName = "Enemy"),
-};
 
 USTRUCT(BlueprintType)
 struct FWvOverlapResult
@@ -236,6 +298,8 @@ enum class EAIActionState : uint8
 	Patrol UMETA(DisplayName = "Patrol"),
 	Search UMETA(DisplayName = "Search"),
 	Combat UMETA(DisplayName = "Combat"),
+	Follow UMETA(DisplayName = "Follow"),
+	Friendly UMETA(DisplayName = "Friendly"),
 };
 
 USTRUCT(BlueprintType)
@@ -1059,6 +1123,41 @@ public:
 
 	UPROPERTY(EditDefaultsOnly)
 	float AngleThreshold = 20.0f;
+};
+#pragma endregion
+
+
+#pragma region BotSetting
+USTRUCT(BlueprintType)
+struct FEnvironmentConfig
+{
+	GENERATED_BODY()
+
+public:
+	UPROPERTY(EditDefaultsOnly)
+	float HitSoundVolume = 1.0f;
+
+	UPROPERTY(EditDefaultsOnly)
+	float Roudness = 500.0f;
+};
+#pragma endregion
+
+
+#pragma region VehicleTraceConfig
+USTRUCT(BlueprintType)
+struct FVehicleTraceConfig
+{
+	GENERATED_BODY()
+
+public:
+	UPROPERTY(EditDefaultsOnly)
+	float ClosestTargetDistance = 400.0f;
+
+	UPROPERTY(EditDefaultsOnly)
+	float NearestDistance = 600.0f;
+
+	UPROPERTY(EditDefaultsOnly)
+	FVector2D ViewRange{ 45.0f, 110.0f };
 };
 #pragma endregion
 

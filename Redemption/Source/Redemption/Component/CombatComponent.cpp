@@ -12,10 +12,12 @@
 #include "WvAbilityDataAsset.h"
 #include "WvGameplayEffectContext.h"
 #include "Character/BaseCharacter.h"
+#include "Character/WvAIController.h"
 #include "Ability/WvAbilitySystemComponent.h"
+#include "WvAbilitySystemGlobals.h"
+#include "WvGameplayCueManager.h"
+#include "Game/CombatInstanceSubsystem.h"
 
-
-#include "AbilitySystemGlobals.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Engine/EngineTypes.h"
 #include "AbilitySystemBlueprintLibrary.h"
@@ -34,7 +36,6 @@ static TAutoConsoleVariable<int32> CVarDebugCharacterCombatTrace(TEXT("wv.Charac
 UCombatComponent::UCombatComponent(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
 	PrimaryComponentTick.bCanEverTick = true;
-	AbilityTraceChannel = UEngineTypes::ConvertToTraceType(ECollisionChannel::ECC_GameTraceChannel3);
 }
 
 void UCombatComponent::BeginPlay()
@@ -53,14 +54,13 @@ void UCombatComponent::BeginPlay()
 
 void UCombatComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-	Character.Reset();
-	ASC.Reset();
-
 	if (ASC.IsValid())
 	{
 		ASC->AbilityTagUpdateDelegate.RemoveDynamic(this, &UCombatComponent::OnTagUpdate);
 	}
 
+	Character.Reset();
+	ASC.Reset();
 	FTimerManager& TM = GetWorld()->GetTimerManager();
 	TM.ClearTimer(TickBoneShakeTimerHandle);
 	TM.ClearTimer(TimerHandle);
@@ -70,7 +70,6 @@ void UCombatComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 
 void UCombatComponent::BeginDestroy()
 {
-
 	Super::BeginDestroy();
 }
 
@@ -131,7 +130,7 @@ void UCombatComponent::BoxTraceMulti(TArray<FWvBattleDamageAttackTargetInfo>& Hi
 	UKismetSystemLibrary::BoxTraceMulti(
 		GetWorld(),
 		Start, End, HalfSize, Orientation,
-		AbilityTraceChannel, false, ActorsToIgnore,
+		ABILITY_GLOBAL()->WeaponTraceChannel, false, ActorsToIgnore,
 		bIsDebugTrace ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None,
 		HitResults, true,
 		FLinearColor::Red, FLinearColor::Green, DrawTime);
@@ -142,7 +141,7 @@ void UCombatComponent::BoxTraceMulti(TArray<FWvBattleDamageAttackTargetInfo>& Hi
 void UCombatComponent::CapsuleTraceMulti(TArray<FWvBattleDamageAttackTargetInfo>& HitTargetInfos, const FVector Start, const FVector End, const float Radius, const float HalfHeight, const FQuat CapsuleFquat, const TArray<AActor*>& ActorsToIgnore)
 {
 	TArray<FHitResult> HitResults;
-	ECollisionChannel CollisionChannel = UEngineTypes::ConvertToCollisionChannel(AbilityTraceChannel);
+	ECollisionChannel CollisionChannel = UEngineTypes::ConvertToCollisionChannel(ABILITY_GLOBAL()->WeaponTraceChannel);
 	static const FName CapsuleTraceMultiName(TEXT("CapsuleTraceMulti"));
 	const FCollisionQueryParams Params = UWvAbilitySystemBlueprintFunctionLibrary::ConfigureCollisionParams(CapsuleTraceMultiName, false, ActorsToIgnore, true, GetOwner());
 	GetWorld()->SweepMultiByChannel(HitResults, Start, End, CapsuleFquat, CollisionChannel, FCollisionShape::MakeCapsule(Radius, HalfHeight), Params);
@@ -224,6 +223,10 @@ void UCombatComponent::HitResultEnemyFilter(TArray<FHitResult>& Hits, TArray<FWv
 				InfoPointer->HitResult = HitResult;
 				InfoPointer->Target = HitActor;
 			}
+			else
+			{
+				//UE_LOG(LogTemp, Log, TEXT("not enemy ?? => %s, function => %s"), *GetNameSafe(HitActor), *FString(__FUNCTION__));
+			}
 		}
 
 		if (!InfoPointer)
@@ -256,6 +259,51 @@ void UCombatComponent::HitResultEnemyFilter(TArray<FHitResult>& Hits, TArray<FWv
 const bool UCombatComponent::LineOfSightTraceOuter(class UWvAbilityBase* Ability, const int32 EffectGroupIndex, TArray<FHitResult>& Hits, const FVector SourceLocation)
 {
 	return BulletTraceAttackToAbilitySystemComponent(0, Ability, EffectGroupIndex, Hits, SourceLocation);
+}
+
+/// <summary>
+/// HitBy Environment
+/// </summary>
+/// <returns></returns>
+const bool UCombatComponent::LineOfSightTraceOuterEnvironment(class UWvAbilityBase* Ability, const int32 EffectGroupIndex, const FHitResult& HitResult, const FVector SourceLocation)
+{
+	if (!IsValid(HitResult.GetActor()))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("not valid HitResult GetActor => %s"), *FString(__FUNCTION__));
+		return false;
+	}
+
+	UCombatInstanceSubsystem::Get()->OnHitEnvironment(GetOwner(), HitResult);
+
+#if false
+	FGameplayCueParameters CueParameter;
+	CueParameter.EffectContext = ASC->MakeEffectContext();
+	CueParameter.Location = HitResult.ImpactPoint;
+	CueParameter.Normal = HitResult.ImpactNormal;
+	CueParameter.PhysicalMaterial = HitResult.PhysMaterial;
+	CueParameter.Instigator = Character;
+	ABILITY_GLOBAL()->GetGameplayCueManager()->HandleGameplayCue(HitResult.GetActor(),
+		TAG_GameplayCue_HitImpact_Environment_BulletHit, EGameplayCueEvent::Type::Executed, CueParameter);
+
+#endif
+	return true;
+}
+
+const bool UCombatComponent::HasEnvironmentFilterClass(const FHitResult& HitResult)
+{
+	if (IsValid(HitResult.GetActor()))
+	{
+		auto FindClass = ABILITY_GLOBAL()->BulletHitFilterClasses.FindByPredicate([&](UClass* Class)
+		{
+			return (HitResult.GetActor()->GetClass()->IsChildOf(Class));
+		});
+
+		if (FindClass)
+		{
+			return true;
+		}
+	}
+	return false;
 }
 
 /// <summary>
@@ -755,6 +803,93 @@ void UCombatComponent::Modify_Weapon(const ELSOverlayState LSOverlayState)
 			Character->OverlayStateChange(LSOverlayState);
 		}
 	}
+}
+
+void UCombatComponent::AddFollower(APawn* NewPawn)
+{
+	if (!IsValid(NewPawn))
+	{
+		return;
+	}
+
+	if (!Followers.Contains(NewPawn))
+	{
+		Followers.Add(NewPawn);
+
+		AWvAIController* AIC = Cast<AWvAIController>(NewPawn->GetController());
+		if (IsValid(AIC))
+		{
+			AIC->Notify_Follow();
+		}
+	}
+}
+
+void UCombatComponent::RemoveFollower(APawn* RemovePawn)
+{
+	if (!IsValid(RemovePawn))
+	{
+		return;
+	}
+
+	if (Followers.Contains(RemovePawn))
+	{
+		Followers.Remove(RemovePawn);
+
+		AWvAIController* AIC = Cast<AWvAIController>(RemovePawn->GetController());
+		if (IsValid(AIC))
+		{
+			AIC->Notify_UnFollow();
+		}
+	}
+}
+
+void UCombatComponent::RemoveAllFollowers()
+{
+	for (TWeakObjectPtr<APawn> Follower : Followers)
+	{
+		if (!Follower.IsValid())
+		{
+			continue;
+		}
+
+		AWvAIController* AIC = Cast<AWvAIController>(Follower.Get()->GetController());
+		if (IsValid(AIC))
+		{
+			AIC->Notify_UnFollow(true);
+		}
+		Follower.Reset();
+	}
+	Followers.Reset(0);
+}
+
+const FVector UCombatComponent::GetFormationPoint(const APawn* InPawn)
+{
+	if (!IsValid(InPawn))
+	{
+		return Character->GetActorLocation();
+	}
+
+	const int32 Num = Followers.Num();
+	int32 SelectIndex = 0;
+	for (int32 Index = 0; Index < Num; ++Index)
+	{
+		TWeakObjectPtr<APawn> Follow = Followers[Index];
+		if (Follow.Get() == InPawn)
+		{
+			SelectIndex = Index;
+			break;
+		}
+	}
+
+	TArray<FVector> Points;
+	UWvCommonUtils::CircleSpawnPoints(Num, FormationRadius, Character->GetActorLocation(), Points);
+
+	return Points[SelectIndex];
+}
+
+bool UCombatComponent::CanFollow() const
+{
+	return Followers.Num() < FollowStackCount;
 }
 #pragma endregion
 

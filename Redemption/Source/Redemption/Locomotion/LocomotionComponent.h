@@ -115,22 +115,6 @@ public:
 	virtual ELSOverlayState GetLSOverlayState_Implementation() const override;
 
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Component|LocomotionInterface")
-	void OnMovementModeChange();
-	virtual void OnMovementModeChange_Implementation() override;
-
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Component|LocomotionInterface")
-	void OnLSRotationModeChange();
-	virtual void OnLSRotationModeChange_Implementation() override;
-
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Component|LocomotionInterface")
-	void OnLSStanceChange();
-	virtual void OnLSStanceChange_Implementation() override;
-
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Component|LocomotionInterface")
-	void OnLSGaitChange();
-	virtual void OnLSGaitChange_Implementation() override;
-
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Component|LocomotionInterface")
 	void SetLSAiming(const bool NewLSAiming);
 	virtual void SetLSAiming_Implementation(const bool NewLSAiming) override;
 
@@ -147,70 +131,38 @@ public:
 	virtual bool HasAiming_Implementation() const override;
 
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Component|LocomotionInterface")
-	void SetWalkingSpeed(const float InWalkingSpeed);
-	virtual void SetWalkingSpeed_Implementation(const float InWalkingSpeed) override;
-
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Component|LocomotionInterface")
-	void SetRunningSpeed(const float InRunningSpeed);
-	virtual void SetRunningSpeed_Implementation(const float InRunningSpeed) override;
-
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Component|LocomotionInterface")
-	void SetSprintingSpeed(const float InSprintingSpeed);
-	virtual void SetSprintingSpeed_Implementation(const float InSprintingSpeed) override;
-
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Component|LocomotionInterface")
-	void SetCrouchingSpeed(const float InCrouchingSpeed);
-	virtual void SetCrouchingSpeed_Implementation(const float InCrouchingSpeed) override;
-
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Component|LocomotionInterface")
-	void SetSwimmingSpeed(const float InSwimmingSpeed);
-	virtual void SetSwimmingSpeed_Implementation(const float InSwimmingSpeed) override;
-
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Component|LocomotionInterface")
-	float GetWalkingSpeed() const;
-	virtual float GetWalkingSpeed_Implementation() const override;
-
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Component|LocomotionInterface")
-	float GetRunningSpeed() const;
-	virtual float GetRunningSpeed_Implementation() const override;
-
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Component|LocomotionInterface")
-	float GetSprintingSpeed() const;
-	virtual float GetSprintingSpeed_Implementation() const override;
-
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Component|LocomotionInterface")
-	float GetCrouchingSpeed() const;
-	virtual float GetCrouchingSpeed_Implementation() const override;
-
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Component|LocomotionInterface")
-	float GetSwimmingSpeed() const;
-	virtual float GetSwimmingSpeed_Implementation() const override;
-
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Component|LocomotionInterface")
-	void SetRightShoulder(const bool NewRightShoulder);
-	virtual void SetRightShoulder_Implementation(const bool NewRightShoulder) override;
-
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Component|LocomotionInterface")
 	const FTransform GetPivotOverlayTansform();
 	virtual const FTransform GetPivotOverlayTansform_Implementation() override;
+
+	virtual void SetWalkingSpeed(const float InWalkingSpeed) override;
+	virtual void SetRunningSpeed(const float InRunningSpeed) override;
+	virtual void SetSprintingSpeed(const float InSprintingSpeed) override;
+	virtual void SetCrouchingSpeed(const float InCrouchingSpeed) override;
+	virtual void SetSwimmingSpeed(const float InSwimmingSpeed) override;
+
+	virtual float GetWalkingSpeed() const override;
+	virtual float GetRunningSpeed() const override;
+	virtual float GetSprintingSpeed() const override;
+	virtual float GetCrouchingSpeed() const override;
+	virtual float GetSwimmingSpeed() const override;
 #pragma endregion
 
-	UPROPERTY(BlueprintAssignable, Category = "Locomotion")
+	UPROPERTY(BlueprintAssignable)
 	FLocomotionStateChangeDelegate OnGaitChangeDelegate;
 
-	UPROPERTY(BlueprintAssignable, Category = "Locomotion")
+	UPROPERTY(BlueprintAssignable)
 	FLocomotionStateChangeDelegate OnStanceChangeDelegate;
 
-	UPROPERTY(BlueprintAssignable, Category = "Locomotion")
+	UPROPERTY(BlueprintAssignable)
 	FLocomotionStateChangeDelegate OnRotationModeChangeDelegate;
 
-	UPROPERTY(BlueprintAssignable, Category = "Locomotion")
+	UPROPERTY(BlueprintAssignable)
 	FLocomotionStateChangeDelegate OnMovementModeChangeDelegate;
 
-	UPROPERTY(BlueprintAssignable, Category = "Locomotion")
+	UPROPERTY(BlueprintAssignable)
 	FLocomotionStateChangeDelegate OnAimingChangeDelegate;
 
-	UPROPERTY(BlueprintAssignable, Category = "Locomotion")
+	UPROPERTY(BlueprintAssignable)
 	FLocomotionOverlayChangeDelegate OnOverlayChangeDelegate;
 
 protected:
@@ -352,6 +304,12 @@ public:
 	void StopRagdollAction();
 
 private:
+	void OnMovementModeChange();
+	void OnLSRotationModeChange();
+	void OnLSStanceChange();
+	void OnLSGaitChange();
+
+
 	const bool CanSprint();
 	void ManageCharacterRotation();
 	void OnLandedCallback();

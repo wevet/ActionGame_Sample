@@ -112,23 +112,23 @@ void UWvCameraFollowComponent::UpdateCamera(UCurveFloat* LerpCurve)
 
 	CameraLerpTimerTotalTime = MaxTime;
 	CameraLerpTimerCurTime = 0;
-
 	CameraLerpTimerLerpInfo.LerpCurve = LerpCurve;
 	CameraLerpTimerLerpInfo.CurCameraSettings.TargetArmLength = SpringArmComponent->TargetArmLength;
 	CameraLerpTimerLerpInfo.CurCameraSettings.SocketOffset = SpringArmComponent->SocketOffset;
 
-	if (CameraLerpTimerHandle.IsValid())
+	FTimerManager& TM = GetWorld()->GetTimerManager();
+	if (TM.IsTimerActive(CameraLerpTimerHandle))
 	{
-		GetWorld()->GetTimerManager().ClearTimer(CameraLerpTimerHandle);
+		TM.ClearTimer(CameraLerpTimerHandle);
 	}
 
-	const float DT = GetWorld()->DeltaTimeSeconds;
-	GetWorld()->GetTimerManager().SetTimer(CameraLerpTimerHandle, this, &UWvCameraFollowComponent::LerpUpdateCameraTimerCallback, DT, true);
+	const float DT = GetWorld()->GetDeltaSeconds();
+	TM.SetTimer(CameraLerpTimerHandle, this, &UWvCameraFollowComponent::LerpUpdateCameraTimerCallback, DT, true);
 }
 
 void UWvCameraFollowComponent::LerpUpdateCameraTimerCallback()
 {
-	const float DT = GetWorld()->DeltaTimeSeconds;
+	const float DT = GetWorld()->GetDeltaSeconds();
 	CameraLerpTimerCurTime += DT;
 
 	const float LerpAlpha = CameraLerpTimerLerpInfo.LerpCurve->GetFloatValue(CameraLerpTimerCurTime);
@@ -139,7 +139,8 @@ void UWvCameraFollowComponent::LerpUpdateCameraTimerCallback()
 
 	if (CameraLerpTimerCurTime >= CameraLerpTimerTotalTime)
 	{
-		GetWorld()->GetTimerManager().ClearTimer(CameraLerpTimerHandle);
+		FTimerManager& TM = GetWorld()->GetTimerManager();
+		TM.ClearTimer(CameraLerpTimerHandle);
 		CameraLerpTimerHandle.Invalidate();
 	}
 }
@@ -154,10 +155,7 @@ bool UWvCameraFollowComponent::LerpCameraSettings(float LerpAlpha)
 
 	const float TargetArmLength = UKismetMathLibrary::Lerp(CameraLerpTimerLerpInfo.CurCameraSettings.TargetArmLength, CameraSettings.TargetArmLength, LerpAlpha);
 	const float CameraLagSpeed = UKismetMathLibrary::Lerp(CameraLerpTimerLerpInfo.CurCameraSettings.CameraLagSpeed, CameraSettings.CameraLagSpeed, LerpAlpha);
-
-	const bool bIsRightShoulder = LocomotionComponent->GetLocomotionEssencialVariables().bRightShoulder;
-	FVector SettingsVector = CameraSettings.SocketOffset;
-	SettingsVector.Y *= bIsRightShoulder ? 1 : -1;
+	const FVector SettingsVector = CameraSettings.SocketOffset;
 
 	const FVector SocketOffset = UKismetMathLibrary::VLerp(CameraLerpTimerLerpInfo.CurCameraSettings.SocketOffset, SettingsVector, LerpAlpha);
 
@@ -936,26 +934,7 @@ AActor* UWvCameraFollowComponent::FindNearestTarget(TArray<AActor*> Actors) cons
 
 AActor* UWvCameraFollowComponent::FindNearestDistanceTarget(TArray<AActor*> Actors) const
 {
-	// From the hit actors, check distance and return the nearest
-	if (Actors.Num() <= 0)
-	{
-		return nullptr;
-	}
-
-	float ClosestDistance = ClosestTargetDistance;
-	AActor* Target = nullptr;
-	for (int32 Index = 0; Index < Actors.Num(); ++Index)
-	{
-		const float Distance2D = (Character->GetActorLocation() - Actors[Index]->GetActorLocation()).Size2D();
-		UE_LOG(LogTemp, Log, TEXT("ClosestDistance => %.3f, Distance2D => %.3f"), ClosestDistance, Distance2D);
-
-		if (Distance2D < ClosestDistance)
-		{
-			ClosestDistance = Distance2D;
-			Target = Actors[Index];
-		}
-	}
-	return Target;
+	return UWvCommonUtils::FindNearestDistanceTarget(Character.Get(), Actors, ClosestTargetDistance);
 }
 
 bool UWvCameraFollowComponent::LineTrace(FHitResult& OutHitResult, const AActor* OtherActor, const TArray<AActor*>& ActorsToIgnore) const

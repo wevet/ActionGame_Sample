@@ -12,7 +12,8 @@
 				"Engine",
 				"GameplayAbilities",
 				"WvAbilitySystem",
-				"AIModule"
+				"AIModule",
+				"ChaosVehicles"
 			]
 		},
 		{
@@ -185,11 +186,39 @@
 			"Enabled": true
 		},
 		{
+			"Name": "WvAbilitySystem",
+			"Enabled": true
+		},
+		{
 			"Name": "MotoricaStudio",
 			"Enabled": false,
 			"SupportedTargetPlatforms": [
 				"Win64"
 			]
+		},
+		{
+			"Name": "MassAI",
+			"Enabled": true
+		},
+		{
+			"Name": "MassCrowd",
+			"Enabled": true
+		},
+		{
+			"Name": "MassEntity",
+			"Enabled": true
+		},
+		{
+			"Name": "MassGameplay",
+			"Enabled": true
+		},
+		{
+			"Name": "ZoneGraph",
+			"Enabled": true
+		},
+		{
+			"Name": "ZoneGraphAnnotations",
+			"Enabled": true
 		}
 	]
 }
