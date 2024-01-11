@@ -94,9 +94,8 @@ void UWvAT_BulletDamage::LineOfSightTraceExecute()
 	HoldWeapon->SetGunFirePrepareParameters(Randomize);
 	HoldWeapon->DoFire();
 
-	FVector TraceEndPosition = FVector::ZeroVector;
 	FHitResult HitResult(ForceInit);
-	const bool bHitResult = HoldWeapon->LineOfSightOuter(HitResult, TraceEndPosition);
+	const bool bHitResult = HoldWeapon->LineOfSightOuter(HitResult);
 
 	if (bHitResult)
 	{

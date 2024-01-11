@@ -6,10 +6,11 @@
 #include "Animation/AnimBulkCurves.h"
 #include "Runtime/Launch/Resources/Version.h"
 
+#include UE_INLINE_GENERATED_CPP_BY_NAME(AnimNode_CacheCurveForFootIK)
+
 FAnimNode_CacheCurveForFootIK::FAnimNode_CacheCurveForFootIK()
 {
 }
-
 
 void FAnimNode_CacheCurveForFootIK::Initialize_AnyThread(const FAnimationInitializeContext& Context)
 {

@@ -11,7 +11,7 @@
 float UPredictionAnimInstance::INVALID_TOE_DISTANCE = -9999.f;
 float UPredictionAnimInstance::DEFAULT_TOE_HEIGHT_LIMIT = -999.f;
 
-// log LogPredictionFootIK Verbose
+// log LogQuadrupedIK Verbose
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(PredictionAnimInstance)
 
@@ -22,8 +22,8 @@ UPredictionAnimInstance::UPredictionAnimInstance()
 	bDrawDebugForPelvis = false;
 	bDrawDebugForTrace = false;
 
-	bEnableCurvePredictive = false;
-	bEnableDefaultDistancePredictive = false;
+	bEnableCurvePredictive = true;
+	bEnableDefaultDistancePredictive = true;
 
 	RightToeName = FName(TEXT("ball_r"));
 	LeftToeName = FName(TEXT("ball_l"));
@@ -39,7 +39,6 @@ bool UPredictionAnimInstance::EnableFootIK_Implementation() const
 void UPredictionAnimInstance::NativeInitializeAnimation()
 {
 	Super::NativeInitializeAnimation();
-
 
 
 }
@@ -65,52 +64,49 @@ void UPredictionAnimInstance::NativeBeginPlay()
 
 	if (Character)
 	{
+		bIsOwnerPlayerController = bool(Cast<APlayerController>(Character->GetController()));
 		CharacterMovementComponent = Character->GetCharacterMovement();
 		Character->LandedDelegate.AddDynamic(this, &ThisClass::Landed_Callback);
-
-		bIsOwnerPlayerCharacter = bool(Cast<APlayerController>(Character->GetController()));
+		PredictionFootIKComponent = Cast<UPredictionFootIKComponent>(Character->GetComponentByClass(UPredictionFootIKComponent::StaticClass()));
 
 		const FVector RightInitialToePos = GetOwningComponent()->GetSkinnedAsset()->GetComposedRefPoseMatrix(RightToeName).GetOrigin();
 		const FVector LeftInitialToePos = GetOwningComponent()->GetSkinnedAsset()->GetComposedRefPoseMatrix(LeftToeName).GetOrigin();
 		RightToePathInfo.SetToeContactFloorHeight(RightInitialToePos.Z + ToeLeaveFloorOffset);
 		LeftToePathInfo.SetToeContactFloorHeight(LeftInitialToePos.Z + ToeLeaveFloorOffset);
-
-		UActorComponent* Component = Character->GetComponentByClass(UPredictionFootIKComponent::StaticClass());
-		if (Component)
-		{
-			PredictionFootIKComponent = Cast<UPredictionFootIKComponent>(Component);
-		}
 	}
 
-	if (!bIsOwnerPlayerCharacter)
+	if (!bIsOwnerPlayerController)
 	{
 		bDrawDebug = false;
 	}
+
 	bDrawDebugForToe = bDrawDebug && bDrawDebugForToe;
 	bDrawDebugForPelvis = bDrawDebug && bDrawDebugForPelvis;
 	bDrawDebugForTrace = bDrawDebug && bDrawDebugForTrace;
+
 }
 
-void UPredictionAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
+void UPredictionAnimInstance::NativeThreadSafeUpdateAnimation(float DeltaSeconds)
 {
-	const bool bIsValidComps = (Character && CharacterMovementComponent && PredictionFootIKComponent);
+	Super::NativeThreadSafeUpdateAnimation(DeltaSeconds);
 
-	if (!bIsValidComps)
+	const bool bIsValidVariables = (Character && CharacterMovementComponent && PredictionFootIKComponent);
+
+	if (!bIsValidVariables)
 	{
 		return;
 	}
 
+	const float HalfHeight = Character->GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
 	CharacterMaxStepHeight = bAllowCustomStepHeight ? CustomStepHeight : CharacterMovementComponent->MaxStepHeight;
 	LstCharacterBottomLocation = CurCharacterBottomLocation;
-	CurCharacterBottomLocation = Character->GetActorLocation() - FVector(0.f, 0.f, Character->GetCapsuleComponent()->GetScaledCapsuleHalfHeight());
+	CurCharacterBottomLocation = Character->GetActorLocation() - FVector(0.f, 0.f, HalfHeight);
 
-	FVector MoveDelta = CurCharacterBottomLocation - LstCharacterBottomLocation;
-	FVector Pos = GetCharacterDirection();
-	//FVector Pos = CharacterMovementComponent->Velocity;
-
-	//float Dot = FMath::Abs(FVector::DotProduct(MoveDelta.GetSafeNormal2D(), Pos.GetSafeNormal2D()));
+	const FVector MoveDelta = CurCharacterBottomLocation - LstCharacterBottomLocation;
+	const FVector Pos = GetCharacterDirection();
 	const float Dot = FVector::DotProduct(MoveDelta.GetSafeNormal2D(), Pos.GetSafeNormal2D());
 	const bool bIsAbnormalMove = Dot < AbnormalMoveCosAngle;
+
 	if (bIsAbnormalMove)
 	{
 		AbnormalMoveTime += DeltaSeconds;
@@ -120,12 +116,12 @@ void UPredictionAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 		AbnormalMoveTime = 0.f;
 	}
 
-	UE_LOG(LogPredictionFootIK, Verbose, TEXT("Dot => %.3f"), Dot);
-	const bool bIsFinalAbnormalMove = AbnormalMoveTime >= AbnormalMoveTimeLimit;
+	UE_LOG(LogQuadrupedIK, Verbose, TEXT("Dot => %.3f"), Dot);
 	const float Dist2DSquared = FVector::DistSquaredXY(CurCharacterBottomLocation, LstCharacterBottomLocation);
+	const bool bIsFinalAbnormalMove = (AbnormalMoveTime >= AbnormalMoveTimeLimit);
 	const bool bIsJustTeleported = Dist2DSquared > TeleportedDistanceThreshold * TeleportedDistanceThreshold;
 	const bool bIsValidPredictiveFootIK = TickPredictiveFootIK(DeltaSeconds, CurMeshWorldPosZ, bIsJustTeleported, bIsFinalAbnormalMove);
-	bool IsEnableFootIK = (EnableFootIK() || bIsValidPredictiveFootIK) && !bIsJustTeleported;
+	const bool IsEnableFootIK = (EnableFootIK() || bIsValidPredictiveFootIK) && !bIsJustTeleported;
 
 	float MinHitZ = 0.f;
 	if (IsEnableFootIK)
@@ -138,8 +134,8 @@ void UPredictionAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 	else
 	{
 		FootIKByHeightOffset = false;
-		CurRightFootWorldPosZ = CurCharacterBottomLocation.Z;
-		CurLeftFootWorldPosZ = CurCharacterBottomLocation.Z;
+		RightFootHitNormal, LeftFootHitNormal = FVector::ZeroVector;
+		CurRightFootWorldPosZ, CurLeftFootWorldPosZ = CurCharacterBottomLocation.Z;
 	}
 
 	if (IsEnableFootIK)
@@ -149,12 +145,14 @@ void UPredictionAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 			TickReactFootIK(DeltaSeconds, CurMeshWorldPosZ, MinHitZ);
 		}
 		WeightOfDisableFootIK = 0.f;
-		//UE_LOG(LogPredictionFootIK, Verbose, TEXT("CurMeshWorldPosZ: %f CapsulePosZ: %f Dist2DSquared: %f"), CurMeshWorldPosZ, CurCharacterBottomLocation.Z, Dist2DSquared);
+		WeightFootIK = 1.0f - WeightOfDisableFootIK;
+		UE_LOG(LogQuadrupedIK, Verbose, TEXT("CurMeshWorldPosZ: %f CapsulePosZ: %f Dist2DSquared: %f"), CurMeshWorldPosZ, CurCharacterBottomLocation.Z, Dist2DSquared);
 	}
 	else
 	{
 		WeightOfDisableFootIK = UKismetMathLibrary::FInterpTo(WeightOfDisableFootIK, 1.f, DeltaSeconds, MeshPosZInterpSpeedWhenDisableFootIK);
-		UE_LOG(LogPredictionFootIK, Verbose, TEXT("-------------DisableFootIK---------CurWeight:%f"), WeightOfDisableFootIK);
+		WeightFootIK = 1.0f - WeightOfDisableFootIK;
+		UE_LOG(LogQuadrupedIK, Verbose, TEXT("-------------DisableFootIK---------CurWeight:%f"), WeightOfDisableFootIK);
 		TickDisableFootIK(DeltaSeconds, CurMeshWorldPosZ, WeightOfDisableFootIK, !bIsJustTeleported);
 	}
 
@@ -162,33 +160,42 @@ void UPredictionAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 	PelvisFinalOffset = UKismetMathLibrary::FClamp(PelvisFinalOffset, -1.f * PelvisHeightThreshold, PelvisHeightThreshold);
 }
 
+
 bool UPredictionAnimInstance::TickPredictiveFootIK(float DeltaSeconds, float& OutTargetMeshPosZ, bool BlockPredictive, bool AbnormalMove)
 {
 	Step0_Prepare();
 
+	if (bIsOwnerPlayerController)
+	{
+		if (!bDrawDebugForToe)
+		{
+			bDrawDebugForToe = bDrawDebug;
+		}
+	}
+
 	if (!BlockPredictive && !CharacterMovementComponent->GetCurrentAcceleration().IsNearlyZero() && ValidPredictiveWeight)
 	{
+		const float Vel = CharacterMovementComponent->Velocity.Size();
+		DefaultToeFirstPathDistance = Vel;
+
 		bool IsTotalPathStart = RightToePathInfo.IsPathStarted || LeftToePathInfo.IsPathStarted;
-		float Dist = !IsTotalPathStart ? DefaultToeFirstPathDistance : DefaultToeFirstPathDistance * 2.f;
+		const float Dist = !IsTotalPathStart ? DefaultToeFirstPathDistance : DefaultToeFirstPathDistance * 2.f;
 
 		// tick contact state and path
 		RightToePathInfo.Update(GetOwningComponent(), RightToeCSPos, LeftToeCSPos, EPredictionMotionFoot::Right, RightToeName);
 		LeftToePathInfo.Update(GetOwningComponent(), RightToeCSPos, LeftToeCSPos, EPredictionMotionFoot::Left, LeftToeName);
 
 		if (RightToePathInfo.IsLeaveStart())
-		{
 			RightToePathInfo.SetDefaultPathDistance(Dist);
-		}
+
 		if (LeftToePathInfo.IsLeaveStart())
-		{
 			LeftToePathInfo.SetDefaultPathDistance(Dist);
-		}
 
 		FVector RightToeEndPos;
-		bool IsValidForRightPredictive = Step1_PredictiveToeEndPos(RightToeEndPos, RightToePathInfo, CurRightToeCurveValue, RightToeName);
+		const bool IsValidForRightPredictive = Step1_PredictiveToeEndPos(RightToeEndPos, RightToePathInfo, CurRightToeCurveValue, RightToeName);
 
 		FVector LeftToeEndPos;
-		bool IsValidForLeftPredictive = Step1_PredictiveToeEndPos(LeftToeEndPos, LeftToePathInfo, CurLeftToeCurveValue, LeftToeName);
+		const bool IsValidForLeftPredictive = Step1_PredictiveToeEndPos(LeftToeEndPos, LeftToePathInfo, CurLeftToeCurveValue, LeftToeName);
 
 		if (IsValidForRightPredictive)
 		{
@@ -212,10 +219,10 @@ bool UPredictionAnimInstance::TickPredictiveFootIK(float DeltaSeconds, float& Ou
 
 		if (!AbnormalMove && (RightToePath.Num() > 1 || LeftToePath.Num() > 1))
 		{
-			UE_LOG(LogPredictionFootIK, Verbose, TEXT("ToePath Num R: %d L: %d"), RightToePath.Num(), LeftToePath.Num());
 
 			if (bDrawDebugForToe)
 			{
+				UE_LOG(LogQuadrupedIK, Verbose, TEXT("ToePath Num R: %d L: %d"), RightToePath.Num(), LeftToePath.Num());
 				DebugDrawToePath(RightToePath, RightToePathInfo.CurToePos, FLinearColor::Yellow);
 				DebugDrawToePath(LeftToePath, LeftToePathInfo.CurToePos, FLinearColor::Green);
 			}
@@ -246,7 +253,7 @@ bool UPredictionAnimInstance::TickPredictiveFootIK(float DeltaSeconds, float& Ou
 		else
 		{
 			CurMotionFoot = EPredictionMotionFoot::None;
-			UE_LOG(LogPredictionFootIK, VeryVerbose, TEXT("ToePredictivePos unwalkable"));
+			UE_LOG(LogQuadrupedIK, VeryVerbose, TEXT("ToePredictivePos unwalkable"));
 		}
 	}
 	else
@@ -292,19 +299,19 @@ bool UPredictionAnimInstance::Step1_PredictiveToeEndPos(FVector& OutToeEndPos, c
 		{
 			ValidPredictive = true;
 			OutToeEndPos = InPastPath.CurToePos;
-			UE_LOG(LogPredictionFootIK, Verbose, TEXT("Predictive by contact :%s"), *InToeName.ToString());
+			UE_LOG(LogQuadrupedIK, Verbose, TEXT("Predictive by contact :%s"), *InToeName.ToString());
 		}
 		else if (bEnableCurvePredictive && InCurToeCurveValue > 0.f)
 		{
 			ValidPredictive = true;
 			CalcToeEndPosByCurve(OutToeEndPos, InCurToeCurveValue);
-			UE_LOG(LogPredictionFootIK, Verbose, TEXT("Predictive by curve :%s"), *InToeName.ToString());
+			UE_LOG(LogQuadrupedIK, Verbose, TEXT("Predictive by curve :%s"), *InToeName.ToString());
 		}
 		else if (bEnableDefaultDistancePredictive)
 		{
 			ValidPredictive = true;
 			CalcToeEndPosByDefaultDistance(OutToeEndPos, InPastPath);
-			UE_LOG(LogPredictionFootIK, Verbose, TEXT("Predictive by default distance :%s"), *InToeName.ToString());
+			UE_LOG(LogQuadrupedIK, Verbose, TEXT("Predictive by default distance :%s"), *InToeName.ToString());
 		}
 	}
 
@@ -313,21 +320,20 @@ bool UPredictionAnimInstance::Step1_PredictiveToeEndPos(FVector& OutToeEndPos, c
 
 void UPredictionAnimInstance::Step2_TraceToePath(TArray<FVector>& OutToePath, float& OutToeHeightLimit, const FVector& InToeStartPos, const FVector& InToeCurPos, FVector InToeEndPos, const FName& InToeName, const float& DeltaSeconds)
 {
-	bool EndPosChanged = false;
+	bool bIsEndPosChanged = false;
 	FVector LastToeEndPos = OutToePath.Num() > 1 ? OutToePath[OutToePath.Num() - 1] : FVector::ZeroVector;
 	FVector CurToeEndPos = InToeEndPos;
-	CheckEndPosByTrace(EndPosChanged, CurToeEndPos, LastToeEndPos);
+	CheckEndPosByTrace(bIsEndPosChanged, CurToeEndPos, LastToeEndPos);
 
 	// will cause cur toe endpos not same with trace end pos.
-	if (EndPosChanged || OutToePath.IsEmpty())
+	if (bIsEndPosChanged || OutToePath.IsEmpty())
 	{
 		TArray<FVector> ToePath;
-		bool ValidEndPos = true;
-		LineTracePath2(ValidEndPos, ToePath, InToeCurPos, CurToeEndPos);
+		bool bIsValidEndPos = true;
+		LineTracePath2(bIsValidEndPos, ToePath, InToeCurPos, CurToeEndPos);
+		UE_LOG(LogQuadrupedIK, Verbose, TEXT("%s End Pos Changed, Valid %d"), *InToeName.ToString(), bIsValidEndPos);
 
-		UE_LOG(LogPredictionFootIK, Verbose, TEXT("%s End Pos Changed, Valid %d"), *InToeName.ToString(), ValidEndPos);
-
-		if (ValidEndPos)
+		if (bIsValidEndPos)
 		{
 			OutToePath = ToePath;
 		}
@@ -342,7 +348,7 @@ void UPredictionAnimInstance::Step2_TraceToePath(TArray<FVector>& OutToePath, fl
 void UPredictionAnimInstance::Step3_CalcMeshPosZ(float& OutTargetMeshPosZ, const float& InRightEndDist, const float& InLeftEndDist, const FVector& InRightToePos, const FVector& InLeftToePos, const FVector& InRightEndPos, const FVector& InLeftEndPos, const float& DeltaSeconds)
 {
 	// switch motion foot
-	EPredictionMotionFoot LstMotionFoot = CurMotionFoot;
+	const EPredictionMotionFoot LstMotionFoot = CurMotionFoot;
 	FName MotionToeName;
 
 	// maybe double dist all < 0.f
@@ -380,8 +386,8 @@ void UPredictionAnimInstance::Step3_CalcMeshPosZ(float& OutTargetMeshPosZ, const
 		CurMotionFoot = LstMotionFoot;
 	}
 
-	FName LstMotionToeName = LstMotionFoot == EPredictionMotionFoot::None ? FName(TEXT("None")) : LstMotionFoot == EPredictionMotionFoot::Right ? RightToeName : LeftToeName;
-	UE_LOG(LogPredictionFootIK, Verbose, TEXT("<<<<<<<<< LstMotionToeName: %s CurRightEndDist: %f CurLeftEndDist: %f"), *LstMotionToeName.ToString(), InRightEndDist, InLeftEndDist);
+	const FName LstMotionToeName = LstMotionFoot == EPredictionMotionFoot::None ? FName(TEXT("None")) : LstMotionFoot == EPredictionMotionFoot::Right ? RightToeName : LeftToeName;
+	UE_LOG(LogQuadrupedIK, Verbose, TEXT("<<<<<<<<< LstMotionToeName: %s CurRightEndDist: %f CurLeftEndDist: %f"), *LstMotionToeName.ToString(), InRightEndDist, InLeftEndDist);
 	CalcPelvisOffset2(OutTargetMeshPosZ, MotionFootStartPos_MapByRootPos, MotionFootEndPos, CurCharacterBottomLocation, DeltaSeconds, LstMotionFoot, CurMotionFoot);
 
 	FVector LstFootEndPos = MotionFootEndPos;
@@ -471,16 +477,14 @@ void UPredictionAnimInstance::LineTracePath2(bool& OutEndPosValid, TArray<FVecto
 {
 	OutToePath.Empty();
 
-	FVector Start = FVector(InToeStartPos.X, InToeStartPos.Y, CurCharacterBottomLocation.Z);
-	FVector End = InToeEndPos;
-
-	FVector Forward = (End - Start).GetSafeNormal2D();
-	float PathLength = (End - Start).Size2D();
+	const FVector Start = FVector(InToeStartPos.X, InToeStartPos.Y, CurCharacterBottomLocation.Z);
+	const FVector End = InToeEndPos;
+	const FVector Forward = (End - Start).GetSafeNormal2D();
+	const float PathLength = (End - Start).Size2D();
+	const FVector TraceHeight = { 0, 0, Character->GetCapsuleComponent()->GetScaledCapsuleHalfHeight() };
 
 	FVector TracePos = Start;
 	FVector ValidHitPos = TracePos;
-
-	FVector TraceHeight = { 0, 0, Character->GetCapsuleComponent()->GetScaledCapsuleHalfHeight() * 2 };
 
 	FHitResult OldHit;
 	TArray<AActor*> IgnoreActors({ Character, });
@@ -506,14 +510,15 @@ void UPredictionAnimInstance::LineTracePath2(bool& OutEndPosValid, TArray<FVecto
 
 		FHitResult Hit;
 
+		auto TraceType = bDrawDebugForToe ? EDrawDebugTrace::ForOneFrame : EDrawDebugTrace::None;
 		// Start from last pos, end to cur pos, build a slope line for trace.
-		UKismetSystemLibrary::LineTraceSingle(GetWorld(), TracePos + TraceHeight, TracePos - TraceHeight,
-			TraceChannel, false, IgnoreActors, EDrawDebugTrace::None, Hit, true);
+		const auto LocalStart = TracePos + TraceHeight;
+		const auto LocalEnd = TracePos - TraceHeight;
+		UKismetSystemLibrary::LineTraceSingle(GetWorld(), LocalStart, LocalEnd, TraceChannel, false, IgnoreActors, TraceType, Hit, true);
 
-		bool ValidHit = Hit.IsValidBlockingHit();
-
+		const bool ValidHit = Hit.IsValidBlockingHit();
 		float HitOffsetZ = FMath::Abs(TracePos.Z - Hit.Location.Z);
-		UE_LOG(LogPredictionFootIK, Verbose, TEXT("trace path warning:HitOffsetZ %.3f"), HitOffsetZ);
+		UE_LOG(LogQuadrupedIK, Verbose, TEXT("trace path warning:HitOffsetZ %.3f"), HitOffsetZ);
 
 		// first trace
 		if (Index == 1)
@@ -539,21 +544,21 @@ void UPredictionAnimInstance::LineTracePath2(bool& OutEndPosValid, TArray<FVecto
 				ValidHitPos = TracePos; //Hit.bBlockingHit ? TracePos : ValidHitPos -= ValidHeight;
 				ValidHitPos = FVector(End.X, End.Y, ValidHitPos.Z);
 				TracePathEnded = true;
-				UE_LOG(LogPredictionFootIK, Verbose, TEXT("trace path error:invalit hit"));
+				UE_LOG(LogQuadrupedIK, Verbose, TEXT("trace path error:invalit hit"));
 			}
 			else if (!CharacterMovementComponent->IsWalkable(OldHit) && !CharacterMovementComponent->IsWalkable(Hit) && HitOffsetZ > CharacterMaxStepHeight)
 			{
 				ValidHitPos = TracePos;
 				ValidHitPos = FVector(End.X, End.Y, ValidHitPos.Z);
 				TracePathEnded = true;
-				UE_LOG(LogPredictionFootIK, Verbose, TEXT("trace path error:un walkable"));
+				UE_LOG(LogQuadrupedIK, Verbose, TEXT("trace path error:un walkable"));
 			}
 			else if (HitOffsetZ > CharacterMaxStepHeight * FMath::Max(1.f, TraceIntervalLength / 10.f))
 			{
 				ValidHitPos = TracePos;
 				ValidHitPos = FVector(End.X, End.Y, ValidHitPos.Z);
 				TracePathEnded = true;
-				UE_LOG(LogPredictionFootIK, Verbose, TEXT("trace path error:too height"));
+				UE_LOG(LogQuadrupedIK, Verbose, TEXT("trace path error:too height"));
 			}
 			else
 			{
@@ -568,7 +573,7 @@ void UPredictionAnimInstance::LineTracePath2(bool& OutEndPosValid, TArray<FVecto
 
 void UPredictionAnimInstance::GetToeHeightLimitByPathCurve(float& OutHeightLimit, const FVector& InToeCurPos, const TArray<FVector>& InToePath)
 {
-	int32 Num = InToePath.Num();
+	const int32 Num = InToePath.Num();
 	if (Num > 1)
 	{
 		FVector StartPos2D = FVector(InToePath[0].X, InToePath[0].Y, 0.f);
@@ -579,14 +584,14 @@ void UPredictionAnimInstance::GetToeHeightLimitByPathCurve(float& OutHeightLimit
 		float Traslation2DSize = Traslation2D.Size();
 		float ProjectLength = UKismetMathLibrary::Dot_VectorVector(Traslation2D, CurPos2D - StartPos2D) / Traslation2DSize;
 
-		for (int32 i = 1; i < Num; ++i)
+		for (int32 Index = 1; Index < Num; ++Index)
 		{
-			if (ProjectLength * ProjectLength <= (InToePath[i] - StartPos2D).SizeSquared2D())
+			if (ProjectLength * ProjectLength <= (InToePath[Index] - StartPos2D).SizeSquared2D())
 			{
-				float BeforeSize = (InToePath[i - 1] - StartPos2D).Size2D();
-				float AfterSize = (InToePath[i] - StartPos2D).Size2D();
-				UE_LOG(LogPredictionFootIK, VeryVerbose, TEXT("ToeHeight Index i: %d"), i);
-				OutHeightLimit = UKismetMathLibrary::MapRangeClamped(ProjectLength - BeforeSize, 0.f, AfterSize - BeforeSize, InToePath[i - 1].Z, InToePath[i].Z);
+				const float BeforeSize = (InToePath[Index - 1] - StartPos2D).Size2D();
+				const float AfterSize = (InToePath[Index] - StartPos2D).Size2D();
+				UE_LOG(LogQuadrupedIK, VeryVerbose, TEXT("ToeHeight Index i: %d"), Index);
+				OutHeightLimit = UKismetMathLibrary::MapRangeClamped(ProjectLength - BeforeSize, 0.f, AfterSize - BeforeSize, InToePath[Index - 1].Z, InToePath[Index].Z);
 				return;
 			}
 		}
@@ -602,17 +607,17 @@ void UPredictionAnimInstance::CalcPelvisOffset2(float& OutTargetMeshPosZ, FVecto
 		FVector Start2D = FVector(OutFootStartPos.X, OutFootStartPos.Y, 0.f);
 		FVector End2D = FVector(InFootEndPos.X, InFootEndPos.Y, 0.f);
 		FVector Traslation2D = End2D - Start2D;
-		float Traslation2DSize = Traslation2D.Size();
-		float ProjectLength = UKismetMathLibrary::Dot_VectorVector(Traslation2D, FVector(InMappedPos.X, InMappedPos.Y, 0.f) - Start2D) / Traslation2DSize;
-		UE_LOG(LogPredictionFootIK, Verbose, TEXT("FootStart Height: %f FootEnd Height: %f Offset: %f Mapped: %f"), OutFootStartPos.Z, InFootEndPos.Z, InFootEndPos.Z - OutFootStartPos.Z, ProjectLength / Traslation2DSize);
+		const float Traslation2DSize = Traslation2D.Size();
+		const float ProjectLength = UKismetMathLibrary::Dot_VectorVector(Traslation2D, FVector(InMappedPos.X, InMappedPos.Y, 0.f) - Start2D) / Traslation2DSize;
+		UE_LOG(LogQuadrupedIK, Verbose, TEXT("FootStart Height: %f FootEnd Height: %f Offset: %f Mapped: %f"), OutFootStartPos.Z, InFootEndPos.Z, InFootEndPos.Z - OutFootStartPos.Z, ProjectLength / Traslation2DSize);
 		const float ClampedPct = FMath::Clamp(ProjectLength / Traslation2DSize, 0.f, 2.f);
 		OutTargetMeshPosZ = FMath::GetRangeValue(FVector2D(OutFootStartPos.Z, InFootEndPos.Z), ClampedPct);
-		UE_LOG(LogPredictionFootIK, Verbose, TEXT("Final Z: %f"), OutTargetMeshPosZ);
+		UE_LOG(LogQuadrupedIK, Verbose, TEXT("Final Z: %f"), OutTargetMeshPosZ);
 	}
 
 	if (InCurMotionFoot != InLstMotionFoot)
 	{
-		UE_LOG(LogPredictionFootIK, Verbose, TEXT("SwitchFoot IsStartFoot: %d Final Z: %f"), InLstMotionFoot == EPredictionMotionFoot::None, OutTargetMeshPosZ);
+		UE_LOG(LogQuadrupedIK, Verbose, TEXT("SwitchFoot IsStartFoot: %d Final Z: %f"), InLstMotionFoot == EPredictionMotionFoot::None, OutTargetMeshPosZ);
 		OutFootStartPos = CurCharacterBottomLocation;
 		OutFootStartPos.Z = OutTargetMeshPosZ;
 	}
@@ -673,11 +678,11 @@ void UPredictionAnimInstance::TraceForTwoFoots(float DeltaSeconds, float& OutMin
 
 	OutRightFootHeight = UKismetMathLibrary::FInterpTo(OutRightFootHeight, TargetRightFootHeightOffset, DeltaSeconds, FootIKHeightOffsetInterpSpeed);
 	OutLeftFootHeight = UKismetMathLibrary::FInterpTo(OutLeftFootHeight, TargetLeftFootHeightOffset, DeltaSeconds, FootIKHeightOffsetInterpSpeed);
-
 	OutRightHitNor = GetOwningComponent()->GetComponentToWorld().InverseTransformVector(OutRightHitNor);
 	OutLeftHitNor = GetOwningComponent()->GetComponentToWorld().InverseTransformVector(OutLeftHitNor);
 }
 #pragma endregion
+
 
 void UPredictionAnimInstance::DebugDrawToePath(const TArray<FVector>& InToePath, const FVector& InToePos, FLinearColor InColor)
 {
@@ -687,28 +692,28 @@ void UPredictionAnimInstance::DebugDrawToePath(const TArray<FVector>& InToePath,
 	}
 
 	UKismetSystemLibrary::DrawDebugPoint(GetWorld(), InToePath[0], 7.5f, InColor);
-	int32 Num = InToePath.Num();
+	const int32 Num = InToePath.Num();
 	for (int32 Index = 1; Index < Num - 1; ++Index)
 	{
 		UKismetSystemLibrary::DrawDebugLine(GetWorld(), InToePath[Index - 1], InToePath[Index], InColor, 0.f, 2.f);
 		UKismetSystemLibrary::DrawDebugPoint(GetWorld(), InToePath[Index], 5.0f, InColor);
-		UE_LOG(LogPredictionFootIK, Verbose, TEXT("Index : %d"), Index);
 	}
 
 	UKismetSystemLibrary::DrawDebugLine(GetWorld(), InToePath[Num - 2], InToePath[Num - 1], InColor, 0.f, 2.f);
 	UKismetSystemLibrary::DrawDebugPoint(GetWorld(), InToePath[Num - 1], 7.5f, InColor);
 
 	// Start from last pos, end to cur pos, build a slope line for trace.
+#if WITH_EDITOR
 	TArray<AActor*> IgnoreActors({ Character, });
 	FHitResult Hit;
 	UKismetSystemLibrary::LineTraceSingle(GetWorld(), InToePos, InToePos - FVector(0.f, 0.f, 100.f), TraceChannel, false, IgnoreActors, EDrawDebugTrace::ForOneFrame, Hit, true, InColor, FLinearColor::Red);
+#endif
 }
 
 void UPredictionAnimInstance::DebugDrawPelvisPath()
 {
 	UKismetSystemLibrary::DrawDebugLine(GetWorld(), MotionFootStartPos_MapByRootPos, MotionFootEndPos, FLinearColor::White, 0.f, 2.f);
 	UKismetSystemLibrary::DrawDebugBox(GetWorld(), MotionFootEndPos, FVector(5.f, 5.f, 5.f), FLinearColor::Blue, FRotator::ZeroRotator, 0.f, 1.f);
-	//UKismetSystemLibrary::DrawDebugBox(GetWorld(), CurCharacterBottomLocation, FVector(5.f, 5.f, 5.f), FLinearColor::White, FRotator::ZeroRotator, 0.f, 1.f);
 }
 
 const FVector UPredictionAnimInstance::GetCharacterDirection()
@@ -744,4 +749,10 @@ float UPredictionAnimInstance::GetPelvisFinalOffset() const
 {
 	return PelvisFinalOffset;
 }
+
+FVector UPredictionAnimInstance::GetMotionFootEndPos() const
+{
+	return MotionFootEndPos;
+}
+
 

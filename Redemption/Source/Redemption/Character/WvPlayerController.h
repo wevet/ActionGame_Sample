@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameplayTagContainer.h"
 #include "Component/WvInputEventComponent.h"
+#include "WvPlayerCameraManager.h"
 #include "GameFramework/PlayerController.h"
 #include "Interface/WvAbilityTargetInterface.h"
 #include "WvPlayerController.generated.h"
@@ -15,6 +16,8 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FInputEventGameplayTagExtendDelegat
 
 class APlayerCharacter;
 class AWvWheeledVehiclePawn;
+class UUMGManager;
+class UVehicleUIController;
 
 /**
  * 
@@ -46,12 +49,17 @@ protected:
 
 public:
 	class UWvInputEventComponent* GetInputEventComponent() const;
-	void PostAscInitialize(UAbilitySystemComponent* ASC);
+	void PostASCInitialize(UAbilitySystemComponent* ASC);
 	void SetInputModeType(const EWvInputMode NewInputMode);
 	EWvInputMode GetInputModeType() const;
 
+	void OnDefaultPossess(APawn* InPawn);
+	void OnDefaultUnPossess();
+
 	void OnVehilcePossess(APawn* InPawn);
 	void OnVehicleUnPossess();
+
+	FVector GetCameraForwardVector() const;
 
 public:
 	//All keys pressed will be notified
@@ -79,14 +87,23 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PlayerController|Config")
 	int32 OverrideSquadID = 1;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PlayerController|Config")
+	TSubclassOf<class UUMGManager> UMGManagerTemplate;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PlayerController|Config")
+	TSubclassOf<class UVehicleUIController> VehicleUIControllerTemplate;
+
+	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "Vehicle")
+	void BP_DefaultPossess(APawn* InPawn);
+
+	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "Vehicle")
+	void BP_DefaultUnPossess();
+
 	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "Vehicle")
 	void BP_VehilcePossess(APawn* InPawn);
 
 	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "Vehicle")
 	void BP_VehicleUnPossess();
-
-	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "Vehicle")
-	void BP_VPCDrawHUD();
 
 private:
 	UPROPERTY()
@@ -96,8 +113,16 @@ private:
 	TObjectPtr<class AWvWheeledVehiclePawn> VPC;
 
 	UPROPERTY()
+	TObjectPtr<class UUMGManager> UMGManager;
+
+	UPROPERTY()
+	TObjectPtr<class UVehicleUIController> VehicleUIController;
+
+	UPROPERTY()
+	TObjectPtr<class AWvPlayerCameraManager> Manager;
+
+	UPROPERTY()
 	FOnTeamIndexChangedDelegate OnTeamChangedDelegate;
 
-	void VPCDrawHUD();
 };
 

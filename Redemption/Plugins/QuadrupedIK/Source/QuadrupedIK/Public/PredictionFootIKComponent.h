@@ -4,9 +4,9 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
+#include "QuadrupedIK.h"
 #include "PredictionFootIKComponent.generated.h"
 
-DECLARE_LOG_CATEGORY_EXTERN(LogPredictionFootIK, Log, All);
 
 UENUM()
 enum class EPredictionToeFloorState : uint8

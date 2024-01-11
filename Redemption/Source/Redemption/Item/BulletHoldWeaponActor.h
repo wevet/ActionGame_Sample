@@ -16,6 +16,8 @@ class REDEMPTION_API ABulletHoldWeaponActor : public AWeaponBaseActor
 	GENERATED_BODY()
 	
 public:
+	ABulletHoldWeaponActor(const FObjectInitializer& ObjectInitializer);
+
 	virtual void DoFire() override;
 	virtual bool IsAvailable() const override;
 
@@ -23,7 +25,7 @@ public:
 	float GetGunFireAnimationLength() const;
 	void SetGunFirePrepareParameters(const float InRandmize);
 
-	const bool LineOfSightOuter(FHitResult& OutHitResult, FVector& OutTraceEnd);
+	const bool LineOfSightOuter(FHitResult& OutHitResult);
 
 protected:
 	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "Event")
@@ -38,10 +40,18 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Config")
 	float FireAnimationOffset = 0.f;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Config")
+	FGameplayTag AmmoEmptyTag;
+
 private:
 	FVector TraceNoise;
 	float Randmize = 0.f;
 
-	const bool LineOfSight(const FVector TraceStart, const FVector Forward, const bool IsRandomize, const float RandomRadius, FHitResult& OutHitResult, FVector& OutTraceEnd);
+	const bool LineOfSight(const FVector TraceStart, const FVector TraceEnd, FHitResult& OutHitResult);
+
+	void Notify_AmmoEmpty();
+	void Notify_AmmoReplenishment();
+
+	void Notify_AmmoReload();
 };
 

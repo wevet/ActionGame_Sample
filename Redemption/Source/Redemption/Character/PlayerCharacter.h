@@ -33,6 +33,11 @@ public:
 	bool IsInputKeyDisable() const;
 	virtual bool IsTargetLock() const override;
 
+	void SetKeyInputDisable();
+	void SetKeyInputEnable();
+
+	FVector GetFollowCameraLocation() const;
+
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<class UWvSpringArmComponent> CameraBoom;

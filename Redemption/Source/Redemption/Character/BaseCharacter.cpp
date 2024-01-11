@@ -178,18 +178,24 @@ void ABaseCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
+	AnimInstance = Cast<UWvAnimInstance>(GetMesh()->GetAnimInstance());
+
 	USkeletalMeshComponent* SkelMesh = GetMesh();
 	SkelMesh->AddTickPrerequisiteActor(this);
+
 	CombatComponent->AddTickPrerequisiteActor(this);
 	PawnNoiseEmitterComponent->AddTickPrerequisiteActor(this);
-
-	AnimInstance = Cast<UWvAnimInstance>(GetMesh()->GetAnimInstance());
 
 	UWvCharacterMovementComponent* CMC = GetWvCharacterMovementComponent();
 	CMC->OnWallClimbingBeginDelegate.AddDynamic(this, &ABaseCharacter::OnWallClimbingBegin_Callback);
 	CMC->OnWallClimbingEndDelegate.AddDynamic(this, &ABaseCharacter::OnWallClimbingEnd_Callback);
+	//CMC->AddTickPrerequisiteActor(this);
+
+	LocomotionComponent->OnRotationModeChangeDelegate.AddDynamic(this, &ThisClass::OnRoationChange_Callback);
+	LocomotionComponent->AddTickPrerequisiteActor(this);
 
 	RequestAsyncLoad();
+
 }
 
 void ABaseCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -200,6 +206,8 @@ void ABaseCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	UWvCharacterMovementComponent* CMC = GetWvCharacterMovementComponent();
 	CMC->OnWallClimbingBeginDelegate.RemoveDynamic(this, &ABaseCharacter::OnWallClimbingBegin_Callback);
 	CMC->OnWallClimbingEndDelegate.RemoveDynamic(this, &ABaseCharacter::OnWallClimbingEnd_Callback);
+
+	LocomotionComponent->OnRotationModeChangeDelegate.RemoveDynamic(this, &ThisClass::OnRoationChange_Callback);
 
 	ResetFinisherAnimationData();
 
@@ -245,7 +253,7 @@ void ABaseCharacter::UnPossessed()
 	MyTeamID = DetermineNewTeamAfterPossessionEnds(OldTeamID);
 	ConditionalBroadcastTeamChanged(this, OldTeamID, MyTeamID);
 
-	UE_LOG(LogTemp, Log, TEXT("%s"), *FString(__FUNCTION__));
+	//UE_LOG(LogTemp, Log, TEXT("%s"), *FString(__FUNCTION__));
 }
 
 void ABaseCharacter::Tick(float DeltaTime)
@@ -265,6 +273,8 @@ void ABaseCharacter::Tick(float DeltaTime)
 			CMC->FallingMantling();
 		}
 	}
+
+	LocomotionComponent->DoTick(DeltaTime);
 }
 
 void ABaseCharacter::OnStartCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust)
@@ -279,6 +289,11 @@ void ABaseCharacter::OnEndCrouch(float HalfHeightAdjust, float ScaledHalfHeightA
 	ILocomotionInterface::Execute_SetLSStanceMode(LocomotionComponent, ELSStance::Standing);
 }
 
+void ABaseCharacter::MoveBlockedBy(const FHitResult& Impact)
+{
+	//UE_LOG(LogTemp, Log, TEXT("%s"), *FString(__FUNCTION__));
+}
+
 void ABaseCharacter::InitAbilitySystemComponent()
 {
 	if (!bIsAbilityInitializeResult)
@@ -291,10 +306,10 @@ void ABaseCharacter::InitAbilitySystemComponent()
 		}
 	}
 
-	auto* PC = Cast<AWvPlayerController>(Controller);
+	AWvPlayerController* PC = Cast<AWvPlayerController>(GetController());
 	if (PC && IsLocallyControlled())
 	{
-		PC->PostAscInitialize(WvAbilitySystemComponent);
+		PC->PostASCInitialize(WvAbilitySystemComponent);
 	}
 
 }
@@ -617,6 +632,11 @@ void ABaseCharacter::SetAIActionState(const EAIActionState NewAIActionState)
 		}
 	}
 
+	if (ActionStateChangeDelegate.IsBound())
+	{
+		ActionStateChangeDelegate.Broadcast(AIActionState, PrevActionState);
+	}
+
 	if (IsLeader())
 	{
 		// no change state color
@@ -835,12 +855,22 @@ void ABaseCharacter::DoStartAiming()
 {
 	StrafeMovement();
 	DoWalking();
-	LocomotionComponent->SetLSAiming_Implementation(true);
+	LocomotionComponent->SetLSAiming(true);
+
+	if (AimingChangeDelegate.IsBound())
+	{
+		AimingChangeDelegate.Broadcast(true);
+	}
 }
 
 void ABaseCharacter::DoStopAiming()
 {
-	LocomotionComponent->SetLSAiming_Implementation(false);
+	LocomotionComponent->SetLSAiming(false);
+
+	if (AimingChangeDelegate.IsBound())
+	{
+		AimingChangeDelegate.Broadcast(false);
+	}
 }
 
 void ABaseCharacter::OnWallClimbingBegin_Callback()
@@ -872,11 +902,13 @@ void ABaseCharacter::HandleGuardAction(const bool bGuardEnable)
 {
 	if (bGuardEnable)
 	{
-		WvAbilitySystemComponent->AddGameplayTag(TAG_Character_DamageBlock, 1);
+		if (!WvAbilitySystemComponent->HasMatchingGameplayTag(TAG_Character_DamageBlock))
+			WvAbilitySystemComponent->AddGameplayTag(TAG_Character_DamageBlock, 1);
 	}
 	else
 	{
-		WvAbilitySystemComponent->RemoveGameplayTag(TAG_Character_DamageBlock, 1);
+		if (WvAbilitySystemComponent->HasMatchingGameplayTag(TAG_Character_DamageBlock))
+			WvAbilitySystemComponent->RemoveGameplayTag(TAG_Character_DamageBlock, 1);
 	}
 }
 #pragma endregion
@@ -964,7 +996,6 @@ void ABaseCharacter::BeginDeathAction()
 {
 	WvAbilitySystemComponent->AddGameplayTag(TAG_Character_StateDead, 1);
 	WvAbilitySystemComponent->AddGameplayTag(TAG_Locomotion_ForbidMovement, 1);
-	UE_LOG(LogTemp, Log, TEXT("Owner => %s, function => %s"), *GetName(), *FString(__FUNCTION__));
 }
 
 void ABaseCharacter::EndDeathAction(const float Interval)
@@ -1003,6 +1034,11 @@ void ABaseCharacter::OverlayStateChange(const ELSOverlayState CurrentOverlay)
 	if (AnimInstanceClass)
 	{
 		AnimInstance->LinkAnimClassLayers(AnimInstanceClass);
+	}
+
+	if (OverlayChangeDelegate.IsBound())
+	{
+		OverlayChangeDelegate.Broadcast(CurrentOverlay);
 	}
 }
 
@@ -1085,8 +1121,32 @@ ABaseCharacter* ABaseCharacter::GetLeaderCharacterFromController() const
 	}
 	return nullptr;
 }
+
+void ABaseCharacter::StartRVOAvoidance()
+{
+	UWvCharacterMovementComponent* CMC = GetWvCharacterMovementComponent();
+	CMC->SetRVOAvoidanceWeight(0.5f);
+	CMC->SetAvoidanceEnabled(true);
+
+	const float Radius = GetCapsuleComponent()->GetScaledCapsuleRadius();
+	AvoidanceConsiderationRadius = CMC->AvoidanceConsiderationRadius;
+	CMC->AvoidanceConsiderationRadius = FMath::Abs(Radius * 4.0f);
+}
+
+void ABaseCharacter::StopRVOAvoidance()
+{
+	UWvCharacterMovementComponent* CMC = GetWvCharacterMovementComponent();
+	CMC->SetRVOAvoidanceWeight(0.0f);
+	CMC->SetAvoidanceEnabled(false);
+
+	CMC->AvoidanceConsiderationRadius = AvoidanceConsiderationRadius;
+}
 #pragma endregion
 
+void ABaseCharacter::OnRoationChange_Callback()
+{
+	//
+}
 
 /// <summary>
 /// Sound
@@ -1137,6 +1197,16 @@ FVector ABaseCharacter::GetPredictionStopLocation(const FVector CurrentLocation)
 	}
 	// return stopping distance from player position in previous frame
 	return CurrentLocation + CurrentVelocityDirection * StoppingDistance;
+}
+
+float ABaseCharacter::GetHealthToWidget() const
+{
+	return StatusComponent->GetHealthToWidget();
+}
+
+bool ABaseCharacter::IsHealthHalf() const
+{
+	return StatusComponent->IsHealthHalf();
 }
 
 #pragma region NearlestAction
@@ -1478,17 +1548,55 @@ void ABaseCharacter::OnFinisherAnimAssetLoadComplete()
 
 void ABaseCharacter::OnLoadFinisherSender()
 {
-	FinisherSender = FinisherDAList[TAG_Weapon_Finisher_Sender].LoadSynchronous();
+	if (FinisherDAList.Contains(TAG_Weapon_Finisher_Sender))
+	{
+		bool bIsResult = false;
+		do
+		{
+			FinisherSender = FinisherDAList[TAG_Weapon_Finisher_Sender].LoadSynchronous();
+			if (IsValid(FinisherSender))
+			{
+				bIsResult = true;
+			}
+		} while (!bIsResult);
+
+		UE_LOG(LogTemp, Log, TEXT("Complete => [%s]"), *FString(__FUNCTION__));
+	}	
 }
 
 void ABaseCharacter::OnLoadFinisherReceiver()
 {
-	FinisherReceiner = FinisherDAList[TAG_Weapon_Finisher_Receiver].LoadSynchronous();
+	if (FinisherDAList.Contains(TAG_Weapon_Finisher_Receiver))
+	{
+		bool bIsResult = false;
+		do
+		{
+			FinisherReceiner = FinisherDAList[TAG_Weapon_Finisher_Receiver].LoadSynchronous();
+			if (IsValid(FinisherReceiner))
+			{
+				bIsResult = true;
+			}
+		} while (!bIsResult);
+
+		UE_LOG(LogTemp, Log, TEXT("Complete => [%s]"), *FString(__FUNCTION__));
+	}
+	
 }
 
 void ABaseCharacter::OnLoadOverlayABP()
 {
-	OverlayAnimDAInstance = OverlayAnimInstanceDA.LoadSynchronous();
+	bool bIsResult = false;
+	do
+	{
+		OverlayAnimDAInstance = OverlayAnimInstanceDA.LoadSynchronous();
+		if (IsValid(OverlayAnimDAInstance))
+		{
+			bIsResult = true;
+		}
+	} while (!bIsResult);
+
+	UE_LOG(LogTemp, Log, TEXT("Complete => [%s]"), *FString(__FUNCTION__));
+
 }
 #pragma endregion
 
@@ -1505,6 +1613,7 @@ void ABaseCharacter::BeginVehicleAction()
 	GetMesh()->SetCollisionEnabled(ECollisionEnabled::PhysicsOnly);
 	GetMesh()->SetVisibility(false);
 
+	GetCombatComponent()->VisibilityCurrentWeapon(true);
 	WvAbilitySystemComponent->AddGameplayTag(TAG_Vehicle_State_Drive, 1);
 }
 
@@ -1514,6 +1623,8 @@ void ABaseCharacter::EndVehicleAction()
 	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 	GetMesh()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 	GetMesh()->SetVisibility(true);
+
+	GetCombatComponent()->VisibilityCurrentWeapon(false);
 	WvAbilitySystemComponent->RemoveGameplayTag(TAG_Vehicle_State_Drive, 1);
 
 }
@@ -1566,4 +1677,13 @@ void ABaseCharacter::HandleDriveAction()
 	}
 }
 #pragma endregion
+
+FTransform ABaseCharacter::GetPivotOverlayTansform() const
+{
+	auto RootPos = GetMesh()->GetSocketLocation(TEXT("root"));
+	auto HeadPos = GetMesh()->GetSocketLocation(TEXT("head"));
+	TArray<FVector> Points({ RootPos, HeadPos, });
+	auto AveragePoint = UKismetMathLibrary::GetVectorArrayAverage(Points);
+	return FTransform(GetActorRotation(), AveragePoint, FVector::OneVector);
+}
 

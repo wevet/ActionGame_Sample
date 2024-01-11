@@ -3,6 +3,9 @@
 #include "WvPlayerController.h"
 #include "PlayerCharacter.h"
 #include "Vehicle/WvWheeledVehiclePawn.h"
+#include "Vehicle/VehicleUIController.h"
+#include "UI/UMGManager.h"
+
 
 #include "Engine/World.h"
 #include "BasePlayerState.h"
@@ -23,6 +26,7 @@ void AWvPlayerController::BeginPlay()
 
 void AWvPlayerController::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
+	Manager = nullptr;
 	Super::EndPlay(EndPlayReason);
 }
 
@@ -38,23 +42,30 @@ void AWvPlayerController::OnPossess(APawn* InPawn)
 		PS->SetGenericTeamId(FGenericTeamId(OverrideSquadID));
 	}
 
+	if (!IsValid(Manager))
+	{
+		Manager = Cast<AWvPlayerCameraManager>(PlayerCameraManager);
+	}
+
 	if (InPawn)
 	{
 		if (IWvAbilityTargetInterface* TeamAgent = Cast<IWvAbilityTargetInterface>(InPawn))
 		{
 			TeamAgent->SetGenericTeamId(FGenericTeamId(OverrideSquadID));
 		}
+
+		if (InPawn->IsA(APlayerCharacter::StaticClass()))
+		{
+			PC = Cast<APlayerCharacter>(InPawn);
+			OnDefaultPossess(InPawn);
+		}
+		else if (InPawn->IsA(AWvWheeledVehiclePawn::StaticClass()))
+		{
+			VPC = Cast<AWvWheeledVehiclePawn>(InPawn);
+			OnVehilcePossess(InPawn);
+		}
 	}
 
-	if (InPawn->IsA(APlayerCharacter::StaticClass()))
-	{
-		PC = Cast<APlayerCharacter>(InPawn);
-	}
-	else if (InPawn->IsA(AWvWheeledVehiclePawn::StaticClass()))
-	{
-		VPC = Cast<AWvWheeledVehiclePawn>(InPawn);
-		OnVehilcePossess(InPawn);
-	}
 }
 
 void AWvPlayerController::OnUnPossess()
@@ -65,7 +76,7 @@ void AWvPlayerController::OnUnPossess()
 	}
 	if (PC)
 	{
-		// playercharacter unpossess
+		OnDefaultUnPossess();
 	}
 	PC = nullptr;
 	VPC = nullptr;
@@ -75,21 +86,12 @@ void AWvPlayerController::OnUnPossess()
 void AWvPlayerController::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-
-	if (VPC)
-	{
-		VPCDrawHUD();
-	}
 }
 
-void AWvPlayerController::VPCDrawHUD()
-{
-	BP_VPCDrawHUD();
-}
 
-void AWvPlayerController::PostAscInitialize(UAbilitySystemComponent* ASC)
+void AWvPlayerController::PostASCInitialize(UAbilitySystemComponent* ASC)
 {
-	InputEventComponent->PostAscInitialize(ASC);
+	InputEventComponent->PostASCInitialize(ASC);
 }
 
 void AWvPlayerController::InitInputSystem()
@@ -148,14 +150,56 @@ void AWvPlayerController::UnFreeze()
 }
 #pragma endregion
 
+void AWvPlayerController::OnDefaultPossess(APawn* InPawn)
+{
+	UMGManager = CreateWidget<UUMGManager>(this, UMGManagerTemplate);
+	if (UMGManager)
+	{
+		UMGManager->Initializer(PC);
+		UMGManager->AddToViewport();
+	}
+
+	BP_DefaultPossess(InPawn);
+}
+
+void AWvPlayerController::OnDefaultUnPossess()
+{
+	if (UMGManager)
+	{
+		UMGManager->UnInitializer();
+		UMGManager->RemoveFromParent();
+		//UE_LOG(LogTemp, Error, TEXT("%s"), *FString(__FUNCTION__));
+	}
+	UMGManager = nullptr;
+
+	BP_DefaultUnPossess();
+}
+
 void AWvPlayerController::OnVehilcePossess(APawn* InPawn)
 {
+	VehicleUIController = CreateWidget<UVehicleUIController>(this, VehicleUIControllerTemplate);
+	if (VehicleUIController)
+	{
+		VehicleUIController->Initializer(VPC);
+		VehicleUIController->AddToViewport();
+	}
+
 	BP_VehilcePossess(InPawn);
 }
 
 void AWvPlayerController::OnVehicleUnPossess()
 {
+	if (VehicleUIController)
+	{
+		VehicleUIController->RemoveFromParent();
+		//UE_LOG(LogTemp, Error, TEXT("%s"), *FString(__FUNCTION__));
+	}
+	VehicleUIController = nullptr;
+
 	BP_VehicleUnPossess();
 }
 
-
+FVector AWvPlayerController::GetCameraForwardVector() const
+{
+	return Manager ? Manager->GetTransformComponent()->GetForwardVector() : FVector::ZeroVector;
+}

@@ -28,8 +28,8 @@ void AMassCharacter::BeginPlay()
 	// 3. UPawnNoiseEmitterComponent
 	// 4. USceneComponent() HeldObjectRoot
 	CharacterTrajectoryComponent->SetComponentTickEnabled(false);
-	LocomotionComponent->SetComponentTickEnabled(false);
-	PawnNoiseEmitterComponent->SetComponentTickEnabled(false);
+	//LocomotionComponent->SetComponentTickEnabled(false);
+	//PawnNoiseEmitterComponent->SetComponentTickEnabled(false);
 	HeldObjectRoot->SetComponentTickEnabled(false);
 
 

@@ -31,6 +31,12 @@ public:
 	void SetDrivingByPawn(APawn* InPawn);
 	void UnSetDrivingByPawn();
 
+	UFUNCTION(BlueprintCallable, Category = "WvWheeledVehiclePawn")
+	float GetForwardSpeed() const;
+
+	UFUNCTION(BlueprintCallable, Category = "WvWheeledVehiclePawn")
+	int32 GetCurrentGear() const;
+
 #pragma region IWvEnvironmentInterface
 	virtual void OnReceiveAbilityAttack(AActor* Attacker, const FHitResult& HitResult) override;
 #pragma endregion

@@ -21,10 +21,14 @@ public:
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
-	void PostAscInitialize(class UAbilitySystemComponent* NewASC);
+	void PostASCInitialize(class UAbilitySystemComponent* NewASC);
 	void BindInputEvent(UInputComponent* InInputComponent);
 	void InputKey(const FInputKeyParams& Params);
-	void ProcessGameEvent(const FGameplayTag& Tag, bool bPress);
+
+	void ProcessGameEvent(const FGameplayTag& Tag, const bool bPress);
+	void ProcessGameEventUI(const FGameplayTag& Tag, const bool bPress);
+	void ProcessGameEventExtend(const FString EventName, const bool bPress);
+
 	void TriggerCacheInputEvent(class UGameplayAbility* CallFromAbility);
 	void ResetCacheInput();
 
@@ -51,7 +55,10 @@ protected:
 
 	virtual void InputCallBack(const FKey InputKey, const FName Key, const bool bPress);
 	virtual void PluralInputCallBack(const FKey InputKey, const FName Key, const bool bPress);
+
+	UFUNCTION()
 	void PluralInputCallBackExecute(FGameplayTag EventTag, bool bPress);
+
 	void UpdateCachePluralInput();
 
 	void ResetWaitTillEnd(class UGameplayAbility* WaitEndAbility = nullptr);

@@ -31,24 +31,6 @@
 #include "UObject/UObjectGlobals.h"
 #include "BaseCharacter.generated.h"
 
-USTRUCT()
-struct FWvReplicatedAcceleration
-{
-	GENERATED_BODY()
-
-	UPROPERTY()
-	uint8 AccelXYRadians = 0;
-	// Direction of XY accel component, quantized to represent [0, 2*pi]
-
-	UPROPERTY()
-	uint8 AccelXYMagnitude = 0;
-	//Accel rate of XY component, quantized to represent [0, MaxAcceleration]
-
-	UPROPERTY()
-	int8 AccelZ = 0;
-	// Raw Z accel rate component, quantized to represent [-MaxAcceleration, MaxAcceleration]
-};
-
 USTRUCT(BlueprintType)
 struct FOverlayAnimInstance
 {
@@ -76,6 +58,11 @@ public:
 
 	TSubclassOf<UAnimInstance> FindAnimInstance(const ELSOverlayState InOverlayState) const;
 };
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FActionStateChangeDelegate, EAIActionState, NewAIActionState, EAIActionState, PrevAIActionState);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FAimingChangeDelegate, bool, bEnableAiming);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOverlayChangeDelegate, const ELSOverlayState, CurrentOverlay);
+
 
 class UPredictionFootIKComponent;
 class UMotionWarpingComponent;
@@ -110,6 +97,8 @@ public:
 	virtual void Jump() override;
 	virtual void StopJumping() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+
+	virtual void MoveBlockedBy(const FHitResult& Impact) override;
 
 protected:
 	virtual void BeginPlay() override;
@@ -219,6 +208,16 @@ public:
 	UFUNCTION(BlueprintCallable, Category = Movement)
 	float GetDistanceFromToeToKnee(FName KneeL = TEXT("calf_l"), FName BallL = TEXT("ball_l"), FName KneeR = TEXT("calf_r"), FName BallR = TEXT("ball_r")) const;
 
+	UPROPERTY(BlueprintAssignable)
+	FActionStateChangeDelegate ActionStateChangeDelegate;
+
+	UPROPERTY(BlueprintAssignable)
+	FAimingChangeDelegate AimingChangeDelegate;
+
+	UPROPERTY(BlueprintAssignable)
+	FOverlayChangeDelegate OverlayChangeDelegate;
+
+
 	FVector2D GetInputAxis() const;
 	FVector GetLedgeInputVelocity() const;
 	FVector GetForwardMoveDir(FVector CompareDir) const;
@@ -249,6 +248,9 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = Movement)
 	virtual void DoStopWalking();
+
+	UFUNCTION(BlueprintCallable, Category = Movement)
+	FTransform GetPivotOverlayTansform() const;
 
 	void BeginDeathAction();
 	void EndDeathAction(const float Interval);
@@ -286,6 +288,12 @@ public:
 	void UpdateDisplayTeamColor();
 
 	ABaseCharacter* GetLeaderCharacterFromController() const;
+
+	void StartRVOAvoidance();
+	void StopRVOAvoidance();
+
+	float GetHealthToWidget() const;
+	bool IsHealthHalf() const;
 
 #pragma region NearlestAction
 	void FindNearlestTarget(const FAttackMotionWarpingData AttackMotionWarpingData);
@@ -382,6 +390,9 @@ protected:
 	UFUNCTION()
 	virtual void OnWallClimbingEnd_Callback();
 
+	UFUNCTION()
+	virtual void OnRoationChange_Callback();
+
 	// Called to determine what happens to the team ID when possession ends
 	virtual FGenericTeamId DetermineNewTeamAfterPossessionEnds(FGenericTeamId OldTeamID) const
 	{
@@ -417,6 +428,7 @@ protected:
 	void HandleDriveAction();
 
 	bool bIsAbilityInitializeResult = false;
+	float AvoidanceConsiderationRadius;
 
 #pragma region NearlestAction
 	const TArray<AActor*> FindNearlestTargets(const float Distance, const float AngleThreshold);

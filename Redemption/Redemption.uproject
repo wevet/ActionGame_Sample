@@ -13,7 +13,8 @@
 				"GameplayAbilities",
 				"WvAbilitySystem",
 				"AIModule",
-				"ChaosVehicles"
+				"ChaosVehicles",
+				"UMG"
 			]
 		},
 		{

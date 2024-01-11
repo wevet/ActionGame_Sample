@@ -47,32 +47,37 @@ void UInventoryComponent::BeginPlay()
 	{
 		return Item == nullptr;
 	});
+
 	for (TPair<EAttackWeaponState, TArray<AWeaponBaseActor*>>Pair : WeaponActorMap)
 	{
 		Pair.Value.RemoveAll([](AWeaponBaseActor* Weapon)
 		{
 			return Weapon == nullptr;
 		});
+
+		Pair.Value.Sort([&](const AWeaponBaseActor& A, const AWeaponBaseActor& B)
+		{
+			int32 PriorityA = A.GetPriority();
+			int32 PriorityB = B.GetPriority();
+			return PriorityA > PriorityB;
+		});
 	}
 
 	const bool bIsValid = (WeaponActorMap.Num() > 0 && WeaponActorMap.Contains(InitAttackWeaponState));
 	if (bIsValid)
 	{
+		AWeaponBaseActor* InitWeaponPtr = nullptr;
 		TArray<AWeaponBaseActor*>& WeaponArray = WeaponActorMap[InitAttackWeaponState];
 		for (auto Weapon : WeaponArray)
 		{
-			if (!CurrentWeaponActor.IsValid())
+			if (Weapon)
 			{
-				CurrentWeaponActor = Weapon;
+				InitWeaponPtr = Weapon;
 				break;
 			}
 		}
-	}
 
-	if (CurrentWeaponActor.IsValid())
-	{
-		CurrentWeaponActor.Get()->Notify_Equip();
-		CurrentWeaponActor.Get()->SetActorHiddenInGame(false);
+		EquipWeapon_Internal(InitWeaponPtr);
 	}
 
 	// output log
@@ -151,99 +156,9 @@ const bool UInventoryComponent::ChangeAttackWeapon(const EAttackWeaponState InAt
 		return false;
 	}
 
-	if (CurrentWeaponActor.IsValid())
-	{
-		CurrentWeaponActor.Get()->Notify_UnEquip();
-		CurrentWeaponActor.Get()->SetActorHiddenInGame(true);
-		CurrentWeaponActor.Reset();
-	}
-
-	CurrentWeaponActor = WeaponArray[SelectIndex];
-	if (CurrentWeaponActor.IsValid())
-	{
-		CurrentWeaponActor.Get()->Notify_Equip();
-		CurrentWeaponActor.Get()->SetActorHiddenInGame(false);
-	}
+	UnEquipWeapon_Internal();
+	EquipWeapon_Internal(WeaponArray[SelectIndex]);
 	return true;
-}
-
-const AWeaponBaseActor* UInventoryComponent::GetAvailableWeaponSameType(const bool bIsCheckAvailable)
-{
-	if (CurrentWeaponActor.IsValid())
-	{
-		const auto WeaponType = CurrentWeaponActor->GetAttackWeaponState();
-		TArray<AWeaponBaseActor*>& WeaponArray = WeaponActorMap[WeaponType];
-		for (AWeaponBaseActor* Weapon : WeaponArray)
-		{
-			bool bIsMatched = IsValid(Weapon) && CurrentWeaponActor.Get();
-			if (bIsCheckAvailable)
-			{
-				bIsMatched &= Weapon->IsAvailable();
-			}
-
-			if (bIsMatched)
-			{
-				return Weapon;
-			}
-		}
-	}
-	return nullptr;
-}
-
-const AWeaponBaseActor* UInventoryComponent::GetAvailableWeaponNoSameType(const bool bIsCheckAvailable)
-{
-	if (CurrentWeaponActor.IsValid())
-	{
-		auto WeaponType = CurrentWeaponActor->GetAttackWeaponState();
-		for (TPair<EAttackWeaponState, TArray<AWeaponBaseActor*>>Pair : WeaponActorMap)
-		{
-			if (Pair.Key == WeaponType)
-			{
-				continue;
-			}
-			for (auto& Item : Pair.Value)
-			{
-				bool bIsMatched = IsValid(Item);
-				if (bIsCheckAvailable)
-				{
-					bIsMatched &= Item->IsAvailable();
-				}
-
-				if (bIsMatched)
-				{
-					return Item;
-				}
-			}
-		}
-	}
-	return nullptr;
-}
-
-TArray<EAttackWeaponState> UInventoryComponent::GetAvailableWeaponType() const
-{
-	TArray<EAttackWeaponState> Result;
-
-	for (TPair<EAttackWeaponState, TArray<AWeaponBaseActor*>>Pair : WeaponActorMap)
-	{
-		const bool bWasAvailable = GetAvailableWeaponType(Pair.Value);
-		if (bWasAvailable)
-		{
-			Result.Add(Pair.Key);
-		}
-	}
-	return Result;
-}
-
-bool UInventoryComponent::GetAvailableWeaponType(const TArray<AWeaponBaseActor*> InWeaponArray) const
-{
-	for (const AWeaponBaseActor* Weapon : InWeaponArray)
-	{
-		if (IsValid(Weapon) && Weapon->IsAvailable())
-		{
-			return true;
-		}
-	}
-	return false;
 }
 
 void UInventoryComponent::AddInventory(class AItemBaseActor* NewItem)
@@ -323,17 +238,7 @@ AItemBaseActor* UInventoryComponent::FindItem(const ELSOverlayState InLSOverlayS
 
 AWeaponBaseActor* UInventoryComponent::GetEquipWeapon() const
 {
-	for (TPair<EAttackWeaponState, TArray<AWeaponBaseActor*>>Pair : WeaponActorMap)
-	{
-		for (auto& Item : Pair.Value)
-		{
-			if (Item->IsEquipped())
-			{
-				return Item;
-			}
-		}
-	}
-	return nullptr;
+	return CurrentWeaponActor.Get();
 }
 
 FName UInventoryComponent::GetEquipWeaponName() const
@@ -373,5 +278,99 @@ TArray<AWeaponBaseActor*> UInventoryComponent::FindOverlayWeaponArray(const ELSO
 
 }
 
+bool UInventoryComponent::CanAimingWeapon() const
+{
+	auto WeaponType = GetEquipWeaponType();
 
+	switch (WeaponType)
+	{
+	case EAttackWeaponState::Gun:
+	case EAttackWeaponState::Rifle:
+		return true;
+	}
+	return false;
+}
+
+const bool UInventoryComponent::ChangeWeapon(AWeaponBaseActor* NewWeapon, ELSOverlayState& OutLSOverlayState)
+{
+	if (!IsValid(NewWeapon))
+	{
+		return false;
+	}
+
+	UnEquipWeapon_Internal();
+	EquipWeapon_Internal(NewWeapon);
+
+	if (CurrentWeaponActor.IsValid())
+	{
+		OutLSOverlayState = CurrentWeaponActor.Get()->OverlayState;
+		return true;
+	}
+
+	return false;
+}
+
+AWeaponBaseActor* UInventoryComponent::GetAvailableWeapon() const
+{
+	TArray<AWeaponBaseActor*> AvailableWeapons;
+
+	// 1. filtered available weapon
+	for (TPair<EAttackWeaponState, TArray<AWeaponBaseActor*>>Pair : WeaponActorMap)
+	{
+		for (auto& Item : Pair.Value)
+		{
+			if (Item && Item->IsAvailable())
+			{
+				AvailableWeapons.Add(Item);
+			}
+		}
+	}
+
+	AvailableWeapons.RemoveAll([](AWeaponBaseActor* Item)
+	{
+		return Item == nullptr;
+	});
+
+	// 2. priority high sort
+	AvailableWeapons.Sort([&](const AWeaponBaseActor& A, const AWeaponBaseActor& B)
+	{
+		int32 PriorityA = A.GetPriority();
+		int32 PriorityB = B.GetPriority();
+		return PriorityA > PriorityB;
+	});
+
+#if false
+	for (auto AvailableWeapon : AvailableWeapons)
+	{
+		UE_LOG(LogTemp, Log, TEXT(" AvailableWeapon => %s"), *GetNameSafe(AvailableWeapon));
+	}
+#endif
+
+	// 3. get first available weapon
+	for (auto AvailableWeapon : AvailableWeapons)
+	{
+		return AvailableWeapon;
+	}
+	return nullptr;
+}
+
+void UInventoryComponent::EquipWeapon_Internal(AWeaponBaseActor* NewWeapon)
+{
+	CurrentWeaponActor = NewWeapon;
+	if (CurrentWeaponActor.IsValid())
+	{
+		CurrentWeaponActor.Get()->Notify_Equip();
+		CurrentWeaponActor.Get()->SetActorHiddenInGame(false);
+	}
+}
+
+void UInventoryComponent::UnEquipWeapon_Internal()
+{
+	if (CurrentWeaponActor.IsValid())
+	{
+		CurrentWeaponActor.Get()->Notify_UnEquip();
+		CurrentWeaponActor.Get()->SetActorHiddenInGame(true);
+		CurrentWeaponActor.Reset();
+	}
+}
 

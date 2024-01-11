@@ -15,7 +15,7 @@ EBTNodeResult::Type UBTTask_ReleaseSearchNode::ExecuteTask(UBehaviorTreeComponen
 {
 	if (AWvAIController* AIController = Cast<AWvAIController>(OwnerComp.GetAIOwner()))
 	{
-		AIController->RemoveSearchNodeHolders();
+		AIController->ClearSearchNodeHolders();
 	}
 	return EBTNodeResult::Succeeded;
 }

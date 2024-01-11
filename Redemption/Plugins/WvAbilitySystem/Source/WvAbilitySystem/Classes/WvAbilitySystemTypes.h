@@ -1127,7 +1127,7 @@ public:
 #pragma endregion
 
 
-#pragma region BotSetting
+#pragma region EnvironmentSetting
 USTRUCT(BlueprintType)
 struct FEnvironmentConfig
 {
@@ -1162,4 +1162,15 @@ public:
 #pragma endregion
 
 
+USTRUCT(BlueprintType)
+struct FBotLeaderConfig
+{
+	GENERATED_BODY()
 
+public:
+	UPROPERTY(EditDefaultsOnly)
+	float FormationRadius = 200.0f;
+
+	UPROPERTY(EditDefaultsOnly)
+	int32 FollowStackCount = 5;
+};

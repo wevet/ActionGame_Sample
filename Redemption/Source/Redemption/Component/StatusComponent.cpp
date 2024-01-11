@@ -27,14 +27,6 @@ void UStatusComponent::BeginPlay()
 	if (ASC.IsValid())
 	{
 		AAS = ASC->GetStatusAttributeSet(UWvAbilityAttributeSet::StaticClass());
-		if (!AAS.IsValid())
-		{
-			UE_LOG(LogTemp, Error, TEXT("AAS not valid, function => %s"), *FString(__FUNCTION__));
-		}
-	}
-	else
-	{
-		UE_LOG(LogTemp, Error, TEXT("ASC not valid, function => %s"), *FString(__FUNCTION__));
 	}
 }
 
@@ -73,6 +65,33 @@ void UStatusComponent::DamageChange_Callback(const FOnAttributeChangeData& Data)
 	UE_LOG(LogTemp, Log, TEXT("Damage => %.3f, function => %s"), Data.NewValue, *FString(__FUNCTION__));
 }
 
+float UStatusComponent::GetHealthToWidget() const
+{
+	if (AAS.IsValid())
+	{
+		return AAS->GetHP() / AAS->GetHPMax();
+	}
+	return 0.f;
+}
+
+bool UStatusComponent::IsHealthHalf() const
+{
+	if (AAS.IsValid())
+	{
+		return (AAS->GetHP() / AAS->GetHPMax()) < 0.5f;
+	}
+	return false;
+}
+
+UWvInheritanceAttributeSet* UStatusComponent::GetInheritanceAttributeSet() const
+{
+	if (AAS.IsValid())
+	{
+		return Cast<UWvInheritanceAttributeSet>(AAS);
+	}
+	return nullptr;
+}
+
 float UStatusComponent::GetKillDamage() const
 {
 	if (AAS.IsValid())
@@ -82,5 +101,14 @@ float UStatusComponent::GetKillDamage() const
 	return 0.f;
 }
 
+float UStatusComponent::GetVigilance() const
+{
+	const auto Attribute = GetInheritanceAttributeSet();
+	if (IsValid(Attribute))
+	{
+		return Attribute->GetVigilance();
+	}
+	return 0.f;
+}
 
 

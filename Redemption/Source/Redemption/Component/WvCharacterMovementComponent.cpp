@@ -73,6 +73,10 @@ namespace WvCharacter
 
 UWvCharacterMovementComponent::UWvCharacterMovementComponent(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
+	PrimaryComponentTick.bCanEverTick = true;
+	// @TODO
+	//PrimaryComponentTick.bRunOnAnyThread = true;
+
 	bUseSeparateBrakingFriction = 0;
 	MinAnalogWalkSpeed = 10.0f;
 

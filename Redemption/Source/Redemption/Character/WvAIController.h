@@ -97,11 +97,14 @@ public:
 	UFUNCTION(BlueprintCallable, Category = AI)
 	AActor* GetBlackboardSearchNodeHolder() const;
 
-	void RemoveSearchNodeHolders();
+	void ClearSearchNodeHolders();
 	void SetBlackboardDead(const bool IsDead);
 
 	UFUNCTION(BlueprintCallable, Category = AI)
 	void Execute_DoAttack();
+
+	UFUNCTION(BlueprintCallable, Category = AI)
+	void HandleSprint(const bool bEnable);
 
 	bool IsInEnemyAgent(const AActor& Other) const;
 	bool IsInFriendAgent(const AActor& Other) const;
@@ -110,7 +113,7 @@ public:
 	bool IsLeaderAgent(const AActor& Other) const;
 	bool IsFriendCombatSupport(const ABaseCharacter* OtherCharacter, AActor* &OutTarget) const;
 
-	void DoSearchEnemyState(AActor* Actor);
+	void DoSearchEnemyState(AActor* Actor, FVector OverridePosition = FVector::ZeroVector);
 	void DoCombatEnemyState(AActor* Actor);
 	void DoFollowActionState(AActor* Actor);
 	void DoFriendlyActionState(AActor* Actor);
@@ -120,7 +123,9 @@ public:
 
 	void Notify_Follow();
 	void Notify_UnFollow(bool bIsInImpact = false);
-	void HandleRemoveFollow();
+
+
+	ABaseCharacter* GetBlackboardTargetAsCharacter() const;
 #pragma endregion
 
 protected:
@@ -172,11 +177,19 @@ private:
 	UFUNCTION()
 	void ClearSightTaget();
 
+	UFUNCTION()
+	void ClearFriendlyTarget();
+
+	UFUNCTION()
+	void ClearFollowTarget();
+
 	bool IsPerceptionConfigsValid() const;
 	void OnSightPerceptionUpdatedRecieve(AActor* Actor);
 	void OnHearPerceptionUpdatedRecieve(AActor* Actor);
 	void OnDamagePerceptionUpdatedRecieve(AActor* Actor);
 	void OnPredictionPerceptionUpdatedRecieve(AActor* Actor);
+
+	void AbortTasks(bool bIsForce = false);
 
 	UPROPERTY()
 	struct FAIStimulus CurrentStimulus;

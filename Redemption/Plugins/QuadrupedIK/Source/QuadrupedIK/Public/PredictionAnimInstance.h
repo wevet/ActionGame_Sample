@@ -26,7 +26,7 @@ public:
 	virtual void NativeInitializeAnimation() override;
 	virtual void NativeUninitializeAnimation() override;
 	virtual void NativeBeginPlay() override;
-	virtual void NativeUpdateAnimation(float DeltaSeconds) override;
+	virtual void NativeThreadSafeUpdateAnimation(float DeltaSeconds) override;
 
 	static float INVALID_TOE_DISTANCE;
 	static float DEFAULT_TOE_HEIGHT_LIMIT;
@@ -65,34 +65,39 @@ private:
 
 public:
 	float GetPelvisFinalOffset() const;
+	FVector GetMotionFootEndPos() const;
+
+	float GetReactFootIKUpTraceHeight() const { return ReactFootIKUpTraceHeight; }
+	float GetReactFootIKDownTraceHeight() const { return ReactFootIKDownTraceHeight; }
+
 
 protected:
 	UPROPERTY(EditAnywhere, Category = "Debug")
-	uint8 bDrawDebug : 1;
+	bool bDrawDebug;
 
 	UPROPERTY(EditAnywhere, Category = "Debug", meta = (EditCondition = "bDrawDebug"))
-	uint8 bDrawDebugForToe : 1;
+	bool bDrawDebugForToe;
 
 	UPROPERTY(EditAnywhere, Category = "Debug", meta = (EditCondition = "bDrawDebug"))
-	uint8 bDrawDebugForPelvis : 1;
+	bool bDrawDebugForPelvis;
 
 	UPROPERTY(EditAnywhere, Category = "Debug", meta = (EditCondition = "bDrawDebug"))
-	uint8 bDrawDebugForTrace : 1;
+	bool bDrawDebugForTrace;
 
+#pragma region Config
 	UPROPERTY(EditAnywhere, Category = "Config")
 	uint8 bEnableCurvePredictive : 1;
 
 	UPROPERTY(EditAnywhere, Category = "Config")
 	uint8 bEnableDefaultDistancePredictive : 1;
 
-	UPROPERTY(EditAnywhere, Category = "Config")
 	float DefaultToeFirstPathDistance = 200.0f;
 
-	UPROPERTY(EditAnywhere, Category = "Config")
-	float ReactFootIKUpTraceHeight = 40.f;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Config")
+	float ReactFootIKUpTraceHeight = 100.f;
 
-	UPROPERTY(EditAnywhere, Category = "Config")
-	float ReactFootIKDownTraceHeight = 100.f;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Config")
+	float ReactFootIKDownTraceHeight = 200.f;
 
 	UPROPERTY(EditAnywhere, Category = "Config")
 	float ToeWidth = 5.f;
@@ -168,9 +173,13 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Config")
 	TEnumAsByte<ETraceTypeQuery> TraceChannel = ETraceTypeQuery::TraceTypeQuery1;
+#pragma endregion
 
 
 #pragma region ToRigParameter
+	UPROPERTY(BlueprintReadOnly, Category = "To Rig Parameter")
+	float WeightFootIK = 1.0f;
+
 	UPROPERTY(BlueprintReadOnly, Category = "To Rig Parameter")
 	float PelvisFinalOffset = 0.f;
 
@@ -247,6 +256,6 @@ private:
 
 	const FVector GetCharacterDirection();
 
-	bool bIsOwnerPlayerCharacter = false;
 	FTimerHandle Landing_TimerHandle;
+	bool bIsOwnerPlayerController = false;
 };

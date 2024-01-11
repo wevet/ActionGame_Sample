@@ -4,6 +4,7 @@
 #include "InventoryComponent.h"
 #include "WeaknessComponent.h"
 #include "HitTargetComponent.h"
+#include "Locomotion/LocomotionComponent.h"
 
 #include "Misc/WvCommonUtils.h"
 #include "Redemption.h"
@@ -769,6 +770,41 @@ bool UCombatComponent::UpdateBoneShake(const float DeltaTime)
 
 
 #pragma region BattleCommand
+/// <summary>
+/// has blackboard target?
+/// </summary>
+/// <returns></returns>
+bool UCombatComponent::HasAttackTarget() const
+{
+	AWvAIController* AIC = Cast<AWvAIController>(Character.Get()->GetController());
+	if (IsValid(AIC))
+	{
+		const IWvAbilityTargetInterface* LocalCharacter = Cast<IWvAbilityTargetInterface>(AIC->GetBlackboardTarget());
+		if (LocalCharacter)
+		{
+			return !LocalCharacter->IsDead();
+		}
+	}
+	return false;
+}
+
+/// <summary>
+/// apply to vehicle system etc
+/// </summary>
+/// <param name="InHidden"></param>
+void UCombatComponent::VisibilityCurrentWeapon(const bool InHidden)
+{
+	auto Inventory = Character->GetInventoryComponent();
+	if (Inventory)
+	{
+		auto Weapon = Inventory->GetEquipWeapon();
+		if (Weapon)
+		{
+			Weapon->SetActorHiddenInGame(InHidden);
+		}
+	}
+}
+
 void UCombatComponent::UnEquipWeapon()
 {
 	Modify_Weapon(ELSOverlayState::None);
@@ -789,6 +825,15 @@ void UCombatComponent::EquipKnife()
 	Modify_Weapon(ELSOverlayState::Knife);
 }
 
+void UCombatComponent::SetAiming(const bool InAiming)
+{
+	ULocomotionComponent* Comp = Character->GetLocomotionComponent();
+	if (Comp)
+	{
+		Comp->SetLSAiming(InAiming);
+	}
+}
+
 void UCombatComponent::Modify_Weapon(const ELSOverlayState LSOverlayState)
 {
 	auto Inventory = Character->GetInventoryComponent();
@@ -805,6 +850,28 @@ void UCombatComponent::Modify_Weapon(const ELSOverlayState LSOverlayState)
 	}
 }
 
+void UCombatComponent::EquipAvailableWeapon()
+{
+	auto Inventory = Character->GetInventoryComponent();
+	if (Inventory)
+	{
+		AWeaponBaseActor* Weapon = Inventory->GetAvailableWeapon();
+		if (Weapon)
+		{
+			ELSOverlayState LSOverlayState;
+			const bool bResult = Inventory->ChangeWeapon(Weapon, LSOverlayState);
+
+			if (bResult)
+			{
+				Character->OverlayStateChange(LSOverlayState);
+			}
+		}
+	}
+}
+#pragma endregion
+
+
+#pragma region Follow
 void UCombatComponent::AddFollower(APawn* NewPawn)
 {
 	if (!IsValid(NewPawn))
@@ -873,7 +940,7 @@ const FVector UCombatComponent::GetFormationPoint(const APawn* InPawn)
 	int32 SelectIndex = 0;
 	for (int32 Index = 0; Index < Num; ++Index)
 	{
-		TWeakObjectPtr<APawn> Follow = Followers[Index];
+		const TWeakObjectPtr<APawn> Follow = Followers[Index];
 		if (Follow.Get() == InPawn)
 		{
 			SelectIndex = Index;
@@ -882,14 +949,16 @@ const FVector UCombatComponent::GetFormationPoint(const APawn* InPawn)
 	}
 
 	TArray<FVector> Points;
-	UWvCommonUtils::CircleSpawnPoints(Num, FormationRadius, Character->GetActorLocation(), Points);
-
+	UWvCommonUtils::CircleSpawnPoints(Num, ABILITY_GLOBAL()->BotLeaderConfig.FormationRadius, Character->GetActorLocation(), Points);
 	return Points[SelectIndex];
 }
 
 bool UCombatComponent::CanFollow() const
 {
-	return Followers.Num() < FollowStackCount;
+	constexpr int32 DummyNum = 5;
+	const int32 StackCount = IsValid(ABILITY_GLOBAL()) ? ABILITY_GLOBAL()->BotLeaderConfig.FollowStackCount : DummyNum;
+	return Followers.Num() < StackCount;
 }
 #pragma endregion
+
 

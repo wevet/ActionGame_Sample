@@ -56,17 +56,10 @@ public:
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "LocomotionInterface")
 	ELSOverlayState GetLSOverlayState() const;
 
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "LocomotionInterface")
-	void SetLSAiming(const bool NewLSAiming);
-
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "LocomotionInterface")
-	bool HasMovementInput() const;
-
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "LocomotionInterface")
-	bool HasMoving() const;
-
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "LocomotionInterface")
-	bool HasAiming() const;
+	virtual void SetLSAiming(const bool NewLSAiming);
+	virtual bool HasMovementInput() const { return false; };
+	virtual bool HasMoving() const { return false; };
+	virtual bool HasAiming() const { return false; };
 
 	virtual void SetWalkingSpeed(const float InWalkingSpeed);
 	virtual void SetRunningSpeed(const float InRunningSpeed);

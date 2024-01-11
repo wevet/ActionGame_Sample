@@ -5,8 +5,11 @@
 #include "Engine/EngineTypes.h"
 //#include "Curves/CurveFloat.h"
 //#include "Components/PrimitiveComponent.h"
+#include "Tasks/Task.h"
+#include "Logging/LogMacros.h"
 #include "AISystemTypes.generated.h"
 
+DECLARE_LOG_CATEGORY_EXTERN(LogWvAI, Log, All)
 
 USTRUCT(BlueprintType)
 struct REDEMPTION_API FBlackboardKeyConfig
@@ -52,18 +55,27 @@ struct REDEMPTION_API FAIPerceptionTask
 
 private:
 	float Timer;
+	float Interval = 0.f;
 	bool bIsNeedTimer = true;
-	bool bIsValid = false;
+	bool bIsTaskPlaying = false;
+	bool bCallbackResult = false;
 	FName TaskName;
 	TFunction<void(void)> FinishDelegate;
-	void Finish_Internal();
+
+	UE::Tasks::FTask TaskInstance;
+	FTimerHandle TaskTimerHandle;
+	TWeakObjectPtr<UWorld> World;
+
+	void Update();
+	void End();
 
 public:
 	FAIPerceptionTask() {}
-	FAIPerceptionTask(const float InTimer, const FName InTaskName, TFunction<void(void)> InFinishDelegate);
-	void Start();
-	void Finish();
-	void Abort();
+	FAIPerceptionTask(const FName InTaskName, UWorld* InWorld);
+	void Begin(const float InTimer, TFunction<void(void)> InFinishDelegate);
+	void Abort(const bool bIsForce);
+
+	void AddLength(const float AddTimer);
 	bool IsRunning() const;
 };
 

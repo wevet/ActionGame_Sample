@@ -49,7 +49,7 @@ public:
 	mutable float Alpha = 1;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = BasicSettings, meta = (PinShownByDefault))
-	mutable float ShiftSpeed = 1;
+	float ShiftSpeed = 2.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = BasicSettings)
 	TEnumAsByte<ETraceTypeQuery> Trace_Channel = ETraceTypeQuery::TraceTypeQuery1;
@@ -303,6 +303,51 @@ public:
 	bool bSpineFeetConnect = true;
 #pragma endregion
 
+public:
+	FAnimNode_CustomSpineSolver();
+	virtual int32 GetLODThreshold() const override { return LODThreshold; }
+	virtual void Initialize_AnyThread(const FAnimationInitializeContext& Context) override;
+	virtual void CacheBones_AnyThread(const FAnimationCacheBonesContext& Context)  override;
+	virtual void Update_AnyThread(const FAnimationUpdateContext& Context) override;
+	virtual void EvaluateComponentSpace_AnyThread(FComponentSpacePoseContext& Output) override;
+	virtual void ConditionalDebugDraw(FPrimitiveDrawInterface* PDI, USkeletalMeshComponent* PreviewSkelMeshComp) const;
+
+	TArray<FCustomBoneHitPairs> SpineHitPairs;
+
+private:
+	virtual void UpdateInternal(const FAnimationUpdateContext& Context);
+	virtual void EvaluateSkeletalControl_AnyThread(FComponentSpacePoseContext& Output, TArray<FBoneTransform>& OutBoneTransforms);
+	virtual bool IsValidToEvaluate(const USkeleton* Skeleton, const FBoneContainer& RequiredBones);
+	virtual void InitializeBoneReferences(FBoneContainer& RequiredBones);
+	void LineTraceControl_AnyThread(FComponentSpacePoseContext& Output, TArray<FBoneTransform>& OutBoneTransforms);
+
+	FRotator CustomLookRotation(FVector LookAt, FVector UpDirection);
+	FVector SmoothApproach(const FVector PastPosition, const FVector PastTargetPosition, const FVector TargetPosition, const float Speed) const;
+	FVector RotateAroundPoint(const FVector InputPoint, const FVector ForwardVector, const FVector Origin, const float Angle) const;
+
+	void TailImpactRotation(const int32 OriginPointIndex, FTransform& OutputTransform, FCSPose<FCompactPose>& MeshBases);
+	void ImpactRotation(const int32 PointIndex, FTransform& OutputTransform, FCSPose<FCompactPose>& MeshBases, const bool bIsReverse);
+	FName GetChildBone(const FName BoneName);
+
+	const TArray<FName> BoneArrayMachine(const int32 Index, const FName StartBoneName, const FName EndBoneName, const FName ThighBoneName, const bool bIsFoot);
+	const bool CheckLoopExist(const FVector FeetTraceOffset, const float FeetHeight, const FName StartBoneName, const FName InputBoneName, const FName ThighBoneName, TArray<FName>& OutTotalSpineBoneArray);
+	void ApplyLineTrace(const FVector StartLocation, const FVector EndLocation, FHitResult HitResult, const FName BoneText, const FName TraceTag, FHitResult& OutHitResult, const FLinearColor DebugColor, const bool bDrawLine);
+
+	TArray<FCustomBone_SpineFeetPair> Swap_SpineFeetPairArray(TArray<FCustomBone_SpineFeetPair>& OutSpineFeetPair);
+	const FCustomBoneSpineOutput BoneSpineProcessor(FTransform& EffectorTransform, FCSPose<FCompactPose>& MeshBases, TArray<FBoneTransform>& OutBoneTransforms);
+	const FCustomBoneSpineOutput BoneSpineProcessor_Direct(FTransform& EffectorTransform, FCSPose<FCompactPose>& MeshBases, TArray<FBoneTransform>& OutBoneTransforms);
+	const FCustomBoneSpineOutput BoneSpineProcessor_Snake(FTransform& EffectorTransform, FCSPose<FCompactPose>& MeshBases, TArray<FBoneTransform>& OutBoneTransforms);
+	const FCustomBoneSpineOutput BoneSpineProcessor_Transform(FCustomBoneSpineOutput& BoneSpine, FCSPose<FCompactPose>& MeshBases, TArray<FBoneTransform>& OutBoneTransforms);
+
+	FRotator BoneRelativeConversion(const FCompactPoseBoneIndex ModifyBoneIndex, const FRotator TargetRotation, const FBoneContainer& BoneContainer, FCSPose<FCompactPose>& MeshBases) const;
+	FVector GetCurrentLocation(FCSPose<FCompactPose>& MeshBases, const FCompactPoseBoneIndex& BoneIndex) const;
+
+	void FABRIK_BodySystem(FComponentSpacePoseContext& Output, FBoneReference TipBone, FCSPose<FCompactPose>& MeshBases, TArray<FBoneTransform>& OutBoneTransforms);
+	void OrthoNormalize(FVector& Normal, FVector& Tangent);
+	void GetResetedPoseInfo(FCSPose<FCompactPose>& MeshBases);
+	void GetAnimatedPoseInfo(FCSPose<FCompactPose>& MeshBases, TArray<FBoneTransform>& OutBoneTransforms);
+
+	bool DoesContainsNaN(const TArray<FBoneTransform>& BoneTransforms) const;
 
 	mutable float AdaptiveAlpha = 1;
 	FInputScaleBias AlphaScaleBias;
@@ -339,6 +384,7 @@ public:
 	bool bWasSingleSpine = false;
 	bool bSolveShouldFail = false;
 	bool bEveryFootDontHaveChild = false;
+	bool LineTraceInitialized = false;
 
 	FTransform DebugEffectorTransform;
 	FVector RootLocationSaved;
@@ -347,7 +393,6 @@ public:
 	TArray<FHitResult> SpineHitBetweenArray;
 	TArray<FVector> SpinePointBetweenArray;
 	TArray<FName> TotalSpineNameArray;
-	TArray<FCustomBoneHitPairs> SpineHitPairs;
 
 	TArray<FHitResult> SpineHitEdgeArray;
 	TArray<FCompactPoseBoneIndex> SpineIndiceArray;
@@ -380,58 +425,8 @@ public:
 	FTransform RootEffectorTransform = FTransform::Identity;
 
 	FComponentSpacePoseContext* SavedPoseContext = nullptr;
-	USkeletalMeshComponent* SkeletalMeshComponent = nullptr;
-	AActor* CharacterOwner = nullptr;
-
-	FAnimNode_CustomSpineSolver();
-
-	FVector SmoothApproach(const FVector PastPosition, const FVector PastTargetPosition, const FVector TargetPosition, const float Speed) const;
-	FVector RotateAroundPoint(const FVector InputPoint, const FVector ForwardVector, const FVector Origin, const float Angle) const;
-
-	void TailImpactRotation(const int32 OriginPointIndex, FTransform& OutputTransform, FCSPose<FCompactPose>& MeshBases);
-	void ImpactRotation(const int32 PointIndex, FTransform& OutputTransform, FCSPose<FCompactPose>& MeshBases, const bool bIsReverse);
-	FName GetChildBone(const FName BoneName);
-
-	const TArray<FName> BoneArrayMachine(const int32 Index, const FName StartBoneName, const FName EndBoneName, const FName ThighBoneName, const bool bIsFoot);
-	const bool CheckLoopExist(const FVector FeetTraceOffset, const float FeetHeight, const FName StartBoneName, const FName InputBoneName, const FName ThighBoneName, TArray<FName>& OutTotalSpineBoneArray);
-	void ApplyLineTrace(const FVector StartLocation, const FVector EndLocation, FHitResult HitResult, const FName BoneText, const FName TraceTag, FHitResult& OutHitResult, const FLinearColor DebugColor, const bool bDrawLine);
-
-	TArray<FCustomBone_SpineFeetPair> Swap_SpineFeetPairArray(TArray<FCustomBone_SpineFeetPair>& OutSpineFeetPair);
-	const FCustomBoneSpineOutput BoneSpineProcessor(FTransform& EffectorTransform, FCSPose<FCompactPose>& MeshBases, TArray<FBoneTransform>& OutBoneTransforms);
-	const FCustomBoneSpineOutput BoneSpineProcessor_Direct(FTransform& EffectorTransform, FCSPose<FCompactPose>& MeshBases, TArray<FBoneTransform>& OutBoneTransforms);
-	const FCustomBoneSpineOutput BoneSpineProcessor_Snake(FTransform& EffectorTransform, FCSPose<FCompactPose>& MeshBases, TArray<FBoneTransform>& OutBoneTransforms);
-	const FCustomBoneSpineOutput BoneSpineProcessor_Transform(FCustomBoneSpineOutput& BoneSpine, FCSPose<FCompactPose>& MeshBases, TArray<FBoneTransform>& OutBoneTransforms);
-
-	FRotator BoneRelativeConversion(const FCompactPoseBoneIndex ModifyBoneIndex, const FRotator TargetRotation, const FBoneContainer& BoneContainer, FCSPose<FCompactPose>& MeshBases) const;
-	FVector GetCurrentLocation(FCSPose<FCompactPose>& MeshBases, const FCompactPoseBoneIndex& BoneIndex) const;
-
-	void FABRIK_BodySystem(FComponentSpacePoseContext& Output, FBoneReference TipBone, FCSPose<FCompactPose>& MeshBases, TArray<FBoneTransform>& OutBoneTransforms);
-	void OrthoNormalize(FVector& Normal, FVector& Tangent);
-	void GetResetedPoseInfo(FCSPose<FCompactPose>& MeshBases);
-	void GetAnimatedPoseInfo(FCSPose<FCompactPose>& MeshBases, TArray<FBoneTransform>& OutBoneTransforms);
-
-	bool DoesContainsNaN(const TArray<FBoneTransform>& BoneTransforms) const;
-	virtual void ConditionalDebugDraw(FPrimitiveDrawInterface* PDI, USkeletalMeshComponent* PreviewSkelMeshComp) const;
-
-public:
-	virtual int32 GetLODThreshold() const override { return LODThreshold; }
-	virtual void Initialize_AnyThread(const FAnimationInitializeContext& Context) override;
-	virtual void CacheBones_AnyThread(const FAnimationCacheBonesContext& Context)  override;
-	virtual void Update_AnyThread(const FAnimationUpdateContext& Context) override;
-	virtual void EvaluateComponentSpace_AnyThread(FComponentSpacePoseContext& Output) override;
-
-protected:
-	virtual void UpdateInternal(const FAnimationUpdateContext& Context);
-	virtual void EvaluateSkeletalControl_AnyThread(FComponentSpacePoseContext& Output, TArray<FBoneTransform>& OutBoneTransforms);
-	virtual bool IsValidToEvaluate(const USkeleton* Skeleton, const FBoneContainer& RequiredBones);
-	virtual void InitializeBoneReferences(FBoneContainer& RequiredBones);
-	void LineTraceControl_AnyThread(FComponentSpacePoseContext& Output, TArray<FBoneTransform>& OutBoneTransforms);
-
-	FRotator CustomLookRotation(FVector LookAt, FVector UpDirection);
-
-private:
-	bool LineTraceInitialized = false;
-
+	TObjectPtr<AActor> CharacterOwner = nullptr;
+	TObjectPtr<USkeletalMeshComponent> SkeletalMeshComponent = nullptr;
 	TObjectPtr<UPredictionAnimInstance> PredictionAnimInstance;
 };
 

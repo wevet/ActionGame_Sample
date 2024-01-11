@@ -2,7 +2,6 @@
 
 #include "PredictionFootIKComponent.h"
 
-DEFINE_LOG_CATEGORY(LogPredictionFootIK);
 
 #pragma region ToePathInfo
 void FPredictionToePathInfo::SetToeContactFloorHeight(float InHeight)
@@ -61,7 +60,7 @@ void FPredictionToePathInfo::SetupPath(const FName& InToeName)
 		{
 			IsPathValid = true;
 			PathTranslation = FVector(ToePathTranslation.X, ToePathTranslation.Y, 0.f);
-			UE_LOG(LogPredictionFootIK, Verbose, TEXT("%s Path: %s PathSize: %f"), *InToeName.ToString(), *PathTranslation.ToString(), PathTranslation.Size2D());
+			UE_LOG(LogQuadrupedIK, Verbose, TEXT("%s Path: %s PathSize: %f"), *InToeName.ToString(), *PathTranslation.ToString(), PathTranslation.Size2D());
 		}
 	}
 }
@@ -101,6 +100,8 @@ float FPredictionToePathInfo::GetDefaultPathDistance() const
 	return DefaultPathDistance;
 }
 #pragma endregion
+
+#include UE_INLINE_GENERATED_CPP_BY_NAME(PredictionFootIKComponent)
 
 UPredictionFootIKComponent::UPredictionFootIKComponent()
 {

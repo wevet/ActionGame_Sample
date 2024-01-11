@@ -16,6 +16,7 @@
 #include "Kismet/KismetSystemLibrary.h"
 #include "AbilitySystemBlueprintLibrary.h"
 #include "Components/CapsuleComponent.h"
+#include "ChaosVehicleMovementComponent.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(WvWheeledVehiclePawn)
 
@@ -170,5 +171,15 @@ void AWvWheeledVehiclePawn::HandleDriveAction()
 void AWvWheeledVehiclePawn::OnReceiveAbilityAttack(AActor* Attacker, const FHitResult& HitResult)
 {
 	UE_LOG(LogTemp, Log, TEXT("Attacker => %s, function => %s"), *GetNameSafe(Attacker), *FString(__FUNCTION__));
+}
+
+float AWvWheeledVehiclePawn::GetForwardSpeed() const
+{
+	return GetVehicleMovementComponent()->GetForwardSpeed();
+}
+
+int32 AWvWheeledVehiclePawn::GetCurrentGear() const
+{
+	return GetVehicleMovementComponent()->GetCurrentGear();
 }
 

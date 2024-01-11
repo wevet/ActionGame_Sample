@@ -55,17 +55,17 @@ void UWvAbilitySystemGlobals::HandleEngineInitComplete()
 
 void UWvAbilitySystemGlobals::OnEffectParamTableChanged()
 {
-	// この関数は、GE のデフォルト・パラメータをすべての子プロセスに更新します。
+	// This function updates the default parameters of the GE to all child processes.
 	TArray<FName> RowNames = EffectParamTable->GetRowNames();
 	auto RowMap = EffectParamTable->GetRowMap();
 
-	// ダブルForeachRowの代わりに生データにアクセスして書き込む。
+	// Access and write raw data instead of double ForeachRow.
 	for (int32 Index = 0; Index < RowNames.Num(); Index++)
 	{
 		FName& ChildKey = RowNames[Index];
 		FWvGameplayEffectParam& ChildRow = *reinterpret_cast<FWvGameplayEffectParam*>(RowMap[ChildKey]);
 
-		// 特定のタグの若い親を記録するための追加マップ
+		// Additional map to record the young parent of a particular tag
 		TMap<FGameplayTag, TSubclassOf<UGameplayEffect>> ParentMap;
 
 		EffectParamTable->ForeachRow<FWvGameplayEffectParam>(TEXT("Default GE inherit foreach"), [&ChildKey, &ChildRow, &ParentMap](const FName& ParentKey, const FWvGameplayEffectParam& ParentRow)

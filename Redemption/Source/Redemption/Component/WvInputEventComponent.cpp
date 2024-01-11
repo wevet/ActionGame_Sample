@@ -45,7 +45,7 @@ void UWvInputEventComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 	}
 }
 
-void UWvInputEventComponent::PostAscInitialize(UAbilitySystemComponent* NewASC)
+void UWvInputEventComponent::PostASCInitialize(UAbilitySystemComponent* NewASC)
 {
 	if (ASC.IsValid())
 	{
@@ -248,12 +248,14 @@ void UWvInputEventComponent::BindTablePluralInput(const FName Key, FWvInputEvent
 	IECallbackInfo->PluralInputEventCount = PluralInputEventsCount;
 	IECallbackInfo->CurInputEventCount = 0;
 	IECallbackInfo->LastPressedTime = FDateTime::Now();
+	IECallbackInfo->IsHoldAction = InputEvent.bHoldAction;
+	IECallbackInfo->HoldTimer = InputEvent.Delay;
 	InputEventCallbackInfoMap.Add(Key, IECallbackInfo);
 
 	for (int32 Index = 0; Index < PluralInputEventsCount; ++Index)
 	{
-		FWvKey innKey = InputEvent.PluralInputEvent.PrepositionInputKey[Index];
-		AddRegisterInputKey(Key, innKey);
+		FWvKey WvKey = InputEvent.PluralInputEvent.PrepositionInputKey[Index];
+		AddRegisterInputKey(Key, WvKey);
 	}
 	AddRegisterInputKey(Key, TriggerInputKey);
 }
@@ -361,7 +363,7 @@ void UWvInputEventComponent::InputCallBack(const FKey InputKey, const FName Key,
 
 	if (InputEvent->GetIsUseExtend())
 	{
-		PlayerController->InputEventGameplayTagExtendDelegate_All.Broadcast(InputEvent->GetEventTagNameWithExtend(), bPress);
+		ProcessGameEventExtend(InputEvent->GetEventTagNameWithExtend(), bPress);
 		return;
 	}
 
@@ -372,15 +374,15 @@ void UWvInputEventComponent::InputCallBack(const FKey InputKey, const FName Key,
 	{
 		switch (InputCache)
 		{
-		case EWvInputMode::GameOnly:
+			case EWvInputMode::GameOnly:
 			ProcessGameEvent(InputEvent->EventTag, true);
 			break;
-		case EWvInputMode::UIOnly:
-			PlayerController->OnInputEventGameplayTagTrigger_UI.Broadcast(InputEvent->EventTag, true);
+			case EWvInputMode::UIOnly:
+			ProcessGameEventUI(InputEvent->EventTag, true);
 			break;
-		case EWvInputMode::GameAndUI:
-			PlayerController->OnInputEventGameplayTagTrigger_UI.Broadcast(InputEvent->EventTag, true);
+			case EWvInputMode::GameAndUI:
 			ProcessGameEvent(InputEvent->EventTag, true);
+			ProcessGameEventUI(InputEvent->EventTag, true);
 			break;
 		}
 
@@ -388,7 +390,7 @@ void UWvInputEventComponent::InputCallBack(const FKey InputKey, const FName Key,
 	else
 	{
 		ProcessGameEvent(InputEvent->EventTag, false);
-		PlayerController->OnInputEventGameplayTagTrigger_UI.Broadcast(InputEvent->EventTag, false);
+		ProcessGameEventUI(InputEvent->EventTag, false);
 	}
 }
 
@@ -474,7 +476,6 @@ void UWvInputEventComponent::PluralInputCallBack(const FKey InputKey, const FNam
 		}
 
 		const int32 StepInputEventIndex = InputEventIndex + 1;
-
 		if (bPress)
 		{
 			if (IECallbackInfo->CurInputEventCount == StepInputEventIndex - 1)
@@ -495,6 +496,7 @@ void UWvInputEventComponent::PluralInputCallBack(const FKey InputKey, const FNam
 		}
 	} while (false);
 
+
 	if (IECallbackInfo->CurInputEventCount != IECallbackInfo->PluralInputEventCount)
 	{
 		return;
@@ -509,7 +511,9 @@ void UWvInputEventComponent::PluralInputCallBack(const FKey InputKey, const FNam
 	const EWvInputEventType TriggerInputEventType = PluralInputEvent.TriggerInputEventType;
 	bool bIsValid = false;
 
-	if (bPress && TriggerInputEventType == EWvInputEventType::Pressed)
+	UE_LOG(LogTemp, Log, TEXT("[%s] : EventTag => %s"), *FString(__FUNCTION__), *InputEvent->EventTag.GetTagName().ToString());
+
+	if (TriggerInputEventType == EWvInputEventType::Pressed)
 	{
 		if (bPress)
 		{
@@ -524,9 +528,12 @@ void UWvInputEventComponent::PluralInputCallBack(const FKey InputKey, const FNam
 			CachePluralInputArray.Remove(IECallbackInfo);
 		}
 	}
-	else if (!bPress && TriggerInputEventType == EWvInputEventType::Released)
+	else if (TriggerInputEventType == EWvInputEventType::Released)
 	{
-		bIsValid = true;
+		if (!bPress)
+		{
+			bIsValid = true;
+		}
 	}
 	else if (TriggerInputEventType == EWvInputEventType::Clicked)
 	{
@@ -543,6 +550,27 @@ void UWvInputEventComponent::PluralInputCallBack(const FKey InputKey, const FNam
 			{
 				bIsValid = true;
 			}
+
+			UE_LOG(LogTemp, Log, TEXT("CurTick - LastTick => %d, CLICK_INTERVAL => %d"), CurTick - LastTick, CLICK_INTERVAL);
+		}
+	}
+	else if (TriggerInputEventType == EWvInputEventType::HoldPressed)
+	{
+		if (bPress)
+		{
+			IECallbackInfo->OnPressed(GetWorld());
+			IECallbackInfo->EventTag = InputEvent->EventTag;
+			IECallbackInfo->IsPress = true;
+			IECallbackInfo->OnHoldingCallback.AddDynamic(this, &ThisClass::PluralInputCallBackExecute);
+			CachePluralInputArray.AddUnique(IECallbackInfo);
+			return;
+		}
+		else
+		{
+			bIsValid = true;
+			IECallbackInfo->OnReleased();
+			IECallbackInfo->OnHoldingCallback.RemoveDynamic(this, &ThisClass::PluralInputCallBackExecute);
+			CachePluralInputArray.Remove(IECallbackInfo);
 		}
 	}
 
@@ -553,11 +581,12 @@ void UWvInputEventComponent::PluralInputCallBack(const FKey InputKey, const FNam
 
 	if (InputEvent->GetIsUseExtend())
 	{
-		PlayerController->InputEventGameplayTagExtendDelegate_All.Broadcast(InputEvent->GetEventTagNameWithExtend(), bPress);
+		ProcessGameEventExtend(InputEvent->GetEventTagNameWithExtend(), bPress);
 		return;
 	}
 
-	PluralInputCallBackExecute(InputEvent->EventTag, PluralInputEvent.TriggerInputEventType == EWvInputEventType::Released ? false : true);
+	const bool bWasReleased = (PluralInputEvent.TriggerInputEventType == EWvInputEventType::Released) ? false : true;
+	PluralInputCallBackExecute(InputEvent->EventTag, bWasReleased);
 }
 
 void UWvInputEventComponent::PluralInputCallBackExecute(FGameplayTag EventTag, bool bPress)
@@ -574,7 +603,7 @@ void UWvInputEventComponent::PluralInputCallBackExecute(FGameplayTag EventTag, b
 
 void UWvInputEventComponent::UpdateCachePluralInput()
 {
-	if (CachePluralInputArray.Num() == 0)
+	if (CachePluralInputArray.Num() <= 0)
 	{
 		return;
 	}
@@ -588,7 +617,7 @@ void UWvInputEventComponent::UpdateCachePluralInput()
 		{
 			if (Info->CurInputEventCount != Info->PluralInputEventCount)
 			{
-				UE_LOG(LogTemp, Warning, TEXT("Release Input Failed! => %s"), *FString(__FUNCTION__));
+				UE_LOG(LogTemp, Error, TEXT("Release Input Failed! => %s"), *FString(__FUNCTION__));
 				NeedToRemove.Add(Info);
 				break;
 			}
@@ -632,7 +661,7 @@ FWvInputEvent* UWvInputEventComponent::FindInputEvent(const FName Key)
 	return InputEvent;
 }
 
-void UWvInputEventComponent::ProcessGameEvent(const FGameplayTag& Tag, bool bPress)
+void UWvInputEventComponent::ProcessGameEvent(const FGameplayTag& Tag, const bool bPress)
 {
 	if (!PlayerController.Get() || !ASC.IsValid())
 	{
@@ -684,19 +713,19 @@ void UWvInputEventComponent::ProcessGameEvent(const FGameplayTag& Tag, bool bPre
 
 				if (!bIsAnimatingCombo)
 				{
-					UE_LOG(LogTemp, Warning, TEXT("not AnimatingCombo"));
+					UE_LOG(LogTemp, Warning, TEXT("not AnimatingCombo => %s"), *FString(__FUNCTION__));
 				}
 
 				if (bIsSameCombo)
 				{
-					//UE_LOG(LogTemp, Log, TEXT("keep cache input, exchange wait cur ability end instead"));
 					// キャッシュ入力を維持し、代わりに現在のAbility終了を待つ。
+					UE_LOG(LogTemp, Log, TEXT("keep cache input, exchange wait cur ability end instead => %s"), *FString(__FUNCTION__));
 					ResetWaitTillEnd(CurrentAbility);
 				}
 				else
 				{
-					//UE_LOG(LogTemp, Log, TEXT("Already switched to new combos/abilities and cleared"));
 					// すでに新しいコンボ／アビリティに切り替え、クリア
+					UE_LOG(LogTemp, Log, TEXT("Already switched to new combos/abilities and cleared => %s"), *FString(__FUNCTION__));
 					ResetCacheInput();
 					ResetWaitTillEnd();
 				}
@@ -706,6 +735,22 @@ void UWvInputEventComponent::ProcessGameEvent(const FGameplayTag& Tag, bool bPre
 
 	// Broadcast the tag status of input event, which button is currently pressed on HUD, need to listen to this message
 	PlayerController->OnInputEventGameplayTagTrigger_Game.Broadcast(Tag, bPress);
+}
+
+void UWvInputEventComponent::ProcessGameEventUI(const FGameplayTag& Tag, const bool bPress)
+{
+	if (IsValid(PlayerController))
+	{
+		PlayerController->OnInputEventGameplayTagTrigger_UI.Broadcast(Tag, bPress);
+	}
+}
+
+void UWvInputEventComponent::ProcessGameEventExtend(const FString EventName, const bool bPress)
+{
+	if (IsValid(PlayerController))
+	{
+		PlayerController->InputEventGameplayTagExtendDelegate_All.Broadcast(EventName, bPress);
+	}
 }
 
 void UWvInputEventComponent::ResetWaitTillEnd(UGameplayAbility* WaitEndAbility)

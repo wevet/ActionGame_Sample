@@ -52,4 +52,9 @@ float ILocomotionInterface::GetSwimmingSpeed() const
 	return 0.f;
 }
 
+void ILocomotionInterface::SetLSAiming(const bool NewLSAiming)
+{
+
+}
+
 

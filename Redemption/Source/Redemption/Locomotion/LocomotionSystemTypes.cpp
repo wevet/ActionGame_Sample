@@ -18,35 +18,45 @@ void FLocomotionEssencialVariables::Init(const FRotator Rotation)
 #pragma region Gun_Data
 FPawnAttackParam::FPawnAttackParam()
 {
-	MaxAmmo = BaseMaxAmmo;
 }
 
-// ëïìUÇµÇƒÇ¢ÇÈíeÇ™Ç»Ç¢
+void FPawnAttackParam::Initialize()
+{
+	CurrentAmmo = ClipType;
+}
+
+#if WITH_EDITOR
+void FPawnAttackParam::Modify()
+{
+	CurrentAmmo = ClipType;
+}
+#endif
+
+// No loaded ammunition.
 bool FPawnAttackParam::IsEmptyCurrentAmmo() const
 {
-	return CurrentAmmo <= 0; 
+	return CurrentAmmo <= 0 && !IsEmptyAmmo();
 }
 
-// äÆëSÇ…íeÇ™Ç»Ç¢
+// Completely out of bullets.
 bool FPawnAttackParam::IsEmptyAmmo() const
 {
 	return MaxAmmo <= 0;
 }
 
-// ëïìUÇµÇƒÇ¢ÇÈÇ©ÅH
+// Is it loaded?
 bool FPawnAttackParam::IsCurrentFullAmmo() const
 {
 	return CurrentAmmo >= ClipType; 
 }
 
-// åÇÇ¡ÇΩå„ÇÃíeêîèàóù
+// Processing the number of bullets after shooting
 void FPawnAttackParam::DecrementAmmos()
 {
 	auto Value = --CurrentAmmo;
-	CurrentAmmo = FMath::Clamp<int32>(CurrentAmmo, 0, MaxAmmo);
+	CurrentAmmo = FMath::Clamp<int32>(CurrentAmmo, 0, ClipType);
 }
 
-// ï‚è[
 void FPawnAttackParam::Replenishment()
 {
 	NeededAmmo = (ClipType - CurrentAmmo);
@@ -112,5 +122,22 @@ bool FCilmbingQTEData::IsSuccess() const
 	return false;
 }
 #pragma endregion
+
+
+FWeaponCharacterAnimation FWeaponCharacterAnimationData::Find(const EAttackWeaponState InWeaponState) const
+{
+	auto FindItemData = Animations.FindByPredicate([&](FWeaponCharacterAnimation Item)
+	{
+		return (Item.WeaponState == InWeaponState);
+	});
+
+	if (FindItemData)
+	{
+		return *FindItemData;
+	}
+
+	FWeaponCharacterAnimation Temp;
+	return Temp;
+}
 
 

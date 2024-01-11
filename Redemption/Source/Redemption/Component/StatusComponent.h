@@ -10,6 +10,7 @@
 #include "StatusComponent.generated.h"
 
 class UWvAbilitySystemComponent;
+class UWvInheritanceAttributeSet;
 class ABaseCharacter;
 
 
@@ -24,6 +25,11 @@ public:
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 	float GetKillDamage() const;
+
+	float GetVigilance() const;
+
+	float GetHealthToWidget() const;
+	bool IsHealthHalf() const;
 
 protected:
 	virtual void BeginPlay() override;
@@ -41,6 +47,8 @@ private:
 
 	void HealthChange_Callback(const FOnAttributeChangeData& Data);
 	void DamageChange_Callback(const FOnAttributeChangeData& Data);
+
+	UWvInheritanceAttributeSet* GetInheritanceAttributeSet() const;
 };
 
 

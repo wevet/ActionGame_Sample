@@ -64,7 +64,7 @@ void UWvAbilityAttributeSet::PreAttributeChange(const FGameplayAttribute& Attrib
 		return;
 	}
 
-	//--HP----------------------------------------------
+	//--Damage----------------------------------------------
 	if (Attribute == GetDamageAttribute())
 	{
 		FGameplayTagContainer OwnedGameplayTag;
@@ -80,6 +80,7 @@ void UWvAbilityAttributeSet::PreAttributeChange(const FGameplayAttribute& Attrib
 void UWvAbilityAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallbackData& Data)
 {
 	Super::PostGameplayEffectExecute(Data);
+
 	PostGameplayEffectExecute_HP(Data);
 	PostGameplayEffectExecute_Stamina(Data);
 }
@@ -89,11 +90,13 @@ void UWvAbilityAttributeSet::PostGameplayEffectExecute_HP(const FGameplayEffectM
 {
 	if (Data.EvaluatedData.Attribute == GetDamageAttribute())
 	{
-		if (HP.GetBaseValue() <= 0 || Damage.GetBaseValue() <= 0)
+		const float CurDamage = Damage.GetCurrentValue();
+
+		if (HP.GetBaseValue() <= 0 || CurDamage <= 0)
 		{
 			return;
 		}
-		HpChangeFromDamage(FMath::Max(0, Damage.GetBaseValue()), Data);
+		HpChangeFromDamage(FMath::Max(0, CurDamage), Data);
 	}
 	else if (Data.EvaluatedData.Attribute == GetRecoverHPAttribute())
 	{
@@ -119,6 +122,7 @@ void UWvAbilityAttributeSet::HpChangeFromDamage(const float InDamage, const FGam
 	Data.Target.AddLooseGameplayTag(TAG_Character_DamageReaction);
 	PostDamageEffectExecute(Data, NewDamage);
 	Data.Target.RemoveLooseGameplayTag(TAG_Character_DamageReaction);
+
 }
 
 void UWvAbilityAttributeSet::PostDamageEffectExecute(const FGameplayEffectModCallbackData& Data, const float InDamage)

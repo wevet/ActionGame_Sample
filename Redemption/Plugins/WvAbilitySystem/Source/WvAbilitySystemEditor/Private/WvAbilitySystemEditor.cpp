@@ -82,7 +82,7 @@ void FWvAbilitySystemEditorModule::RegisterMenus()
 	// Owner will be used for cleanup in call to UToolMenus::UnregisterOwner
 	FToolMenuOwnerScoped OwnerScoped(this);
 
-	UToolMenu* Menu = UToolMenus::Get()->RegisterMenu("LevelEditor.LevelEditorToolBar.SakuraEXTCombo");
+	UToolMenu* Menu = UToolMenus::Get()->RegisterMenu("LevelEditor.LevelEditorToolBar.WvEXTCombo");
 	FToolMenuSection& Section = Menu->FindOrAddSection("Settings");
 	FToolMenuEntry& Entry = Section.AddEntry(FToolMenuEntry::InitMenuEntry(FWvAbilitySystemEditorCommands::Get().OpenWvEditorWindow));
 	Entry.SetCommandList(PluginCommands);

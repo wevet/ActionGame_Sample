@@ -21,6 +21,7 @@ enum class EWvInputEventType : uint8
 	Pressed	UMETA(DisplayName = "Pressed"),
 	Released UMETA(DisplayName = "Released"),
 	Clicked UMETA(DisplayName = "Clicked"),
+	HoldPressed UMETA(DisplayName = "HoldPressed"),
 };
 
 USTRUCT(BlueprintType)
@@ -77,6 +78,12 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	bool bConsumeInput = true;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	bool bHoldAction = false;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, meta = (EditCondition = "bHoldAction"))
+	float Delay = 2.0f;
+
 protected:
 	FString Extend;
 	bool IsUseExtend{ false };
@@ -96,16 +103,33 @@ public:
 	bool GetIsUseExtend() const;
 };
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FHoldActionDelegate, FGameplayTag, GameplayTag, bool, IsPressed);
+
 UCLASS()
-class UWvInputEventCallbackInfo :public UObject
+class UWvInputEventCallbackInfo : public UObject
 {
 	GENERATED_BODY()
 
 public:
-	int PluralInputEventCount;
-	int CurInputEventCount;
+	int32 PluralInputEventCount;
+	int32 CurInputEventCount;
 	FDateTime LastPressedTime;
 	FGameplayTag EventTag;
 	bool IsPress;
+	bool IsHoldAction;
+	float HoldTimer;
+
+	UPROPERTY(BlueprintAssignable)
+	FHoldActionDelegate OnHoldingCallback;
+
+	void OnPressed(const UWorld* World);
+	void OnReleased();
+	void Update(const float DeltaTime);
+
+private:
+	FTimerHandle HoldActionTH;
+	bool bCallbackResult = false;
+	float Interval = 0.f;
+
 };
 

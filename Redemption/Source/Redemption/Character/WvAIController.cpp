@@ -91,7 +91,7 @@ void AWvAIController::OnPossess(APawn* InPawn)
 		}
 		else
 		{
-			UE_LOG(LogTemp, Error, TEXT("NotValid BehaviorTree => %s"), *FString(__FUNCTION__));
+			UE_LOG(LogWvAI, Error, TEXT("NotValid BehaviorTree => %s"), *FString(__FUNCTION__));
 		}
 	}
 
@@ -99,12 +99,23 @@ void AWvAIController::OnPossess(APawn* InPawn)
 	{
 		ASC = Cast<UWvAbilitySystemComponent>(AbilitySystemComponent);
 	}
+
+	// Enable Collision Avoidance
+	if (BaseCharacter.IsValid())
+	{
+		BaseCharacter->StartRVOAvoidance();
+	}
+
+	HearTask = FAIPerceptionTask(FName(TEXT("HearTask")), GetWorld());
+	SightTask = FAIPerceptionTask(FName(TEXT("SightTask")), GetWorld());
+	FollowTask = FAIPerceptionTask(FName(TEXT("FollowTask")), GetWorld());
+	FriendlyTask = FAIPerceptionTask(FName(TEXT("FriendlyTask")), GetWorld());
 }
 
 void AWvAIController::OnUnPossess()
 {
+	AbortTasks(true);
 	StopTree();
-
 	BaseCharacter.Reset();
 	IgnoreTargets.Reset(0);
 	Generators.Reset(0);
@@ -205,7 +216,7 @@ void AWvAIController::BroadcastOnPlayerStateChanged()
 #pragma region IWvAbilityTargetInterface
 void AWvAIController::SetGenericTeamId(const FGenericTeamId& NewTeamID)
 {
-	UE_LOG(LogTemp, Error, TEXT("You can't set the team ID on a player bot controller (%s); it's driven by the associated player state"), *GetPathNameSafe(this));
+	UE_LOG(LogWvAI, Error, TEXT("You can't set the team ID on a player bot controller (%s); it's driven by the associated player state"), *GetPathNameSafe(this));
 }
 
 FGenericTeamId AWvAIController::GetGenericTeamId() const
@@ -247,24 +258,20 @@ void AWvAIController::OnReceiveKillTarget(AActor* Actor, const float Damage)
 	AIPerceptionComponent->OnTargetPerceptionUpdated.RemoveDynamic(this, &AWvAIController::OnTargetPerceptionUpdatedRecieve);
 	AIPerceptionComponent->OnPerceptionUpdated.RemoveDynamic(this, &AWvAIController::OnActorsPerceptionUpdatedRecieve);
 
-	HandleRemoveFollow();
-
-	SightTask.Abort();
-	HearTask.Abort();
-	FollowTask.Abort();
-	FriendlyTask.Abort();
+	AbortTasks();
+	StopTree();
+	ClearSightTaget();
+	ClearFriendlyTarget();
+	ClearSearchNodeHolders();
+	ClearFollowTarget();
 
 	SetBlackboardDead(true);
-	ClearSightTaget();
-	StopTree();
-	RemoveSearchNodeHolders();
-
-	UE_LOG(LogTemp, Warning, TEXT("Pawn is neutralized and AIPerception is stopped. => %s, Pawn => %s"), *FString(__FUNCTION__), *GetNameSafe(GetPawn()));
+	UE_LOG(LogWvAI, Warning, TEXT("Pawn is neutralized and AIPerception is stopped. => %s, Pawn => %s"), *FString(__FUNCTION__), *GetNameSafe(GetPawn()));
 }
 
 void AWvAIController::OnSendKillTarget(AActor* Actor, const float Damage)
 {
-	SightTask.Abort();
+	SightTask.Abort(false);
 	ClearSightTaget();
 }
 
@@ -276,13 +283,11 @@ bool AWvAIController::IsInBattled() const
 
 void AWvAIController::Freeze()
 {
-	SightTask.Abort();
-	HearTask.Abort();
-	FollowTask.Abort();
-	FriendlyTask.Abort();
+	AbortTasks();
 	StopTree();
 	ClearSightTaget();
-	RemoveSearchNodeHolders();
+	ClearFriendlyTarget();
+	ClearSearchNodeHolders();
 }
 
 void AWvAIController::UnFreeze()
@@ -313,7 +318,7 @@ void AWvAIController::SetAIActionState(const EAIActionState NewAIActionState)
 	}
 	else
 	{
-		UE_LOG(LogTemp, Error, TEXT("not valid IWvAIActionStateInterface => %s"), *FString(__FUNCTION__));
+		UE_LOG(LogWvAI, Error, TEXT("not valid IWvAIActionStateInterface => %s"), *FString(__FUNCTION__));
 	}
 
 }
@@ -380,6 +385,11 @@ AActor* AWvAIController::GetBlackboardTarget() const
 	return Cast<AActor>(BlackboardComponent->GetValueAsObject(BlackboardKeyConfig.TargetKeyName));
 }
 
+ABaseCharacter* AWvAIController::GetBlackboardTargetAsCharacter() const
+{
+	return Cast<ABaseCharacter>(BlackboardComponent->GetValueAsObject(BlackboardKeyConfig.TargetKeyName));
+}
+
 AActor* AWvAIController::GetBlackboardLeader() const
 {
 	return Cast<AActor>(BlackboardComponent->GetValueAsObject(BlackboardKeyConfig.LeaderKeyName));
@@ -415,129 +425,70 @@ void AWvAIController::UpdateFollowPoint()
 	}
 }
 
-void AWvAIController::RemoveSearchNodeHolders()
-{
-	if (Generators.Num() > 1)
-	{
-		UE_LOG(LogTemp, Error, TEXT("Generator is unnecessarily generated. => %d Character. => %s"), Generators.Num(), *GetNameSafe(GetPawn()));
-
-		for (TWeakObjectPtr<AActor> Generator : Generators)
-		{
-			ABaseInvestigationGenerator* IG = Cast<ABaseInvestigationGenerator>(Generator.Get());
-			if (IsValid(IG))
-			{
-				IG->K2_DestroyActor();
-			}
-		}
-
-		Generators.Empty();
-	}
-	else
-	{
-		auto Generator = GetBlackboardSearchNodeHolder();
-		if (IsValid(Generator))
-		{
-			if (ABaseInvestigationGenerator* IG = Cast<ABaseInvestigationGenerator>(Generator))
-			{
-				IG->K2_DestroyActor();
-			}
-		}
-	}
-
-	if (HearTask.IsRunning())
-	{
-		HearTask.Finish();
-	}
-}
-
-void AWvAIController::HandleRemoveFollow()
-{
-	if (ABaseCharacter* LocalCharacter = Cast<ABaseCharacter>(GetPawn()))
-	{
-		// if controlled pawn is leader
-		if (LocalCharacter->IsLeader())
-		{
-			UCombatComponent* Comp = LocalCharacter->GetCombatComponent();
-			if (IsValid(Comp))
-			{
-				// remove all follower
-				Comp->RemoveAllFollowers();
-				UE_LOG(LogTemp, Log, TEXT("HandleRemoveFollow : RemoveAllFollowers"));
-			}
-		}
-		else
-		{
-			// not get leader from controller
-			ABaseCharacter* Leader = LocalCharacter->GetLeaderCharacterFromController();
-			if (IsValid(Leader))
-			{
-				UCombatComponent* Comp = Leader->GetCombatComponent();
-				if (IsValid(Comp))
-				{
-					// remove controlled pawn follower array
-					Comp->RemoveFollower(GetPawn());
-					UE_LOG(LogTemp, Log, TEXT("HandleRemoveFollow : RemoveFollower"));
-				}
-			}
-		}
-	}
-	else
-	{
-		// pawn is vehicle | mass | otherwise
-		UE_LOG(LogTemp, Warning, TEXT("HandleRemoveFollow : pawn is vehicle | mass | otherwise"));
-	}
-}
-
-void AWvAIController::DoSearchEnemyState(AActor* Actor)
+void AWvAIController::DoSearchEnemyState(AActor* Actor, FVector OverridePosition/* = FVector::ZeroVector*/)
 {
 	if (!NodeGeneratorClasses)
 	{
 		return;
 	}
 
-
-	if (!IsValid(GetBlackboardSearchNodeHolder()))
+	if (IsValid(GetBlackboardSearchNodeHolder()))
 	{
-		if (!HearTask.IsRunning())
-		{
-			const FVector TargetLocation = CurrentStimulus.StimulusLocation;
-			const FTransform Origin{ FRotator::ZeroRotator, TargetLocation, FVector::ZeroVector };
-			FActorSpawnParameters SpawnParams;
-			SpawnParams.Owner = this;
-			SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-			auto Generator = GetWorld()->SpawnActor<ABaseInvestigationGenerator>(NodeGeneratorClasses, Origin, SpawnParams);
+		return;
+	}
 
-			SetBlackboardSearchNodeHolder(Generator);
-			SetBlackboardDestinationLocation(TargetLocation);
-			HearTask = FAIPerceptionTask(HEAR_AGE, FName(TEXT("HearTask")), nullptr);
-			HearTask.Start();
-		}
-		else
-		{
+	if (!HearTask.IsRunning())
+	{
+		const FVector TargetLocation = OverridePosition.IsNearlyZero() ? CurrentStimulus.StimulusLocation : OverridePosition;
+		const FTransform Origin{ FRotator::ZeroRotator, TargetLocation, FVector::ZeroVector };
+		FActorSpawnParameters SpawnParams;
+		SpawnParams.Owner = BaseCharacter.Get();
+		SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+		auto Generator = GetWorld()->SpawnActor<ABaseInvestigationGenerator>(NodeGeneratorClasses, Origin, SpawnParams);
 
-		}
+		SetBlackboardSearchNodeHolder(Generator);
+		SetBlackboardDestinationLocation(TargetLocation);
+		HearTask.Begin(HEAR_AGE, [this]()
+		{
+			//
+		});
+
+	}
+	else
+	{
+		// already running
 	}
 
 }
 
 void AWvAIController::DoCombatEnemyState(AActor* Actor)
 {
-	if (IsValid(Actor))
+	if (!IsValid(Actor))
 	{
-		if (!SightTask.IsRunning())
+		return;
+	}
+
+	if (!SightTask.IsRunning())
+	{
+		SetBlackboardTarget(Actor);
+		SightTask.Begin(SIGHT_AGE, [this]()
 		{
-			SetBlackboardTarget(Actor);
-			SightTask = FAIPerceptionTask(SIGHT_AGE, FName(TEXT("SightTask")), [this]()
+			// not hear task running and lost target is alive
+			auto LostTarget = GetBlackboardTargetAsCharacter();
+			if ((LostTarget && !LostTarget->IsDead()) && !HearTask.IsRunning())
 			{
-				ClearSightTaget();
-			});
-			SightTask.Start();
-		}
+				DoSearchEnemyState(LostTarget, LostTarget->GetActorLocation());
+				UE_LOG(LogWvAI, Warning, TEXT("%s has lost my target and I will warn me."), *GetNameSafe(GetPawn()));
+			}
+
+			ClearSightTaget();
+		});
+
 	}
 	else
 	{
-		SetBlackboardTarget(Actor);
-		SightTask.Abort();
+		// already running
+		SightTask.AddLength(SIGHT_AGE);
 	}
 }
 
@@ -545,81 +496,74 @@ void AWvAIController::DoFollowActionState(AActor* Actor)
 {
 	// once event
 	// start task
-	if (IsValid(Actor))
+	if (!IsValid(Actor))
 	{
-		if (!FollowTask.IsRunning())
+		return;
+	}
+
+	if (!FollowTask.IsRunning())
+	{
+		// if actor same group leader
+		UCombatComponent* Comp = Actor->FindComponentByClass<UCombatComponent>();
+		if (Comp)
 		{
-			// if actor same group leader
-			UCombatComponent* Comp = Actor->FindComponentByClass<UCombatComponent>();
-			if (Comp)
+			if (!Comp->CanFollow())
 			{
-				if (!Comp->CanFollow())
-				{
-					// stack full!
-					return;
-				}
-
-				Comp->AddFollower(GetPawn());
-				SetBlackboardLeader(Actor);
-				SetBlackboardFollowLocation(Actor->GetActorLocation());
-
-				FollowTask = FAIPerceptionTask(FOLLOW_AGE, FName(TEXT("FollowTask")), [this]()
-				{
-
-				});
-				FollowTask.Start();
+				// stack full!
+				return;
 			}
-		}
-		else
-		{
-			UpdateFollowPoint();
-		}
 
+			Comp->AddFollower(GetPawn());
+			SetBlackboardLeader(Actor);
+			SetBlackboardFollowLocation(Actor->GetActorLocation());
+			FollowTask.Begin(FOLLOW_AGE, [this]()
+			{
 
+			});
+		}
 	}
 	else
 	{
-		SetBlackboardLeader(Actor);
-		FollowTask.Abort();
+		UpdateFollowPoint();
 	}
 }
 
 void AWvAIController::DoFriendlyActionState(AActor* Actor)
 {
-	if (IsValid(Actor))
+	if (!IsValid(Actor))
 	{
-		if (!FriendlyTask.IsRunning())
+		return;
+	}
+
+	if (!FriendlyTask.IsRunning())
+	{
+		SetBlackboardFriend(Actor);
+		SetBlackboardFriendLocation(Actor->GetActorLocation());
+		FriendlyTask.Begin(FRIEND_AGE, [this]()
 		{
-			SetBlackboardFriend(Actor);
-			SetBlackboardFriendLocation(Actor->GetActorLocation());
-			FriendlyTask = FAIPerceptionTask(FRIEND_AGE, FName(TEXT("FriendlyTask")), [this]()
-			{
-				//
-			});
-			FriendlyTask.Start();
-		}
+			ClearFriendlyTarget();
+		});
 	}
 	else
 	{
-		SetBlackboardFriend(Actor);
-		FriendlyTask.Abort();
+		// already running
 	}
 }
 
 void AWvAIController::Notify_Follow()
 {
-	UE_LOG(LogTemp, Log, TEXT("started leader follow => %s"), *GetNameSafe(GetPawn()));
+	UE_LOG(LogWvAI, Log, TEXT("started leader follow => %s"), *GetNameSafe(GetPawn()));
 }
 
 void AWvAIController::Notify_UnFollow(bool bIsInImpact/* = false */)
 {
 	if (bIsInImpact)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("leader is dead. big impact !! => %s"), *GetNameSafe(GetPawn()));
+		UE_LOG(LogWvAI, Warning, TEXT("leader is dead. big impact !! => %s"), *GetNameSafe(GetPawn()));
 	}
 	else
 	{
-		UE_LOG(LogTemp, Warning, TEXT("follower is dead. because removed follow => %s"), *GetNameSafe(GetPawn()));
+		UE_LOG(LogWvAI, Warning, TEXT("follower is dead. because removed follow => %s"), *GetNameSafe(GetPawn()));
 	}
 
 	DoFollowActionState(nullptr);
@@ -631,6 +575,29 @@ void AWvAIController::Execute_DoAttack()
 	{
 		TeamAgent->DoAttack();
 	}
+}
+
+void AWvAIController::HandleSprint(const bool bEnable)
+{
+	if (BaseCharacter.IsValid())
+	{
+		if (bEnable)
+		{
+			BaseCharacter->DoSprinting();
+		}
+		else
+		{
+			BaseCharacter->DoStopSprinting();
+		}
+	}
+}
+
+void AWvAIController::AbortTasks(bool bIsForce /*= false*/)
+{
+	SightTask.Abort(bIsForce);
+	HearTask.Abort(bIsForce);
+	FollowTask.Abort(bIsForce);
+	FriendlyTask.Abort(bIsForce);
 }
 #pragma endregion
 
@@ -729,7 +696,7 @@ void AWvAIController::OnTargetPerceptionUpdatedRecieve(AActor* Actor, FAIStimulu
 {
 	if (!Stimulus.IsValid() || !IsValid(Actor) || IgnoreTargets.Contains(Actor))
 	{
-		//UE_LOG(LogTemp, Warning, TEXT("Not Valid Stimulus or Not Valid Actor or Contains IgnoreTargets => %s"), *FString(__FUNCTION__));
+		//UE_LOG(LogWvAI, Warning, TEXT("Not Valid Stimulus or Not Valid Actor or Contains IgnoreTargets => %s"), *FString(__FUNCTION__));
 		return;
 	}
 
@@ -785,7 +752,7 @@ void AWvAIController::OnSightPerceptionUpdatedRecieve(AActor* Actor)
 	const bool bFollowRunning = FollowTask.IsRunning();
 	const bool bFriendRunning = FriendlyTask.IsRunning();
 
-	if (IsInEnemyAgent(*Actor) && !bSightRunning)
+	if (IsInEnemyAgent(*Actor))
 	{
 		if (bFollowRunning)
 		{
@@ -850,12 +817,88 @@ void AWvAIController::OnDamagePerceptionUpdatedRecieve(AActor* Actor)
 
 void AWvAIController::OnPredictionPerceptionUpdatedRecieve(AActor* Actor)
 {
-	UE_LOG(LogTemp, Log, TEXT("Apply PredictionConfig => %s, Owner => %s, Target => %s"), *FString(__FUNCTION__), *GetNameSafe(GetPawn()), *GetNameSafe(Actor));
+	UE_LOG(LogWvAI, Log, TEXT("Apply PredictionConfig => %s, Owner => %s, Target => %s"), *FString(__FUNCTION__), *GetNameSafe(GetPawn()), *GetNameSafe(Actor));
 	DrawDebugLine(GetWorld(), GetPawn()->GetActorLocation(), Actor->GetActorLocation(), FColor::Green, false, 4.0f, 0, 1.5f);
+}
+
+#pragma region ClearFunction
+void AWvAIController::ClearSearchNodeHolders()
+{
+	if (Generators.Num() > 1)
+	{
+		UE_LOG(LogWvAI, Error, TEXT("Generator is unnecessarily generated. => %d Character. => %s"), Generators.Num(), *GetNameSafe(GetPawn()));
+
+		for (TWeakObjectPtr<AActor> Generator : Generators)
+		{
+			ABaseInvestigationGenerator* IG = Cast<ABaseInvestigationGenerator>(Generator.Get());
+			if (IsValid(IG))
+			{
+				IG->K2_DestroyActor();
+			}
+		}
+
+		Generators.Empty();
+	}
+	else
+	{
+		auto Generator = GetBlackboardSearchNodeHolder();
+		if (IsValid(Generator))
+		{
+			if (ABaseInvestigationGenerator* IG = Cast<ABaseInvestigationGenerator>(Generator))
+			{
+				IG->K2_DestroyActor();
+			}
+		}
+	}
+
 }
 
 void AWvAIController::ClearSightTaget()
 {
 	SetBlackboardTarget(nullptr);
 }
+
+void AWvAIController::ClearFriendlyTarget()
+{
+	SetBlackboardFriend(nullptr);
+}
+
+void AWvAIController::ClearFollowTarget()
+{
+	if (ABaseCharacter* LocalCharacter = Cast<ABaseCharacter>(GetPawn()))
+	{
+		if (LocalCharacter->IsLeader())
+		{
+			UCombatComponent* Comp = LocalCharacter->GetCombatComponent();
+			if (IsValid(Comp))
+			{
+				// remove all follower
+				Comp->RemoveAllFollowers();
+				UE_LOG(LogWvAI, Log, TEXT("[%s] : if controlled pawn is leader"), *FString(__FUNCTION__));
+			}
+		}
+		else
+		{
+			ABaseCharacter* Leader = LocalCharacter->GetLeaderCharacterFromController();
+			if (IsValid(Leader))
+			{
+				UCombatComponent* Comp = Leader->GetCombatComponent();
+				if (IsValid(Comp))
+				{
+					// remove controlled pawn follower array
+					Comp->RemoveFollower(GetPawn());
+					UE_LOG(LogWvAI, Log, TEXT("[%s] : not get leader from controller"), *FString(__FUNCTION__));
+				}
+			}
+		}
+	}
+	else
+	{
+		// pawn is vehicle | mass | otherwise
+		UE_LOG(LogWvAI, Warning, TEXT("[%s] : pawn is vehicle | mass | otherwise"), *FString(__FUNCTION__));
+	}
+
+	SetBlackboardLeader(nullptr);
+}
+#pragma endregion
 

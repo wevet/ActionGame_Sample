@@ -14,6 +14,10 @@ UWvSkeletalMeshComponent::UWvSkeletalMeshComponent(const FObjectInitializer& Obj
 	//bAutoRegisterWithBudgetAllocator = true;
 	//bAutoCalculateSignificance = true;
 	//bShouldUseActorRenderedFlag = true;
+
+	PrimaryComponentTick.bCanEverTick = true;
+	// @TODO
+	//PrimaryComponentTick.bRunOnAnyThread = true;
 }
 
 void UWvSkeletalMeshComponent::BeginPlay()

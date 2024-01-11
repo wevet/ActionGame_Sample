@@ -113,6 +113,12 @@ class WVABILITYSYSTEM_API IWvEnvironmentInterface
 
 public:
 	virtual void OnReceiveAbilityAttack(AActor* Attacker, const FHitResult& HitResult) {};
+
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "WvEnvironmentInterface")
+	void CallTriggerActor();
+
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "WvEnvironmentInterface")
+	void CallTriggerActorEndOverlap();
 };
 
 

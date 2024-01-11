@@ -37,33 +37,44 @@ EBTNodeResult::Type UBTTask_ChangeAIActionState::ExecuteTask(UBehaviorTreeCompon
 		// It is necessary to separate the equipment of weapons according to the situation.
 		if (ABaseCharacter* Character = Cast<ABaseCharacter>(ControlPawn))
 		{
-			auto CombatComp = Character->GetCombatComponent();
-
 			switch (AIActionState)
 			{
-				case EAIActionState::Search:
-				case EAIActionState::Follow:
 				case EAIActionState::Combat:
 				{
-					if (CombatComp)
-					{
-						CombatComp->EquipPistol();
-						Character->StrafeMovement();
-					}
+					Character->StrafeMovement();
 				}
 				break;
-
+				case EAIActionState::Search:
+				case EAIActionState::Follow:
 				case EAIActionState::Patrol:
 				case EAIActionState::Friendly:
 				{
-					if (CombatComp)
-					{
-						CombatComp->UnEquipWeapon();
-						Character->VelocityMovement();
-					}
+					Character->VelocityMovement();
 				}
 				break;
 			}
+
+			auto CombatComp = Character->GetCombatComponent();
+			if (CombatComp)
+			{
+				switch (AIActionState)
+				{
+					case EAIActionState::Combat:
+					case EAIActionState::Search:
+					case EAIActionState::Follow:
+					{
+						CombatComp->EquipAvailableWeapon();
+					}
+					break;
+					case EAIActionState::Patrol:
+					case EAIActionState::Friendly:
+					{
+						CombatComp->UnEquipWeapon();
+					}
+					break;
+				}
+			}
+
 		}
 	}
 	return EBTNodeResult::Succeeded;

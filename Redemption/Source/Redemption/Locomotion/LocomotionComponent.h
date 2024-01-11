@@ -115,24 +115,14 @@ public:
 	virtual ELSOverlayState GetLSOverlayState_Implementation() const override;
 
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Component|LocomotionInterface")
-	void SetLSAiming(const bool NewLSAiming);
-	virtual void SetLSAiming_Implementation(const bool NewLSAiming) override;
-
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Component|LocomotionInterface")
-	bool HasMovementInput() const;
-	virtual bool HasMovementInput_Implementation() const override;
-
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Component|LocomotionInterface")
-	bool HasMoving() const;
-	virtual bool HasMoving_Implementation() const override;
-
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Component|LocomotionInterface")
-	bool HasAiming() const;
-	virtual bool HasAiming_Implementation() const override;
-
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Component|LocomotionInterface")
 	const FTransform GetPivotOverlayTansform();
 	virtual const FTransform GetPivotOverlayTansform_Implementation() override;
+
+	virtual void SetLSAiming(const bool NewLSAiming) override;
+	virtual bool HasMovementInput() const override;
+	virtual bool HasMoving() const override;
+	virtual bool HasAiming() const override;
+
 
 	virtual void SetWalkingSpeed(const float InWalkingSpeed) override;
 	virtual void SetRunningSpeed(const float InRunningSpeed) override;
@@ -269,6 +259,8 @@ protected:
 #pragma endregion
 
 public:
+	void DoTick(const float DeltaTime);
+
 	void SetLockUpdatingRotation(const bool NewLockUpdatingRotation);
 	bool GetLockUpdatingRotation() const;
 
@@ -293,7 +285,7 @@ public:
 	float ChooseBrakingDeceleration() const;
 	float ChooseGroundFriction() const;
 	float ChooseBrakingFrictionFactor() const;
-	bool GetGaitModeFromVelocity(ELSGait& OutGaitMode) const;
+	ELSGait GetGaitModeFromVelocity() const;
 
 	FLocomotionEssencialVariables GetLocomotionEssencialVariables() const { return LocomotionEssencialVariables; }
 
@@ -310,7 +302,7 @@ private:
 	void OnLSGaitChange();
 
 
-	const bool CanSprint();
+	bool CanSprint() const;
 	void ManageCharacterRotation();
 	void OnLandedCallback();
 

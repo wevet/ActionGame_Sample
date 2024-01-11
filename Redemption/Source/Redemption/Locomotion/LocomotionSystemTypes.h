@@ -8,6 +8,7 @@
 #include "GameplayTagContainer.h"
 #include "LocomotionSystemTypes.generated.h"
 
+class UTexture2D;
 
 UENUM(BlueprintType)
 enum class ELSGait : uint8
@@ -413,45 +414,52 @@ struct REDEMPTION_API FPawnAttackParam
 	GENERATED_BODY()
 
 public:
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FName WeaponName;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float BaseDamage = 10.0f;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	EAttackWeaponState AttackWeaponState;
 
-	// is gun?
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	bool bHasAmmo = false;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float Loudness = 1000.0f;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float Volume = 1.0f;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, meta = (EditCondition = "bHasAmmo"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (EditCondition = "bHasAmmo"))
 	FName MuzzleSocketName = FName("MuzzleFlash");
 
-	// ç≈ëÂíeêîíl
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, meta = (EditCondition = "bHasAmmo"))
-	int32 BaseMaxAmmo;
-
-	// reloadÇ∑ÇÈèÍçáÇÃíeêîíl
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, meta = (EditCondition = "bHasAmmo"))
-	int32 ClipType;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, meta = (EditCondition = "bHasAmmo"))
-	float TraceRange = 2000.0f;
-
-	int32 NeededAmmo;
-	// åªç›íeêî
-	int32 CurrentAmmo;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (EditCondition = "bHasAmmo"))
 	int32 MaxAmmo;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (EditCondition = "bHasAmmo"))
+	int32 ClipType;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (EditCondition = "bHasAmmo"))
+	float TraceRange = 2000.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	class UTexture2D* Texture;
+
+	UPROPERTY()
+	int32 NeededAmmo;
+
+	UPROPERTY()
+	int32 CurrentAmmo;
+
 	FPawnAttackParam();
+
+#if WITH_EDITOR
+	void Modify();
+#endif
+
+	void Initialize();
 
 	bool IsEmptyCurrentAmmo() const;
 	bool IsEmptyAmmo() const;
@@ -898,5 +906,59 @@ public:
 	}
 };
 #pragma endregion
+
+
+#pragma region WeaponCharacterAnimation
+USTRUCT(BlueprintType)
+struct REDEMPTION_API FWeaponCharacterAnimation
+{
+	GENERATED_BODY()
+
+public:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	EAttackWeaponState WeaponState;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UAnimMontage* ShotAnimation;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UAnimMontage* ReloadAnimation;
+
+	FWeaponCharacterAnimation() 
+	{
+	}
+};
+
+USTRUCT(BlueprintType)
+struct REDEMPTION_API FWeaponCharacterAnimationData
+{
+	GENERATED_BODY()
+
+public:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	TArray<FWeaponCharacterAnimation> Animations;
+
+	FWeaponCharacterAnimation Find(const EAttackWeaponState InWeaponState) const;
+};
+#pragma endregion
+
+
+USTRUCT()
+struct FWvReplicatedAcceleration
+{
+	GENERATED_BODY()
+
+	UPROPERTY()
+	uint8 AccelXYRadians = 0;
+	// Direction of XY accel component, quantized to represent [0, 2*pi]
+
+	UPROPERTY()
+	uint8 AccelXYMagnitude = 0;
+	//Accel rate of XY component, quantized to represent [0, MaxAcceleration]
+
+	UPROPERTY()
+	int8 AccelZ = 0;
+	// Raw Z accel rate component, quantized to represent [-MaxAcceleration, MaxAcceleration]
+};
 
 

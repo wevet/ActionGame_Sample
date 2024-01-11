@@ -66,6 +66,9 @@ public:
 	FBotConfig BotConfig;
 
 	UPROPERTY(EditDefaultsOnly)
+	FBotLeaderConfig BotLeaderConfig;
+
+	UPROPERTY(EditDefaultsOnly)
 	FEnvironmentConfig EnvironmentConfig;
 
 	UPROPERTY(EditDefaultsOnly)

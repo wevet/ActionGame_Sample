@@ -11,6 +11,7 @@
 #include "Component/CombatComponent.h"
 #include "Component/InventoryComponent.h"
 #include "Misc/WvCommonUtils.h"
+#include "Item/WeaponBaseActor.h"
 
 #include "Kismet/KismetMathLibrary.h"
 #include "Kismet/KismetSystemLibrary.h"
@@ -39,7 +40,6 @@ void UWvAbility_Melee::ActivateAbility(const FGameplayAbilitySpecHandle Handle, 
 		return;
 	}
 
-
 	if (MontageTask)
 	{
 		MontageTask->OnCompleted.Clear();
@@ -58,6 +58,7 @@ void UWvAbility_Melee::ActivateAbility(const FGameplayAbilitySpecHandle Handle, 
 		FName("Default"),
 		true,
 		1.0f);
+
 
 	MontageTask->OnCancelled.AddDynamic(this, &UWvAbility_Melee::OnPlayMontageCompleted_Event);
 	MontageTask->OnInterrupted.AddDynamic(this, &UWvAbility_Melee::OnPlayMontageCompleted_Event);

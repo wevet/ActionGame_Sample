@@ -6,6 +6,7 @@
 #include "WvGameplayAbility.h"
 #include "Task/WvAT_BulletDamage.h"
 #include "Task/WvAT_PlayMontageAndWaitForEvent.h"
+#include "Item/WeaponBaseActor.h"
 #include "WvAbilitySystemTypes.h"
 #include "WvAbility_GunFire.generated.h"
 
@@ -29,7 +30,7 @@ protected:
 	int32 GameplayEffectGroupIndexs = 0;
 
 	UPROPERTY(EditDefaultsOnly)
-	UAnimMontage* Montage;
+	UWeaponCharacterAnimationDataAsset* CharacterAnimationDA;
 
 	UPROPERTY(EditDefaultsOnly)
 	bool bWeaponEvent = false;
@@ -46,4 +47,7 @@ private:
 	
 	UPROPERTY()
 	class UWvAT_BulletDamage* DamageTask;
+
+	UPROPERTY()
+	TWeakObjectPtr<AWeaponBaseActor> WeaponBaseActor;
 };

@@ -4,6 +4,7 @@
 #include "AnimationRuntime.h"
 #include "Animation/AnimInstanceProxy.h"
 
+#include UE_INLINE_GENERATED_CPP_BY_NAME(AnimNode_CacheToePosForFootIK)
 
 void FAnimNode_CacheToePosForFootIK::GatherDebugData(FNodeDebugData& DebugData)
 {

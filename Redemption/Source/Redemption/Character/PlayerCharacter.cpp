@@ -86,7 +86,8 @@ void APlayerCharacter::PossessedBy(AController* NewController)
 	{
 		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PC->GetLocalPlayer()))
 		{
-			Subsystem->AddMappingContext(DefaultMappingContext, 0);
+			FModifyContextOptions Options;
+			Subsystem->AddMappingContext(DefaultMappingContext, 0, Options);
 		}
 	}
 }
@@ -107,6 +108,8 @@ void APlayerCharacter::UnPossessed()
 
 void APlayerCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent)
 {
+	check(PlayerInputComponent);
+
 	if (UEnhancedInputComponent* EnhancedInputComponent = CastChecked<UEnhancedInputComponent>(PlayerInputComponent))
 	{
 		if (MoveAction)
@@ -172,7 +175,7 @@ void APlayerCharacter::ToggleRotationMode(const FInputActionValue& Value)
 
 		if (LocomotionEssencialVariables.bAiming)
 		{
-			LocomotionComponent->SetLSAiming_Implementation(false);
+			LocomotionComponent->SetLSAiming(false);
 		}
 	}
 
@@ -231,7 +234,7 @@ void APlayerCharacter::ToggleTargetLock()
 			{
 			case EAttackWeaponState::Gun:
 			case EAttackWeaponState::Rifle:
-				LocomotionComponent->SetLSAiming_Implementation(true);
+				LocomotionComponent->SetLSAiming(true);
 				break;
 			}
 		}
@@ -331,7 +334,7 @@ bool APlayerCharacter::HasFinisherAction(const FGameplayTag Tag) const
 	FGameplayTagContainer Container;
 	Container.AddTag(TAG_Weapon_Finisher);
 	Container.AddTag(TAG_Weapon_HoldUp);
-	Container.AddTag(TAG_Weapon_HoldUp);
+	Container.AddTag(TAG_Weapon_KnockOut);
 	return Container.HasTag(Tag);
 }
 
@@ -383,15 +386,32 @@ void APlayerCharacter::HandleSprinting(const bool bIsPress)
 	}
 }
 
+#pragma region Input
+void APlayerCharacter::SetKeyInputEnable()
+{
+	WvAbilitySystemComponent->RemoveGameplayTag(TAG_Game_Input_Disable, 1);
+}
+
+void APlayerCharacter::SetKeyInputDisable()
+{
+	WvAbilitySystemComponent->AddGameplayTag(TAG_Game_Input_Disable, 1);
+}
+
 bool APlayerCharacter::IsInputKeyDisable() const
 {
 	return WvAbilitySystemComponent->HasMatchingGameplayTag(TAG_Game_Input_Disable);
 }
+#pragma endregion
 
 bool APlayerCharacter::IsTargetLock() const
 {
 	const bool bHasTag = WvAbilitySystemComponent->HasMatchingGameplayTag(TAG_Character_TargetLocking);
 	const FLocomotionEssencialVariables LocomotionEssencial = LocomotionComponent->GetLocomotionEssencialVariables();
 	return bHasTag && LocomotionEssencial.LookAtTarget.IsValid();
+}
+
+FVector APlayerCharacter::GetFollowCameraLocation() const
+{
+	return FollowCamera->GetForwardVector();
 }
 

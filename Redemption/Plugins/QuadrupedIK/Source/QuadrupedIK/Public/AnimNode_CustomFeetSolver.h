@@ -5,6 +5,7 @@
 #include "CustomIKData.h"
 #include "AnimNode_CustomIKControlBase.h"
 #include "BoneControllers/AnimNode_SkeletalControlBase.h"
+#include "PredictionAnimInstance.h"
 #include "AnimNode_CustomFeetSolver.generated.h"
 
 class USkeletalMeshComponent;
@@ -16,8 +17,6 @@ struct QUADRUPEDIK_API FAnimNode_CustomFeetSolver : public FAnimNode_CustomIKCon
 	GENERATED_BODY()
 
 public:
-	FAnimNode_CustomFeetSolver();
-
 #pragma region Settings
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Settings, meta = (PinHiddenByDefault))
 	FCustomIKData_MultiInput SolverInputData;
@@ -38,10 +37,13 @@ public:
 	bool bAutomaticLeg = false;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Settings, meta = (PinHiddenByDefault))
-	bool bUseOptionalRefFeetRef = false;
+	bool bUseOptionalRefFeetRef = true;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Settings, meta = (PinShownByDefault))
 	bool bEnableSolver = true;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Settings, meta = (PinHiddenByDefault))
+	bool bDisplayLineTrace = false;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Settings)
 	TEnumAsByte<ETraceTypeQuery> TraceChannel = ETraceTypeQuery::TraceTypeQuery1;
@@ -49,10 +51,9 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Settings)
 	float FPSLerpTreshold = 25.0f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Settings, meta = (PinHiddenByDefault))
+	//UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Settings, meta = (PinHiddenByDefault))
 	float LineTraceUpperHeight = 200.0f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Settings, meta = (PinHiddenByDefault))
+	//UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Settings, meta = (PinHiddenByDefault))
 	float LineTraceDownHeight = 5.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Settings, meta = (PinHiddenByDefault))
@@ -88,8 +89,8 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Settings, meta = (PinHiddenByDefault))
 	float MaxLegIKAngle = 65.0f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Settings)
-	bool bDisplayLineTrace = false;
+	UPROPERTY(EditAnywhere, Category = Settings, meta = (PinHiddenByDefault))
+	FRuntimeFloatCurve TraceDownMultiplierCurve;
 #pragma endregion
 
 #pragma region InterpSetting
@@ -133,68 +134,33 @@ public:
 	FRuntimeFloatCurve InterpolationVelocityCurve;
 #pragma endregion
 
-	UPROPERTY(EditAnywhere, Category = TraceSettings, meta = (PinHiddenByDefault))
-	FRuntimeFloatCurve TraceDownMultiplierCurve;
 
-	FCustomBoneStruct IKBoneData;
-	int32 FeetCounter = 0;
-	int32 FirstTimeCounter = 0;
-	float TargetFPS = -1.0f;
-	float ScaleMode = 1.0f;
-	float DTLocationSpeed = 0.0f;
-	float DTRotationSpeed = 0.0f;
-	float CharacterMovementSpeed = 0.0f;
-	bool bHasAtleastHit = false;
-	bool bSolveShouldFail = false;
-	bool bIsInitialized = false;
-	bool bFirstTimeSetup = true;
+public:
+	FAnimNode_CustomFeetSolver();
+	virtual void Initialize_AnyThread(const FAnimationInitializeContext& Context) override;
+	virtual int32 GetLODThreshold() const override { return LODThreshold; }
+	virtual void ConditionalDebugDraw(FPrimitiveDrawInterface* PDI, USkeletalMeshComponent* PreviewSkelMeshComp) const;
 
-	TArray<FVector> TraceStartList = TArray<FVector>();
-	TArray<FVector> TraceEndList = TArray<FVector>();
-	TArray<bool> bIsLineModeArray = TArray<bool>();
-	TArray<float> TraceRadiusList = TArray<float>();
-
-
-	FBoneContainer* SavedBoneContainer;
-	FTransform ChestEffectorTransform = FTransform::Identity;
-	FTransform RootEffectorTransform = FTransform::Identity;
-	TArray<FBoneReference> FootBoneRefArray;
-	TArray<FTransform> FeetTransformArray;
-	TArray<TArray<float>> FootAlphaArray;
-	TArray<TArray<FTransform>> FeetModofyTransformArray;
-	TArray<TArray<FVector>> FeetModifiedNormalArray;
-	TArray<TArray<bool>> FeetArray;
-	TArray<TArray<FVector>> FeetImpactPointArray;
-	TArray<TArray<TArray<FTransform>>> FeetFingerTransformArray;
-	TArray<TArray<FVector>> FootKneeOffsetArray;
-	TArray<TArray<FTransform>> FeetAnimatedTransformArray;
-	TArray<FTransform> KneeAnimatedTransformArray;
-	TArray<FHitResult> FootHitResultArray;
-	TArray<FCustomBone_SpineFeetPair> SpineFeetPair;
-	TArray<FName> TotalSpineBoneArray;
-
-	AActor* Character_Actor;
-	FComponentSpacePoseContext* SavedPoseContext = nullptr;
-	USkeletalMeshComponent* SkeletalMeshComponent = nullptr;
-
-	TArray<FCustomBoneSpineFeetPair_WS> SpineTransformPairs;
-	TArray<FCustomBoneSpineFeetPair_WS> SpineAnimatedTransformPairs;
 	TArray<FCustomBoneHitPairs> SpineHitPairs;
-	TArray<FCompactPoseBoneIndex> SpineIndices;
-	TArray<FVector> EffectorLocationList;
-	TArray<float> TotalSpineHeights;
 	TArray<TArray<FVector>> FeetTipLocations;
 	TArray<TArray<float>> FeetWidthSpacing;
 	TArray<TArray<float>> FeetRootHeights;
 	TArray<TArray<TArray<float>>> FeetFingerHeights;
+	TArray<FTransform> KneeAnimatedTransformArray;
+	TArray<TArray<FVector>> FootKneeOffsetArray;
+	TArray<FCustomBone_SpineFeetPair> SpineFeetPair;
+	TArray<FCustomBoneSpineFeetPair_WS> SpineTransformPairs;
+	TArray<TArray<TArray<FTransform>>> FeetFingerTransformArray;
 
-	TArray<FBoneTransform> RestBoneTransforms;
-	TArray<FBoneTransform> AnimatedBoneTransforms;
-	TArray<FBoneTransform> FinalBoneTransforms;
-	TArray<FBoneTransform> BoneTransforms;
-	TArray<FCompactPoseBoneIndex> CombinedIndices;
+protected:
+	virtual void UpdateInternal(const FAnimationUpdateContext& Context) override;
+	virtual void EvaluateSkeletalControl_AnyThread(FComponentSpacePoseContext& Output, TArray<FBoneTransform>& OutBoneTransforms) override;
+	virtual bool IsValidToEvaluate(const USkeleton* Skeleton, const FBoneContainer& RequiredBones) override;
+	virtual void InitializeBoneReferences(const FBoneContainer& RequiredBones) override;
+	void LineTraceControl_AnyThread(FComponentSpacePoseContext& Output, TArray<FBoneTransform>& OutBoneTransforms);
 
-public:
+
+private:
 	void ApplyLegFull(const FName FootName, const int32 SpineIndex, const int32 FeetIndex, FComponentSpacePoseContext& MeshBasesSaved, TArray<FBoneTransform>& OutBoneTransforms);
 	void ApplyTwoBoneIK(const FBoneReference IKFootBone, const int32 SpineIndex, const int32 FeetIndex, const TEnumAsByte<enum EBoneControlSpace> EffectorLocationSpace, TEnumAsByte<enum EBoneControlSpace> JointTargetLocationSpace, FComponentSpacePoseContext& MeshBasesSaved, TArray<FBoneTransform>& OutBoneTransforms);
 	void ApplySingleBoneIK(const FBoneReference IKFootBone, const int32 SpineIndex, const int32 FeetIndex, TEnumAsByte<enum EBoneControlSpace> EffectorLocationSpace, TEnumAsByte<enum EBoneControlSpace> JointTargetLocationSpace, FComponentSpacePoseContext& MeshBasesSaved, TArray<FBoneTransform>& OutBoneTransforms);
@@ -257,20 +223,55 @@ public:
 	FVector GetCurrentLocation(FCSPose<FCompactPose>& MeshBases, const FCompactPoseBoneIndex& BoneIndex) const;
 	FVector RotateAroundPoint(const FVector InputPoint, const FVector ForwardVector, const FVector Origin, const float Angle) const;
 
-public:
-	virtual void Initialize_AnyThread(const FAnimationInitializeContext& Context) override;
-	virtual int32 GetLODThreshold() const override { return LODThreshold; }
+	FCustomBoneStruct IKBoneData;
+	int32 FeetCounter = 0;
+	int32 FirstTimeCounter = 0;
+	float TargetFPS = -1.0f;
+	float ScaleMode = 1.0f;
+	float DTLocationSpeed = 0.0f;
+	float DTRotationSpeed = 0.0f;
+	float CharacterMovementSpeed = 0.0f;
+	bool bHasAtleastHit = false;
+	bool bSolveShouldFail = false;
+	bool bIsInitialized = false;
+	bool bFirstTimeSetup = true;
 
-protected:
-	virtual void UpdateInternal(const FAnimationUpdateContext& Context) override;
-	virtual void EvaluateSkeletalControl_AnyThread(FComponentSpacePoseContext& Output, TArray<FBoneTransform>& OutBoneTransforms) override;
-	virtual bool IsValidToEvaluate(const USkeleton* Skeleton, const FBoneContainer& RequiredBones) override;
-	virtual void InitializeBoneReferences(const FBoneContainer& RequiredBones) override;
-	void LineTraceControl_AnyThread(FComponentSpacePoseContext& Output, TArray<FBoneTransform>& OutBoneTransforms);
+	TArray<FVector> TraceStartList = TArray<FVector>();
+	TArray<FVector> TraceEndList = TArray<FVector>();
+	TArray<bool> bIsLineModeArray = TArray<bool>();
+	TArray<float> TraceRadiusList = TArray<float>();
 
-public:
-	virtual void ConditionalDebugDraw(FPrimitiveDrawInterface* PDI, USkeletalMeshComponent* PreviewSkelMeshComp) const;
 
+	FBoneContainer* SavedBoneContainer;
+	FTransform ChestEffectorTransform = FTransform::Identity;
+	FTransform RootEffectorTransform = FTransform::Identity;
+	TArray<FBoneReference> FootBoneRefArray;
+	TArray<FTransform> FeetTransformArray;
+	TArray<TArray<float>> FootAlphaArray;
+	TArray<TArray<FTransform>> FeetModofyTransformArray;
+	TArray<TArray<FVector>> FeetModifiedNormalArray;
+	TArray<TArray<bool>> FeetArray;
+	TArray<TArray<FVector>> FeetImpactPointArray;
+	
+	TArray<TArray<FTransform>> FeetAnimatedTransformArray;
+	TArray<FHitResult> FootHitResultArray;
+	TArray<FName> TotalSpineBoneArray;
+
+	FComponentSpacePoseContext* SavedPoseContext = nullptr;
+	TObjectPtr<AActor> CharacterOwner;
+	TObjectPtr<USkeletalMeshComponent> SkeletalMeshComponent = nullptr;
+	TObjectPtr<UPredictionAnimInstance> PredictionAnimInstance = nullptr;
+	
+	TArray<FCustomBoneSpineFeetPair_WS> SpineAnimatedTransformPairs;
+	TArray<FCompactPoseBoneIndex> SpineIndices;
+	TArray<FVector> EffectorLocationList;
+	TArray<float> TotalSpineHeights;
+
+	TArray<FBoneTransform> RestBoneTransforms;
+	TArray<FBoneTransform> AnimatedBoneTransforms;
+	TArray<FBoneTransform> FinalBoneTransforms;
+	TArray<FBoneTransform> BoneTransforms;
+	TArray<FCompactPoseBoneIndex> CombinedIndices;
 
 
 };

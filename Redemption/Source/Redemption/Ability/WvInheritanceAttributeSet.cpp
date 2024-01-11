@@ -14,8 +14,20 @@
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(WvInheritanceAttributeSet)
 
-UWvInheritanceAttributeSet::UWvInheritanceAttributeSet(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
+UWvInheritanceAttributeSet::UWvInheritanceAttributeSet(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer),
+	VigilanceMax(100.0f)
 {
+
+}
+
+void UWvInheritanceAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallbackData& Data)
+{
+	Super::PostGameplayEffectExecute(Data);
+
+	if (Data.EvaluatedData.Attribute == GetVigilanceAttribute())
+	{
+		SetVigilance(FMath::Clamp(GetVigilance(), 0.f, GetVigilanceMax()));
+	}
 }
 
 

@@ -8,7 +8,6 @@
 #include "WvAbilitySystemBlueprintFunctionLibrary.h"
 
 #include "Character/BaseCharacter.h"
-#include "Component/CombatComponent.h"
 #include "Component/InventoryComponent.h"
 #include "Misc/WvCommonUtils.h"
 #include "Item/BulletHoldWeaponActor.h"
@@ -32,6 +31,13 @@ bool UWvAbility_GunFire::CanActivateAbility(const FGameplayAbilitySpecHandle Han
 
 void UWvAbility_GunFire::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
 {
+	if (!CharacterAnimationDA)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[%s : CharacterAnimationDA is null.]"), *FString(__FUNCTION__));
+		CancelAbility(Handle, ActorInfo, ActivationInfo, false);
+		return;
+	}
+
 	ABaseCharacter* Character = GetBaseCharacter();
 	if (!Character)
 	{
@@ -39,6 +45,22 @@ void UWvAbility_GunFire::ActivateAbility(const FGameplayAbilitySpecHandle Handle
 		CancelAbility(Handle, ActorInfo, ActivationInfo, false);
 		return;
 	}
+
+	if (WeaponBaseActor.IsValid())
+	{
+		WeaponBaseActor.Reset();
+	}
+
+	WeaponBaseActor = Character->GetInventoryComponent()->GetEquipWeapon();
+	if (!WeaponBaseActor.IsValid())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[%s : Weapon is null.]"), *FString(__FUNCTION__));
+		CancelAbility(Handle, ActorInfo, ActivationInfo, false);
+		return;
+	}
+
+	FWeaponCharacterAnimation AnimationData = CharacterAnimationDA->Find(Character->GetAvatarTag(), WeaponBaseActor->GetAttackWeaponState());
+	auto Montage = AnimationData.ShotAnimation;
 
 	if (!bWeaponEvent && !Montage)
 	{
@@ -49,6 +71,7 @@ void UWvAbility_GunFire::ActivateAbility(const FGameplayAbilitySpecHandle Handle
 
 	if (DamageTask)
 	{
+		DamageTask->OnCompleted.Clear();
 		DamageTask->EndTask();
 	}
 
@@ -60,37 +83,27 @@ void UWvAbility_GunFire::ActivateAbility(const FGameplayAbilitySpecHandle Handle
 		MontageTask->EndTask();
 	}
 
-	if (bWeaponEvent)
-	{
-		DamageTask = UWvAT_BulletDamage::ComponentFrameAction(
-			this, 
-			FName("GunFire"), 
-			1.0f, 
-			Randomize, 
-			GameplayEffectGroupIndexs);
+	DamageTask = UWvAT_BulletDamage::ComponentFrameAction(
+		this,
+		FName("GunFire"),
+		1.0f,
+		Randomize,
+		GameplayEffectGroupIndexs);
 
-		DamageTask->OnCompleted.AddDynamic(this, &UWvAbility_GunFire::OnPlayMontageCompleted_Event);
-		DamageTask->ReadyForActivation();
+	DamageTask->OnCompleted.AddDynamic(this, &UWvAbility_GunFire::OnPlayMontageCompleted_Event);
+	DamageTask->ReadyForActivation();
 
-	}
-	else
-	{
-		MontageTask = UWvAT_PlayMontageAndWaitForEvent::PlayMontageAndWaitForEvent(
-			this,
-			FName("GunFire"),
-			Montage,
-			FGameplayTagContainer(),
-			1.0,
-			0.f,
-			FName("Default"),
-			true,
-			1.0f);
+	MontageTask = UWvAT_PlayMontageAndWaitForEvent::PlayMontageAndWaitForEvent(
+		this,
+		FName("GunFire"),
+		Montage,
+		FGameplayTagContainer(),
+		1.0, 0.f, FName("Default"), true, 1.0f);
 
-		MontageTask->OnCancelled.AddDynamic(this, &UWvAbility_GunFire::OnPlayMontageCompleted_Event);
-		MontageTask->OnInterrupted.AddDynamic(this, &UWvAbility_GunFire::OnPlayMontageCompleted_Event);
-		MontageTask->OnCompleted.AddDynamic(this, &UWvAbility_GunFire::OnPlayMontageCompleted_Event);
-		MontageTask->ReadyForActivation();
-	}
+	MontageTask->OnCancelled.AddDynamic(this, &UWvAbility_GunFire::OnPlayMontageCompleted_Event);
+	MontageTask->OnInterrupted.AddDynamic(this, &UWvAbility_GunFire::OnPlayMontageCompleted_Event);
+	MontageTask->OnCompleted.AddDynamic(this, &UWvAbility_GunFire::OnPlayMontageCompleted_Event);
+	MontageTask->ReadyForActivation();
 }
 
 void UWvAbility_GunFire::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled)
@@ -101,6 +114,8 @@ void UWvAbility_GunFire::EndAbility(const FGameplayAbilitySpecHandle Handle, con
 void UWvAbility_GunFire::OnPlayMontageCompleted_Event(FGameplayTag EventTag, FGameplayEventData EventData)
 {
 	K2_EndAbility();
+
+	WeaponBaseActor.Reset();
 }
 
 

@@ -64,20 +64,13 @@ public:
 	FName GetEquipWeaponName() const;
 	EAttackWeaponState GetEquipWeaponType() const;
 
+	AWeaponBaseActor* GetAvailableWeapon() const;
+	const bool ChangeWeapon(AWeaponBaseActor* NewWeapon, ELSOverlayState& OutLSOverlayState);
+
 	const EAttackWeaponState ConvertWeaponState(const ELSOverlayState InLSOverlayState, bool& OutbCanAttack);
 	const bool ChangeAttackWeapon(const EAttackWeaponState InAttackWeaponState, int32 Index = 0);
 
-	/*
-	* Search and return unused weapons of the same type
-	*/
-	const AWeaponBaseActor* GetAvailableWeaponSameType(const bool bIsCheckAvailable);
-
-	/*
-	* Search and return unused weapons of different types
-	*/
-	const AWeaponBaseActor* GetAvailableWeaponNoSameType(const bool bIsCheckAvailable);
-	TArray<EAttackWeaponState> GetAvailableWeaponType() const;
-
+	bool CanAimingWeapon() const;
 
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Config")
@@ -99,5 +92,8 @@ private:
 	TWeakObjectPtr<AWeaponBaseActor> CurrentWeaponActor;
 
 	TArray<AWeaponBaseActor*> FindOverlayWeaponArray(const ELSOverlayState InLSOverlayState) const;
-	bool GetAvailableWeaponType(const TArray<AWeaponBaseActor*> InWeaponArray) const;
+
+	void EquipWeapon_Internal(AWeaponBaseActor* NewWeapon);
+	void UnEquipWeapon_Internal();
+
 };

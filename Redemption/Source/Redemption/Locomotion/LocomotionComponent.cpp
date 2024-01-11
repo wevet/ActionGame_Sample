@@ -52,7 +52,10 @@ FGameplayTag ULocomotionStateDataAsset::FindGaitTag(const ELSGait LSGait) const
 
 ULocomotionComponent::ULocomotionComponent(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
-	PrimaryComponentTick.bCanEverTick = true;
+	PrimaryComponentTick.bCanEverTick = false;
+	// @TODO
+	//PrimaryComponentTick.bRunOnAnyThread = true;
+
 	RagdollPoseSnapshot = FName(TEXT("RagdollPose"));
 	PelvisBoneName = FName(TEXT("pelvis"));
 
@@ -138,7 +141,10 @@ void ULocomotionComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 void ULocomotionComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+}
 
+void ULocomotionComponent::DoTick(const float DeltaTime)
+{
 #if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
 	bDebugTrace = (CVarDebugLocomotionSystem.GetValueOnGameThread() > 0);
 #else
@@ -273,33 +279,6 @@ void ULocomotionComponent::SetLSOverlayState_Implementation(const ELSOverlayStat
 	}
 }
 
-void ULocomotionComponent::SetLSAiming_Implementation(const bool NewLSAiming)
-{
-	if (LocomotionEssencialVariables.bAiming == NewLSAiming)
-	{
-		return;
-	}
-
-	LocomotionEssencialVariables.bAiming = NewLSAiming;
-	if (FindAbilitySystemComponent() && LocomotionStateDataAsset)
-	{
-		if (LocomotionEssencialVariables.bAiming)
-		{
-			AbilitySystemComponent->RemoveGameplayTag(LocomotionStateDataAsset->AimingTag, 1);
-		}
-		else
-		{
-			AbilitySystemComponent->AddGameplayTag(LocomotionStateDataAsset->AimingTag, 1);
-		}
-	}
-
-	UpdateCharacterMovementSettings();
-	if (OnAimingChangeDelegate.IsBound())
-	{
-		OnAimingChangeDelegate.Broadcast();
-	}
-}
-
 ELSMovementMode ULocomotionComponent::GetLSMovementMode_Implementation() const
 {
 	return LocomotionEssencialVariables.LSMovementMode;
@@ -330,17 +309,58 @@ ELSOverlayState ULocomotionComponent::GetLSOverlayState_Implementation() const
 	return LocomotionEssencialVariables.OverlayState;
 }
 
-bool ULocomotionComponent::HasMovementInput_Implementation() const
+const FTransform ULocomotionComponent::GetPivotOverlayTansform_Implementation()
+{
+	if (Character.IsValid())
+	{
+		auto RootPos = Character->GetMesh()->GetSocketLocation(TEXT("root"));
+		auto HeadPos = Character->GetMesh()->GetSocketLocation(TEXT("head"));
+		TArray<FVector> Points({ RootPos, HeadPos, });
+		auto AveragePoint = UKismetMathLibrary::GetVectorArrayAverage(Points);
+		return FTransform(Character->GetActorRotation(), AveragePoint, FVector::OneVector);
+	}
+	return FTransform::Identity;
+}
+#pragma endregion
+
+void ULocomotionComponent::SetLSAiming(const bool NewLSAiming)
+{
+	if (LocomotionEssencialVariables.bAiming == NewLSAiming)
+	{
+		return;
+	}
+
+	LocomotionEssencialVariables.bAiming = NewLSAiming;
+	if (FindAbilitySystemComponent() && LocomotionStateDataAsset)
+	{
+		if (LocomotionEssencialVariables.bAiming)
+		{
+			AbilitySystemComponent->RemoveGameplayTag(LocomotionStateDataAsset->AimingTag, 1);
+		}
+		else
+		{
+			AbilitySystemComponent->AddGameplayTag(LocomotionStateDataAsset->AimingTag, 1);
+		}
+	}
+
+	UpdateCharacterMovementSettings();
+	if (OnAimingChangeDelegate.IsBound())
+	{
+		OnAimingChangeDelegate.Broadcast();
+	}
+}
+
+bool ULocomotionComponent::HasMovementInput() const
 {
 	return LocomotionEssencialVariables.bWasMovementInput;
 }
 
-bool ULocomotionComponent::HasMoving_Implementation() const
+bool ULocomotionComponent::HasMoving() const
 {
 	return LocomotionEssencialVariables.bWasMoving;
 }
 
-bool ULocomotionComponent::HasAiming_Implementation() const
+bool ULocomotionComponent::HasAiming() const
 {
 	return LocomotionEssencialVariables.bAiming;
 }
@@ -398,19 +418,6 @@ float ULocomotionComponent::GetSwimmingSpeed() const
 	return CharacterMovementComponent->MaxSwimSpeed;
 }
 
-const FTransform ULocomotionComponent::GetPivotOverlayTansform_Implementation()
-{
-	if (Character.IsValid())
-	{
-		auto RootPos = Character->GetMesh()->GetSocketLocation(TEXT("root"));
-		auto HeadPos = Character->GetMesh()->GetSocketLocation(TEXT("head"));
-		TArray<FVector> Points({RootPos, HeadPos, });
-		auto AveragePoint = UKismetMathLibrary::GetVectorArrayAverage(Points);
-		return FTransform(Character->GetActorRotation(), AveragePoint, FVector::OneVector);
-	}
-	return FTransform::Identity;
-}
-#pragma endregion
 
 #pragma region Ability
 const UWvAbilitySystemComponent* ULocomotionComponent::FindAbilitySystemComponent()
@@ -550,32 +557,24 @@ void ULocomotionComponent::UpdateCharacterMovementSettings()
 	}
 }
 
-bool ULocomotionComponent::GetGaitModeFromVelocity(ELSGait& OutGaitMode) const
+ELSGait ULocomotionComponent::GetGaitModeFromVelocity() const
 {
-	if (!LocomotionEssencialVariables.HasAcceleration || !CharacterMovementComponent.IsValid())
-		return false;
-
-	const float Speed = CharacterMovementComponent->Velocity.Size2D();
+	ELSGait Result = ELSGait::Walking;
+	const float Speed = GetOwner()->GetVelocity().Size2D();
 	if (Speed >= SprintingSpeed)
 	{
-		OutGaitMode = ELSGait::Sprinting;
+		Result = ELSGait::Sprinting;
 	}
 	else if (SprintingSpeed > Speed && Speed >= RunningSpeed)
 	{
-		OutGaitMode = ELSGait::Running;
+		Result = ELSGait::Running;
 	}
-	else
-	{
-		OutGaitMode = ELSGait::Walking;
-	}
-	return true;
+	return Result;
 }
 
-const bool ULocomotionComponent::CanSprint()
+bool ULocomotionComponent::CanSprint() const
 {
-	if (LocomotionEssencialVariables.LSMovementMode == ELSMovementMode::Ragdoll ||
-		!LocomotionEssencialVariables.bWasMoving ||
-		LocomotionEssencialVariables.bAiming)
+	if (LocomotionEssencialVariables.LSMovementMode == ELSMovementMode::Ragdoll || !LocomotionEssencialVariables.bWasMoving || LocomotionEssencialVariables.bAiming)
 	{
 		return false;
 	}
@@ -601,8 +600,8 @@ void ULocomotionComponent::SprintCheck()
 			if (!bDoSprint)
 			{
 				bDoSprint = true;
-				SetLSGaitMode_Implementation(ELSGait::Sprinting);
 				bDoRunning = false;
+				SetLSGaitMode_Implementation(ELSGait::Sprinting);
 			}
 		}
 		else
@@ -610,8 +609,8 @@ void ULocomotionComponent::SprintCheck()
 			if (!bDoRunning)
 			{
 				bDoRunning = true;
-				SetLSGaitMode_Implementation(ELSGait::Running);
 				bDoSprint = false;
+				SetLSGaitMode_Implementation(ELSGait::Running);
 			}
 		}
 	}
@@ -620,8 +619,8 @@ void ULocomotionComponent::SprintCheck()
 		if (!bDoRunning)
 		{
 			bDoRunning = true;
-			SetLSGaitMode_Implementation(ELSGait::Running);
 			bDoSprint = false;
+			SetLSGaitMode_Implementation(ELSGait::Running);
 		}
 	}
 
@@ -1097,13 +1096,7 @@ void ULocomotionComponent::CalculateEssentialVariables()
 		LocomotionEssencialVariables.WorldAcceleration2D = CharacterMovementComponent->GetCurrentAcceleration() * FVector(1.0f, 1.0f, 0.0f);
 		LocomotionEssencialVariables.LocalAcceleration2D = UKismetMathLibrary::Quat_UnrotateVector(Character->GetActorRotation().Quaternion(), LocomotionEssencialVariables.WorldAcceleration2D);
 		const float SizeXY = UKismetMathLibrary::VSizeXYSquared(LocomotionEssencialVariables.LocalAcceleration2D);
-
 		LocomotionEssencialVariables.HasAcceleration = !FMath::IsNearlyEqual(SizeXY, 0.0f, 0.000001);
-		if (Character->IsBotCharacter())
-		{
-			constexpr float Thredhold = 50.0f;
-			LocomotionEssencialVariables.HasAcceleration = LocomotionEssencialVariables.Velocity.Size() > 0.f;
-		}
 		LocomotionEssencialVariables.LocalVelocity2D = UKismetMathLibrary::Quat_UnrotateVector(Character->GetActorRotation().Quaternion(), LocomotionEssencialVariables.Velocity * FVector(1.0f, 1.0f, 0.0f));
 	}
 

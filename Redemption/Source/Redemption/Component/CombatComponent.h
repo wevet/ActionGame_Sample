@@ -36,11 +36,6 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Combat|Config")
 	class UHitReactBoneShakeDataAsset* HitReactBoneShakeDA;
 
-	UPROPERTY(EditDefaultsOnly, Category="Combat|Follow")
-	float FormationRadius = 200.0f;
-
-	int32 FollowStackCount = 5;
-
 public:
 	bool AbilityDamageBoxTrace(class UWvAbilityBase* Ability, const int32 EffectGroupIndex, const FVector Start, const FVector End, FVector HalfSize, const FRotator Orientation, TArray<AActor*>& ActorsToIgnore);
 	bool AbilityDamageCapsuleTrace(class UWvAbilityBase* Ability, const int32 EffectGroupIndex, const FVector Start, const FVector End, const float Radius, const float HalfHeight, const FQuat CapsuleQuat, TArray<AActor*>& ActorsToIgnore);
@@ -83,9 +78,19 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "CombatComponent|BattleCommand")
 	void EquipKnife();
 
+	UFUNCTION(BlueprintCallable, Category = "CombatComponent|BattleCommand")
+	void SetAiming(const bool InAiming);
+
+	UFUNCTION(BlueprintCallable, Category = "CombatComponent|BattleCommand")
+	void EquipAvailableWeapon();
+
 	void AddFollower(APawn* NewPawn);
 	void RemoveFollower(APawn* RemovePawn);
 	void RemoveAllFollowers();
+
+	void VisibilityCurrentWeapon(const bool InHidden);
+
+	bool HasAttackTarget() const;
 #pragma endregion
 
 private:

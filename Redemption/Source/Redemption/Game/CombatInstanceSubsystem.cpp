@@ -85,7 +85,7 @@ void UCombatInstanceSubsystem::OnHitEnvironment(const AActor* Attacker, const FH
 	const EPhysicalSurface HitSurfaceType = HitResult.PhysMaterial.IsValid() ? HitResult.PhysMaterial->SurfaceType.GetValue() : EPhysicalSurface::SurfaceType_Default;
 	const AActor* HitTarget = HitResult.GetActor();
 	const FString SurfaceName = UWvCommonUtils::GetSurfaceName(HitSurfaceType).ToString();
-	UE_LOG(LogTemp, Log, TEXT("found HitActor => %s, SurfaceName => %s, function => %s"), *GetNameSafe(HitTarget), *SurfaceName, *FString(__FUNCTION__));
+	//UE_LOG(LogTemp, Log, TEXT("found HitActor => %s, SurfaceName => %s, function => %s"), *GetNameSafe(HitTarget), *SurfaceName, *FString(__FUNCTION__));
 
 	IWvEnvironmentInterface* Interface = Cast<IWvEnvironmentInterface>(const_cast<AActor*>(HitTarget));
 	if (Interface)
