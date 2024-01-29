@@ -207,7 +207,7 @@ void UCombatComponent::HitResultEnemyFilter(TArray<FHitResult>& Hits, TArray<FWv
 			{
 				if (!HitActor->GetClass()->IsChildOf(ABaseCharacter::StaticClass()))
 				{
-					//Character hitはPhysicsAssetのコリジョンボックスの使用を指定
+					// Character hit specifies the use of PhysicsAsset collision box
 					if (HitComponent == nullptr || !HitComponent->GetClass()->IsChildOf(USkeletalMeshComponent::StaticClass()))
 					{
 						continue;
@@ -263,6 +263,23 @@ const bool UCombatComponent::LineOfSightTraceOuter(class UWvAbilityBase* Ability
 }
 
 /// <summary>
+/// HitBy Environments
+/// </summary>
+/// <returns></returns>
+const bool UCombatComponent::LineOfSightTraceOuterEnvironments(class UWvAbilityBase* Ability, const int32 EffectGroupIndex, const TArray<FHitResult>& HitResults, const FVector SourceLocation)
+{
+	for (const FHitResult HitResult : HitResults)
+	{
+		LineOfSightTraceOuterEnvironment(Ability, EffectGroupIndex, HitResult, SourceLocation);
+		if (HasEnvironmentFilterClass(HitResult))
+		{
+
+		}
+	}
+	return true;
+}
+
+/// <summary>
 /// HitBy Environment
 /// </summary>
 /// <returns></returns>
@@ -290,6 +307,11 @@ const bool UCombatComponent::LineOfSightTraceOuterEnvironment(class UWvAbilityBa
 	return true;
 }
 
+/// <summary>
+/// Hit Effect by Environment
+/// </summary>
+/// <param name="HitResult"></param>
+/// <returns></returns>
 const bool UCombatComponent::HasEnvironmentFilterClass(const FHitResult& HitResult)
 {
 	if (IsValid(HitResult.GetActor()))

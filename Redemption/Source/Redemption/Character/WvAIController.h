@@ -97,6 +97,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = AI)
 	AActor* GetBlackboardSearchNodeHolder() const;
 
+	UFUNCTION(BlueprintCallable, Category = AI)
+	const bool HandleAttackPawnPrepare();
+
 	void ClearSearchNodeHolders();
 	void SetBlackboardDead(const bool IsDead);
 

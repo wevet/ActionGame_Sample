@@ -34,6 +34,14 @@ void UWvAbility_VehicleDrive::ActivateAbility(const FGameplayAbilitySpecHandle H
 {
 	Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
 
+	if (!TriggerEventData)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[%s : not valid TriggerEventData]"), *FString(__FUNCTION__));
+		CancelAbility(Handle, ActorInfo, ActivationInfo, false);
+		return;
+	}
+
+
 	Instigator = Cast<APawn>(TriggerEventData->Instigator);
 	Target = Cast<APawn>(TriggerEventData->Target);
 	if (!Instigator.IsValid() || !Target.IsValid())

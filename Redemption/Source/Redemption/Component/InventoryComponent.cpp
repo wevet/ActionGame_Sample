@@ -218,7 +218,7 @@ AItemBaseActor* UInventoryComponent::FindItem(const ELSOverlayState InLSOverlayS
 {
 	for (auto Item : ItemArray)
 	{
-		if (Item && Item->OverlayState == InLSOverlayState)
+		if (Item && Item->GetOverlayState() == InLSOverlayState)
 		{
 			return Item;
 		}
@@ -227,7 +227,7 @@ AItemBaseActor* UInventoryComponent::FindItem(const ELSOverlayState InLSOverlayS
 	TArray<AWeaponBaseActor*> WeaponArray = FindOverlayWeaponArray(InLSOverlayState);
 	for (auto Weapon : WeaponArray)
 	{
-		if (Weapon && Weapon->OverlayState == InLSOverlayState)
+		if (Weapon && Weapon->GetOverlayState() == InLSOverlayState)
 		{
 			return Weapon;
 		}
@@ -268,7 +268,7 @@ TArray<AWeaponBaseActor*> UInventoryComponent::FindOverlayWeaponArray(const ELSO
 	{
 		for (auto& Item : Pair.Value)
 		{
-			if (Item && Item->OverlayState == InLSOverlayState)
+			if (Item && Item->GetOverlayState() == InLSOverlayState)
 			{
 				Temp.AddUnique(Item);
 			}
@@ -303,7 +303,7 @@ const bool UInventoryComponent::ChangeWeapon(AWeaponBaseActor* NewWeapon, ELSOve
 
 	if (CurrentWeaponActor.IsValid())
 	{
-		OutLSOverlayState = CurrentWeaponActor.Get()->OverlayState;
+		OutLSOverlayState = CurrentWeaponActor.Get()->GetOverlayState();
 		return true;
 	}
 

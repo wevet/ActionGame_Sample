@@ -632,16 +632,14 @@ void ULocomotionComponent::StartRagdollAction()
 {
 	Character->SetReplicateMovement(false);
 	CharacterMovementComponent->SetMovementMode(EMovementMode::MOVE_None);
-	CapsuleComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-
-	SkeletalMeshComponent->SetCollisionEnabled(ECollisionEnabled::PhysicsOnly);
-	SkeletalMeshComponent->SetCollisionProfileName(FName(TEXT("Ragdoll")));
-	//SkeletalMeshComponent->SetAllBodiesSimulatePhysics(true);
-	SkeletalMeshComponent->SetAllBodiesBelowSimulatePhysics(PelvisBoneName, true, true);
+	//SkeletalMeshComponent->SetCollisionEnabled(ECollisionEnabled::PhysicsOnly);
+	//SkeletalMeshComponent->SetCollisionProfileName(FName(TEXT("Ragdoll")));
+	SkeletalMeshComponent->SetAllBodiesBelowSimulatePhysics(PelvisBoneName, true);
 	//SkeletalMeshComponent->WakeAllRigidBodies();
-	//SkeletalMeshComponent->bBlendPhysics = 1;
-	//SkeletalMeshComponent->bIgnoreRadialForce = 1;
-	//SkeletalMeshComponent->bIgnoreRadialImpulse = 1;
+	SkeletalMeshComponent->bBlendPhysics = 1;
+	SkeletalMeshComponent->bIgnoreRadialForce = 1;
+	SkeletalMeshComponent->bIgnoreRadialImpulse = 1;
+	CapsuleComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 }
 
 void ULocomotionComponent::StopRagdollAction()

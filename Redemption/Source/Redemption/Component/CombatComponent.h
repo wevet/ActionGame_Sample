@@ -43,6 +43,7 @@ public:
 
 	const bool LineOfSightTraceOuter(class UWvAbilityBase* Ability, const int32 EffectGroupIndex, TArray<FHitResult>& Hits, const FVector SourceLocation);
 	const bool LineOfSightTraceOuterEnvironment(class UWvAbilityBase* Ability, const int32 EffectGroupIndex, const FHitResult& HitResult, const FVector SourceLocation);
+	const bool LineOfSightTraceOuterEnvironments(class UWvAbilityBase* Ability, const int32 EffectGroupIndex, const TArray<FHitResult>& HitResults, const FVector SourceLocation);
 
 	UFUNCTION(BlueprintCallable)
 	FGameplayTag GetHitReactFeature();

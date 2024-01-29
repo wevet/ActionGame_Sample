@@ -28,16 +28,18 @@ public:
 
 	virtual void Notify_Equip();
 	virtual void Notify_UnEquip();
-
-	bool IsEquipped() const;
 	virtual bool IsAvailable() const;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Settings")
-	ELSOverlayState OverlayState;
+	bool IsEquipped() const;
+	ELSOverlayState GetOverlayState() const;
 
 protected:
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Settings")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "ItemBaseActor|Config")
+	ELSOverlayState OverlayState;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "ItemBaseActor|Config")
 	bool bCanEquip;
 
+private:
 	bool bIsEquip = false;
 };

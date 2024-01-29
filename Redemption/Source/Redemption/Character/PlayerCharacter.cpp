@@ -286,11 +286,13 @@ void APlayerCharacter::GameplayTagTrigger_Callback(const FGameplayTag Tag, const
 	}
 	else if (Tag == TAG_Character_ActionDrive)
 	{
-		if (bIsPress)
-		{
-			HandleDriveAction();
-		}
+		HandleDriveAction(bIsPress);
 	}
+	else if (Tag == TAG_Character_Player_Melee)
+	{
+		HandleMeleeAction(bIsPress);
+	}
+
 }
 
 void APlayerCharacter::OnPluralInputEventTrigger_Callback(const FGameplayTag Tag, const bool bIsPress)
@@ -303,9 +305,9 @@ void APlayerCharacter::OnPluralInputEventTrigger_Callback(const FGameplayTag Tag
 	{
 		ToggleTargetLock();
 	}
-	else if (HasFinisherAction(Tag) && bIsPress)
+	else if (HasFinisherAction(Tag))
 	{
-		BuildFinisherAbility(Tag);
+		HandleFinisherAction(Tag, bIsPress);
 	}
 
 	//UE_LOG(LogTemp, Log, TEXT("Tag => %s, Pressed => %s"), *Tag.ToString(), bIsPress ? TEXT("true") : TEXT("false"));
@@ -383,6 +385,37 @@ void APlayerCharacter::HandleSprinting(const bool bIsPress)
 	else
 	{
 		Super::DoStopSprinting();
+	}
+}
+
+void APlayerCharacter::HandleMeleeAction(const bool bIsPress)
+{
+	if (bIsPress)
+	{
+		Super::DoAttack();
+	}
+}
+
+void APlayerCharacter::HandleFinisherAction(const FGameplayTag Tag, const bool bIsPress)
+{
+	if (bIsPress)
+	{
+		const bool bIsEquipBulletWeapon = GetInventoryComponent()->CanAimingWeapon();
+		if (bIsEquipBulletWeapon)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Cannot be used if equipped with a pistol or rifle. => %s"), *FString(__FUNCTION__));
+			return;
+		}
+
+		BuildFinisherAbility(Tag);
+	}
+}
+
+void APlayerCharacter::HandleDriveAction(const bool bIsPress)
+{
+	if (bIsPress)
+	{
+		Super::HandleDriveAction();
 	}
 }
 

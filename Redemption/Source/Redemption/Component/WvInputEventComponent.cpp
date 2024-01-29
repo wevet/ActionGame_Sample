@@ -511,7 +511,7 @@ void UWvInputEventComponent::PluralInputCallBack(const FKey InputKey, const FNam
 	const EWvInputEventType TriggerInputEventType = PluralInputEvent.TriggerInputEventType;
 	bool bIsValid = false;
 
-	UE_LOG(LogTemp, Log, TEXT("[%s] : EventTag => %s"), *FString(__FUNCTION__), *InputEvent->EventTag.GetTagName().ToString());
+	//UE_LOG(LogTemp, Log, TEXT("[%s] : EventTag => %s"), *FString(__FUNCTION__), *InputEvent->EventTag.GetTagName().ToString());
 
 	if (TriggerInputEventType == EWvInputEventType::Pressed)
 	{

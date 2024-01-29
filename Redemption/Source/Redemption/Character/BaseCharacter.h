@@ -252,6 +252,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category = Movement)
 	FTransform GetPivotOverlayTansform() const;
 
+	const bool HandleAttackPawnPrepare();
+
 	void BeginDeathAction();
 	void EndDeathAction(const float Interval);
 

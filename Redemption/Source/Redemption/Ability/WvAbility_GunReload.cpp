@@ -83,6 +83,12 @@ void UWvAbility_GunReload::ActivateAbility(const FGameplayAbilitySpecHandle Hand
 		FGameplayTagContainer(),
 		1.0, 0.f, FName("Default"), true, 1.0f);
 
+	ABulletHoldWeaponActor* HoldWeapon = Cast<ABulletHoldWeaponActor>(WeaponBaseActor);
+	if (IsValid(HoldWeapon))
+	{
+		HoldWeapon->DoReload();
+	}
+
 	MontageTask->OnCancelled.AddDynamic(this, &UWvAbility_GunReload::OnPlayMontageCompleted_Event);
 	MontageTask->OnInterrupted.AddDynamic(this, &UWvAbility_GunReload::OnPlayMontageCompleted_Event);
 	MontageTask->OnCompleted.AddDynamic(this, &UWvAbility_GunReload::OnPlayMontageCompleted_Event);
@@ -101,7 +107,7 @@ void UWvAbility_GunReload::OnPlayMontageCompleted_Event(FGameplayTag EventTag, F
 	ABulletHoldWeaponActor* HoldWeapon = Cast<ABulletHoldWeaponActor>(WeaponBaseActor);
 	if (IsValid(HoldWeapon))
 	{
-		HoldWeapon->DoReload();
+		HoldWeapon->Notify_AmmoReplenishment();
 	}
 
 	WeaponBaseActor.Reset();

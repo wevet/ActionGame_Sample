@@ -45,9 +45,9 @@ void UWvFootstepAnimNotify::TraceFoot(USkeletalMeshComponent* MeshComp, UAnimSeq
 {
 	if (AActor* OwnerActor = MeshComp ? MeshComp->GetOwner() : nullptr)
 	{
-		// 足元下方向への距離はアセット依存なのでプロパティ化
+		// Distance to the foot downward is asset-dependent, so it is made into a property.
 		const FVector SocketLocation = MeshComp->GetSocketLocation(SocketName);
-		// 地面へのめり込みを考慮して開始地点は少し浮かす
+		// Float the starting point a little to account for the sinking into the ground.
 		const FVector TraceBegin = SocketLocation + FVector::UpVector * TraceBeginDistance;
 		const FVector TraceEnd = SocketLocation + FVector::DownVector * TraceEndDistance;
 
@@ -141,7 +141,7 @@ void UWvFootstepAnimNotify::TriggerEffect(AActor* Owner, UAnimSequenceBase* Anim
 
 			if (IsInCrouch(Owner))
 			{
-				constexpr float CrouchThreshold = 4.0f;
+				constexpr float CrouchThreshold = 10.0f;
 				Volume = Volume / CrouchThreshold;
 			}
 

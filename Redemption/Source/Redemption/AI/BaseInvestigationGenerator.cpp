@@ -87,7 +87,7 @@ void ABaseInvestigationGenerator::SpawnNodeGenerator(const FTransform SpawnTrans
 	const bool bHitResult = UKismetSystemLibrary::LineTraceSingle(GetWorld(), TraceStartPosition, TraceEndPosition,
 		TraceChannel, false, IgnoreActors, TraceType, HitResult, true, FLinearColor::Red, FLinearColor::Green, 5.0f);
 
-	UKismetSystemLibrary::DrawDebugLine(GetWorld(), TraceStartPosition, TraceEndPosition, FLinearColor::Blue, 5.0f, 2.0f);
+	//UKismetSystemLibrary::DrawDebugLine(GetWorld(), TraceStartPosition, TraceEndPosition, FLinearColor::Blue, 5.0f, 2.0f);
 
 	auto CMC = Character->GetCharacterMovement();
 	if (CMC->IsWalkable(HitResult))

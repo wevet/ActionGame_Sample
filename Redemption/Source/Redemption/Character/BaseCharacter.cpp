@@ -18,6 +18,7 @@
 #include "Ability/WvInheritanceAttributeSet.h"
 #include "Game/WvGameInstance.h"
 #include "Vehicle/WvWheeledVehiclePawn.h"
+#include "Item/BulletHoldWeaponActor.h"
 
 #include "Components/CapsuleComponent.h"
 #include "Components/InputComponent.h"
@@ -590,9 +591,22 @@ void ABaseCharacter::DoAttack()
 	const auto Weapon = ItemInventoryComponent->GetEquipWeapon();
 	if (Weapon)
 	{
-		const FGameplayTag TriggerTag = Weapon->GetPluralInputTriggerTag();
-		WvAbilitySystemComponent->TryActivateAbilityByTag(TriggerTag);
+		if (Weapon->IsAvailable())
+		{
+			const FGameplayTag TriggerTag = Weapon->GetPluralInputTriggerTag();
+			WvAbilitySystemComponent->TryActivateAbilityByTag(TriggerTag);
+		}
 	}
+}
+
+const bool ABaseCharacter::HandleAttackPawnPrepare()
+{
+	const auto Weapon = ItemInventoryComponent->GetEquipWeapon();
+	if (Weapon)
+	{
+		return Weapon->HandleAttackPrepare();
+	}
+	return false;
 }
 
 void ABaseCharacter::DoResumeAttack()
@@ -1011,8 +1025,19 @@ void ABaseCharacter::EndDeathAction(const float Interval)
 
 void ABaseCharacter::EndDeathAction_Callback()
 {
-	ILocomotionInterface::Execute_SetLSMovementMode(LocomotionComponent, ELSMovementMode::Ragdoll);
+	if (IsBotCharacter())
+	{
+		//SetReplicateMovement(false);
+		//SetActorTickEnabled(false);
+
+		//TearOff();
+		//GetCharacterMovement()->StopMovementImmediately();
+		//GetCharacterMovement()->DisableMovement();
+		//GetCharacterMovement()->SetComponentTickEnabled(false);
+	}
+
 	LocomotionComponent->StartRagdollAction();
+	ILocomotionInterface::Execute_SetLSMovementMode(LocomotionComponent, ELSMovementMode::Ragdoll);
 
 	if (IsBotCharacter())
 	{
@@ -1232,7 +1257,8 @@ void ABaseCharacter::FindNearlestTarget(const FAttackMotionWarpingData AttackMot
 	WarpingTarget.Rotation = FRotator(0.f, Rotation.Yaw, 0.f);
 	MotionWarpingComponent->AddOrUpdateWarpTarget(WarpingTarget);
 
-#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
+//#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
+#if false
 	DrawDebugSphere(GetWorld(), From, 20.f, 12, FColor::Blue, false, 2);
 	DrawDebugSphere(GetWorld(), To, 20.f, 12, FColor::Blue, false, 2);
 	DrawDebugDirectionalArrow(GetWorld(), From, To, 20.f, FColor::Red, false, 2);
@@ -1255,30 +1281,29 @@ const TArray<AActor*> ABaseCharacter::FindNearlestTargets(const float Distance, 
 	TArray<AActor*> FilterTargets;
 	for (int32 Index = 0; Index < HitTargets.Num(); ++Index)
 	{
-		if (ABaseCharacter* Target = Cast<ABaseCharacter>(HitTargets[Index]))
+		AActor* Target = HitTargets[Index];
+		if (!IsValid(Target))
 		{
-			if (!IsValid(Target) || Target->IsDead())
-			{
-				continue;
-			}
+			continue;
+		}
 
-			const FVector NormalizePos = (Target->GetActorLocation() - GetActorLocation()).GetSafeNormal();
-			const FVector Forward = GetActorForwardVector();
-			const float Angle = UKismetMathLibrary::DegAcos(FVector::DotProduct(Forward, NormalizePos));
-			const bool bIsTargetInView = (FMath::Abs(Angle) < AngleThreshold);
-			if (bIsTargetInView)
-			{
-				FilterTargets.Add(Target);
+		const FVector NormalizePos = (Target->GetActorLocation() - GetActorLocation()).GetSafeNormal();
+		const FVector Forward = GetActorForwardVector();
+		const float Angle = UKismetMathLibrary::DegAcos(FVector::DotProduct(Forward, NormalizePos));
+		const bool bIsTargetInView = (FMath::Abs(Angle) < AngleThreshold);
+		if (bIsTargetInView)
+		{
+			FilterTargets.Add(Target);
 
 //#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
 #if false
-				const FVector From = GetActorLocation();
-				const FVector To = Target->GetActorLocation();
-				DrawDebugSphere(GetWorld(), From, 20.f, 12, FColor::Blue, false, 2);
-				DrawDebugSphere(GetWorld(), To, 20.f, 12, FColor::Blue, false, 2);
-				DrawDebugDirectionalArrow(GetWorld(), From, To, 20.f, FColor::Red, false, 2);
+			const FVector From = GetActorLocation();
+			const FVector To = Target->GetActorLocation();
+			DrawDebugSphere(GetWorld(), From, 20.f, 12, FColor::Blue, false, 2);
+			DrawDebugSphere(GetWorld(), To, 20.f, 12, FColor::Blue, false, 2);
+			DrawDebugDirectionalArrow(GetWorld(), From, To, 20.f, FColor::Red, false, 2);
 #endif
-			}
+
 		}
 	}
 	return FilterTargets;
@@ -1296,6 +1321,11 @@ AActor* ABaseCharacter::FindNearlestTarget(const float Distance, const float Ang
 		return nullptr;
 	}
 
+	HitTargets.RemoveAll([](AActor* Actor)
+	{
+		return Actor == nullptr;
+	});
+
 	// Get the target with the smallest angle difference from the camera forward vector
 	float ClosestDotToCenter = 0.f;
 	ABaseCharacter* NearlestTarget = nullptr;
@@ -1304,17 +1334,7 @@ AActor* ABaseCharacter::FindNearlestTarget(const float Distance, const float Ang
 	{
 		if (ABaseCharacter* Target = Cast<ABaseCharacter>(HitTargets[Index]))
 		{
-			if (!IsValid(Target))
-			{
-				continue;
-			}
-
-			if (Target->IsDead())
-			{
-				continue;
-			}
-
-			if (bTargetCheckBattled && Target->IsInBattled())
+			if (bTargetCheckBattled && Target->IsInBattled() || Target->IsDead())
 			{
 				continue;
 			}
@@ -1447,6 +1467,7 @@ void ABaseCharacter::BuildFinisherAnimationSender(const FGameplayTag RequireTag,
 {
 	if (!IsValid(FinisherSender))
 	{
+		UE_LOG(LogTemp, Warning, TEXT("not valid FinisherSender"));
 		return;
 	}
 
@@ -1468,6 +1489,7 @@ void ABaseCharacter::BuildFinisherAnimationReceiver(const FGameplayTag RequireTa
 {
 	if (!IsValid(FinisherReceiner))
 	{
+		UE_LOG(LogTemp, Warning, TEXT("not valid FinisherReceiner"));
 		return;
 	}
 

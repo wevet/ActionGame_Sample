@@ -68,6 +68,7 @@ public:
 	virtual void DoAttack() {};
 	virtual void DoResumeAttack() {};
 	virtual void DoStopAttack() {};
+	virtual const bool CanAttack();
 
 	FAbilityDeadAnimProcessForEventDelegate OnDeadAnimBeginPlay;
 	FAbilityDeadAnimProcessForEventDelegate OnDeadAnimFinish;

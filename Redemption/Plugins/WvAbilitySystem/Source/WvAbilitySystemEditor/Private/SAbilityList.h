@@ -29,6 +29,6 @@ public:
 	TArray<TSharedPtr<FAbilityItem>> RootCategories;
 	TSharedPtr<FAbilityItem> GenericCategory;
 	TSharedPtr<FAbilityItem> CustomCategory;
-	//struct FActAbilitySystemData* AbilityData = nullptr;
 };
+
 

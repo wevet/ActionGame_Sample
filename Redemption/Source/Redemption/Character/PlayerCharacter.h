@@ -82,7 +82,10 @@ private:
 
 	void HandleJump(const bool bIsPress);
 	void HandleSprinting(const bool bIsPress);
+	void HandleFinisherAction(const FGameplayTag Tag, const bool bIsPress);
+	void HandleMeleeAction(const bool bIsPress);
 	bool HasFinisherAction(const FGameplayTag Tag) const;
+	void HandleDriveAction(const bool bIsPress);
 
 	UFUNCTION()
 	void GameplayTagTrigger_Callback(const FGameplayTag Tag, const bool bIsPress);

@@ -13,6 +13,9 @@
 // Input
 REDEMPTION_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Game_Input_Disable);
 
+// PlayerAction
+REDEMPTION_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Character_Player_Melee);
+
 // MeleeAction
 REDEMPTION_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Character_ActionMelee);
 REDEMPTION_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Character_ActionMelee_ComboRequire);
@@ -39,6 +42,9 @@ REDEMPTION_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Character_ActionCrouch_Forbid)
 // Drive
 REDEMPTION_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Character_ActionDrive);
 REDEMPTION_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Character_ActionDrive_Forbid);
+
+// if reload active tag added character state tag
+REDEMPTION_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Character_Action_GunReload);
 
 // TargetLockOn
 REDEMPTION_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Character_TargetLock);

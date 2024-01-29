@@ -41,33 +41,54 @@ void ABulletHoldWeaponActor::DoFire()
 		return;
 	}
 
-	if (!PawnAttackParam.IsEmptyCurrentAmmo())
+	const float Loudness = PawnAttackParam.Loudness;
+	const float Volume = PawnAttackParam.Volume;
+	Character->ReportNoiseEvent(FVector::ZeroVector, Volume, Loudness);
+	if (IsValid(FireAnimation))
 	{
-		const float Loudness = PawnAttackParam.Loudness;
-		const float Volume = PawnAttackParam.Volume;
-		Character->ReportNoiseEvent(FVector::ZeroVector, Volume, Loudness);
-		if (IsValid(FireAnimation))
-		{
-			SkeletalMeshComponent->PlayAnimation(FireAnimation, false);
-		}
-		PawnAttackParam.DecrementAmmos();
-		DoFireReceived();
-
-		// if ammo becomes empty as a result of bullet fire
-		if (PawnAttackParam.IsEmptyCurrentAmmo())
-		{
-			Notify_AmmoEmpty();
-		}
-
+		SkeletalMeshComponent->PlayAnimation(FireAnimation, false);
 	}
-	else
+	PawnAttackParam.DecrementAmmos();
+	DoFireReceived();
+
+	// if ammo becomes empty as a result of bullet fire
+	if (PawnAttackParam.IsEmptyCurrentAmmo())
 	{
-		Notify_AmmoReload();
+		Notify_AmmoEmpty();
 	}
-
 
 }
 
+bool ABulletHoldWeaponActor::IsCurrentAmmoEmpty() const
+{
+	return PawnAttackParam.IsEmptyCurrentAmmo();
+}
+
+const bool ABulletHoldWeaponActor::HandleAttackPrepare()
+{
+	if (Character.IsValid())
+	{
+		if (IsCurrentAmmoEmpty())
+		{
+			if (Character->GetWvAbilitySystemComponent()->HasMatchingGameplayTag(TAG_Character_Action_GunReload))
+			{
+				// reloading..
+				return false;
+			}
+			else
+			{
+				UE_LOG(LogTemp, Log, TEXT("reload ability start => %s"), *FString(__FUNCTION__));
+				Notify_ReloadOwner();
+				return false;
+			}
+		}
+		else
+		{
+			return true;
+		}
+	}
+	return false;
+}
 
 void ABulletHoldWeaponActor::Notify_AmmoEmpty()
 {
@@ -83,9 +104,10 @@ void ABulletHoldWeaponActor::Notify_AmmoReplenishment()
 	{
 		Character->GetWvAbilitySystemComponent()->RemoveGameplayTag(AmmoEmptyTag, 1);
 	}
+	PawnAttackParam.Replenishment();
 }
 
-void ABulletHoldWeaponActor::Notify_AmmoReload()
+void ABulletHoldWeaponActor::Notify_ReloadOwner()
 {
 	if (Character.IsValid())
 	{
@@ -95,13 +117,11 @@ void ABulletHoldWeaponActor::Notify_AmmoReload()
 
 void ABulletHoldWeaponActor::DoReload()
 {
-	if (!Character.IsValid())
-	{
-		return;
-	}
 
-	PawnAttackParam.Replenishment();
-	Notify_AmmoReplenishment();
+	if (IsValid(ReloadAnimation))
+	{
+		SkeletalMeshComponent->PlayAnimation(ReloadAnimation, false);
+	}
 	DoReloadReceived();
 }
 
@@ -119,38 +139,19 @@ void ABulletHoldWeaponActor::SetGunFirePrepareParameters(const float InRandmize)
 	Randmize = InRandmize;
 }
 
-const bool ABulletHoldWeaponActor::LineOfSightOuter(FHitResult& OutHitResult)
+const FVector ABulletHoldWeaponActor::CalcTraceEndPosition()
 {
-	if (!Character->GetLocomotionComponent())
-	{
-		return false;
-	}
-
-	const bool bIsRandomize = Character->IsBotCharacter();
 	const FTransform MuzzleTransform = SkeletalMeshComponent->GetSocketTransform(PawnAttackParam.MuzzleSocketName);
 	const FVector TraceStart = MuzzleTransform.GetLocation();
 	FVector Forward = FRotator(MuzzleTransform.GetRotation()).Vector();
 
-	// make noise
-	if (bIsRandomize)
-	{
-		const float Value = FMath::RandRange(Randmize * -1.0f, Randmize);
-		TraceNoise = FVector(0.f, Value, Value);
-	}
-	else
-	{
-		TraceNoise = FVector::ZeroVector;
-	}
-
 	FVector TraceEndPosition = FVector::ZeroVector;
-
-	// calc trace end
 	auto LocomotionEssencialVariables = Character->GetLocomotionComponent()->GetLocomotionEssencialVariables();
 	if (LocomotionEssencialVariables.LSRotationMode != ELSRotationMode::VelocityDirection)
 	{
-		if (APlayerCharacter* PC = Cast<APlayerCharacter>(Character))
+		if (const APlayerCharacter* PC = Cast<APlayerCharacter>(Character))
 		{
-			auto StartPosition = PC->GetFollowCamera()->GetComponentLocation();
+			const auto StartPosition = PC->GetFollowCamera()->GetComponentLocation();
 			auto Pos = StartPosition;
 			Forward = PC->GetFollowCamera()->GetForwardVector() * PawnAttackParam.TraceRange;
 			Pos += Forward;
@@ -163,8 +164,6 @@ const bool ABulletHoldWeaponActor::LineOfSightOuter(FHitResult& OutHitResult)
 			{
 				TraceEndPosition = LocalHitResult.ImpactPoint;
 			}
-
-			//DrawDebugLine(GetWorld(), TraceStart, TraceEndPosition, LocalHitResult.IsValidBlockingHit() ? FColor::Green : FColor::Red, false, 2.0f, 0U, 1.2f);
 		}
 		else
 		{
@@ -180,7 +179,34 @@ const bool ABulletHoldWeaponActor::LineOfSightOuter(FHitResult& OutHitResult)
 		Offset += TraceNoise;
 		TraceEndPosition = TraceStart + Offset;
 	}
+	return TraceEndPosition;
+}
 
+
+const bool ABulletHoldWeaponActor::LineOfSightOuter(FHitResult& OutHitResult)
+{
+	if (!Character->GetLocomotionComponent())
+	{
+		return false;
+	}
+
+	const bool bIsRandomize = Character->IsBotCharacter() || Character->IsHealthHalf();
+	const FTransform MuzzleTransform = SkeletalMeshComponent->GetSocketTransform(PawnAttackParam.MuzzleSocketName);
+	const FVector TraceStart = MuzzleTransform.GetLocation();
+	//FVector Forward = FRotator(MuzzleTransform.GetRotation()).Vector();
+
+	// make noise
+	if (bIsRandomize)
+	{
+		const float Value = FMath::RandRange(Randmize * -1.0f, Randmize);
+		TraceNoise = FVector(0.f, Value, Value);
+	}
+	else
+	{
+		TraceNoise = FVector::ZeroVector;
+	}
+
+	const FVector TraceEndPosition = CalcTraceEndPosition();
 	return LineOfSight(TraceStart, TraceEndPosition, OutHitResult);
 }
 
@@ -195,18 +221,49 @@ const bool ABulletHoldWeaponActor::LineOfSight(const FVector TraceStart, const F
 	const bool bHitResult = UKismetSystemLibrary::LineTraceSingle(GetWorld(), TraceStart, TraceEnd,
 		ABILITY_GLOBAL()->WeaponTraceChannel, false, IgnoreActors, TraceType, HitResult, true, FLinearColor::Red, FLinearColor::Green, 2.0f);
 
-#if false
-	FCollisionQueryParams QueryParams;
-	QueryParams.AddIgnoredActor(Character.Get());
-	QueryParams.bReturnPhysicalMaterial = true;
-	const bool bHitResult = GetWorld()->LineTraceSingleByChannel(HitResult, TraceStart, TraceEndPosition, CollisionChannel, QueryParams);
-	if (ABILITY_GLOBAL()->bWeaponTraceDebug)
-	{
-		DrawDebugLine(GetWorld(), TraceStart, TraceEnd, FColor::Blue, false, 5.0f);
-	}
-#endif
-
 	OutHitResult = HitResult;
+	return bHitResult;
+}
+
+const bool ABulletHoldWeaponActor::LineOfSightOuterMulti(TArray<FHitResult>& OutHitResults)
+{
+	if (!Character->GetLocomotionComponent())
+	{
+		return false;
+	}
+
+	const bool bIsRandomize = Character->IsBotCharacter() || Character->IsHealthHalf();
+	const FTransform MuzzleTransform = SkeletalMeshComponent->GetSocketTransform(PawnAttackParam.MuzzleSocketName);
+	const FVector TraceStart = MuzzleTransform.GetLocation();
+	//FVector Forward = FRotator(MuzzleTransform.GetRotation()).Vector();
+
+	// make noise
+	if (bIsRandomize)
+	{
+		const float Value = FMath::RandRange(Randmize * -1.0f, Randmize);
+		TraceNoise = FVector(0.f, Value, Value);
+	}
+	else
+	{
+		TraceNoise = FVector::ZeroVector;
+	}
+
+	const FVector TraceEndPosition = CalcTraceEndPosition();
+	return LineOfSightMulti(TraceStart, TraceEndPosition, OutHitResults);
+}
+
+const bool ABulletHoldWeaponActor::LineOfSightMulti(const FVector TraceStart, const FVector TraceEnd, TArray<FHitResult>& OutHitResults)
+{
+	TArray<AActor*> IgnoreActors({ Character.Get(), });
+	auto TraceType = ABILITY_GLOBAL()->bWeaponTraceDebug ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None;
+
+	ECollisionChannel CollisionChannel = UEngineTypes::ConvertToCollisionChannel(ABILITY_GLOBAL()->WeaponTraceChannel);
+
+	TArray<FHitResult> HitResults;
+	const bool bHitResult = UKismetSystemLibrary::LineTraceMulti(GetWorld(), TraceStart, TraceEnd, 
+		ABILITY_GLOBAL()->WeaponTraceChannel, false, IgnoreActors, TraceType, HitResults, true, FLinearColor::Red, FLinearColor::Green, 2.0f);
+
+	OutHitResults = HitResults;
 	return bHitResult;
 }
 #pragma endregion

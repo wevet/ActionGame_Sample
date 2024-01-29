@@ -48,3 +48,8 @@ bool AItemBaseActor::IsAvailable() const
 	return true;
 }
 
+ELSOverlayState AItemBaseActor::GetOverlayState() const
+{
+	return OverlayState; 
+}
+

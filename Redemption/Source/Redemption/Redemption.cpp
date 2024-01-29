@@ -6,6 +6,9 @@
 // Input
 UE_DEFINE_GAMEPLAY_TAG(TAG_Game_Input_Disable, "Game.Input.Disable");
 
+// PlayerAction
+UE_DEFINE_GAMEPLAY_TAG(TAG_Character_Player_Melee, "Character.Player.Melee");
+
 // MeleeAction
 UE_DEFINE_GAMEPLAY_TAG(TAG_Character_ActionMelee, "Character.Action.Melee");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Character_ActionMelee_ComboRequire, "Character.Action.Melee.ComboRequire");
@@ -32,6 +35,9 @@ UE_DEFINE_GAMEPLAY_TAG(TAG_Character_ActionCrouch_Forbid, "Character.Action.Crou
 // Drive
 UE_DEFINE_GAMEPLAY_TAG(TAG_Character_ActionDrive, "Character.Action.Drive");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Character_ActionDrive_Forbid, "Character.Action.Drive.Forbid");
+
+// if reload active tag added character state tag
+UE_DEFINE_GAMEPLAY_TAG(TAG_Character_Action_GunReload, "Character.Action.GunReload");
 
 // TargetLock
 UE_DEFINE_GAMEPLAY_TAG(TAG_Character_TargetLock, "Character.Action.TargetLock");

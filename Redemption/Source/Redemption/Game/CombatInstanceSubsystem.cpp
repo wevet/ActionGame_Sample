@@ -107,7 +107,7 @@ void UCombatInstanceSubsystem::OnHitEnvironment(const AActor* Attacker, const FH
 			UGameplayStatics::PlaySoundAtLocation(World, RowData->HitSound, HitLocation, EnvironmentConfig.HitSoundVolume, 1.0f, 0.0f, nullptr, nullptr);
 		}
 		// Send nosie even if there is no sound asset
-		UAISense_Hearing::ReportNoiseEvent(GetWorld(), HitLocation, EnvironmentConfig.HitSoundVolume, const_cast<AActor*>(HitTarget), EnvironmentConfig.Roudness);
+		UAISense_Hearing::ReportNoiseEvent(World, HitLocation, EnvironmentConfig.HitSoundVolume, const_cast<AActor*>(HitTarget), EnvironmentConfig.Roudness);
 
 
 		if (RowData->HitEffect)

@@ -94,12 +94,19 @@ void UWvAT_BulletDamage::LineOfSightTraceExecute()
 	HoldWeapon->SetGunFirePrepareParameters(Randomize);
 	HoldWeapon->DoFire();
 
+	auto WeaponLoc = HoldWeapon->GetActorLocation();
+
+	TArray<FHitResult> HitResults;
+	HoldWeapon->LineOfSightOuterMulti(HitResults);
+
+	CombatComponent->LineOfSightTraceOuterEnvironments(WvAbility, EffectGroupIndex, HitResults, WeaponLoc);
+	CombatComponent->LineOfSightTraceOuter(WvAbility, EffectGroupIndex, HitResults, WeaponLoc);
+
+#if false
 	FHitResult HitResult(ForceInit);
 	const bool bHitResult = HoldWeapon->LineOfSightOuter(HitResult);
-
 	if (bHitResult)
 	{
-		auto WeaponLoc = HoldWeapon->GetActorLocation();
 		if (CombatComponent->HasEnvironmentFilterClass(HitResult))
 		{
 			CombatComponent->LineOfSightTraceOuterEnvironment(WvAbility, EffectGroupIndex, HitResult, WeaponLoc);
@@ -110,6 +117,7 @@ void UWvAT_BulletDamage::LineOfSightTraceExecute()
 			CombatComponent->LineOfSightTraceOuter(WvAbility, EffectGroupIndex, Hits, WeaponLoc);
 		}
 	}
+#endif
 
 }
 

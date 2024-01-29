@@ -59,13 +59,16 @@ public:
 	virtual void SetOwner(AActor* NewOwner) override;
 	//~End of AActor interface
 
+	virtual FGameplayTag GetPluralInputTriggerTag() const { return PluralInputTriggerTag; }
+
 	EAttackWeaponState GetAttackWeaponState() const { return PawnAttackParam.AttackWeaponState; }
 	FGameplayTag GetItemtag() const { return Itemtag; }
-	FGameplayTag GetPluralInputTriggerTag() const { return PluralInputTriggerTag; }
 	FName GetWeaponName() const { return PawnAttackParam.WeaponName; }
 	int32 GetPriority() const { return Priority; }
 
 	FPawnAttackParam GetWeaponAttackInfo() const { return PawnAttackParam; }
+
+	virtual const bool HandleAttackPrepare() { return true; }
 
 protected:
 	//~AActor interface
@@ -80,19 +83,19 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Component, meta = (AllowPrivateAccess = "true"))
 	class USkeletalMeshComponent* SkeletalMeshComponent;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Config")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "WeaponBaseActor|Config")
 	FName WeaponKeyName;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Config")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "WeaponBaseActor|Config")
 	UWeaponParameterDataAsset* UWeaponParameterDA;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Config")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "WeaponBaseActor|Config")
 	FGameplayTag Itemtag;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Config")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "WeaponBaseActor|Config")
 	FGameplayTag PluralInputTriggerTag;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Config")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "WeaponBaseActor|Config")
 	int32 Priority;
 
 	UPROPERTY()

@@ -599,6 +599,11 @@ void AWvAIController::AbortTasks(bool bIsForce /*= false*/)
 	FollowTask.Abort(bIsForce);
 	FriendlyTask.Abort(bIsForce);
 }
+
+const bool AWvAIController::HandleAttackPawnPrepare()
+{
+	return BaseCharacter->HandleAttackPawnPrepare();
+}
 #pragma endregion
 
 bool AWvAIController::IsInEnemyAgent(const AActor& Other) const

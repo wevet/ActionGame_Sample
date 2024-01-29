@@ -152,7 +152,7 @@ void UCombatUIController::FocusWeaponWindowRenderer()
 	const auto EssencialVariables = CharacterOwner->GetLocomotionComponent()->GetLocomotionEssencialVariables();
 	bool bIsCurAimingWeapon = CharacterOwner->GetInventoryComponent()->CanAimingWeapon();
 	bIsCurAimingWeapon &= EssencialVariables.LSRotationMode == ELSRotationMode::LookingDirection;
-	bIsCurAimingWeapon |= EssencialVariables.bAiming;
+	//bIsCurAimingWeapon |= EssencialVariables.bAiming;
 
 	if (bCanFocusWeapon != bIsCurAimingWeapon)
 	{

@@ -93,6 +93,10 @@ bool IWvAbilityTargetInterface::IsInBattled() const
 	return false;
 }
 
+const bool IWvAbilityTargetInterface::CanAttack()
+{
+	return true;
+}
 
 UWvAIActionStateInterface::UWvAIActionStateInterface(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
