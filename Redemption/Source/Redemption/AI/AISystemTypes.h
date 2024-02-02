@@ -67,14 +67,15 @@ private:
 	TWeakObjectPtr<UWorld> World;
 
 	void Update();
-	void End();
+	void End_Internal();
 
 public:
 	FAIPerceptionTask() {}
 	FAIPerceptionTask(const FName InTaskName, UWorld* InWorld);
 	void Begin(const float InTimer, TFunction<void(void)> InFinishDelegate);
-	void Abort(const bool bIsForce);
+	void End();
 
+	void Abort(const bool bIsForce);
 	void AddLength(const float AddTimer);
 	bool IsRunning() const;
 };

@@ -109,6 +109,9 @@ public:
 	virtual void InitializeWithAbilitySystem(UAbilitySystemComponent* ASC);
 
 
+public:
+	void WakeUpPoseSnapShot();
+
 protected:
 	UPROPERTY()
 	TWeakObjectPtr<class ABaseCharacter> Character;
@@ -191,6 +194,9 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Linked Layer Data")
 	UAnimInstance* LastLinkedAnimInstance = nullptr;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion")
+	FName RagdollPoseSnapshot;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
 	FLocomotionEssencialVariables LocomotionEssencialVariables;

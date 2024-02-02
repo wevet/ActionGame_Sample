@@ -59,6 +59,9 @@ protected:
 	UFUNCTION()
 	void PluralInputCallBackExecute(FGameplayTag EventTag, bool bPress);
 
+	UFUNCTION()
+	void OnHoldingInputCallBackExecute(FGameplayTag EventTag, bool bPress);
+
 	void UpdateCachePluralInput();
 
 	void ResetWaitTillEnd(class UGameplayAbility* WaitEndAbility = nullptr);

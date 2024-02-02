@@ -39,6 +39,9 @@ UE_DEFINE_GAMEPLAY_TAG(TAG_Character_ActionDrive_Forbid, "Character.Action.Drive
 // if reload active tag added character state tag
 UE_DEFINE_GAMEPLAY_TAG(TAG_Character_Action_GunReload, "Character.Action.GunReload");
 
+UE_DEFINE_GAMEPLAY_TAG(TAG_Character_ActionStrafeChange, "Character.Action.StrafeChange");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Character_ActionAimChange, "Character.Action.AimChange");
+
 // TargetLock
 UE_DEFINE_GAMEPLAY_TAG(TAG_Character_TargetLock, "Character.Action.TargetLock");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Character_TargetLocking, "Character.Action.TargetLocking");

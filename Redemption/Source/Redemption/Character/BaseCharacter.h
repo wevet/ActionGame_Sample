@@ -238,7 +238,7 @@ public:
 	void HandleCrouchAction(const bool bCanCrouch);
 
 	UFUNCTION(BlueprintCallable, Category = Action)
-	void HandleGuardAction(const bool bGuardEnable);
+	void HandleGuardAction(const bool bGuardEnable, bool &OutResult);
 
 	UFUNCTION(BlueprintCallable, Category = Action)
 	FTransform GetChestTransform(const FName BoneName) const;
@@ -256,6 +256,10 @@ public:
 
 	void BeginDeathAction();
 	void EndDeathAction(const float Interval);
+
+	void BeginAliveAction();
+	void EndAliveAction();
+	void WakeUpPoseSnapShot();
 
 	void OverlayStateChange(const ELSOverlayState CurrentOverlay);
 	virtual bool IsTargetLock() const;
@@ -297,7 +301,15 @@ public:
 	float GetHealthToWidget() const;
 	bool IsHealthHalf() const;
 
+	void DoForceKill();
+
+	void DrawActionState();
+
 #pragma region NearlestAction
+	void CalcurateNearlestTarget(const float SyncPointWeight);
+	void ResetNearlestTarget();
+	void FindNearlestTarget(AActor* Target, const float SyncPointWeight);
+
 	void FindNearlestTarget(const FAttackMotionWarpingData AttackMotionWarpingData);
 	void BuildFinisherAbility(const FGameplayTag RequireTag);
 	void BuildFinisherAnimationSender(const FGameplayTag RequireTag, FFinisherAnimation& OutFinisherAnimation, int32 &OutIndex);
@@ -452,13 +464,10 @@ protected:
 	TSharedPtr<FStreamableHandle> ABPStreamableHandle;
 	TSharedPtr<FStreamableHandle> FinisherStreamableHandle;
 
-	void OnABPAnimAssetLoad();
 	void OnABPAnimAssetLoadComplete();
-	void OnFinisherAnimAssetLoad();
 	void OnFinisherAnimAssetLoadComplete();
 
-	void OnLoadFinisherSender();
-	void OnLoadFinisherReceiver();
+	void OnLoadFinisherAssets();
 	void OnLoadOverlayABP();
 #pragma endregion
 

@@ -89,12 +89,15 @@ void FAIPerceptionTask::Begin(const float InTimer, TFunction<void(void)> InFinis
 	});
 	TM.SetTimer(TaskTimerHandle, LocalDelegate, DT, true);
 
+#if false
 	TaskInstance = Launch(UE_SOURCE_LOCATION, [this]
 	{
 		FPlatformProcess::Sleep(Timer);
 		UE_LOG(LogWvAI, Log, TEXT("TaskInstance finish => %s"), *FString(__FUNCTION__));
 	},
 	ETaskPriority::Default, EExtendedTaskPriority::None);
+#endif
+
 }
 
 void FAIPerceptionTask::Update()
@@ -115,6 +118,11 @@ void FAIPerceptionTask::Update()
 }
 
 void FAIPerceptionTask::End()
+{
+	End_Internal();
+}
+
+void FAIPerceptionTask::End_Internal()
 {
 	bCallbackResult = true;
 	bIsTaskPlaying = false;

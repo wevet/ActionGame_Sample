@@ -85,6 +85,8 @@ UWvAnimInstance::UWvAnimInstance(const FObjectInitializer& ObjectInitializer) : 
 
 	bIsWallClimbing = false;
 	bIsWallClimbingJumping = false;
+
+	RagdollPoseSnapshot = FName(TEXT("RagdollPose"));
 }
 
 void UWvAnimInstance::NativeInitializeAnimation()
@@ -508,4 +510,8 @@ void UWvAnimInstance::RenderAnimTickRecords(const TArray<FAnimTickRecord>& Recor
 }
 #pragma endregion
 
+void UWvAnimInstance::WakeUpPoseSnapShot()
+{
+	SavePoseSnapshot(RagdollPoseSnapshot);
+}
 

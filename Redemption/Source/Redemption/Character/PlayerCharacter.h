@@ -75,23 +75,31 @@ private:
 	void TurnAtRate(float Rate);
 	void LookUpAtRate(float Rate);
 	void Look(const FInputActionValue& Value);
-	void ToggleRotationMode(const FInputActionValue& Value);
-	void ToggleAimMode(const FInputActionValue& Value);
+
+
 	void ToggleStanceMode();
 	void ToggleTargetLock();
+	void ToggleRotationMode();
+	void ToggleAimMode();
 
 	void HandleJump(const bool bIsPress);
 	void HandleSprinting(const bool bIsPress);
-	void HandleFinisherAction(const FGameplayTag Tag, const bool bIsPress);
 	void HandleMeleeAction(const bool bIsPress);
-	bool HasFinisherAction(const FGameplayTag Tag) const;
 	void HandleDriveAction(const bool bIsPress);
+	void HandleAliveAction(const bool bIsPress);
+	void HandleHoldAimAction(const bool bIsPress);
+	void HandleFinisherAction(const FGameplayTag Tag, const bool bIsPress);
+	bool HasFinisherAction(const FGameplayTag Tag) const;
+
 
 	UFUNCTION()
 	void GameplayTagTrigger_Callback(const FGameplayTag Tag, const bool bIsPress);
 
 	UFUNCTION()
 	void OnPluralInputEventTrigger_Callback(const FGameplayTag Tag, const bool bIsPress);
+
+	UFUNCTION()
+	void OnHoldingInputEventTrigger_Callback(const FGameplayTag Tag, const bool bIsPress);
 
 	UFUNCTION()
 	void OverlayStateChange_Callback(const ELSOverlayState PrevOverlay, const ELSOverlayState CurrentOverlay);

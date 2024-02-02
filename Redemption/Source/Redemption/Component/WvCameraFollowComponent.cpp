@@ -57,7 +57,7 @@ void UWvCameraFollowComponent::BeginPlay()
 	LocomotionComponent->OnGaitChangeDelegate.AddDynamic(this, &UWvCameraFollowComponent::LocomotionMoveStateChangeCallback);
 	LocomotionComponent->OnStanceChangeDelegate.AddDynamic(this, &UWvCameraFollowComponent::LocomotionMoveStateChangeCallback);
 	LocomotionComponent->OnRotationModeChangeDelegate.AddDynamic(this, &UWvCameraFollowComponent::LocomotionMoveStateChangeCallback);
-	LocomotionComponent->OnAimingChangeDelegate.AddDynamic(this, &UWvCameraFollowComponent::LocomotionAimChangeCallback);
+	//LocomotionComponent->OnAimingChangeDelegate.AddDynamic(this, &UWvCameraFollowComponent::LocomotionAimChangeCallback);
 
 	RotationSensitiveValue = CameraTargetSettingsDA ? CameraTargetSettingsDA->RotationSensitiveValue : 0.3f;
 	SetupLocalPlayerController();
@@ -71,7 +71,7 @@ void UWvCameraFollowComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 		LocomotionComponent->OnGaitChangeDelegate.RemoveDynamic(this, &UWvCameraFollowComponent::LocomotionMoveStateChangeCallback);
 		LocomotionComponent->OnStanceChangeDelegate.RemoveDynamic(this, &UWvCameraFollowComponent::LocomotionMoveStateChangeCallback);
 		LocomotionComponent->OnRotationModeChangeDelegate.RemoveDynamic(this, &UWvCameraFollowComponent::LocomotionMoveStateChangeCallback);
-		LocomotionComponent->OnAimingChangeDelegate.RemoveDynamic(this, &UWvCameraFollowComponent::LocomotionAimChangeCallback);
+		//LocomotionComponent->OnAimingChangeDelegate.RemoveDynamic(this, &UWvCameraFollowComponent::LocomotionAimChangeCallback);
 	}
 
 	FTimerManager& TM = GetWorld()->GetTimerManager();
@@ -181,84 +181,92 @@ bool UWvCameraFollowComponent::ChooseCameraSettings(FCameraSettings& CameraSetti
 
 	if (LSMovementMode == ELSMovementMode::Grounded || LSMovementMode == ELSMovementMode::Falling || LSMovementMode == ELSMovementMode::Swimming)
 	{
+
+#if false
 		if (LocomotionEssencialVariables.bAiming)
 		{
 			CameraSettings = CameraTargetSettingsDA->CameraSettings.Aiming;
 		}
 		else
 		{
-			if (LSRotationMode == ELSRotationMode::VelocityDirection)
+		}
+#endif
+
+		if (LSRotationMode == ELSRotationMode::VelocityDirection)
+		{
+			if (LSStance == ELSStance::Standing)
 			{
-				if (LSStance == ELSStance::Standing)
+				if (LSGait == ELSGait::Walking)
 				{
-					if (LSGait == ELSGait::Walking)
+					CameraSettings = CameraTargetSettingsDA->CameraSettings.VelocityDirection.Standing.Walk;
+				}
+				else if (LSGait == ELSGait::Running)
+				{
+					CameraSettings = CameraTargetSettingsDA->CameraSettings.VelocityDirection.Standing.Run;
+				}
+				else if (LSGait == ELSGait::Sprinting)
+				{
+					CameraSettings = CameraTargetSettingsDA->CameraSettings.VelocityDirection.Standing.Run;
+#if false
+					if (LocomotionEssencialVariables.bWasMoving)
 					{
-						CameraSettings = CameraTargetSettingsDA->CameraSettings.VelocityDirection.Standing.Walk;
-					}
-					else if (LSGait == ELSGait::Running)
-					{
-						CameraSettings = CameraTargetSettingsDA->CameraSettings.VelocityDirection.Standing.Run;
-					}
-					else if (LSGait == ELSGait::Sprinting)
-					{
-						if (LocomotionEssencialVariables.bWasMoving)
-						{
-							CameraSettings = CameraLerpTimerLerpInfo.CurCameraSettings;
-						}
-						else
-						{
-							CameraSettings = CameraTargetSettingsDA->CameraSettings.VelocityDirection.Standing.Run;
-						}
+						CameraSettings = CameraLerpTimerLerpInfo.CurCameraSettings;
 					}
 					else
 					{
-						return false;
+						CameraSettings = CameraTargetSettingsDA->CameraSettings.VelocityDirection.Standing.Run;
 					}
-				}
-				else if (LSStance == ELSStance::Crouching)
-				{
-					CameraSettings = CameraTargetSettingsDA->CameraSettings.VelocityDirection.Crouching;
+#endif
 				}
 				else
 				{
 					return false;
 				}
 			}
-			else if (LSRotationMode == ELSRotationMode::LookingDirection)
+			else if (LSStance == ELSStance::Crouching)
 			{
-				if (LSStance == ELSStance::Standing)
-				{
-					if (LSGait == ELSGait::Walking)
-					{
-						CameraSettings = CameraTargetSettingsDA->CameraSettings.LookingDirection.Standing.Walk;
-					}
-					else if (LSGait == ELSGait::Running)
-					{
-						CameraSettings = CameraTargetSettingsDA->CameraSettings.LookingDirection.Standing.Run;
-					}
-					else if (LSGait == ELSGait::Sprinting)
-					{
-						CameraSettings = CameraTargetSettingsDA->CameraSettings.LookingDirection.Standing.Sprint;
-					}
-					else
-					{
-						return false;
-					}
-				}
-				else if (LSStance == ELSStance::Crouching)
-				{
-					CameraSettings = CameraTargetSettingsDA->CameraSettings.LookingDirection.Crouching;
-				}
-				else
-				{
-					return false;
-				}
+				CameraSettings = CameraTargetSettingsDA->CameraSettings.VelocityDirection.Crouching;
 			}
 			else
 			{
 				return false;
 			}
 		}
+		else if (LSRotationMode == ELSRotationMode::LookingDirection)
+		{
+			if (LSStance == ELSStance::Standing)
+			{
+				if (LSGait == ELSGait::Walking)
+				{
+					CameraSettings = CameraTargetSettingsDA->CameraSettings.LookingDirection.Standing.Walk;
+				}
+				else if (LSGait == ELSGait::Running)
+				{
+					CameraSettings = CameraTargetSettingsDA->CameraSettings.LookingDirection.Standing.Run;
+				}
+				else if (LSGait == ELSGait::Sprinting)
+				{
+					CameraSettings = CameraTargetSettingsDA->CameraSettings.LookingDirection.Standing.Sprint;
+				}
+				else
+				{
+					return false;
+				}
+			}
+			else if (LSStance == ELSStance::Crouching)
+			{
+				CameraSettings = CameraTargetSettingsDA->CameraSettings.LookingDirection.Crouching;
+			}
+			else
+			{
+				return false;
+			}
+		}
+		else
+		{
+			return false;
+		}
+
 	}
 	else
 	{

@@ -56,6 +56,7 @@ void APlayerCharacter::BeginPlay()
 	{
 		PC->OnInputEventGameplayTagTrigger_Game.AddDynamic(this, &APlayerCharacter::GameplayTagTrigger_Callback);
 		PC->OnPluralInputEventTrigger.AddDynamic(this, &APlayerCharacter::OnPluralInputEventTrigger_Callback);
+		PC->OnHoldingInputEventTrigger.AddDynamic(this, &APlayerCharacter::OnHoldingInputEventTrigger_Callback);
 	}
 
 	WvCameraFollowComponent->OnTargetLockedOn.AddDynamic(this, &APlayerCharacter::OnTargetLockedOn_Callback);
@@ -69,6 +70,7 @@ void APlayerCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	{
 		PC->OnInputEventGameplayTagTrigger_Game.RemoveDynamic(this, &APlayerCharacter::GameplayTagTrigger_Callback);
 		PC->OnPluralInputEventTrigger.RemoveDynamic(this, &APlayerCharacter::OnPluralInputEventTrigger_Callback);
+		PC->OnHoldingInputEventTrigger.RemoveDynamic(this, &APlayerCharacter::OnHoldingInputEventTrigger_Callback);
 	}
 
 	WvCameraFollowComponent->OnTargetLockedOn.RemoveDynamic(this, &APlayerCharacter::OnTargetLockedOn_Callback);
@@ -124,8 +126,8 @@ void APlayerCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerIn
 
 		if (StrafeAction)
 		{
-			EnhancedInputComponent->BindAction(StrafeAction, ETriggerEvent::Canceled, this, &APlayerCharacter::ToggleRotationMode);
-			EnhancedInputComponent->BindAction(StrafeAction, ETriggerEvent::Completed, this, &APlayerCharacter::ToggleAimMode);
+			//EnhancedInputComponent->BindAction(StrafeAction, ETriggerEvent::Canceled, this, &APlayerCharacter::ToggleRotationMode);
+			//EnhancedInputComponent->BindAction(StrafeAction, ETriggerEvent::Completed, this, &APlayerCharacter::ToggleAimMode);
 		}
 	}
 }
@@ -136,59 +138,14 @@ void APlayerCharacter::Move(const FInputActionValue& Value)
 	InputAxis = Value.Get<FVector2D>();
 	LocomotionComponent->Move(InputAxis);
 
-#if false
-	if (Controller != nullptr)
-	{
-		// find out which way is forward
-		const FRotator Rotation = Controller->GetControlRotation();
-		const FRotator YawRotation(0, Rotation.Yaw, 0);
-		// get forward vector
-		const FVector ForwardDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
-		// get right vector 
-		const FVector RightDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
-		// add movement 
-		AddMovementInput(ForwardDirection, InputAxis.Y);
-		AddMovementInput(RightDirection, InputAxis.X);
-	}
-#endif
-
 }
 
-void APlayerCharacter::ToggleRotationMode(const FInputActionValue& Value)
+
+void APlayerCharacter::ToggleAimMode()
 {
-	float HoldValue = Value.Get<float>();
-
-	if (IsTargetLock())
-	{
-		return;
-	}
-
+	//float HoldValue = Value.Get<float>();
 	const auto LocomotionEssencialVariables = LocomotionComponent->GetLocomotionEssencialVariables();
-	const ELSRotationMode LSRotationMode = LocomotionEssencialVariables.LSRotationMode;
-	if (LSRotationMode == ELSRotationMode::VelocityDirection)
-	{
-		StrafeMovement();
-	}
-	else
-	{
-		VelocityMovement();
 
-		if (LocomotionEssencialVariables.bAiming)
-		{
-			LocomotionComponent->SetLSAiming(false);
-		}
-	}
-
-
-}
-
-void APlayerCharacter::ToggleAimMode(const FInputActionValue& Value)
-{
-	float HoldValue = Value.Get<float>();
-	const auto LocomotionEssencialVariables = LocomotionComponent->GetLocomotionEssencialVariables();
-	DoStartAiming();
-
-#if false
 	if (!LocomotionEssencialVariables.bAiming)
 	{
 		DoStartAiming();
@@ -197,7 +154,6 @@ void APlayerCharacter::ToggleAimMode(const FInputActionValue& Value)
 	{
 		DoStopAiming();
 	}
-#endif
 
 }
 
@@ -247,6 +203,25 @@ void APlayerCharacter::ToggleTargetLock()
 	}
 }
 
+void APlayerCharacter::ToggleRotationMode()
+{
+	if (IsTargetLock())
+	{
+		return;
+	}
+
+	const auto LocomotionEssencialVariables = LocomotionComponent->GetLocomotionEssencialVariables();
+	const ELSRotationMode LSRotationMode = LocomotionEssencialVariables.LSRotationMode;
+	if (LSRotationMode == ELSRotationMode::VelocityDirection)
+	{
+		StrafeMovement();
+	}
+	else
+	{
+		VelocityMovement();
+	}
+}
+
 void APlayerCharacter::Look(const FInputActionValue& Value)
 {
 	FVector2D LookAxisVector = Value.Get<FVector2D>();
@@ -292,7 +267,10 @@ void APlayerCharacter::GameplayTagTrigger_Callback(const FGameplayTag Tag, const
 	{
 		HandleMeleeAction(bIsPress);
 	}
-
+	else if (Tag == TAG_Character_StateAlive_Trigger)
+	{
+		HandleAliveAction(bIsPress);
+	}
 }
 
 void APlayerCharacter::OnPluralInputEventTrigger_Callback(const FGameplayTag Tag, const bool bIsPress)
@@ -305,12 +283,24 @@ void APlayerCharacter::OnPluralInputEventTrigger_Callback(const FGameplayTag Tag
 	{
 		ToggleTargetLock();
 	}
-	else if (HasFinisherAction(Tag))
+	else if (Tag == TAG_Character_ActionStrafeChange)
+	{
+		ToggleRotationMode();
+	}
+	else if (HasFinisherAction(Tag) && !Super::IsVehicleDriving())
 	{
 		HandleFinisherAction(Tag, bIsPress);
 	}
 
 	//UE_LOG(LogTemp, Log, TEXT("Tag => %s, Pressed => %s"), *Tag.ToString(), bIsPress ? TEXT("true") : TEXT("false"));
+}
+
+void APlayerCharacter::OnHoldingInputEventTrigger_Callback(const FGameplayTag Tag, const bool bIsPress)
+{
+	if (Tag == TAG_Character_ActionAimChange)
+	{
+		HandleHoldAimAction(bIsPress);
+	}
 }
 
 void APlayerCharacter::OverlayStateChange_Callback(const ELSOverlayState PrevOverlay, const ELSOverlayState CurrentOverlay)
@@ -329,15 +319,6 @@ void APlayerCharacter::OverlayStateChange_Callback(const ELSOverlayState PrevOve
 		Super::OverlayStateChange(CurrentOverlay);
 	}
 
-}
-
-bool APlayerCharacter::HasFinisherAction(const FGameplayTag Tag) const
-{
-	FGameplayTagContainer Container;
-	Container.AddTag(TAG_Weapon_Finisher);
-	Container.AddTag(TAG_Weapon_HoldUp);
-	Container.AddTag(TAG_Weapon_KnockOut);
-	return Container.HasTag(Tag);
 }
 
 void APlayerCharacter::OnTargetLockedOn_Callback(AActor* LookOnTarget, UHitTargetComponent* TargetComponent)
@@ -371,7 +352,9 @@ void APlayerCharacter::HandleSprinting(const bool bIsPress)
 		switch (LSMovementMode)
 		{
 			case ELSMovementMode::Grounded:
-			Super::DoSprinting();
+			{
+				Super::DoSprinting();
+			}
 			break;
 			case ELSMovementMode::WallClimbing:
 			{
@@ -396,6 +379,31 @@ void APlayerCharacter::HandleMeleeAction(const bool bIsPress)
 	}
 }
 
+void APlayerCharacter::HandleDriveAction(const bool bIsPress)
+{
+	if (bIsPress)
+	{
+		Super::HandleDriveAction();
+	}
+}
+
+void APlayerCharacter::HandleAliveAction(const bool bIsPress)
+{
+	if (bIsPress)
+	{
+		Super::BeginAliveAction();
+	}
+}
+
+void APlayerCharacter::HandleHoldAimAction(const bool bIsPress)
+{
+	if (bIsPress)
+	{
+		ToggleAimMode();
+	}
+}
+
+
 void APlayerCharacter::HandleFinisherAction(const FGameplayTag Tag, const bool bIsPress)
 {
 	if (bIsPress)
@@ -411,12 +419,13 @@ void APlayerCharacter::HandleFinisherAction(const FGameplayTag Tag, const bool b
 	}
 }
 
-void APlayerCharacter::HandleDriveAction(const bool bIsPress)
+bool APlayerCharacter::HasFinisherAction(const FGameplayTag Tag) const
 {
-	if (bIsPress)
-	{
-		Super::HandleDriveAction();
-	}
+	FGameplayTagContainer Container;
+	Container.AddTag(TAG_Weapon_Finisher);
+	Container.AddTag(TAG_Weapon_HoldUp);
+	Container.AddTag(TAG_Weapon_KnockOut);
+	return Container.HasTag(Tag);
 }
 
 #pragma region Input

@@ -40,6 +40,17 @@ void UWvAbility_Melee::ActivateAbility(const FGameplayAbilitySpecHandle Handle, 
 		return;
 	}
 
+	if (Character->IsTargetLock())
+	{
+		// default weight
+		constexpr float Weight = 1.0f;
+		Character->CalcurateNearlestTarget(Weight);
+	}
+	else
+	{
+		Character->ResetNearlestTarget();
+	}
+
 	if (MontageTask)
 	{
 		MontageTask->OnCompleted.Clear();
@@ -53,12 +64,7 @@ void UWvAbility_Melee::ActivateAbility(const FGameplayAbilitySpecHandle Handle, 
 		FName("Melee"),
 		Montage,
 		FGameplayTagContainer(),
-		1.0,
-		0.f,
-		FName("Default"),
-		true,
-		1.0f);
-
+		1.0, 0.f, FName("Default"), true, 1.0f);
 
 	MontageTask->OnCancelled.AddDynamic(this, &UWvAbility_Melee::OnPlayMontageCompleted_Event);
 	MontageTask->OnInterrupted.AddDynamic(this, &UWvAbility_Melee::OnPlayMontageCompleted_Event);

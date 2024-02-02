@@ -100,6 +100,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = AI)
 	const bool HandleAttackPawnPrepare();
 
+	UFUNCTION(BlueprintCallable, Category = AI)
+	void HandleTargetState();
+
 	void ClearSearchNodeHolders();
 	void SetBlackboardDead(const bool IsDead);
 
@@ -115,6 +118,7 @@ public:
 	bool IsInDeadFriendAgent(const AActor& Other) const;
 	bool IsLeaderAgent(const AActor& Other) const;
 	bool IsFriendCombatSupport(const ABaseCharacter* OtherCharacter, AActor* &OutTarget) const;
+	bool IsInEnemyTargetDead() const;
 
 	void DoSearchEnemyState(AActor* Actor, FVector OverridePosition = FVector::ZeroVector);
 	void DoCombatEnemyState(AActor* Actor);

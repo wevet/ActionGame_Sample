@@ -31,6 +31,9 @@ public:
 	float GetHealthToWidget() const;
 	bool IsHealthHalf() const;
 
+	void DoAlive();
+	void DoKill();
+
 protected:
 	virtual void BeginPlay() override;
 

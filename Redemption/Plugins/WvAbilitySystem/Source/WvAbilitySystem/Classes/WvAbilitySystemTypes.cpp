@@ -31,6 +31,14 @@ UE_DEFINE_GAMEPLAY_TAG(TAG_Character_StateHitReact, "Character.State.HitReact");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Character_StateDead, "Character.State.Dead");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Character_StateDead_Action, "Character.State.Dead.Action");
 
+// Alive
+// ability playing added owner tag
+UE_DEFINE_GAMEPLAY_TAG(TAG_Character_StateAlive, "Character.State.Alive");
+// ability trigger tag
+UE_DEFINE_GAMEPLAY_TAG(TAG_Character_StateAlive_Action, "Character.State.Alive.Action");
+// player input trigger tag
+UE_DEFINE_GAMEPLAY_TAG(TAG_Character_StateAlive_Trigger, "Character.State.Alive.Trigger");
+
 // Damage
 UE_DEFINE_GAMEPLAY_TAG(TAG_Character_DamageBlock, "Character.Damage.Block");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Character_DamageKill, "Character.Damage.Kill");

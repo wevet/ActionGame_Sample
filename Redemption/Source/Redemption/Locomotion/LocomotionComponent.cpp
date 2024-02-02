@@ -5,6 +5,7 @@
 #include "Ability/WvAbilitySystemComponent.h"
 #include "Component/WvCharacterMovementComponent.h"
 #include "Component/HitTargetComponent.h"
+#include "Redemption.h"
 
 #include "Components/CapsuleComponent.h"
 #include "AbilitySystemInterface.h"
@@ -631,36 +632,52 @@ void ULocomotionComponent::SprintCheck()
 void ULocomotionComponent::StartRagdollAction()
 {
 	Character->SetReplicateMovement(false);
+
+	// Step 1: Clear the Character Movement Mode and set teh Movement State to Ragdoll
 	CharacterMovementComponent->SetMovementMode(EMovementMode::MOVE_None);
-	//SkeletalMeshComponent->SetCollisionEnabled(ECollisionEnabled::PhysicsOnly);
-	//SkeletalMeshComponent->SetCollisionProfileName(FName(TEXT("Ragdoll")));
-	SkeletalMeshComponent->SetAllBodiesBelowSimulatePhysics(PelvisBoneName, true);
-	//SkeletalMeshComponent->WakeAllRigidBodies();
-	SkeletalMeshComponent->bBlendPhysics = 1;
-	SkeletalMeshComponent->bIgnoreRadialForce = 1;
-	SkeletalMeshComponent->bIgnoreRadialImpulse = 1;
+	ILocomotionInterface::Execute_SetLSMovementMode(this, ELSMovementMode::Ragdoll);
+
+	// Step 2: Disable capsule collision and enable mesh physics simulation starting from the pelvis.
 	CapsuleComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+	if (!Character->IsBotCharacter())
+	{
+		//SkeletalMeshComponent->SetCollisionObjectType(ECollisionChannel::ECC_PhysicsBody);
+	}
+	SkeletalMeshComponent->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+	SkeletalMeshComponent->SetAllBodiesBelowSimulatePhysics(PelvisBoneName, true, true);
+
+	//SkeletalMeshComponent->WakeAllRigidBodies();
+	//SkeletalMeshComponent->bBlendPhysics = 1;
+	//SkeletalMeshComponent->bIgnoreRadialForce = 1;
+	//SkeletalMeshComponent->bIgnoreRadialImpulse = 1;
+
 }
 
 void ULocomotionComponent::StopRagdollAction()
 {
 	Character->SetReplicateMovement(true);
+	Character->WakeUpPoseSnapShot();
 
 	CharacterMovementComponent->SetMovementMode(LocomotionEssencialVariables.bRagdollOnGround ? EMovementMode::MOVE_Walking : EMovementMode::MOVE_Falling);
 	CharacterMovementComponent->Velocity = LocomotionEssencialVariables.RagdollVelocity;
-	//ILocomotionSystemPawn::Execute_PoseSnapShot(GetAnimInstance(), RagdollPoseSnapshot);
 
+	CapsuleComponent->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+	//SkeletalMeshComponent->SetCollisionObjectType(ECollisionChannel::ECC_Pawn);
+	SkeletalMeshComponent->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+	SkeletalMeshComponent->SetAllBodiesSimulatePhysics(false);
+}
+
+bool ULocomotionComponent::IsRagdollingGetUpFront() const
+{
 	if (LocomotionEssencialVariables.bRagdollOnGround)
 	{
 		const FRotator Rotation = SkeletalMeshComponent->GetSocketRotation(PelvisBoneName);
-		const bool bGetUpFront = (Rotation.Roll > 0.0f) ? true : false;
 		UE_LOG(LogTemp, Log, TEXT("Rotation %s"), *Rotation.ToString());
-		//ILocomotionSystemPawn::Execute_SetGetup(GetAnimInstance(), bGetUpFront);
+		return (Rotation.Roll > 0.0f);
 	}
+	return false;
 
-	CapsuleComponent->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
-	SkeletalMeshComponent->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
-	SkeletalMeshComponent->SetAllBodiesSimulatePhysics(false);
 }
 
 void ULocomotionComponent::DoWhileRagdolling()

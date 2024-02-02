@@ -27,6 +27,9 @@ REDEMPTION_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Character_ActionMelee_Forbid);
 // MeleeActionHold
 REDEMPTION_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Character_ActionMelee_Hold);
 
+REDEMPTION_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Character_ActionStrafeChange);
+REDEMPTION_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Character_ActionAimChange);
+
 // JumpAction
 REDEMPTION_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Character_ActionJump);
 REDEMPTION_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Character_ActionJump_Forbid);
@@ -122,5 +125,10 @@ REDEMPTION_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Vehicle_State_Drive); // curre
 
 #define NEARLEST_TARGET_SYNC_POINT FName(TEXT("NearlestTarget"))
 #define FINISHER_TARGET_SYNC_POINT FName(TEXT("FinisherTarget"))
+
+/*
+* project custom collision preset
+*/
+#define K_CHARACTER_COLLISION_PRESET FName(TEXT("BaseCharacter"))
 
 

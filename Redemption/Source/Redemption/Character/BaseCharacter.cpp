@@ -19,6 +19,7 @@
 #include "Game/WvGameInstance.h"
 #include "Vehicle/WvWheeledVehiclePawn.h"
 #include "Item/BulletHoldWeaponActor.h"
+#include "GameExtension.h"
 
 #include "Components/CapsuleComponent.h"
 #include "Components/InputComponent.h"
@@ -44,6 +45,7 @@
 #include "UObject/UObjectBaseUtility.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "Kismet/KismetSystemLibrary.h"
+#include "Kismet/GameplayStatics.h"
 #include "Animation/AnimInstance.h"
 #include "Perception/AISense_Hearing.h"
 #include "Perception/AISense_Prediction.h"
@@ -173,6 +175,9 @@ ABaseCharacter::ABaseCharacter(const FObjectInitializer& ObjectInitializer)
 	// sets Damage
 	WvMeshComp->SetCollisionResponseToChannel(ECollisionChannel::ECC_GameTraceChannel3, ECollisionResponse::ECR_Block);
 	WvMeshComp->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+
+	// custom collision preset
+	WvMeshComp->SetCollisionProfileName(K_CHARACTER_COLLISION_PRESET);
 }
 
 void ABaseCharacter::BeginPlay()
@@ -867,7 +872,7 @@ void ABaseCharacter::DoStopCrouch()
 
 void ABaseCharacter::DoStartAiming()
 {
-	StrafeMovement();
+	//StrafeMovement();
 	DoWalking();
 	LocomotionComponent->SetLSAiming(true);
 
@@ -879,6 +884,8 @@ void ABaseCharacter::DoStartAiming()
 
 void ABaseCharacter::DoStopAiming()
 {
+	//StrafeMovement();
+	DoStopWalking();
 	LocomotionComponent->SetLSAiming(false);
 
 	if (AimingChangeDelegate.IsBound())
@@ -912,17 +919,23 @@ void ABaseCharacter::HandleCrouchAction(const bool bCanCrouch)
 	}
 }
 
-void ABaseCharacter::HandleGuardAction(const bool bGuardEnable)
+void ABaseCharacter::HandleGuardAction(const bool bGuardEnable, bool& OutResult)
 {
 	if (bGuardEnable)
 	{
 		if (!WvAbilitySystemComponent->HasMatchingGameplayTag(TAG_Character_DamageBlock))
+		{
 			WvAbilitySystemComponent->AddGameplayTag(TAG_Character_DamageBlock, 1);
+			OutResult = true;
+		}
 	}
 	else
 	{
 		if (WvAbilitySystemComponent->HasMatchingGameplayTag(TAG_Character_DamageBlock))
+		{
 			WvAbilitySystemComponent->RemoveGameplayTag(TAG_Character_DamageBlock, 1);
+			OutResult = true;
+		}
 	}
 }
 #pragma endregion
@@ -1027,24 +1040,53 @@ void ABaseCharacter::EndDeathAction_Callback()
 {
 	if (IsBotCharacter())
 	{
-		//SetReplicateMovement(false);
-		//SetActorTickEnabled(false);
 
-		//TearOff();
-		//GetCharacterMovement()->StopMovementImmediately();
-		//GetCharacterMovement()->DisableMovement();
-		//GetCharacterMovement()->SetComponentTickEnabled(false);
 	}
-
 	LocomotionComponent->StartRagdollAction();
-	ILocomotionInterface::Execute_SetLSMovementMode(LocomotionComponent, ELSMovementMode::Ragdoll);
+}
 
-	if (IsBotCharacter())
+void ABaseCharacter::BeginAliveAction()
+{
+	//LocomotionComponent->StopRagdollAction();
+
+	if (IsDead())
 	{
-		//DetachFromControllerPendingDestroy();
-		//Super::SetLifeSpan(DEFAULT_LIFESPAN);
+		WvAbilitySystemComponent->TryActivateAbilityByTag(TAG_Character_StateAlive_Action);
+		if (!bIsCrouched)
+		{
+			DoStartCrouch();
+		}
 	}
-	UE_LOG(LogTemp, Log, TEXT("Owner => %s, function => %s"), *GetName(), *FString(__FUNCTION__));
+}
+
+void ABaseCharacter::EndAliveAction()
+{
+	WvAbilitySystemComponent->RemoveGameplayTag(TAG_Character_StateDead, 1);
+	WvAbilitySystemComponent->RemoveGameplayTag(TAG_Locomotion_ForbidMovement, 1);
+	StatusComponent->DoAlive();
+}
+
+void ABaseCharacter::DoForceKill()
+{
+	auto Pawn = Game::ControllerExtension::GetPlayerPawn(GetWorld(), 0);
+
+	const float KillDamage = StatusComponent->GetKillDamage();
+	//OnReceiveKillTarget(Pawn, StatusComponent->GetKillDamage());
+	//StatusComponent->DoKill();
+
+	FGameplayEffectContextHandle Context;
+
+	FGameplayEventData Payload{};
+	Payload.ContextHandle = Context;
+	Payload.Instigator = this;
+	Payload.Target = Pawn;
+	Payload.EventMagnitude = KillDamage;
+	WvAbilitySystemComponent->HandleGameplayEvent(TAG_Common_PassiveAbilityTrigger_KillReact, &Payload);
+}
+
+void ABaseCharacter::WakeUpPoseSnapShot()
+{
+	AnimInstance->WakeUpPoseSnapShot();
 }
 
 void ABaseCharacter::OverlayStateChange(const ELSOverlayState CurrentOverlay)
@@ -1052,19 +1094,23 @@ void ABaseCharacter::OverlayStateChange(const ELSOverlayState CurrentOverlay)
 	if (!IsValid(OverlayAnimDAInstance))
 	{
 		OnLoadOverlayABP();
-		return;
 	}
 
-	auto AnimInstanceClass = OverlayAnimDAInstance->FindAnimInstance(CurrentOverlay);
-	if (AnimInstanceClass)
+
+	if (IsValid(OverlayAnimDAInstance))
 	{
-		AnimInstance->LinkAnimClassLayers(AnimInstanceClass);
+		auto AnimInstanceClass = OverlayAnimDAInstance->FindAnimInstance(CurrentOverlay);
+		if (AnimInstanceClass)
+		{
+			AnimInstance->LinkAnimClassLayers(AnimInstanceClass);
+		}
+
+		if (OverlayChangeDelegate.IsBound())
+		{
+			OverlayChangeDelegate.Broadcast(CurrentOverlay);
+		}
 	}
 
-	if (OverlayChangeDelegate.IsBound())
-	{
-		OverlayChangeDelegate.Broadcast(CurrentOverlay);
-	}
 }
 
 bool ABaseCharacter::IsTargetLock() const
@@ -1168,6 +1214,19 @@ void ABaseCharacter::StopRVOAvoidance()
 }
 #pragma endregion
 
+void ABaseCharacter::DrawActionState()
+{
+	if (IsDead())
+	{
+		return;
+	}
+	const FString CurStateName = *FString::Format(TEXT("{0}"), { *GETENUMSTRING("/Script/WvAbilitySystem.EAIActionState", AIActionState) });
+	auto ActorLoc = GetActorLocation();
+	ActorLoc.Z += GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight();
+	UKismetSystemLibrary::DrawDebugString(GetWorld(), ActorLoc, CurStateName, nullptr, FColor::Red, 0.f);
+
+}
+
 void ABaseCharacter::OnRoationChange_Callback()
 {
 	//
@@ -1235,18 +1294,29 @@ bool ABaseCharacter::IsHealthHalf() const
 }
 
 #pragma region NearlestAction
-void ABaseCharacter::FindNearlestTarget(const FAttackMotionWarpingData AttackMotionWarpingData)
+/// <summary>
+/// call to melee ability
+/// </summary>
+/// <param name="SyncPointWeight"></param>
+void ABaseCharacter::CalcurateNearlestTarget(const float SyncPointWeight)
 {
-	auto Target = FindNearlestTarget(AttackMotionWarpingData.NearlestDistance, AttackMotionWarpingData.AngleThreshold, false);
-	if (!Target)
+	const FLocomotionEssencialVariables LocomotionEssencial = LocomotionComponent->GetLocomotionEssencialVariables();
+	if (LocomotionEssencial.LookAtTarget.IsValid())
 	{
-		UE_LOG(LogTemp, Warning, TEXT("not found FindNearlestTarget => %s"), *FString(__FUNCTION__));
-		return;
+		FindNearlestTarget(LocomotionEssencial.LookAtTarget.Get(), SyncPointWeight);
 	}
+}
 
+void ABaseCharacter::ResetNearlestTarget()
+{
+	MotionWarpingComponent->RemoveWarpTarget(NEARLEST_TARGET_SYNC_POINT);
+}
+
+void ABaseCharacter::FindNearlestTarget(AActor* Target, const float SyncPointWeight)
+{
 	const FVector From = GetActorLocation();
 	const FVector To = Target->GetActorLocation();
-	const float Weight = AttackMotionWarpingData.TargetSyncPointWeight;
+	const float Weight = SyncPointWeight;
 	MotionWarpingComponent->RemoveWarpTarget(NEARLEST_TARGET_SYNC_POINT);
 	const FRotator TargetLookAt = UKismetMathLibrary::FindLookAtRotation(From, To);
 
@@ -1257,12 +1327,24 @@ void ABaseCharacter::FindNearlestTarget(const FAttackMotionWarpingData AttackMot
 	WarpingTarget.Rotation = FRotator(0.f, Rotation.Yaw, 0.f);
 	MotionWarpingComponent->AddOrUpdateWarpTarget(WarpingTarget);
 
-//#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
+	//#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
 #if false
 	DrawDebugSphere(GetWorld(), From, 20.f, 12, FColor::Blue, false, 2);
 	DrawDebugSphere(GetWorld(), To, 20.f, 12, FColor::Blue, false, 2);
 	DrawDebugDirectionalArrow(GetWorld(), From, To, 20.f, FColor::Red, false, 2);
 #endif
+}
+
+void ABaseCharacter::FindNearlestTarget(const FAttackMotionWarpingData AttackMotionWarpingData)
+{
+	auto Target = FindNearlestTarget(AttackMotionWarpingData.NearlestDistance, AttackMotionWarpingData.AngleThreshold, false);
+	if (!Target)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("not found FindNearlestTarget => %s"), *FString(__FUNCTION__));
+		return;
+	}
+	
+	FindNearlestTarget(Target, AttackMotionWarpingData.TargetSyncPointWeight);
 
 }
 
@@ -1356,7 +1438,7 @@ const bool ABaseCharacter::CanFiniherSender()
 {
 	if (!IsValid(FinisherSender))
 	{
-		OnLoadFinisherSender();
+		OnLoadFinisherAssets();
 		return false;
 	}
 	return true;
@@ -1366,7 +1448,7 @@ const bool ABaseCharacter::CanFiniherReceiver()
 {
 	if (!IsValid(FinisherReceiner))
 	{
-		OnLoadFinisherReceiver();
+		OnLoadFinisherAssets();
 		return false;
 	}
 	return true;
@@ -1524,31 +1606,19 @@ FRequestAbilityAnimationData ABaseCharacter::GetFinisherAnimationData() const
 #pragma endregion
 
 #pragma region AsyncLoad
+/// <summary>
+/// Finisher Assets & ABP Asyncload
+/// </summary>
 void ABaseCharacter::RequestAsyncLoad()
 {
-	OnABPAnimAssetLoad();
-	OnFinisherAnimAssetLoad();
-}
+	FStreamableManager& StreamableManager = UWvGameInstance::GetStreamableManager();
 
-void ABaseCharacter::OnABPAnimAssetLoad()
-{
 	if (OverlayAnimInstanceDA.IsValid())
 	{
-		FStreamableManager& StreamableManager = UWvGameInstance::GetStreamableManager();
 		const FSoftObjectPath ObjectPath = OverlayAnimInstanceDA.ToSoftObjectPath();
 		ABPStreamableHandle = StreamableManager.RequestAsyncLoad(ObjectPath, FStreamableDelegate::CreateUObject(this, &ThisClass::OnABPAnimAssetLoadComplete));
 	}
-}
 
-void ABaseCharacter::OnABPAnimAssetLoadComplete()
-{
-	OnLoadOverlayABP();
-	ABPStreamableHandle.Reset();
-}
-
-void ABaseCharacter::OnFinisherAnimAssetLoad()
-{
-	FStreamableManager& StreamableManager = UWvGameInstance::GetStreamableManager();
 	TArray<FSoftObjectPath> Paths;
 	for (TPair<FGameplayTag, TSoftObjectPtr<UFinisherDataAsset>>Pair : FinisherDAList)
 	{
@@ -1559,50 +1629,14 @@ void ABaseCharacter::OnFinisherAnimAssetLoad()
 		Paths.Add(Pair.Value.ToSoftObjectPath());
 	}
 	FinisherStreamableHandle = StreamableManager.RequestAsyncLoad(Paths, FStreamableDelegate::CreateUObject(this, &ThisClass::OnFinisherAnimAssetLoadComplete));
+
 }
 
-void ABaseCharacter::OnFinisherAnimAssetLoadComplete()
+
+void ABaseCharacter::OnABPAnimAssetLoadComplete()
 {
-	OnLoadFinisherSender();
-	OnLoadFinisherReceiver();
-	FinisherStreamableHandle.Reset();
-}
-
-void ABaseCharacter::OnLoadFinisherSender()
-{
-	if (FinisherDAList.Contains(TAG_Weapon_Finisher_Sender))
-	{
-		bool bIsResult = false;
-		do
-		{
-			FinisherSender = FinisherDAList[TAG_Weapon_Finisher_Sender].LoadSynchronous();
-			if (IsValid(FinisherSender))
-			{
-				bIsResult = true;
-			}
-		} while (!bIsResult);
-
-		UE_LOG(LogTemp, Log, TEXT("Complete => [%s]"), *FString(__FUNCTION__));
-	}	
-}
-
-void ABaseCharacter::OnLoadFinisherReceiver()
-{
-	if (FinisherDAList.Contains(TAG_Weapon_Finisher_Receiver))
-	{
-		bool bIsResult = false;
-		do
-		{
-			FinisherReceiner = FinisherDAList[TAG_Weapon_Finisher_Receiver].LoadSynchronous();
-			if (IsValid(FinisherReceiner))
-			{
-				bIsResult = true;
-			}
-		} while (!bIsResult);
-
-		UE_LOG(LogTemp, Log, TEXT("Complete => [%s]"), *FString(__FUNCTION__));
-	}
-	
+	OnLoadOverlayABP();
+	ABPStreamableHandle.Reset();
 }
 
 void ABaseCharacter::OnLoadOverlayABP()
@@ -1611,13 +1645,49 @@ void ABaseCharacter::OnLoadOverlayABP()
 	do
 	{
 		OverlayAnimDAInstance = OverlayAnimInstanceDA.LoadSynchronous();
-		if (IsValid(OverlayAnimDAInstance))
-		{
-			bIsResult = true;
-		}
-	} while (!bIsResult);
+		bIsResult = (IsValid(OverlayAnimDAInstance));
 
-	UE_LOG(LogTemp, Log, TEXT("Complete => [%s]"), *FString(__FUNCTION__));
+	} while (!bIsResult);
+	//UE_LOG(LogTemp, Log, TEXT("Complete => [%s]"), *FString(__FUNCTION__));
+}
+
+void ABaseCharacter::OnFinisherAnimAssetLoadComplete()
+{
+	OnLoadFinisherAssets();
+	FinisherStreamableHandle.Reset();
+}
+
+void ABaseCharacter::OnLoadFinisherAssets()
+{
+	if (!IsValid(FinisherSender))
+	{
+		if (FinisherDAList.Contains(TAG_Weapon_Finisher_Sender))
+		{
+			bool bIsResult = false;
+			do
+			{
+				FinisherSender = FinisherDAList[TAG_Weapon_Finisher_Sender].LoadSynchronous();
+				bIsResult = (IsValid(FinisherSender));
+
+			} while (!bIsResult);
+			//UE_LOG(LogTemp, Log, TEXT("Complete => [%s]"), *FString(__FUNCTION__));
+		}
+	}
+
+	if (!IsValid(FinisherReceiner))
+	{
+		if (FinisherDAList.Contains(TAG_Weapon_Finisher_Receiver))
+		{
+			bool bIsResult = false;
+			do
+			{
+				FinisherReceiner = FinisherDAList[TAG_Weapon_Finisher_Receiver].LoadSynchronous();
+				bIsResult = (IsValid(FinisherReceiner));
+
+			} while (!bIsResult);
+			//UE_LOG(LogTemp, Log, TEXT("Complete => [%s]"), *FString(__FUNCTION__));
+		}
+	}
 
 }
 #pragma endregion

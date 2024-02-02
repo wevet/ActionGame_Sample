@@ -159,4 +159,27 @@ void UCharacterInstanceSubsystem::GeneratorSpawnedFinish()
 {
 }
 
+void UCharacterInstanceSubsystem::DoForceKill(bool bFindWorldActorIterator/* = false*/)
+{
+	if (bFindWorldActorIterator)
+	{
+		TArray<ABaseCharacter*> Array;
+		WorldCharacterIterator(Array);
+		Characters += Array;
+
+		Characters.RemoveAll([](ABaseCharacter* Character)
+		{
+			return IsValid(Character) == false;
+		});
+	}
+
+	for (ABaseCharacter* Character : Characters)
+	{
+		if (IsValid(Character))
+		{
+			Character->DoForceKill();
+		}
+	}
+}
+
 

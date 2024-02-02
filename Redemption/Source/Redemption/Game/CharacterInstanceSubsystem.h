@@ -30,6 +30,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = CharacterInstanceSubsystem)
 	void UnFreezeAlCharacters(bool bFindWorldActorIterator = false);
 
+	UFUNCTION(BlueprintCallable, Category = CharacterInstanceSubsystem)
+	void DoForceKill(bool bFindWorldActorIterator = false);
+
 	void WorldCharacterIterator(TArray<class ABaseCharacter*>& OutCharacterArray);
 
 	void AssignAICharacter(ABaseCharacter* NewCharacter);

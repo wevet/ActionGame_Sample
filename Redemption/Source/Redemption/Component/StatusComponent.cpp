@@ -111,4 +111,20 @@ float UStatusComponent::GetVigilance() const
 	return 0.f;
 }
 
+void UStatusComponent::DoAlive()
+{
+	if (AAS.IsValid())
+	{
+		AAS->SetHP(AAS->GetHPMax());
+	}
+}
+
+void UStatusComponent::DoKill()
+{
+	if (AAS.IsValid())
+	{
+		AAS->SetHP(0);
+	}
+}
+
 

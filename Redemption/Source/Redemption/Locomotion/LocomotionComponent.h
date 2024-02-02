@@ -292,8 +292,14 @@ public:
 	const UWvAbilitySystemComponent* FindAbilitySystemComponent();
 	UAnimMontage* GetCurrentMontage() const;
 
+	UFUNCTION(BlueprintCallable, Category = Ragdoll)
 	void StartRagdollAction();
+
+	UFUNCTION(BlueprintCallable, Category = Ragdoll)
 	void StopRagdollAction();
+
+	UFUNCTION(BlueprintCallable, Category = Ragdoll)
+	bool IsRagdollingGetUpFront() const;
 
 private:
 	void OnMovementModeChange();

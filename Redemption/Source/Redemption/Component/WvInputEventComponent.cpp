@@ -551,7 +551,7 @@ void UWvInputEventComponent::PluralInputCallBack(const FKey InputKey, const FNam
 				bIsValid = true;
 			}
 
-			UE_LOG(LogTemp, Log, TEXT("CurTick - LastTick => %d, CLICK_INTERVAL => %d"), CurTick - LastTick, CLICK_INTERVAL);
+			//UE_LOG(LogTemp, Log, TEXT("CurTick - LastTick => %d, CLICK_INTERVAL => %d"), CurTick - LastTick, CLICK_INTERVAL);
 		}
 	}
 	else if (TriggerInputEventType == EWvInputEventType::HoldPressed)
@@ -561,7 +561,7 @@ void UWvInputEventComponent::PluralInputCallBack(const FKey InputKey, const FNam
 			IECallbackInfo->OnPressed(GetWorld());
 			IECallbackInfo->EventTag = InputEvent->EventTag;
 			IECallbackInfo->IsPress = true;
-			IECallbackInfo->OnHoldingCallback.AddDynamic(this, &ThisClass::PluralInputCallBackExecute);
+			IECallbackInfo->OnHoldingCallback.AddDynamic(this, &ThisClass::OnHoldingInputCallBackExecute);
 			CachePluralInputArray.AddUnique(IECallbackInfo);
 			return;
 		}
@@ -569,7 +569,7 @@ void UWvInputEventComponent::PluralInputCallBack(const FKey InputKey, const FNam
 		{
 			bIsValid = true;
 			IECallbackInfo->OnReleased();
-			IECallbackInfo->OnHoldingCallback.RemoveDynamic(this, &ThisClass::PluralInputCallBackExecute);
+			IECallbackInfo->OnHoldingCallback.RemoveDynamic(this, &ThisClass::OnHoldingInputCallBackExecute);
 			CachePluralInputArray.Remove(IECallbackInfo);
 		}
 	}
@@ -599,6 +599,18 @@ void UWvInputEventComponent::PluralInputCallBackExecute(FGameplayTag EventTag, b
 	//ASC->PluralInputTriggerInputEvent(EventTag);
 	ASC->TryActivateAbilityByTag(EventTag);
 	PlayerController->OnPluralInputEventTrigger.Broadcast(EventTag, bPress);
+}
+
+void UWvInputEventComponent::OnHoldingInputCallBackExecute(FGameplayTag EventTag, bool bPress)
+{
+	if (!PlayerController.Get() || !ASC.Get())
+	{
+		return;
+	}
+
+	//ASC->PluralInputTriggerInputEvent(EventTag);
+	ASC->TryActivateAbilityByTag(EventTag);
+	PlayerController->OnHoldingInputEventTrigger.Broadcast(EventTag, bPress);
 }
 
 void UWvInputEventComponent::UpdateCachePluralInput()

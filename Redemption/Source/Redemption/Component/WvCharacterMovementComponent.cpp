@@ -2199,7 +2199,13 @@ bool UWvCharacterMovementComponent::CanStartClimbing()
 
 		if (!GetWallWidth(Hit))
 		{
-			UE_LOG(LogTemp, Warning, TEXT("Object cannot be climbed because its width is smaller than CapsuleRadius..."));
+#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
+			if (CVarDebugWallClimbingSystem.GetValueOnGameThread() > 0)
+			{
+				UE_LOG(LogTemp, Warning, TEXT("Object cannot be climbed because its width is smaller than CapsuleRadius..."));
+			}
+#endif
+
 			continue;
 		}
 
@@ -2511,11 +2517,9 @@ bool UWvCharacterMovementComponent::CheckFloor(FHitResult& FloorHit) const
 	const FVector EndLocation = StartLocation + FVector::DownVector * ClimbingDataAsset->FloorCheckDistance;
 
 #if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
-	UKismetSystemLibrary::DrawDebugLine(GetWorld(), StartLocation, EndLocation, FLinearColor::Gray, 1.0f, 1.0f);
-
 	if (CVarDebugWallClimbingSystem.GetValueOnGameThread() > 0)
 	{
-
+		UKismetSystemLibrary::DrawDebugLine(GetWorld(), StartLocation, EndLocation, FLinearColor::Gray, 1.0f, 1.0f);
 	}
 #endif
 
@@ -2543,12 +2547,10 @@ const bool UWvCharacterMovementComponent::CanMoveToLedgeClimbLocation()
 		FQuat::Identity, /*ClimbingDataAsset->ClimbTraceChannel*/ ECC_WorldStatic, Capsule->GetCollisionShape(), ClimbQueryParams);
 
 #if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
-	UKismetSystemLibrary::DrawDebugLine(GetWorld(), UpdatedComponent->GetComponentLocation(), CapsuleStartCheck, FLinearColor::Red, 4.0f, 1.0f);
-	UKismetSystemLibrary::DrawDebugLine(GetWorld(), CapsuleStartCheck, CheckEndLocation, FLinearColor::Red, 4.0f, 1.0f);
-
 	if (CVarDebugWallClimbingSystem.GetValueOnGameThread() > 0)
 	{
-
+		UKismetSystemLibrary::DrawDebugLine(GetWorld(), UpdatedComponent->GetComponentLocation(), CapsuleStartCheck, FLinearColor::Red, 4.0f, 1.0f);
+		UKismetSystemLibrary::DrawDebugLine(GetWorld(), CapsuleStartCheck, CheckEndLocation, FLinearColor::Red, 4.0f, 1.0f);
 	}
 #endif
 
@@ -2574,25 +2576,35 @@ const bool UWvCharacterMovementComponent::IsLocationWalkable(const FVector& Chec
 
 	if (!IsWalkable(LedgeHit))
 	{
-		UE_LOG(LogTemp, Log, TEXT("TraceHitData holds data that cannot be walked. => %s"), *FString(__FUNCTION__));
+#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
+		if (CVarDebugWallClimbingSystem.GetValueOnGameThread() > 0)
+		{
+			UE_LOG(LogTemp, Log, TEXT("TraceHitData holds data that cannot be walked. => %s"), *FString(__FUNCTION__));
+		}
+#endif
+
 		return false;
 	}
 
 	if (SlopeAngle >= GetWalkableFloorAngle())
 	{
-		UE_LOG(LogTemp, Log, TEXT("The slope exceeds a certain value. SlopeAngle => %.3f, GetWalkableFloorAngle => %.3f"), SlopeAngle, GetWalkableFloorAngle());
+#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
+		if (CVarDebugWallClimbingSystem.GetValueOnGameThread() > 0)
+		{
+			UE_LOG(LogTemp, Log, TEXT("The slope exceeds a certain value. SlopeAngle => %.3f, GetWalkableFloorAngle => %.3f"), SlopeAngle, GetWalkableFloorAngle());
+		}
+#endif
 		return false;
 	}
 
 	const bool bHitResult = (bHitLedgeGround && LedgeHit.Normal.Z >= GetWalkableFloorZ());
 
 #if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
-	const float Radius = CharacterOwner->GetCapsuleComponent()->GetUnscaledCapsuleRadius();
-	const FRotator Rot = UpdatedComponent->GetComponentRotation();
-	UKismetSystemLibrary::DrawDebugCapsule(GetWorld(), LedgeHit.ImpactPoint, InitUnScaledCapsuleHalfHeight, Radius, Rot, FLinearColor::Red, 4.0f, 1.0f);
 	if (CVarDebugWallClimbingSystem.GetValueOnGameThread() > 0)
 	{
-
+		const float Radius = CharacterOwner->GetCapsuleComponent()->GetUnscaledCapsuleRadius();
+		const FRotator Rot = UpdatedComponent->GetComponentRotation();
+		UKismetSystemLibrary::DrawDebugCapsule(GetWorld(), LedgeHit.ImpactPoint, InitUnScaledCapsuleHalfHeight, Radius, Rot, FLinearColor::Red, 4.0f, 1.0f);
 	}
 #endif
 

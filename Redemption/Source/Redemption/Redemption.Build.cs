@@ -24,6 +24,7 @@ public class Redemption : ModuleRules
 				"GameplayTasks",
 				"GameplayAbilities",
 				"AIModule",
+				"NavigationSystem",
 				"PhysicsCore",
 				"DataRegistry",
 				"ReplicationGraph",

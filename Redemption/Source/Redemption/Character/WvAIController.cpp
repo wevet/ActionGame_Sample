@@ -7,6 +7,7 @@
 #include "Redemption.h"
 #include "Component/CombatComponent.h"
 
+#include "Components/CapsuleComponent.h"
 #include "Ability/WvAbilitySystemComponent.h"
 #include "AbilitySystemGlobals.h"
 #include "Engine/World.h"
@@ -16,8 +17,13 @@
 #include "NavigationPath.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Kismet/KismetMathLibrary.h"
+#include "NavigationSystem.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(WvAIController)
+
+#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
+static TAutoConsoleVariable<int32> CVarDebugCharacterBehaviorTree(TEXT("wv.DebugCharacterBehaviorTree"), 0, TEXT("CharacterBehaviorTree debug system\n") TEXT("<=0: Debug off\n") TEXT(">=1: Debug on\n"), ECVF_Default);
+#endif
 
 AWvAIController::AWvAIController(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
@@ -72,6 +78,13 @@ void AWvAIController::BeginPlay()
 void AWvAIController::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+
+#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
+	if (CVarDebugCharacterBehaviorTree.GetValueOnGameThread() > 0)
+	{
+		BaseCharacter->DrawActionState();
+	}
+#endif
 }
 
 void AWvAIController::OnPossess(APawn* InPawn)
@@ -339,7 +352,10 @@ void AWvAIController::SetBlackboardTarget(AActor* NewTarget)
 void AWvAIController::SetBlackboardSearchNodeHolder(AActor* NewTarget)
 {
 	BlackboardComponent->SetValueAsObject(BlackboardKeyConfig.SearchNodeHolderKeyName, NewTarget);
-	Generators.Add(NewTarget);
+	if (IsValid(NewTarget))
+	{
+		Generators.Add(NewTarget);
+	}
 	SetAIActionState(IsValid(NewTarget) ? EAIActionState::Search : EAIActionState::Patrol);
 }
 
@@ -432,15 +448,22 @@ void AWvAIController::DoSearchEnemyState(AActor* Actor, FVector OverridePosition
 		return;
 	}
 
-	if (IsValid(GetBlackboardSearchNodeHolder()))
-	{
-		return;
-	}
-
 	if (!HearTask.IsRunning())
 	{
-		const FVector TargetLocation = OverridePosition.IsNearlyZero() ? CurrentStimulus.StimulusLocation : OverridePosition;
-		const FTransform Origin{ FRotator::ZeroRotator, TargetLocation, FVector::ZeroVector };
+		UNavigationSystemV1* NavSys = UNavigationSystemV1::GetCurrent(GetWorld());
+		FNavLocation EndPathLocation;
+
+		// Search range of nearest Mesh from endPoint
+		const FVector Extent(500, 500, 10000);
+
+		FVector TargetLocation = OverridePosition.IsNearlyZero() ? CurrentStimulus.StimulusLocation : OverridePosition;
+
+		// get the coordinates on the nearest nav mesh
+		NavSys->ProjectPointToNavigation(TargetLocation, EndPathLocation, Extent);
+		auto NavPath = NavSys->FindPathToLocationSynchronously(GetWorld(), GetPawn()->GetActorLocation(), EndPathLocation.Location);
+
+
+		const FTransform Origin{ FRotator::ZeroRotator, /*TargetLocation*/EndPathLocation, FVector::ZeroVector};
 		FActorSpawnParameters SpawnParams;
 		SpawnParams.Owner = BaseCharacter.Get();
 		SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
@@ -450,105 +473,126 @@ void AWvAIController::DoSearchEnemyState(AActor* Actor, FVector OverridePosition
 		SetBlackboardDestinationLocation(TargetLocation);
 		HearTask.Begin(HEAR_AGE, [this]()
 		{
-			//
+			ClearSearchNodeHolders();
+			UE_LOG(LogTemp, Log, TEXT("finish search node perception => %s"), *FString(__FUNCTION__));
 		});
-
 	}
 	else
 	{
-		// already running
+		if (!IsValid(GetBlackboardSearchNodeHolder()))
+		{
+			//HearTask.End();
+			UE_LOG(LogTemp, Log, TEXT("ended hear perception => %s"), *FString(__FUNCTION__));
+		}
+		else
+		{
+			// already running
+			UE_LOG(LogTemp, Log, TEXT("had searchnode actor.. hear running => %s"), *FString(__FUNCTION__));
+		}
+
 	}
 
 }
 
 void AWvAIController::DoCombatEnemyState(AActor* Actor)
 {
-	if (!IsValid(Actor))
+	if (IsValid(Actor))
 	{
-		return;
-	}
-
-	if (!SightTask.IsRunning())
-	{
-		SetBlackboardTarget(Actor);
-		SightTask.Begin(SIGHT_AGE, [this]()
+		if (IWvAbilityTargetInterface* ATI = Cast<IWvAbilityTargetInterface>(Actor))
 		{
-			// not hear task running and lost target is alive
-			auto LostTarget = GetBlackboardTargetAsCharacter();
-			if ((LostTarget && !LostTarget->IsDead()) && !HearTask.IsRunning())
+			if (ATI->IsDead())
+				return;
+		}
+
+		if (!SightTask.IsRunning())
+		{
+			ClearSearchNodeHolders();
+			SetBlackboardTarget(Actor);
+
+			SightTask.Begin(SIGHT_AGE, [this]()
 			{
-				DoSearchEnemyState(LostTarget, LostTarget->GetActorLocation());
-				UE_LOG(LogWvAI, Warning, TEXT("%s has lost my target and I will warn me."), *GetNameSafe(GetPawn()));
-			}
+				// not hear task running and lost target is alive
+				auto LostTarget = GetBlackboardTargetAsCharacter();
+				if ((LostTarget && !LostTarget->IsDead()) && !HearTask.IsRunning())
+				{
+					DoSearchEnemyState(LostTarget, LostTarget->GetActorLocation());
+					UE_LOG(LogWvAI, Warning, TEXT("%s has lost my target and I will warn me."), *GetNameSafe(GetPawn()));
+				}
 
-			ClearSightTaget();
-		});
-
+				ClearSightTaget();
+			});
+		}
+		else
+		{
+			// already running
+			SightTask.AddLength(SIGHT_AGE);
+		}
 	}
 	else
 	{
-		// already running
-		SightTask.AddLength(SIGHT_AGE);
+		//SetBlackboardTarget(nullptr);
 	}
+
 }
 
 void AWvAIController::DoFollowActionState(AActor* Actor)
 {
-	// once event
-	// start task
-	if (!IsValid(Actor))
+	if (IsValid(Actor))
 	{
-		return;
+		if (!FollowTask.IsRunning())
+		{
+			// if actor same group leader
+			UCombatComponent* Comp = Actor->FindComponentByClass<UCombatComponent>();
+			if (Comp)
+			{
+				if (Comp->CanFollow())
+				{
+					Comp->AddFollower(GetPawn());
+					SetBlackboardLeader(Actor);
+					SetBlackboardFollowLocation(Actor->GetActorLocation());
+					FollowTask.Begin(FOLLOW_AGE, [this]()
+					{
+
+					});
+				}
+			}
+		}
+		else
+		{
+			//UpdateFollowPoint();
+			UE_LOG(LogTemp, Log, TEXT("update follow running => %s"), *FString(__FUNCTION__));
+		}
+	}
+	else
+	{
+		//SetBlackboardLeader(nullptr);
+		//SetBlackboardFollowLocation(FVector::ZeroVector);
 	}
 
-	if (!FollowTask.IsRunning())
+
+}
+
+void AWvAIController::DoFriendlyActionState(AActor* Actor)
+{
+	if (IsValid(Actor))
 	{
-		// if actor same group leader
-		UCombatComponent* Comp = Actor->FindComponentByClass<UCombatComponent>();
-		if (Comp)
+		if (!FriendlyTask.IsRunning())
 		{
-			if (!Comp->CanFollow())
+			SetBlackboardFriend(Actor);
+			SetBlackboardFriendLocation(Actor->GetActorLocation());
+			FriendlyTask.Begin(FRIEND_AGE, [this]()
 			{
-				// stack full!
-				return;
-			}
-
-			Comp->AddFollower(GetPawn());
-			SetBlackboardLeader(Actor);
-			SetBlackboardFollowLocation(Actor->GetActorLocation());
-			FollowTask.Begin(FOLLOW_AGE, [this]()
-			{
-
+				ClearFriendlyTarget();
 			});
 		}
 	}
 	else
 	{
-		UpdateFollowPoint();
+		SetBlackboardFriend(nullptr);
+		SetBlackboardFriendLocation(FVector::ZeroVector);
 	}
 }
 
-void AWvAIController::DoFriendlyActionState(AActor* Actor)
-{
-	if (!IsValid(Actor))
-	{
-		return;
-	}
-
-	if (!FriendlyTask.IsRunning())
-	{
-		SetBlackboardFriend(Actor);
-		SetBlackboardFriendLocation(Actor->GetActorLocation());
-		FriendlyTask.Begin(FRIEND_AGE, [this]()
-		{
-			ClearFriendlyTarget();
-		});
-	}
-	else
-	{
-		// already running
-	}
-}
 
 void AWvAIController::Notify_Follow()
 {
@@ -598,6 +642,14 @@ void AWvAIController::AbortTasks(bool bIsForce /*= false*/)
 	HearTask.Abort(bIsForce);
 	FollowTask.Abort(bIsForce);
 	FriendlyTask.Abort(bIsForce);
+}
+
+void AWvAIController::HandleTargetState()
+{
+	if (IsInEnemyTargetDead())
+	{
+		OnSendKillTarget(nullptr, 0.f);
+	}
 }
 
 const bool AWvAIController::HandleAttackPawnPrepare()
@@ -671,6 +723,16 @@ bool AWvAIController::IsFriendCombatSupport(const ABaseCharacter* OtherCharacter
 	return false;
 }
 
+bool AWvAIController::IsInEnemyTargetDead() const
+{
+	auto CutTarget = GetBlackboardTarget();
+	if (IWvAbilityTargetInterface* ATI = Cast<IWvAbilityTargetInterface>(CutTarget))
+	{
+		return ATI->IsDead();
+	}
+	return false;
+}
+
 bool AWvAIController::IsSightTaskRunning() const
 {
 	return SightTask.IsRunning();
@@ -728,6 +790,10 @@ void AWvAIController::OnTargetPerceptionUpdatedRecieve(AActor* Actor, FAIStimulu
 	{
 		OnSightPerceptionUpdatedRecieve(Actor);
 	}
+	else if (CurrentSenseID == UAISense::GetSenseID(HearConfig->GetSenseImplementation()))
+	{
+		OnHearPerceptionUpdatedRecieve(Actor);
+	}
 	else if (CurrentSenseID == UAISense::GetSenseID(DamageConfig->GetSenseImplementation()))
 	{
 		OnDamagePerceptionUpdatedRecieve(Actor);
@@ -736,18 +802,6 @@ void AWvAIController::OnTargetPerceptionUpdatedRecieve(AActor* Actor, FAIStimulu
 	{
 		OnPredictionPerceptionUpdatedRecieve(Actor);
 	}
-	else
-	{
-		const bool bHearRunning = HearTask.IsRunning();
-		if (!bHearRunning)
-		{
-			if (CurrentSenseID == UAISense::GetSenseID(HearConfig->GetSenseImplementation()))
-			{
-				OnHearPerceptionUpdatedRecieve(Actor);
-			}
-		}
-	}
-
 }
 
 void AWvAIController::OnSightPerceptionUpdatedRecieve(AActor* Actor)
@@ -757,23 +811,29 @@ void AWvAIController::OnSightPerceptionUpdatedRecieve(AActor* Actor)
 	const bool bFollowRunning = FollowTask.IsRunning();
 	const bool bFriendRunning = FriendlyTask.IsRunning();
 
+	if (bSightRunning)
+	{
+		auto CutTarget = GetBlackboardTarget();
+		if (IsValid(CutTarget) && CutTarget == Actor)
+		{
+			DoCombatEnemyState(Actor);
+		}
+		return;
+	}
+
 	if (IsInEnemyAgent(*Actor))
 	{
-		if (bFollowRunning)
-		{
-			DoFollowActionState(nullptr);
-		}
 		DoCombatEnemyState(Actor);
 	}
-	else if (IsLeaderAgent(*Actor) && !bFollowRunning)
-	{
-		DoFollowActionState(Actor);
-	}
-	else if (IsInDeadFriendAgent(*Actor) && !bHearRunning)
+	else if (IsInDeadFriendAgent(*Actor))
 	{
 		DoSearchEnemyState(Actor);
 	}
-	else if (IsInFriendAgent(*Actor) && !bFriendRunning)
+	else if (IsLeaderAgent(*Actor))
+	{
+		//DoFollowActionState(Actor);
+	}
+	else if (IsInFriendAgent(*Actor))
 	{
 		//DoFriendlyActionState(Actor);
 	}
@@ -811,12 +871,7 @@ void AWvAIController::OnHearPerceptionUpdatedRecieve(AActor* Actor)
 
 void AWvAIController::OnDamagePerceptionUpdatedRecieve(AActor* Actor)
 {
-	const bool bFollowRunning = FollowTask.IsRunning();
-	if (bFollowRunning)
-	{
-		DoFollowActionState(nullptr);
-	}
-
+	ClearSearchNodeHolders();
 	DoCombatEnemyState(Actor);
 }
 
@@ -856,11 +911,17 @@ void AWvAIController::ClearSearchNodeHolders()
 		}
 	}
 
+	// cancel hear task
+	if (HearTask.IsRunning())
+	{
+		HearTask.End();
+	}
 }
 
 void AWvAIController::ClearSightTaget()
 {
 	SetBlackboardTarget(nullptr);
+
 }
 
 void AWvAIController::ClearFriendlyTarget()
