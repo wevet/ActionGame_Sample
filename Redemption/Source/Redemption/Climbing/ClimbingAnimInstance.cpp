@@ -44,7 +44,7 @@ void UClimbingAnimInstance::NativeUpdateAnimation(float DeltaTimeX)
 	SetCharacterReferences();
 
 #if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
-	static const IConsoleVariable* CVar = IConsoleManager::Get().FindConsoleVariable(TEXT("inn.ClimbingSystem.Debug"));
+	static const IConsoleVariable* CVar = IConsoleManager::Get().FindConsoleVariable(TEXT("wv.WallClimbingSystem.Debug"));
 	const int32 ConsoleValue = CVar->GetInt();
 	bDebugTrace = (ConsoleValue > 0);
 #else
@@ -83,32 +83,32 @@ void UClimbingAnimInstance::NativeThreadSafeUpdateAnimation(float DeltaTimeX)
 
 void UClimbingAnimInstance::SetCharacterReferences()
 {
-	if (!IsValid(CharacterOwner))
+	if (!IsValid(Character))
 	{
-		CharacterOwner = Cast<ACharacter>(TryGetPawnOwner());
+		Character = Cast<ACharacter>(TryGetPawnOwner());
 	}
 
-	if (!IsValid(CharacterOwner))
+	if (!IsValid(Character))
 		return;
 
 	if (!IsValid(LocomotionComponent))
 	{
-		LocomotionComponent = Cast<ULocomotionComponent>(CharacterOwner->GetComponentByClass(ULocomotionComponent::StaticClass()));
+		LocomotionComponent = Cast<ULocomotionComponent>(Character->GetComponentByClass(ULocomotionComponent::StaticClass()));
 	}
 
 	//if (!IsValid(LadderComponent))
 	//{
-	//	LadderComponent = Cast<ULadderComponent>(CharacterOwner->GetComponentByClass(ULadderComponent::StaticClass()));
+	//	LadderComponent = Cast<ULadderComponent>(Character->GetComponentByClass(ULadderComponent::StaticClass()));
 	//}
 
 	if (!IsValid(CharacterMovementComponent))
 	{
-		CharacterMovementComponent = Cast<UWvCharacterMovementComponent>(CharacterOwner->GetCharacterMovement());
+		CharacterMovementComponent = Cast<UWvCharacterMovementComponent>(Character->GetCharacterMovement());
 	}
 
 	//if (!IsValid(ClimbingComponent))
 	//{
-	//	ClimbingSystemComponent = Cast<UClimbingComponent>(CharacterOwner->GetComponentByClass(UClimbingComponent::StaticClass()));
+	//	ClimbingSystemComponent = Cast<UClimbingComponent>(Character->GetComponentByClass(UClimbingComponent::StaticClass()));
 	//	if (ClimbingSystemComponent)
 	//	{
 	//		RootOffset.Z = (ClimbingSystemComponent->ConstCapsuleOffset - 10.0f);
@@ -164,7 +164,7 @@ void UClimbingAnimInstance::NotifyFreeHangStateEvent(const bool bDetectedIK)
 	bIsLockUpdatingHangingMode = true;
 
 	const float Interval = 0.6f;
-	FTimerManager& TimerManager = CharacterOwner->GetWorldTimerManager();
+	FTimerManager& TimerManager = Character->GetWorldTimerManager();
 	if (TimerManager.IsTimerActive(WaitAxisTimer))
 		TimerManager.ClearTimer(WaitAxisTimer);
 

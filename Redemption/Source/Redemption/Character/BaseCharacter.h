@@ -298,6 +298,10 @@ public:
 	void StartRVOAvoidance();
 	void StopRVOAvoidance();
 
+	void BeginCinematic();
+	void EndCinematic();
+
+
 	float GetHealthToWidget() const;
 	bool IsHealthHalf() const;
 
@@ -406,6 +410,9 @@ protected:
 
 	UFUNCTION()
 	virtual void OnRoationChange_Callback();
+
+	UFUNCTION()
+	virtual void OnGaitChange_Callback();
 
 	// Called to determine what happens to the team ID when possession ends
 	virtual FGenericTeamId DetermineNewTeamAfterPossessionEnds(FGenericTeamId OldTeamID) const

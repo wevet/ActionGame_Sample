@@ -25,5 +25,8 @@ public:
 		TagContainer = MyTagContainer;
 	}
 
+protected:
+	virtual void BeginPlay() override;
+
 	
 };

@@ -110,7 +110,7 @@ REDEMPTION_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Vehicle_State_Drive); // curre
 /*
 * AIPerception Hear CancelEvent Interval
 */
-#define HEAR_AGE 40.0f
+#define HEAR_AGE 30.0f
 
 /*
 * AIPerception Follow CancelEvent Interval

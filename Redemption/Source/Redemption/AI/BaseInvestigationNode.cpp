@@ -1,6 +1,7 @@
 // Copyright 2022 wevet works All Rights Reserved.
 
 #include "BaseInvestigationNode.h"
+#include "Components/PrimitiveComponent.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(BaseInvestigationNode)
 
@@ -10,5 +11,26 @@ ABaseInvestigationNode::ABaseInvestigationNode()
 	PrimaryActorTick.bCanEverTick = true;
 }
 
+void ABaseInvestigationNode::BeginPlay()
+{
+	Super::BeginPlay();
+
+#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
+	static const IConsoleVariable* CVar = IConsoleManager::Get().FindConsoleVariable(TEXT("wv.DebugCharacterBehaviorTree"));
+	const int32 ConsoleValue = CVar->GetInt();
+
+	TArray<UPrimitiveComponent*> Components;
+	GetComponents(UPrimitiveComponent::StaticClass(), Components);
+
+	for (UPrimitiveComponent* Primitive : Components)
+	{
+		if (Primitive)
+		{
+			Primitive->SetHiddenInGame(!(ConsoleValue > 0));
+		}
+	}
+
+#endif
+}
 
 

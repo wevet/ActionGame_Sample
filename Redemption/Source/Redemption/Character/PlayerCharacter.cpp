@@ -108,6 +108,13 @@ void APlayerCharacter::UnPossessed()
 	Super::UnPossessed();
 }
 
+void APlayerCharacter::OnReceiveKillTarget(AActor* Actor, const float Damage)
+{
+	Super::OnReceiveKillTarget(Actor, Damage);
+
+	LocomotionComponent->SetLookAimTarget(false, nullptr, nullptr);
+}
+
 void APlayerCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent)
 {
 	check(PlayerInputComponent);
@@ -174,6 +181,11 @@ void APlayerCharacter::ToggleStanceMode()
 void APlayerCharacter::ToggleTargetLock()
 {
 	if (!IsValid(WvCameraFollowComponent))
+	{
+		return;
+	}
+
+	if (IsDead())
 	{
 		return;
 	}

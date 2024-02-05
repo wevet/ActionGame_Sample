@@ -8,6 +8,7 @@
 #include "Components/ActorComponent.h"
 #include "GameplayTagContainer.h"
 #include "Engine/DataAsset.h"
+#include "Async/TaskGraphInterfaces.h"
 #include "LocomotionComponent.generated.h"
 
 class UWvCharacterMovementComponent;
@@ -17,6 +18,7 @@ class UWvAbilitySystemComponent;
 class ABaseCharacter;
 class UCapsuleComponent;
 class UHitTargetComponent;
+
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FLocomotionStateChangeDelegate);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FLocomotionOverlayChangeDelegate, const ELSOverlayState, PrevOverlay, const ELSOverlayState, CurrentOverlay);
@@ -259,6 +261,7 @@ protected:
 #pragma endregion
 
 public:
+	void DoTick();
 	void DoTick(const float DeltaTime);
 
 	void SetLockUpdatingRotation(const bool NewLockUpdatingRotation);
@@ -302,6 +305,7 @@ public:
 	bool IsRagdollingGetUpFront() const;
 
 private:
+
 	void OnMovementModeChange();
 	void OnLSRotationModeChange();
 	void OnLSStanceChange();
@@ -376,4 +380,70 @@ private:
 	float RightAxisValue;
 
 	FTimerHandle Landing_CallbackHandle;
+	FGraphEventRef AsyncWork;
 };
+
+/**
+ * Tick function that calls ULocomotionComponent::DoTick
+ **/
+USTRUCT()
+struct FLocomotionPostPhysicsTickFunction : public FTickFunction
+{
+	GENERATED_USTRUCT_BODY()
+
+	/** LocomotionComponent that is the target of this tick **/
+	class ULocomotionComponent* Target;
+
+	/**
+	 * Abstract function actually execute the tick.
+	 * @param DeltaTime - frame time to advance, in seconds
+	 * @param TickType - kind of tick for this frame
+	 * @param CurrentThread - thread we are executing on, useful to pass along as new tasks are created
+	 * @param MyCompletionGraphEvent - completion event for this task. Useful for holding the completion of this task until certain child tasks are complete.
+	 **/
+	virtual void ExecuteTick(float DeltaTime, enum ELevelTick TickType, ENamedThreads::Type CurrentThread, const FGraphEventRef& MyCompletionGraphEvent) override;
+
+	/** Abstract function to describe this tick. Used to print messages about illegal cycles in the dependency graph **/
+	virtual FString DiagnosticMessage() override;
+	/** Function used to describe this tick for active tick reporting. **/
+	virtual FName DiagnosticContext(bool bDetailed) override;
+};
+
+
+template<>
+struct TStructOpsTypeTraits<FLocomotionPostPhysicsTickFunction> : public TStructOpsTypeTraitsBase2<FLocomotionPostPhysicsTickFunction>
+{
+	enum
+	{
+		WithCopy = false
+	};
+};
+
+class FLocomotionTask
+{
+	ULocomotionComponent* TargetComponent;
+public:
+	FORCEINLINE FLocomotionTask(ULocomotionComponent* InComponent) : TargetComponent(InComponent) {}
+	~FLocomotionTask() {}
+
+	static FORCEINLINE TStatId GetStatId()
+	{
+		RETURN_QUICK_DECLARE_CYCLE_STAT(FLocomotionTask, STATGROUP_TaskGraphTasks);
+	}
+
+	static FORCEINLINE ENamedThreads::Type GetDesiredThread()
+	{
+		return ENamedThreads::AnyHiPriThreadNormalTask;
+	}
+
+	static FORCEINLINE ESubsequentsMode::Type GetSubsequentsMode()
+	{
+		return ESubsequentsMode::TrackSubsequents;
+	}
+
+	void DoTask(ENamedThreads::Type CurrentThread, const FGraphEventRef& MyCompleteGraphEvent)
+	{
+		TargetComponent->DoTick();
+	}
+};
+

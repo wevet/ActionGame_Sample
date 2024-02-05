@@ -105,3 +105,8 @@ void ABaseInvestigationGenerator::SpawnNodeGenerator(const FTransform SpawnTrans
 
 }
 
+TArray<ABaseInvestigationNode*> ABaseInvestigationGenerator::GetGridPoints() const
+{
+	return GridPoints;
+}
+

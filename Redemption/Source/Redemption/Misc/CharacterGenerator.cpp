@@ -81,9 +81,10 @@ void ACharacterGenerator::DoSpawn()
 
 	FActorSpawnParameters SpawnParams;
 	SpawnParams.Owner = this;
-	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
 	FTransform Transform;
 	Transform.SetLocation(SpawnPoints[CurrentSpawnCount]);
+	Transform.SetRotation(FQuat(FRotator(0.f, FMath::FRandRange(0.f, 360.0f), 0.f)));
 	AActor* SpawningObject = GetWorld()->SpawnActor<AActor>(SpawnClasses, Transform, SpawnParams);
 
 	if (SpawningObject)

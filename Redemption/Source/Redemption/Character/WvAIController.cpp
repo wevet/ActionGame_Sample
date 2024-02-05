@@ -458,19 +458,36 @@ void AWvAIController::DoSearchEnemyState(AActor* Actor, FVector OverridePosition
 
 		FVector TargetLocation = OverridePosition.IsNearlyZero() ? CurrentStimulus.StimulusLocation : OverridePosition;
 
+		FVector EndPosition;
 		// get the coordinates on the nearest nav mesh
-		NavSys->ProjectPointToNavigation(TargetLocation, EndPathLocation, Extent);
-		auto NavPath = NavSys->FindPathToLocationSynchronously(GetWorld(), GetPawn()->GetActorLocation(), EndPathLocation.Location);
+		const bool bValidPoint = NavSys->ProjectPointToNavigation(TargetLocation, EndPathLocation, Extent);
+		EndPosition = (!bValidPoint) ? GetPawn()->GetActorLocation() : EndPathLocation.Location;
 
+		if (!bValidPoint)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("not valid ProjectPointToNavigation => %s"), *FString(__FUNCTION__));
+		}
 
-		const FTransform Origin{ FRotator::ZeroRotator, /*TargetLocation*/EndPathLocation, FVector::ZeroVector};
+		UNavigationPath* NavPath = NavSys->FindPathToLocationSynchronously(GetWorld(), GetPawn()->GetActorLocation(), EndPosition);
+
+#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
+		if (CVarDebugCharacterBehaviorTree.GetValueOnGameThread() > 0)
+		{
+			UKismetSystemLibrary::DrawDebugSphere(GetWorld(), TargetLocation, 60.f, 12, FColor::Blue, false, 4);
+			UKismetSystemLibrary::DrawDebugSphere(GetWorld(), EndPosition, 60.f, 12, FColor::Blue, false, 4);
+			DrawDebugDirectionalArrow(GetWorld(), TargetLocation, EndPosition, 20.f, FColor::Red, false, 4);
+		}
+#endif
+
+		const FTransform Origin{ FRotator::ZeroRotator, EndPosition, FVector::ZeroVector};
 		FActorSpawnParameters SpawnParams;
 		SpawnParams.Owner = BaseCharacter.Get();
-		SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+		SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
 		auto Generator = GetWorld()->SpawnActor<ABaseInvestigationGenerator>(NodeGeneratorClasses, Origin, SpawnParams);
 
 		SetBlackboardSearchNodeHolder(Generator);
-		SetBlackboardDestinationLocation(TargetLocation);
+		SetBlackboardDestinationLocation(EndPosition);
+
 		HearTask.Begin(HEAR_AGE, [this]()
 		{
 			ClearSearchNodeHolders();

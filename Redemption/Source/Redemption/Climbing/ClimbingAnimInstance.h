@@ -29,10 +29,10 @@ public:
 
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "References")
-	class ACharacter* CharacterOwner;
+	TObjectPtr<class ACharacter> Character;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
-	class ULocomotionComponent* LocomotionComponent;
+	TObjectPtr<class ULocomotionComponent> LocomotionComponent;
 
 	//UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	//class UClimbingComponent* ClimbingComponent;
@@ -41,7 +41,7 @@ protected:
 	//class ULadderComponent* LadderComponent;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
-	class UWvCharacterMovementComponent* CharacterMovementComponent;
+	TObjectPtr<class UWvCharacterMovementComponent> CharacterMovementComponent;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Climbing")
 	FVector RootOffset;

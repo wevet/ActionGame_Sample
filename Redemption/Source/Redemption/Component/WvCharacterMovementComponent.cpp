@@ -77,6 +77,8 @@ UWvCharacterMovementComponent::UWvCharacterMovementComponent(const FObjectInitia
 	// @TODO
 	//PrimaryComponentTick.bRunOnAnyThread = true;
 
+	bUpdateOnlyIfRendered = true;
+
 	bUseSeparateBrakingFriction = 0;
 	MinAnalogWalkSpeed = 10.0f;
 
@@ -115,6 +117,8 @@ UWvCharacterMovementComponent::UWvCharacterMovementComponent(const FObjectInitia
 	NavAgentProps.bCanCrouch = true;
 	NavAgentProps.bCanFly = true;
 	bUseAccelerationForPaths = true;
+
+	//CharacterMovementCVars::AsyncCharacterMovement = 1;
 }
 
 void UWvCharacterMovementComponent::BeginPlay()
@@ -127,14 +131,15 @@ void UWvCharacterMovementComponent::BeginPlay()
 	if (IsValid(BaseCharacter))
 	{
 		LocomotionComponent = BaseCharacter->GetLocomotionComponent();
-
-		UCapsuleComponent* Capsule = BaseCharacter->GetCapsuleComponent();
-		const float CapsuleRadius = Capsule->GetUnscaledCapsuleRadius() * PerchRadiusThresholdRange;
-		PerchRadiusThreshold = FMath::Abs(CapsuleRadius);
-		AnimInstance = BaseCharacter->GetMesh()->GetAnimInstance();
-		InitUnScaledCapsuleHalfHeight = Capsule->GetUnscaledCapsuleHalfHeight();
-		ClimbQueryParams.AddIgnoredActor(CharacterOwner);
 	}
+
+	UCapsuleComponent* Capsule = CharacterOwner->GetCapsuleComponent();
+	const float CapsuleRadius = Capsule->GetUnscaledCapsuleRadius() * PerchRadiusThresholdRange;
+	PerchRadiusThreshold = FMath::Abs(CapsuleRadius);
+	AnimInstance = CharacterOwner->GetMesh()->GetAnimInstance();
+	InitUnScaledCapsuleHalfHeight = Capsule->GetUnscaledCapsuleHalfHeight();
+	ClimbQueryParams.AddIgnoredActor(CharacterOwner);
+
 }
 
 void UWvCharacterMovementComponent::SimulateMovement(float DeltaTime)

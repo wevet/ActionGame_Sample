@@ -19,6 +19,8 @@ public:
 
 	virtual void K2_DestroyActor() override;
 
+	UFUNCTION(BlueprintCallable, Category = "Misc")
+	TArray<ABaseInvestigationNode*> GetGridPoints() const;
 
 protected:
 	virtual void BeginPlay() override;

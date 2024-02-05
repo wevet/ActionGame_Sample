@@ -198,6 +198,7 @@ void ABaseCharacter::BeginPlay()
 	//CMC->AddTickPrerequisiteActor(this);
 
 	LocomotionComponent->OnRotationModeChangeDelegate.AddDynamic(this, &ThisClass::OnRoationChange_Callback);
+	LocomotionComponent->OnGaitChangeDelegate.AddDynamic(this, &ThisClass::OnGaitChange_Callback);
 	LocomotionComponent->AddTickPrerequisiteActor(this);
 
 	RequestAsyncLoad();
@@ -214,6 +215,7 @@ void ABaseCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	CMC->OnWallClimbingEndDelegate.RemoveDynamic(this, &ABaseCharacter::OnWallClimbingEnd_Callback);
 
 	LocomotionComponent->OnRotationModeChangeDelegate.RemoveDynamic(this, &ThisClass::OnRoationChange_Callback);
+	LocomotionComponent->OnGaitChangeDelegate.RemoveDynamic(this, &ThisClass::OnGaitChange_Callback);
 
 	ResetFinisherAnimationData();
 
@@ -280,7 +282,7 @@ void ABaseCharacter::Tick(float DeltaTime)
 		}
 	}
 
-	LocomotionComponent->DoTick(DeltaTime);
+	//LocomotionComponent->DoTick(DeltaTime);
 }
 
 void ABaseCharacter::OnStartCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust)
@@ -1232,6 +1234,34 @@ void ABaseCharacter::OnRoationChange_Callback()
 	//
 }
 
+void ABaseCharacter::OnGaitChange_Callback()
+{
+	const auto EssencialVariables = LocomotionComponent->GetLocomotionEssencialVariables();
+
+	float Weight = 0.6f;
+	EPredictionGait Gait = EPredictionGait::Run;
+	switch (EssencialVariables.LSGait)
+	{
+	case ELSGait::Walking:
+		Gait = EPredictionGait::Walk;
+		Weight = 0.2f;
+		break;
+	case ELSGait::Sprinting:
+		Gait = EPredictionGait::Dash;
+		Weight = 0.8f;
+		break;
+	}
+
+	UWvCharacterMovementComponent* CMC = GetWvCharacterMovementComponent();
+	if (IsValid(CMC))
+	{
+		const float Acc = CMC->GetCurrentAcceleration().Length();
+
+	}
+
+	PredictionFootIKComponent->ChangeSpeedCurveValue(Gait, Weight, EssencialVariables.Velocity.Size());
+}
+
 /// <summary>
 /// Sound
 /// Send Sound AI
@@ -1777,5 +1807,23 @@ FTransform ABaseCharacter::GetPivotOverlayTansform() const
 	TArray<FVector> Points({ RootPos, HeadPos, });
 	auto AveragePoint = UKismetMathLibrary::GetVectorArrayAverage(Points);
 	return FTransform(GetActorRotation(), AveragePoint, FVector::OneVector);
+}
+
+void ABaseCharacter::BeginCinematic()
+{
+	UWvCharacterMovementComponent* CMC = GetWvCharacterMovementComponent();
+	if (IsValid(CMC))
+	{
+		CMC->bUpdateOnlyIfRendered = false;
+	}
+}
+
+void ABaseCharacter::EndCinematic()
+{
+	UWvCharacterMovementComponent* CMC = GetWvCharacterMovementComponent();
+	if (IsValid(CMC))
+	{
+		CMC->bUpdateOnlyIfRendered = true;
+	}
 }
 

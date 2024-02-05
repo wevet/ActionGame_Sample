@@ -22,6 +22,8 @@ AWvPlayerController::AWvPlayerController(const FObjectInitializer& ObjectInitial
 void AWvPlayerController::BeginPlay()
 {
 	Super::BeginPlay();
+
+	//ConsoleCommand(TEXT("p.AsyncCharacterMovement 1"), true);
 }
 
 void AWvPlayerController::EndPlay(const EEndPlayReason::Type EndPlayReason)

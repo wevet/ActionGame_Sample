@@ -33,6 +33,8 @@ public:
 	bool IsInputKeyDisable() const;
 	virtual bool IsTargetLock() const override;
 
+	virtual void OnReceiveKillTarget(AActor* Actor, const float Damage) override;
+
 	void SetKeyInputDisable();
 	void SetKeyInputEnable();
 

@@ -75,6 +75,13 @@ void UPredictionAnimInstance::NativeBeginPlay()
 		LeftToePathInfo.SetToeContactFloorHeight(LeftInitialToePos.Z + ToeLeaveFloorOffset);
 	}
 
+
+}
+
+void UPredictionAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
+{
+	Super::NativeUpdateAnimation(DeltaSeconds);
+
 	if (!bIsOwnerPlayerController)
 	{
 		bDrawDebug = false;
@@ -165,31 +172,47 @@ bool UPredictionAnimInstance::TickPredictiveFootIK(float DeltaSeconds, float& Ou
 {
 	Step0_Prepare();
 
+#if false
 	if (bIsOwnerPlayerController)
 	{
 		if (!bDrawDebugForToe)
 		{
 			bDrawDebugForToe = bDrawDebug;
 		}
+		if (!bDrawDebugForPelvis)
+		{
+			bDrawDebugForPelvis = bDrawDebug;
+		}
+		if (!bDrawDebugForTrace)
+		{
+			bDrawDebugForTrace = bDrawDebug;
+		}
 	}
+#endif
 
 	if (!BlockPredictive && !CharacterMovementComponent->GetCurrentAcceleration().IsNearlyZero() && ValidPredictiveWeight)
 	{
 		const float Vel = CharacterMovementComponent->Velocity.Size();
 		DefaultToeFirstPathDistance = Vel;
 
-		bool IsTotalPathStart = RightToePathInfo.IsPathStarted || LeftToePathInfo.IsPathStarted;
+		const bool IsTotalPathStart = RightToePathInfo.IsPathStarted || LeftToePathInfo.IsPathStarted;
 		const float Dist = !IsTotalPathStart ? DefaultToeFirstPathDistance : DefaultToeFirstPathDistance * 2.f;
 
 		// tick contact state and path
 		RightToePathInfo.Update(GetOwningComponent(), RightToeCSPos, LeftToeCSPos, EPredictionMotionFoot::Right, RightToeName);
 		LeftToePathInfo.Update(GetOwningComponent(), RightToeCSPos, LeftToeCSPos, EPredictionMotionFoot::Left, LeftToeName);
 
+#if false
 		if (RightToePathInfo.IsLeaveStart())
+		{
 			RightToePathInfo.SetDefaultPathDistance(Dist);
+		}
 
 		if (LeftToePathInfo.IsLeaveStart())
+		{
 			LeftToePathInfo.SetDefaultPathDistance(Dist);
+		}
+#endif
 
 		FVector RightToeEndPos;
 		const bool IsValidForRightPredictive = Step1_PredictiveToeEndPos(RightToeEndPos, RightToePathInfo, CurRightToeCurveValue, RightToeName);
@@ -458,7 +481,8 @@ void UPredictionAnimInstance::CheckEndPosByTrace(bool& OutEndPosChanged, FVector
 
 		if (Hit.bBlockingHit)
 		{
-			LocalToeHitPos = { Hit.Location.X, Hit.Location.Y, Hit.Location.Z };
+			//LocalToeHitPos = { Hit.Location.X, Hit.Location.Y, Hit.Location.Z };
+			LocalToeHitPos = Hit.ImpactPoint;
 			OutEndPosChanged = FMath::Abs(LocalToeHitPos.Z - InLastToeEndPos.Z) > EndPosChangedHeightThreshold;
 		}
 		else
@@ -510,7 +534,8 @@ void UPredictionAnimInstance::LineTracePath2(bool& OutEndPosValid, TArray<FVecto
 
 		FHitResult Hit;
 
-		auto TraceType = bDrawDebugForToe ? EDrawDebugTrace::ForOneFrame : EDrawDebugTrace::None;
+		//auto TraceType = bDrawDebugForToe ? EDrawDebugTrace::ForOneFrame : EDrawDebugTrace::None;
+		const auto TraceType = EDrawDebugTrace::None;
 		// Start from last pos, end to cur pos, build a slope line for trace.
 		const auto LocalStart = TracePos + TraceHeight;
 		const auto LocalEnd = TracePos - TraceHeight;
@@ -642,16 +667,18 @@ void UPredictionAnimInstance::TraceForTwoFoots(float DeltaSeconds, float& OutMin
 
 	TArray<AActor*> IgnoreActors({ Character, });
 
+	const auto TraceType = bDrawDebugForTrace ? EDrawDebugTrace::ForOneFrame : EDrawDebugTrace::None;
+
 	FHitResult RightHit;
 	UKismetSystemLibrary::LineTraceSingle(GetWorld(), RightFootPos + TraceUp, RightFootPos - TraceDown,
-		TraceChannel, false, IgnoreActors, bDrawDebugForTrace ? EDrawDebugTrace::ForOneFrame : EDrawDebugTrace::None, RightHit, true);
+		TraceChannel, false, IgnoreActors, TraceType, RightHit, true);
 
 	ValidRightHit = RightHit.IsValidBlockingHit();
 	RightFootHitZ = ValidRightHit ? RightHit.Location.Z : CurCharacterBottomLocation.Z;
 
 	FHitResult LeftHit;
 	UKismetSystemLibrary::LineTraceSingle(GetWorld(), LeftFootPos + TraceUp, LeftFootPos - TraceDown,
-		TraceChannel, false, IgnoreActors, bDrawDebugForTrace ? EDrawDebugTrace::ForOneFrame : EDrawDebugTrace::None, LeftHit, true);
+		TraceChannel, false, IgnoreActors, TraceType, LeftHit, true);
 
 	ValidbLeftHit = LeftHit.IsValidBlockingHit();
 	LeftFootHitZ = ValidbLeftHit ? LeftHit.Location.Z : CurCharacterBottomLocation.Z;
@@ -703,7 +730,7 @@ void UPredictionAnimInstance::DebugDrawToePath(const TArray<FVector>& InToePath,
 	UKismetSystemLibrary::DrawDebugPoint(GetWorld(), InToePath[Num - 1], 7.5f, InColor);
 
 	// Start from last pos, end to cur pos, build a slope line for trace.
-#if WITH_EDITOR
+#if false
 	TArray<AActor*> IgnoreActors({ Character, });
 	FHitResult Hit;
 	UKismetSystemLibrary::LineTraceSingle(GetWorld(), InToePos, InToePos - FVector(0.f, 0.f, 100.f), TraceChannel, false, IgnoreActors, EDrawDebugTrace::ForOneFrame, Hit, true, InColor, FLinearColor::Red);
@@ -725,7 +752,9 @@ const FVector UPredictionAnimInstance::GetCharacterDirection()
 		//Pos = DirA;
 		Pos = CharacterMovementComponent->Velocity;
 	}
-	return Pos;
+	//@TODO
+	//return Pos;
+	return CharacterMovementComponent->Velocity;
 }
 
 void UPredictionAnimInstance::Landed_Callback(const FHitResult& HitResult)

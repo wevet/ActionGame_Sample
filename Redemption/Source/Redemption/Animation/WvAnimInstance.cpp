@@ -1,6 +1,12 @@
 // Copyright 2022 wevet works All Rights Reserved.
 
 #include "WvAnimInstance.h"
+#include "Locomotion/LocomotionComponent.h"
+#include "Character/WvPlayerController.h"
+#include "Component/WvCharacterMovementComponent.h"
+#include "Component/InventoryComponent.h"
+#include "WvAbilitySystemTypes.h"
+
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemGlobals.h"
 #include "Kismet/KismetSystemLibrary.h"
@@ -15,10 +21,6 @@
 #include "Animation/AnimInstanceProxy.h"
 #include "Animation/AnimNode_LinkedAnimLayer.h"
 #include "Animation/BlendSpace.h"
-
-#include "Component/WvCharacterMovementComponent.h"
-#include "Locomotion/LocomotionComponent.h"
-#include "Character/WvPlayerController.h"
 
 
 
@@ -76,12 +78,6 @@ UWvAnimInstance::UWvAnimInstance(const FObjectInitializer& ObjectInitializer) : 
 	LSMovementMode = ELSMovementMode::None;
 
 	bIsClimbing = false;
-	//bIsFreeHang = false;
-	//bIsLaddering = false;
-	//bIsQTEActivate = false;
-	//bIsStartMantling = false;
-	//bIsMoveToNextLedgeMode = false;
-	//bIsLockUpdatingHangingMode = false;
 
 	bIsWallClimbing = false;
 	bIsWallClimbingJumping = false;
@@ -132,6 +128,22 @@ void UWvAnimInstance::NativeThreadSafeUpdateAnimation(float DeltaSeconds)
 {
 	Super::NativeThreadSafeUpdateAnimation(DeltaSeconds);
 
+	if (Character.IsValid())
+	{
+		if (Character->GetAbilitySystemComponent())
+		{
+			bIsStateMelee = Character->GetAbilitySystemComponent()->HasMatchingGameplayTag(TAG_Character_StateMelee);
+		}
+
+		if (Character->GetInventoryComponent())
+		{
+			bWasBulletWeaponEquip = Character->GetInventoryComponent()->CanAimingWeapon();
+		}
+
+		// @NOTE
+		// not melee attack & not gun equiped & target lock on
+		bWasTargetLock = Character->IsTargetLock() && !bIsStateMelee && !bWasBulletWeaponEquip;
+	}
 
 	if (IsValid(CharacterMovementComponent))
 	{

@@ -1,7 +1,8 @@
 // Copyright 2022 wevet works All Rights Reserved.
 
 #include "PredictionFootIKComponent.h"
-
+#include "GameFramework/Character.h"
+#include "Animation/AnimInstance.h"
 
 #pragma region ToePathInfo
 void FPredictionToePathInfo::SetToeContactFloorHeight(float InHeight)
@@ -94,12 +95,8 @@ void FPredictionToePathInfo::SetDefaultPathDistance(float InDist)
 {
 	DefaultPathDistance = InDist;
 }
-
-float FPredictionToePathInfo::GetDefaultPathDistance() const
-{
-	return DefaultPathDistance;
-}
 #pragma endregion
+
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(PredictionFootIKComponent)
 
@@ -127,6 +124,13 @@ void UPredictionFootIKComponent::BeginPlay()
 		GaitCurveArray.Add(Info);
 	}
 
+	ACharacter* Character = Cast<ACharacter>(GetOwner());
+	if (Character)
+	{
+		AnimInstance = Character->GetMesh()->GetAnimInstance();
+	}
+
+
 	Super::SetComponentTickEnabled(false);
 }
 
@@ -143,6 +147,18 @@ void UPredictionFootIKComponent::SetCurveValue(EPredictionGait InGait, float InW
 		if (GaitCurveArray[(uint8)InGait].CurveMap.Contains(InCurveName))
 		{
 			GaitCurveArray[(uint8)InGait].CurveMap[InCurveName] = InCurveValue;
+		}
+	}
+}
+
+void UPredictionFootIKComponent::ChangeSpeedCurveValue(EPredictionGait InGait, float InWeight, float InCurveValue)
+{
+	if ((uint8)InGait < GaitCurveArray.Num())
+	{
+		GaitCurveArray[(uint8)InGait].Weight = InWeight;
+		if (GaitCurveArray[(uint8)InGait].CurveMap.Contains(MoveSpeedCurveName))
+		{
+			GaitCurveArray[(uint8)InGait].CurveMap[MoveSpeedCurveName] = InCurveValue;
 		}
 	}
 }
@@ -179,11 +195,24 @@ void UPredictionFootIKComponent::GetCurveValues(float& OutLeftCurveValue, float&
 		}
 	}
 
-	OutLeftCurveValue = GaitCurveArray[MaxWeightIndex].CurveMap[LeftFootCurveName];
-	OutRightCurveValue = GaitCurveArray[MaxWeightIndex].CurveMap[RightFootCurveName];
-	OutMoveSpeedCurveValue = GaitCurveArray[MaxWeightIndex].CurveMap[MoveSpeedCurveName];
-	OutIsSwitchGait = (uint8)CurGait != MaxWeightIndex;
+	if (AnimInstance)
+	{
+		OutLeftCurveValue = AnimInstance->GetCurveValue(LeftFootCurveName);
+		OutRightCurveValue = AnimInstance->GetCurveValue(RightFootCurveName);
+		OutMoveSpeedCurveValue = AnimInstance->GetCurveValue(MoveSpeedCurveName);
+		OutIsSwitchGait = (uint8)CurGait != MaxWeightIndex;
+	}
+	else
+	{
+		OutLeftCurveValue = GaitCurveArray[MaxWeightIndex].CurveMap[LeftFootCurveName];
+		OutRightCurveValue = GaitCurveArray[MaxWeightIndex].CurveMap[RightFootCurveName];
+		OutMoveSpeedCurveValue = GaitCurveArray[MaxWeightIndex].CurveMap[MoveSpeedCurveName];
+		OutIsSwitchGait = (uint8)CurGait != MaxWeightIndex;
+
+	}
 	CurGait = (EPredictionGait)MaxWeightIndex;
+
+	//UE_LOG(LogTemp, Log, TEXT("CurGait => %d"), MaxWeightIndex);
 }
 
 void UPredictionFootIKComponent::GetToeCSPos(FVector& OutRightToeCSPos, FVector& OutLeftToeCSPos, bool& ValidWeight)
@@ -197,12 +226,12 @@ void UPredictionFootIKComponent::ClearCurveValues()
 {
 	if (GaitCurveArray.Num() == (uint8)EPredictionGait::Max)
 	{
-		for (uint8 i = (uint8)EPredictionGait::Walk; i < (uint8)EPredictionGait::Max; ++i)
+		for (uint8 Index = (uint8)EPredictionGait::Walk; Index < (uint8)EPredictionGait::Max; ++Index)
 		{
-			GaitCurveArray[i].Weight = 0.f;
-			GaitCurveArray[i].CurveMap[LeftFootCurveName] = 0.f;
-			GaitCurveArray[i].CurveMap[RightFootCurveName] = 0.f;
-			GaitCurveArray[i].CurveMap[MoveSpeedCurveName] = 0.f;
+			GaitCurveArray[Index].Weight = 0.f;
+			GaitCurveArray[Index].CurveMap[LeftFootCurveName] = 0.f;
+			GaitCurveArray[Index].CurveMap[RightFootCurveName] = 0.f;
+			GaitCurveArray[Index].CurveMap[MoveSpeedCurveName] = 0.f;
 		}
 	}
 }

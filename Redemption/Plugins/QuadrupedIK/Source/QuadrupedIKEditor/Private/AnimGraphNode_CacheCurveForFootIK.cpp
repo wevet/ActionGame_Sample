@@ -151,6 +151,13 @@ void UAnimGraphNode_CacheCurveForFootIK::GetNodeContextMenuActions(UToolMenu* Me
 		}
 
 		// If we have more curves to add, create submenu to offer them
+		Section.AddSubMenu(
+			"AddCurvePin",
+			LOCTEXT("AddCurvePin", "Add Curve Pin"),
+			LOCTEXT("AddCurvePinTooltip", "Add a new pin to drive a curve"),
+			FNewMenuDelegate::CreateUObject(this, &UAnimGraphNode_CacheCurveForFootIK::GetAddCurveMenuActions));
+
+#if false
 		if (GetCurvesToAdd().Num() > 0)
 		{
 			Section.AddSubMenu(
@@ -159,6 +166,7 @@ void UAnimGraphNode_CacheCurveForFootIK::GetNodeContextMenuActions(UToolMenu* Me
 				LOCTEXT("AddCurvePinTooltip", "Add a new pin to drive a curve"),
 				FNewMenuDelegate::CreateUObject(this, &UAnimGraphNode_CacheCurveForFootIK::GetAddCurveMenuActions));
 		}
+#endif
 
 		// If we have curves to remove, create submenu to offer them
 		if (Node.CurveNames.Num() > 0)

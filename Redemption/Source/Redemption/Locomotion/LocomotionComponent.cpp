@@ -28,6 +28,29 @@ static TAutoConsoleVariable<int32> CVarDebugLocomotionSystem(TEXT("wv.Locomotion
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(LocomotionComponent)
 
+void FLocomotionPostPhysicsTickFunction::ExecuteTick(float DeltaTime, enum ELevelTick TickType, ENamedThreads::Type CurrentThread, const FGraphEventRef& MyCompletionGraphEvent)
+{
+	FActorComponentTickFunction::ExecuteTickHelper(Target, /*bTickInEditor=*/ false, DeltaTime, TickType, [this](float DilatedTime)
+	{
+		//Target->DoTick(DilatedTime, *this);
+	});
+}
+
+FString FLocomotionPostPhysicsTickFunction::DiagnosticMessage()
+{
+	return Target->GetFullName() + TEXT("[ULocomotionComponent::PostPhysicsTick]");
+}
+
+FName FLocomotionPostPhysicsTickFunction::DiagnosticContext(bool bDetailed)
+{
+	if (bDetailed)
+	{
+		return FName(*FString::Printf(TEXT("LocomotionComponentPostPhysicsTick/%s"), *GetFullNameSafe(Target)));
+	}
+	return FName(TEXT("LocomotionComponentPostPhysicsTick"));
+}
+
+
 #pragma region LocomotionDA
 FGameplayTag ULocomotionStateDataAsset::FindStanceTag(const ELSStance LSStance) const
 {
@@ -53,7 +76,7 @@ FGameplayTag ULocomotionStateDataAsset::FindGaitTag(const ELSGait LSGait) const
 
 ULocomotionComponent::ULocomotionComponent(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
-	PrimaryComponentTick.bCanEverTick = false;
+	PrimaryComponentTick.bCanEverTick = true;
 	// @TODO
 	//PrimaryComponentTick.bRunOnAnyThread = true;
 
@@ -126,15 +149,18 @@ void ULocomotionComponent::BeginPlay()
 		AbilitySystemComponent->AddGameplayTag(LocomotionStateDataAsset->FindStanceTag(LocomotionEssencialVariables.LSStance));
 	}
 
+
 }
 
 void ULocomotionComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-	FTimerManager& TM = GetWorld()->GetTimerManager();
-	if (TM.IsTimerActive(Landing_CallbackHandle))
+	if (IsInGameThread())
 	{
-		TM.ClearTimer(Landing_CallbackHandle);
+		FTimerManager& TM = GetWorld()->GetTimerManager();
+		if (TM.IsTimerActive(Landing_CallbackHandle))
+			TM.ClearTimer(Landing_CallbackHandle);
 	}
+
 	Character.Reset();
 	Super::EndPlay(EndPlayReason);
 }
@@ -142,6 +168,25 @@ void ULocomotionComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 void ULocomotionComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+
+	AsyncWork = TGraphTask<FLocomotionTask>::CreateTask().ConstructAndDispatchWhenReady(this);
+	ThisTickFunction->GetCompletionHandle()->DontCompleteUntil(AsyncWork);
+
+	DoTick(DeltaTime);
+}
+
+void ULocomotionComponent::DoTick()
+{
+	//if (IsInGameThread())
+	//{
+	//	const float DeltaTime = GetWorld()->GetDeltaSeconds();
+	//	DoTick(DeltaTime);
+	//}
+	//else
+	//{
+	//	UE_LOG(LogTemp, Warning, TEXT("not game thread => %s"), *FString(__FUNCTION__));
+	//}
+
 }
 
 void ULocomotionComponent::DoTick(const float DeltaTime)
@@ -166,7 +211,6 @@ void ULocomotionComponent::DoTick(const float DeltaTime)
 
 	SprintCheck();
 	ManageCharacterRotation();
-
 
 #if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
 	DrawDebugDirectionArrow();
@@ -871,12 +915,15 @@ void ULocomotionComponent::OnLSGaitChange()
 
 void ULocomotionComponent::OnLanded()
 {
-	FTimerManager& TM = GetWorld()->GetTimerManager();
-	if (TM.IsTimerActive(Landing_CallbackHandle))
+	if (IsInGameThread())
 	{
-		TM.ClearTimer(Landing_CallbackHandle);
+		FTimerManager& TM = GetWorld()->GetTimerManager();
+		if (TM.IsTimerActive(Landing_CallbackHandle))
+		{
+			TM.ClearTimer(Landing_CallbackHandle);
+		}
+		TM.SetTimer(Landing_CallbackHandle, this, &ULocomotionComponent::OnLandedCallback, 0.2f, false);
 	}
-	TM.SetTimer(Landing_CallbackHandle, this, &ULocomotionComponent::OnLandedCallback, 0.2f, false);
 
 	if (Character.IsValid())
 	{

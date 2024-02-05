@@ -7,6 +7,7 @@
 #include "QuadrupedIK.h"
 #include "PredictionFootIKComponent.generated.h"
 
+class UAnimInstance;
 
 UENUM()
 enum class EPredictionToeFloorState : uint8
@@ -54,7 +55,6 @@ public:
 	bool IsContacStart() const;
 
 	void SetDefaultPathDistance(float InDist);
-	float GetDefaultPathDistance() const;
 
 public:
 	FVector CurToePos;
@@ -102,6 +102,8 @@ public:
 	void ClearCurveValues();
 	void ClearToeCSPos();
 
+	void ChangeSpeedCurveValue(EPredictionGait InGait, float InWeight, float InCurveValue);
+
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FName RightFootCurveName;
@@ -119,6 +121,9 @@ private:
 	float ToeWeight = 0.f;
 	FVector RightToeCSPos;
 	FVector LeftToeCSPos;
+
+	UPROPERTY()
+	TObjectPtr<class UAnimInstance> AnimInstance;
 };
 
 
