@@ -37,11 +37,13 @@ protected:
 	class UHitReactBoneShakeDataAsset* HitReactBoneShakeDA;
 
 public:
+	static int32 DEFAULT_FOLLOW_NUM;
+
 	bool AbilityDamageBoxTrace(class UWvAbilityBase* Ability, const int32 EffectGroupIndex, const FVector Start, const FVector End, FVector HalfSize, const FRotator Orientation, TArray<AActor*>& ActorsToIgnore);
 	bool AbilityDamageCapsuleTrace(class UWvAbilityBase* Ability, const int32 EffectGroupIndex, const FVector Start, const FVector End, const float Radius, const float HalfHeight, const FQuat CapsuleQuat, TArray<AActor*>& ActorsToIgnore);
-	const bool BulletTraceAttackToAbilitySystemComponent(const int32 WeaponID, class UWvAbilityBase* Ability, const int32 EffectGroupIndex, TArray<FHitResult>& Hits, const FVector SourceLocation);
+	const bool BulletTraceAttackToAbilitySystemComponent(class UWvAbilityBase* Ability, const int32 WeaponID, const int32 EffectGroupIndex, TArray<FHitResult>& Hits, const FVector SourceLocation);
 
-	const bool LineOfSightTraceOuter(class UWvAbilityBase* Ability, const int32 EffectGroupIndex, TArray<FHitResult>& Hits, const FVector SourceLocation);
+	const bool LineOfSightTraceOuter(class UWvAbilityBase* Ability, const int32 WeaponID, const int32 EffectGroupIndex, TArray<FHitResult>& Hits, const FVector SourceLocation);
 	const bool LineOfSightTraceOuterEnvironment(class UWvAbilityBase* Ability, const int32 EffectGroupIndex, const FHitResult& HitResult, const FVector SourceLocation);
 	const bool LineOfSightTraceOuterEnvironments(class UWvAbilityBase* Ability, const int32 EffectGroupIndex, const TArray<FHitResult>& HitResults, const FVector SourceLocation);
 

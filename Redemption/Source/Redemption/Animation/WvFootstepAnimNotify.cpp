@@ -132,7 +132,7 @@ void UWvFootstepAnimNotify::TriggerEffect(AActor* Owner, UAnimSequenceBase* Anim
 			Volume = 1.0f;
 			if (UWvCommonUtils::IsBotPawn(Owner))
 			{
-				const float BotVolume = ABILITY_GLOBAL()->BotConfig.FootStepMaxVolume;
+				const float BotVolume = ASC_GLOBAL()->BotConfig.FootStepMaxVolume;
 				constexpr float Threshold = 5000.0f;
 				const float Distance = UWvCommonUtils::PlayerPawnToDistance(Owner);
 				Volume = UKismetMathLibrary::MapRangeClamped(Distance, 0.f, Threshold, 1.0f, 0.f);
@@ -169,7 +169,7 @@ void UWvFootstepAnimNotify::TriggerEffect(AActor* Owner, UAnimSequenceBase* Anim
 			if (RowData->FootStepSound)
 			{
 				UGameplayStatics::PlaySoundAtLocation(World, RowData->FootStepSound, HitLocation, Volume, 1.0f, 0.0f, nullptr, nullptr);
-				const FVector2D NoiseRange = ABILITY_GLOBAL()->BotConfig.HearingRange;
+				const FVector2D NoiseRange = ASC_GLOBAL()->BotConfig.HearingRange;
 
 				if (ABaseCharacter* Character = Cast<ABaseCharacter>(Owner))
 				{

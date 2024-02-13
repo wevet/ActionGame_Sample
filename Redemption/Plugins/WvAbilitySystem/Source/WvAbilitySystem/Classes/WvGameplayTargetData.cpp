@@ -239,7 +239,7 @@ TArray<FActiveGameplayEffectHandle> FWvGameplayAbilityTargetData_SingleTargetHit
 	AddTargetDataToContext(EffectContext, true);
 	AActor* TargetActor = Actors[0].Get();
 
-	UWvAbilitySystemGlobals::Get()->SetCustomEffectContext(TargetActor,SpecToApply);
+	ASC_GLOBAL()->SetCustomEffectContext(TargetActor,SpecToApply);
 	
 	UAbilitySystemComponent* TargetComponent = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(TargetActor);
 	UAbilitySystemComponent* SourceComponent = EffectContext.GetInstigatorAbilitySystemComponent();

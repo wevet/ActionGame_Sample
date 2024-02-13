@@ -90,7 +90,6 @@ void UWvAT_BulletDamage::LineOfSightTraceExecute()
 		return;
 	}
 
-	//const float Interval = HoldWeapon->GetGunFireAnimationLength();
 	HoldWeapon->SetGunFirePrepareParameters(Randomize);
 	HoldWeapon->DoFire();
 
@@ -99,8 +98,8 @@ void UWvAT_BulletDamage::LineOfSightTraceExecute()
 	TArray<FHitResult> HitResults;
 	HoldWeapon->LineOfSightOuterMulti(HitResults);
 
-	CombatComponent->LineOfSightTraceOuterEnvironments(WvAbility, EffectGroupIndex, HitResults, WeaponLoc);
-	CombatComponent->LineOfSightTraceOuter(WvAbility, EffectGroupIndex, HitResults, WeaponLoc);
+	const EAttackWeaponState WeaponType = HoldWeapon->GetAttackWeaponState();
+	CombatComponent->LineOfSightTraceOuter(WvAbility, (int32)WeaponType, EffectGroupIndex, HitResults, WeaponLoc);
 
 #if false
 	FHitResult HitResult(ForceInit);

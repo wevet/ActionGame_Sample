@@ -99,7 +99,7 @@ protected:
 };
 
 
-#define ABILITY_GLOBAL() UWvAbilitySystemGlobals::Get()
+#define ASC_GLOBAL() UWvAbilitySystemGlobals::Get()
 
 #define GAMEPLAYTAG_SCOPE_VALUE(ClassName,TagName) \
 	FORCEINLINE const FGameplayTag GetGameplayTag_##TagName##() const\

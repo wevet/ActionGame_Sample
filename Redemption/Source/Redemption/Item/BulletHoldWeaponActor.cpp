@@ -164,6 +164,9 @@ const FVector ABulletHoldWeaponActor::CalcTraceEndPosition()
 			{
 				TraceEndPosition = LocalHitResult.ImpactPoint;
 			}
+
+			// hand noise
+			TraceEndPosition += TraceNoise;
 		}
 		else
 		{
@@ -213,13 +216,13 @@ const bool ABulletHoldWeaponActor::LineOfSightOuter(FHitResult& OutHitResult)
 const bool ABulletHoldWeaponActor::LineOfSight(const FVector TraceStart, const FVector TraceEnd, FHitResult& OutHitResult)
 {
 	TArray<AActor*> IgnoreActors({ Character.Get(), });
-	auto TraceType = ABILITY_GLOBAL()->bWeaponTraceDebug ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None;
+	auto TraceType = ASC_GLOBAL()->bWeaponTraceDebug ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None;
 
-	ECollisionChannel CollisionChannel = UEngineTypes::ConvertToCollisionChannel(ABILITY_GLOBAL()->WeaponTraceChannel);
+	ECollisionChannel CollisionChannel = UEngineTypes::ConvertToCollisionChannel(ASC_GLOBAL()->WeaponTraceChannel);
 
 	FHitResult HitResult(ForceInit);
 	const bool bHitResult = UKismetSystemLibrary::LineTraceSingle(GetWorld(), TraceStart, TraceEnd,
-		ABILITY_GLOBAL()->WeaponTraceChannel, false, IgnoreActors, TraceType, HitResult, true, FLinearColor::Red, FLinearColor::Green, 2.0f);
+		ASC_GLOBAL()->WeaponTraceChannel, false, IgnoreActors, TraceType, HitResult, true, FLinearColor::Red, FLinearColor::Green, 2.0f);
 
 	OutHitResult = HitResult;
 	return bHitResult;
@@ -255,13 +258,13 @@ const bool ABulletHoldWeaponActor::LineOfSightOuterMulti(TArray<FHitResult>& Out
 const bool ABulletHoldWeaponActor::LineOfSightMulti(const FVector TraceStart, const FVector TraceEnd, TArray<FHitResult>& OutHitResults)
 {
 	TArray<AActor*> IgnoreActors({ Character.Get(), });
-	auto TraceType = ABILITY_GLOBAL()->bWeaponTraceDebug ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None;
+	auto TraceType = ASC_GLOBAL()->bWeaponTraceDebug ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None;
 
-	ECollisionChannel CollisionChannel = UEngineTypes::ConvertToCollisionChannel(ABILITY_GLOBAL()->WeaponTraceChannel);
+	ECollisionChannel CollisionChannel = UEngineTypes::ConvertToCollisionChannel(ASC_GLOBAL()->WeaponTraceChannel);
 
 	TArray<FHitResult> HitResults;
 	const bool bHitResult = UKismetSystemLibrary::LineTraceMulti(GetWorld(), TraceStart, TraceEnd, 
-		ABILITY_GLOBAL()->WeaponTraceChannel, false, IgnoreActors, TraceType, HitResults, true, FLinearColor::Red, FLinearColor::Green, 2.0f);
+		ASC_GLOBAL()->WeaponTraceChannel, false, IgnoreActors, TraceType, HitResults, true, FLinearColor::Red, FLinearColor::Green, 2.0f);
 
 	OutHitResults = HitResults;
 	return bHitResult;

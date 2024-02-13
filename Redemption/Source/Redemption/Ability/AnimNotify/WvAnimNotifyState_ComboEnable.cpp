@@ -5,6 +5,8 @@
 #include "Character/WvPlayerController.h"
 #include "GameplayTagContainer.h"
 #include "Component/WvInputEventComponent.h"
+#include "Component/InventoryComponent.h"
+#include "Item/WeaponBaseActor.h"
 #include "Abilities/GameplayAbility.h"
 #include "Redemption.h"
 
@@ -40,19 +42,26 @@ void UWvAnimNotifyState_ComboEnable::AbilityNotifyBegin(USkeletalMeshComponent* 
 	TArray<FGameplayTag> TagArray;
 	OtherComboDA.GenerateKeyArray(TagArray);
 	TagArray.Add(TriggerTag);
-	FGameplayTagContainer EventTagContainer = FGameplayTagContainer::CreateFromArray(TagArray);
+	TagArray.Add(TAG_Character_Player_Melee);
 
+	//for (FGameplayTag Tag : TagArray)
+	//{
+	//	UE_LOG(LogTemp, Log, TEXT("Tag => %s"), *Tag.GetTagName().ToString());
+	//}
+
+	const FGameplayTagContainer EventTagContainer = FGameplayTagContainer::CreateFromArray(TagArray);
 
 	IsImmediatelyExecute = (ExecuteTime <= 0.f);
 	WaitReleaseTask = UWvAT_WaitKeyPress::WaitKeyPress(Ability, FName(TEXT("WaitKeyInput_ComboEnable")), EventTagContainer);
-	WaitReleaseTask->OnActive.__Internal_AddDynamic(this, &UWvAnimNotifyState_ComboEnable::OnRelease, FName(TEXT("OnRelease")));
+	WaitReleaseTask->OnActive.__Internal_AddDynamic(this, &UWvAnimNotifyState_ComboEnable::OnPressed, FName(TEXT("OnPressed")));
 	WaitReleaseTask->ReadyForActivation();
 
-	if (AWvPlayerController* Ctrl = Cast<AWvPlayerController>(AbilitySystemComponent->GetAvatarController()))
+
+	if (AWvPlayerController* PC = Cast<AWvPlayerController>(AbilitySystemComponent->GetAvatarController()))
 	{
-		if (Ctrl->IsLocalPlayerController())
+		if (PC->IsLocalPlayerController())
 		{
-			UWvInputEventComponent* InputComponent = Ctrl->GetInputEventComponent();
+			UWvInputEventComponent* InputComponent = PC->GetInputEventComponent();
 			if (IsValid(InputComponent))
 			{
 				InputComponent->TriggerCacheInputEvent(Ability);
@@ -90,7 +99,7 @@ FGameplayTag UWvAnimNotifyState_ComboEnable::GetInputCombo(const class UWvAbilit
 	return AbilityData->ActiveTriggerTag;
 }
 
-void UWvAnimNotifyState_ComboEnable::OnRelease(const FGameplayTag InTag, const bool bIsPressed)
+void UWvAnimNotifyState_ComboEnable::OnPressed(const FGameplayTag InTag, const bool bIsPressed)
 {
 	if (!bIsPressed)
 	{
@@ -103,7 +112,6 @@ void UWvAnimNotifyState_ComboEnable::OnRelease(const FGameplayTag InTag, const b
 		PressedToCombo();
 	}
 }
-
 
 void UWvAnimNotifyState_ComboEnable::TryCombo()
 {
@@ -118,8 +126,8 @@ void UWvAnimNotifyState_ComboEnable::PressedToCombo()
 {
 	bool Result = false;
 	UWvAbilityDataAsset* NextDA = nullptr;
-	//UE_LOG(LogTemp, Log, TEXT("LastPressedTag => %s, TriggerTag => %s"), *LastPressedTag.GetTagName().ToString(), *TriggerTag.GetTagName().ToString());
 
+	UE_LOG(LogTemp, Log, TEXT("LastPressedTag => %s, TriggerTag => %s"), *LastPressedTag.GetTagName().ToString(), *TriggerTag.GetTagName().ToString());
 
 	if (LastPressedTag == TriggerTag)
 	{
@@ -143,6 +151,10 @@ void UWvAnimNotifyState_ComboEnable::PressedToCombo()
 		{
 			CurrentAbility->SetComboTriggerTag(LastPressedTag);
 			UE_LOG(LogTemp, Log, TEXT("LastPressedTag => %s, function => %s"), *LastPressedTag.GetTagName().ToString(), *FString(__FUNCTION__));
+		}
+		else
+		{
+			UE_LOG(LogTemp, Warning, TEXT("LastPressedTag => %s, function => %s"), *LastPressedTag.GetTagName().ToString(), *FString(__FUNCTION__));
 		}
 	}
 	else

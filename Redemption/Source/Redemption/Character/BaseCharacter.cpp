@@ -217,6 +217,8 @@ void ABaseCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	LocomotionComponent->OnRotationModeChangeDelegate.RemoveDynamic(this, &ThisClass::OnRoationChange_Callback);
 	LocomotionComponent->OnGaitChangeDelegate.RemoveDynamic(this, &ThisClass::OnGaitChange_Callback);
 
+	WvAbilitySystemComponent->AbilityFailedCallbacks.Remove(AbilityFailedDelegateHandle);
+
 	ResetFinisherAnimationData();
 
 	OverlayAnimDAInstance = nullptr;
@@ -320,6 +322,7 @@ void ABaseCharacter::InitAbilitySystemComponent()
 		PC->PostASCInitialize(WvAbilitySystemComponent);
 	}
 
+	AbilityFailedDelegateHandle = WvAbilitySystemComponent->AbilityFailedCallbacks.AddUObject(this, &ABaseCharacter::OnAbilityFailed_Callback);
 }
 
 void ABaseCharacter::PreInitializeComponents()
@@ -950,6 +953,19 @@ FTransform ABaseCharacter::GetChestTransform(const FName BoneName) const
 	return GetMesh()->GetSocketTransform(BoneName);
 }
 
+/// <summary>
+/// overlay widget position
+/// </summary>
+/// <returns></returns>
+FTransform ABaseCharacter::GetPivotOverlayTansform() const
+{
+	auto RootPos = GetMesh()->GetSocketLocation(TEXT("root"));
+	auto HeadPos = GetMesh()->GetSocketLocation(TEXT("head"));
+	TArray<FVector> Points({ RootPos, HeadPos, });
+	auto AveragePoint = UKismetMathLibrary::GetVectorArrayAverage(Points);
+	return FTransform(GetActorRotation(), AveragePoint, FVector::OneVector);
+}
+
 FVector2D ABaseCharacter::GetInputAxis() const
 {
 	return InputAxis;
@@ -1260,6 +1276,11 @@ void ABaseCharacter::OnGaitChange_Callback()
 	}
 
 	PredictionFootIKComponent->ChangeSpeedCurveValue(Gait, Weight, EssencialVariables.Velocity.Size());
+}
+
+void ABaseCharacter::OnAbilityFailed_Callback(const UGameplayAbility* Ability, const FGameplayTagContainer& GameplayTags)
+{
+
 }
 
 /// <summary>
@@ -1732,7 +1753,7 @@ void ABaseCharacter::BeginVehicleAction()
 {
 	GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_None);
 	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-	GetMesh()->SetCollisionEnabled(ECollisionEnabled::PhysicsOnly);
+	GetMesh()->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 	GetMesh()->SetVisibility(false);
 
 	GetCombatComponent()->VisibilityCurrentWeapon(true);
@@ -1758,7 +1779,7 @@ void ABaseCharacter::HandleDriveAction()
 		return;
 	}
 
-	const FVehicleTraceConfig VehicleTraceConfig = ABILITY_GLOBAL()->VehicleTraceConfig;
+	const FVehicleTraceConfig VehicleTraceConfig = ASC_GLOBAL()->VehicleTraceConfig;
 	const float ClosestTargetDistance = VehicleTraceConfig.ClosestTargetDistance;
 	const float NearestDistance = VehicleTraceConfig.NearestDistance;
 	const FVector2D ViewRange = VehicleTraceConfig.ViewRange;
@@ -1770,7 +1791,7 @@ void ABaseCharacter::HandleDriveAction()
 	//UKismetSystemLibrary::DrawDebugSphere(GetWorld(), GetActorLocation(), ClosestTargetDistance, 12, FLinearColor::Blue, 4.0f, 1.0f);
 
 	const bool bHitResult = UKismetSystemLibrary::SphereOverlapActors(GetWorld(), GetActorLocation(), ClosestTargetDistance,
-		ABILITY_GLOBAL()->VehicleTraceChannel, AWvWheeledVehiclePawn::StaticClass(), IgnoreActors, OutActors);
+		ASC_GLOBAL()->VehicleTraceChannel, AWvWheeledVehiclePawn::StaticClass(), IgnoreActors, OutActors);
 
 	const AWvWheeledVehiclePawn* VehicleTarget = Cast<AWvWheeledVehiclePawn>(UWvCommonUtils::FindNearestDistanceTarget(this, OutActors, NearestDistance));
 
@@ -1799,15 +1820,6 @@ void ABaseCharacter::HandleDriveAction()
 	}
 }
 #pragma endregion
-
-FTransform ABaseCharacter::GetPivotOverlayTansform() const
-{
-	auto RootPos = GetMesh()->GetSocketLocation(TEXT("root"));
-	auto HeadPos = GetMesh()->GetSocketLocation(TEXT("head"));
-	TArray<FVector> Points({ RootPos, HeadPos, });
-	auto AveragePoint = UKismetMathLibrary::GetVectorArrayAverage(Points);
-	return FTransform(GetActorRotation(), AveragePoint, FVector::OneVector);
-}
 
 void ABaseCharacter::BeginCinematic()
 {

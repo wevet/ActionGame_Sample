@@ -101,13 +101,16 @@ void UCombatInstanceSubsystem::OnHitEnvironment(const AActor* Attacker, const FH
 		const FVector HitLocation = HitResult.ImpactPoint;
 		FRotator FaceRotation;
 
-		const FEnvironmentConfig EnvironmentConfig = ABILITY_GLOBAL()->EnvironmentConfig;
+		const FEnvironmentConfig EnvironmentConfig = ASC_GLOBAL()->EnvironmentConfig;
+		const float SoundVolume = EnvironmentConfig.HitSoundVolume;
+		const float Roudness = EnvironmentConfig.Roudness;
+
 		if (RowData->HitSound)
 		{
-			UGameplayStatics::PlaySoundAtLocation(World, RowData->HitSound, HitLocation, EnvironmentConfig.HitSoundVolume, 1.0f, 0.0f, nullptr, nullptr);
+			UGameplayStatics::PlaySoundAtLocation(World, RowData->HitSound, HitLocation, SoundVolume, 1.0f, 0.0f, nullptr, nullptr);
 		}
 		// Send nosie even if there is no sound asset
-		UAISense_Hearing::ReportNoiseEvent(World, HitLocation, EnvironmentConfig.HitSoundVolume, const_cast<AActor*>(HitTarget), EnvironmentConfig.Roudness);
+		UAISense_Hearing::ReportNoiseEvent(World, HitLocation, SoundVolume, const_cast<AActor*>(HitTarget), Roudness);
 
 
 		if (RowData->HitEffect)

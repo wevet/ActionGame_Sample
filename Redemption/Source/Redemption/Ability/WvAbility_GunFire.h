@@ -33,14 +33,14 @@ protected:
 	UWeaponCharacterAnimationDataAsset* CharacterAnimationDA;
 
 	UPROPERTY(EditDefaultsOnly)
-	bool bWeaponEvent = false;
-
-	UPROPERTY(EditDefaultsOnly)
 	float Randomize = 150.0f;
 
 private:
 	UFUNCTION()
 	void OnPlayMontageCompleted_Event(FGameplayTag EventTag, FGameplayEventData EventData);
+
+	UFUNCTION()
+	void OnPlayGunFireCompleted_Event(FGameplayTag EventTag, FGameplayEventData EventData);
 
 	UPROPERTY()
 	class UWvAT_PlayMontageAndWaitForEvent* MontageTask;

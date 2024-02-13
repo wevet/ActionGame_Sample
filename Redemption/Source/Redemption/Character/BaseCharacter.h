@@ -414,6 +414,9 @@ protected:
 	UFUNCTION()
 	virtual void OnGaitChange_Callback();
 
+	UFUNCTION()
+	void OnAbilityFailed_Callback(const UGameplayAbility* Ability, const FGameplayTagContainer& GameplayTags);
+
 	// Called to determine what happens to the team ID when possession ends
 	virtual FGenericTeamId DetermineNewTeamAfterPossessionEnds(FGenericTeamId OldTeamID) const
 	{
@@ -450,6 +453,8 @@ protected:
 
 	bool bIsAbilityInitializeResult = false;
 	float AvoidanceConsiderationRadius;
+
+	FDelegateHandle AbilityFailedDelegateHandle;
 
 #pragma region NearlestAction
 	const TArray<AActor*> FindNearlestTargets(const float Distance, const float AngleThreshold);

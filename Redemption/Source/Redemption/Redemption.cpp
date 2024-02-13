@@ -9,16 +9,26 @@ UE_DEFINE_GAMEPLAY_TAG(TAG_Game_Input_Disable, "Game.Input.Disable");
 // PlayerAction
 UE_DEFINE_GAMEPLAY_TAG(TAG_Character_Player_Melee, "Character.Player.Melee");
 
-// MeleeAction
-UE_DEFINE_GAMEPLAY_TAG(TAG_Character_ActionMelee, "Character.Action.Melee");
+// Combo frag tag
 UE_DEFINE_GAMEPLAY_TAG(TAG_Character_ActionMelee_ComboRequire, "Character.Action.Melee.ComboRequire");
+
+// Attack frag tag
+UE_DEFINE_GAMEPLAY_TAG(TAG_Character_ActionMelee_Forbid, "Character.Action.Melee.Forbid");
+
+// Melee Action 
+UE_DEFINE_GAMEPLAY_TAG(TAG_Character_ActionMelee, "Character.Action.Melee");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Character_ActionMelee_Hold, "Character.Action.Melee.Hold");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Character_ActionMelee_Combo1, "Character.Action.Melee.Combo1");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Character_ActionMelee_Combo2, "Character.Action.Melee.Combo2");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Character_ActionMelee_Combo3, "Character.Action.Melee.Combo3");
-UE_DEFINE_GAMEPLAY_TAG(TAG_Character_ActionMelee_Forbid, "Character.Action.Melee.Forbid");
 
-// MeleeActionHold
-UE_DEFINE_GAMEPLAY_TAG(TAG_Character_ActionMelee_Hold, "Character.Action.Melee.Hold");
+// Knife Action
+UE_DEFINE_GAMEPLAY_TAG(TAG_Character_ActionKnife, "Character.Action.Knife");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Character_ActionKnife_Hold, "Character.Action.Knife.Hold");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Character_ActionKnife_Combo1, "Character.Action.Knife.Combo1");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Character_ActionKnife_Combo2, "Character.Action.Knife.Combo2");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Character_ActionKnife_Combo3, "Character.Action.Knife.Combo3");
+
 
 // JumpAction
 UE_DEFINE_GAMEPLAY_TAG(TAG_Character_ActionJump, "Character.Action.Jump");
@@ -84,6 +94,8 @@ UE_DEFINE_GAMEPLAY_TAG(TAG_AI_State_Patrol, "AI.State.Patrol");
 UE_DEFINE_GAMEPLAY_TAG(TAG_AI_State_Follow, "AI.State.Follow");
 UE_DEFINE_GAMEPLAY_TAG(TAG_AI_State_Friend, "AI.State.Friend");
 UE_DEFINE_GAMEPLAY_TAG(TAG_AI_Character_Leader, "AI.Character.Leader");
+UE_DEFINE_GAMEPLAY_TAG(TAG_AI_Character_Ignore, "AI.Character.Ignore");
+
 
 // vehicle
 UE_DEFINE_GAMEPLAY_TAG(TAG_Vehicle_Drive, "Vehicle.Drive");

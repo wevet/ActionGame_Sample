@@ -131,7 +131,7 @@ void UCombatComponent::BoxTraceMulti(TArray<FWvBattleDamageAttackTargetInfo>& Hi
 	UKismetSystemLibrary::BoxTraceMulti(
 		GetWorld(),
 		Start, End, HalfSize, Orientation,
-		ABILITY_GLOBAL()->WeaponTraceChannel, false, ActorsToIgnore,
+		ASC_GLOBAL()->WeaponTraceChannel, false, ActorsToIgnore,
 		bIsDebugTrace ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None,
 		HitResults, true,
 		FLinearColor::Red, FLinearColor::Green, DrawTime);
@@ -142,7 +142,7 @@ void UCombatComponent::BoxTraceMulti(TArray<FWvBattleDamageAttackTargetInfo>& Hi
 void UCombatComponent::CapsuleTraceMulti(TArray<FWvBattleDamageAttackTargetInfo>& HitTargetInfos, const FVector Start, const FVector End, const float Radius, const float HalfHeight, const FQuat CapsuleFquat, const TArray<AActor*>& ActorsToIgnore)
 {
 	TArray<FHitResult> HitResults;
-	ECollisionChannel CollisionChannel = UEngineTypes::ConvertToCollisionChannel(ABILITY_GLOBAL()->WeaponTraceChannel);
+	ECollisionChannel CollisionChannel = UEngineTypes::ConvertToCollisionChannel(ASC_GLOBAL()->WeaponTraceChannel);
 	static const FName CapsuleTraceMultiName(TEXT("CapsuleTraceMulti"));
 	const FCollisionQueryParams Params = UWvAbilitySystemBlueprintFunctionLibrary::ConfigureCollisionParams(CapsuleTraceMultiName, false, ActorsToIgnore, true, GetOwner());
 	GetWorld()->SweepMultiByChannel(HitResults, Start, End, CapsuleFquat, CollisionChannel, FCollisionShape::MakeCapsule(Radius, HalfHeight), Params);
@@ -188,8 +188,8 @@ void UCombatComponent::HitResultEnemyFilter(TArray<FHitResult>& Hits, TArray<FWv
 
 		FWvBattleDamageAttackTargetInfo* InfoPointer = TargetCharacterInfos.Find(HitActor);
 		UPrimitiveComponent* HitComponent = HitResult.GetComponent();
-
 		UHitTargetComponent* HitTargetComponent = nullptr;
+
 		if (HitComponent && HitComponent->GetClass()->IsChildOf(UHitTargetComponent::StaticClass()))
 		{
 			HitTargetComponent = Cast<UHitTargetComponent>(HitComponent);
@@ -257,9 +257,10 @@ void UCombatComponent::HitResultEnemyFilter(TArray<FHitResult>& Hits, TArray<FWv
 /// <summary>
 /// Call WvAT_BulletDamage
 /// </summary>
-const bool UCombatComponent::LineOfSightTraceOuter(class UWvAbilityBase* Ability, const int32 EffectGroupIndex, TArray<FHitResult>& Hits, const FVector SourceLocation)
+const bool UCombatComponent::LineOfSightTraceOuter(class UWvAbilityBase* Ability, const int32 WeaponID, const int32 EffectGroupIndex, TArray<FHitResult>& Hits, const FVector SourceLocation)
 {
-	return BulletTraceAttackToAbilitySystemComponent(0, Ability, EffectGroupIndex, Hits, SourceLocation);
+	LineOfSightTraceOuterEnvironments(Ability, EffectGroupIndex, Hits, SourceLocation);
+	return BulletTraceAttackToAbilitySystemComponent(Ability, WeaponID, EffectGroupIndex, Hits, SourceLocation);
 }
 
 /// <summary>
@@ -316,7 +317,7 @@ const bool UCombatComponent::HasEnvironmentFilterClass(const FHitResult& HitResu
 {
 	if (IsValid(HitResult.GetActor()))
 	{
-		auto FindClass = ABILITY_GLOBAL()->BulletHitFilterClasses.FindByPredicate([&](UClass* Class)
+		const auto FindClass = ASC_GLOBAL()->BulletHitFilterClasses.FindByPredicate([&](UClass* Class)
 		{
 			return (HitResult.GetActor()->GetClass()->IsChildOf(Class));
 		});
@@ -332,7 +333,7 @@ const bool UCombatComponent::HasEnvironmentFilterClass(const FHitResult& HitResu
 /// <summary>
 /// Attack from bullet infos
 /// </summary>
-const bool UCombatComponent::BulletTraceAttackToAbilitySystemComponent(const int32 WeaponID, class UWvAbilityBase* Ability, const int32 EffectGroupIndex, TArray<FHitResult>& Hits, const FVector SourceLocation)
+const bool UCombatComponent::BulletTraceAttackToAbilitySystemComponent(class UWvAbilityBase* Ability, const int32 WeaponID, const int32 EffectGroupIndex, TArray<FHitResult>& Hits, const FVector SourceLocation)
 {
 	TArray<FWvBattleDamageAttackTargetInfo> HitTargetInfos;
 	HitResultEnemyFilter(Hits, HitTargetInfos);
@@ -894,6 +895,8 @@ void UCombatComponent::EquipAvailableWeapon()
 
 
 #pragma region Follow
+int32 UCombatComponent::DEFAULT_FOLLOW_NUM = 5;
+
 void UCombatComponent::AddFollower(APawn* NewPawn)
 {
 	if (!IsValid(NewPawn))
@@ -971,14 +974,13 @@ const FVector UCombatComponent::GetFormationPoint(const APawn* InPawn)
 	}
 
 	TArray<FVector> Points;
-	UWvCommonUtils::CircleSpawnPoints(Num, ABILITY_GLOBAL()->BotLeaderConfig.FormationRadius, Character->GetActorLocation(), Points);
+	UWvCommonUtils::CircleSpawnPoints(Num, ASC_GLOBAL()->BotLeaderConfig.FormationRadius, Character->GetActorLocation(), Points);
 	return Points[SelectIndex];
 }
 
 bool UCombatComponent::CanFollow() const
 {
-	constexpr int32 DummyNum = 5;
-	const int32 StackCount = IsValid(ABILITY_GLOBAL()) ? ABILITY_GLOBAL()->BotLeaderConfig.FollowStackCount : DummyNum;
+	const int32 StackCount = IsValid(ASC_GLOBAL()) ? ASC_GLOBAL()->BotLeaderConfig.FollowStackCount : DEFAULT_FOLLOW_NUM;
 	return Followers.Num() < StackCount;
 }
 #pragma endregion

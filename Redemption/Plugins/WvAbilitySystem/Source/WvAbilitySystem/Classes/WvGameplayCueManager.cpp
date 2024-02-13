@@ -1,6 +1,7 @@
 // Copyright 2020 wevet works All Rights Reserved.
 
 #include "WvGameplayCueManager.h"
+#include "WvAbilitySystem.h"
 #include "AbilitySystemGlobals.h"
 #include "AbilitySystemLog.h"
 #include "GameplayCueNotify_Actor.h"
@@ -179,9 +180,9 @@ void UWvGameplayCueManager::ActInitializeRuntimeObjectLibrary()
 
 	for (FString Path : RuntimeGameplayCueObjectLibrary.Paths)
 	{
-		UE_LOG(LogTemp, Log, TEXT("Path => %s"), *Path);
+		UE_LOG(LogWvAbility, Log, TEXT("Path => %s"), *Path);
 	}
-	UE_LOG(LogTemp, Error, TEXT("%s"), *FString(__FUNCTION__));
+	UE_LOG(LogWvAbility, Error, TEXT("%s"), *FString(__FUNCTION__));
 
 }
 

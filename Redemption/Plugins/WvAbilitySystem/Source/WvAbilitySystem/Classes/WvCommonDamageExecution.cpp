@@ -2,6 +2,7 @@
 
 
 #include "WvCommonDamageExecution.h"
+#include "WvAbilitySystem.h"
 #include "WvAbilitySystemBlueprintFunctionLibrary.h"
 #include "WvAbilitySystemTypes.h"
 #include "WvGameplayTargetData.h"
@@ -38,7 +39,7 @@ void UWvCommonDamageExecution::Execute_Implementation(const FGameplayEffectCusto
 			GameplayAbilityTargetData->WeaknessDamge = FinishDamage - BaseDamage;
 		}
 
-		UE_LOG(LogTemp, Log, TEXT("FinishDamage => %.3f, function => %s"), FinishDamage, *FString(__FUNCTION__));
+		UE_LOG(LogWvAbility, Log, TEXT("FinishDamage => %.3f, function => %s"), FinishDamage, *FString(__FUNCTION__));
 		OutExecutionOutput.AddOutputModifier(FGameplayModifierEvaluatedData(UWvAbilityAttributeSet::GetDamageAttribute(), EGameplayModOp::Override, FinishDamage));
 	}
 }

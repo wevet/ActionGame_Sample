@@ -294,8 +294,14 @@ void UWvInputEventComponent::AddRegisterInputKey(const FName Key, const FWvKey K
 void UWvInputEventComponent::TriggerCacheInputEvent(UGameplayAbility* CallFromAbility)
 {
 	//only local has valid data
-	if (CacheInput == FGameplayTag::EmptyTag || !ASC.IsValid() || !PlayerController.Get())
+	if (!ASC.IsValid() || !PlayerController.Get())
 	{
+		return;
+	}
+
+	if (CacheInput == FGameplayTag::EmptyTag)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("empty cache input => %s"), *FString(__FUNCTION__));
 		return;
 	}
 
@@ -319,6 +325,8 @@ void UWvInputEventComponent::TriggerCacheInputEvent(UGameplayAbility* CallFromAb
 			ResetWaitTillEnd(CallFromAbility);
 		}
 	}
+
+
 }
 
 void UWvInputEventComponent::InputCallBack(const FKey InputKey, const FName Key, const bool bPress)
@@ -699,6 +707,7 @@ void UWvInputEventComponent::ProcessGameEvent(const FGameplayTag& Tag, const boo
 			if (CacheAnimatingAbility == ASC->GetAnimatingAbility())
 			{
 				CacheInput = Tag;
+				//UE_LOG(LogTemp, Log, TEXT("Modify CacheInput => %s"), *CacheInput.GetTagName().ToString());
 				ResetWaitTillEnd(CacheAnimatingAbility);
 
 				if (!bPermanentCacheInput)
@@ -723,21 +732,21 @@ void UWvInputEventComponent::ProcessGameEvent(const FGameplayTag& Tag, const boo
 				const bool bIsComboTagEqual = (CurrentAbility && LastAbility) ? CurrentAbility->GetComboRequiredTag() == LastAbility->GetComboRequiredTag() : false;
 				const bool bIsSameCombo = CurrentAbility && LastAbility && bIsAnimatingCombo && bIsComboTagEqual;
 
-				if (!bIsAnimatingCombo)
-				{
-					UE_LOG(LogTemp, Warning, TEXT("not AnimatingCombo => %s"), *FString(__FUNCTION__));
-				}
+				//if (!bIsAnimatingCombo)
+				//{
+				//	UE_LOG(LogTemp, Warning, TEXT("not AnimatingCombo => %s"), *FString(__FUNCTION__));
+				//}
 
 				if (bIsSameCombo)
 				{
 					// キャッシュ入力を維持し、代わりに現在のAbility終了を待つ。
-					UE_LOG(LogTemp, Log, TEXT("keep cache input, exchange wait cur ability end instead => %s"), *FString(__FUNCTION__));
+					//UE_LOG(LogTemp, Log, TEXT("keep cache input, exchange wait cur ability end instead => %s"), *FString(__FUNCTION__));
 					ResetWaitTillEnd(CurrentAbility);
 				}
 				else
 				{
 					// すでに新しいコンボ／アビリティに切り替え、クリア
-					UE_LOG(LogTemp, Log, TEXT("Already switched to new combos/abilities and cleared => %s"), *FString(__FUNCTION__));
+					//UE_LOG(LogTemp, Log, TEXT("Already switched to new combos/abilities and cleared => %s"), *FString(__FUNCTION__));
 					ResetCacheInput();
 					ResetWaitTillEnd();
 				}

@@ -1,6 +1,7 @@
 // Copyright 2020 wevet works All Rights Reserved.
 
 #include "WvAbilitySystemTypes.h"
+#include "WvAbilitySystem.h"
 #include "GameplayTagsManager.h"
 #include "WvAbilitySystemGlobals.h"
 #include "Components/SkeletalMeshComponent.h"
@@ -132,7 +133,7 @@ void UWvAbilityEffectDataAsset::PostEditChangeChainProperty(struct FPropertyChan
 
 void UWvAbilityEffectDataAsset::UpdateEffectGroup(struct FPropertyChangedChainEvent& PropertyChangedEvent)
 {
-	const auto ASG = UWvAbilitySystemGlobals::Get();
+	const auto ASG = ASC_GLOBAL();
 
 	if (!IsValid(ASG))
 	{
@@ -199,12 +200,12 @@ void UWvAbilityEffectDataAsset::PostLoad()
 
 		if (Effect.ExData->FeatureTags.IsEmpty())
 		{
-			Effect.ExData->FeatureTags = UWvAbilitySystemGlobals::Get()->ApplyEffectFeatureGroupTemplate;
+			Effect.ExData->FeatureTags = ASC_GLOBAL()->ApplyEffectFeatureGroupTemplate;
 		}
 		else
 		{
 			TArray<FGameplayTag> FeatureTemplate;
-			UWvAbilitySystemGlobals::Get()->ApplyEffectFeatureGroupTemplate.GetGameplayTagArray(FeatureTemplate);
+			ASC_GLOBAL()->ApplyEffectFeatureGroupTemplate.GetGameplayTagArray(FeatureTemplate);
 			for (FGameplayTag& Tag : FeatureTemplate)
 			{
 				const FGameplayTag TagParent = Tag.RequestDirectParent();
@@ -219,16 +220,16 @@ void UWvAbilityEffectDataAsset::PostLoad()
 
 void UWvAbilityEffectDataAsset::CreateExData(FOnceApplyEffect& Effect)
 {
-	UWvAbilitySystemGlobals* ASG = UWvAbilitySystemGlobals::Get();
-	if (!ASG)
+	const auto ASG = ASC_GLOBAL();
+	if (!IsValid(ASG))
 	{
-		UE_LOG(LogTemp, Error, TEXT("not valid UWvAbilitySystemGlobals => %s"), *FString(__FUNCTION__));
+		UE_LOG(LogWvAbility, Error, TEXT("not valid UWvAbilitySystemGlobals => %s"), *FString(__FUNCTION__));
 		return;
 	}
 
 	if (Effect.ExData)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("already created instance Effect.ExData => %s"), *FString(__FUNCTION__));
+		UE_LOG(LogWvAbility, Warning, TEXT("already created instance Effect.ExData => %s"), *FString(__FUNCTION__));
 		return;
 	}
 
@@ -238,11 +239,11 @@ void UWvAbilityEffectDataAsset::CreateExData(FOnceApplyEffect& Effect)
 	{
 		Effect.ExData = NewObject<UApplyEffectExData>(this, GCMClass, NAME_None);
 		Effect.ExData->FeatureTags = ASG->ApplyEffectFeatureGroupTemplate;
-		UE_LOG(LogTemp, Log, TEXT("created instance Effect.ExData => %s"), *FString(__FUNCTION__));
+		UE_LOG(LogWvAbility, Log, TEXT("created instance Effect.ExData => %s"), *FString(__FUNCTION__));
 	}
 	else
 	{
-		UE_LOG(LogTemp, Warning, TEXT("not valid UApplyEffectExData LoadClass => %s"), *FString(__FUNCTION__));
+		UE_LOG(LogWvAbility, Warning, TEXT("not valid UApplyEffectExData LoadClass => %s"), *FString(__FUNCTION__));
 	}
 }
 #endif
@@ -252,7 +253,7 @@ bool UApplyEffectExData::GetExactFeatureTag(FGameplayTag FeatureGroup, FGameplay
 	FGameplayTagContainer Filter = FeatureTags.Filter(FGameplayTagContainer(FeatureGroup));
 	if (Filter.Num() == 0)
 	{
-		Filter = UWvAbilitySystemGlobals::Get()->ApplyEffectFeatureGroupTemplate.Filter(FGameplayTagContainer(FeatureGroup));
+		Filter = ASC_GLOBAL()->ApplyEffectFeatureGroupTemplate.Filter(FGameplayTagContainer(FeatureGroup));
 	}
 	ExactTag = Filter.First();
 	return ExactTag.IsValid();
@@ -263,7 +264,7 @@ bool UApplyEffectExData::GetExactFeatureTags(FGameplayTag FeatureGroup, FGamepla
 	FGameplayTagContainer Filter = FeatureTags.Filter(FGameplayTagContainer(FeatureGroup));
 	if (Filter.Num() == 0)
 	{
-		Filter = UWvAbilitySystemGlobals::Get()->ApplyEffectFeatureGroupTemplate.Filter(FGameplayTagContainer(FeatureGroup));
+		Filter = ASC_GLOBAL()->ApplyEffectFeatureGroupTemplate.Filter(FGameplayTagContainer(FeatureGroup));
 	}
 	ExactTags = Filter;
 	return ExactTags.Num() > 0;
@@ -345,7 +346,7 @@ const FHitReactInfoRow* UWvHitReactDataAsset::GetHitReactInfoRow(UDataTable* Tab
 
 	const int32 TagLength = RowName.Len();
 	RowName = RowName.Right(TagLength - (LastIndex + 1));
-	UE_LOG(LogTemp, Log, TEXT("RowName => %s, function => %s"), *RowName, *FString(__FUNCTION__));
+	UE_LOG(LogWvAbility, Log, TEXT("RowName => %s, function => %s"), *RowName, *FString(__FUNCTION__));
 	HitReactRow = Table->FindRow<FHitReactInfoRow>(FName(RowName), TEXT("HitReactInfoRow"), false);
 	return HitReactRow;
 }
@@ -544,7 +545,7 @@ void UAAU_HitReactBoneShakeDATool::SaveDA(class UHitReactBoneShakeDataAsset* DA)
 	DA->Modify();
 	UPackage* Package = DA->GetOutermost();
 	FEditorFileUtils::PromptForCheckoutAndSave({ Package }, false, false);
-	UE_LOG(LogTemp, Log, TEXT("[HitReactBoneShakeDATool] Save Success."));
+	UE_LOG(LogWvAbility, Log, TEXT("[HitReactBoneShakeDATool] Save Success."));
 #endif
 }
 

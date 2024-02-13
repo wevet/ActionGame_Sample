@@ -338,6 +338,14 @@ void AWvAIController::SetAIActionState(const EAIActionState NewAIActionState)
 
 void AWvAIController::SetBlackboardTarget(AActor* NewTarget)
 {
+	if (UAbilitySystemComponent* TargetASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(NewTarget))
+	{
+		if (TargetASC->HasMatchingGameplayTag(TAG_AI_Character_Ignore))
+		{
+			return;
+		}
+	}
+
 	BlackboardComponent->SetValueAsObject(BlackboardKeyConfig.TargetKeyName, NewTarget);
 
 	ULocomotionComponent* Locomotion = GetPawn()->FindComponentByClass<ULocomotionComponent>();

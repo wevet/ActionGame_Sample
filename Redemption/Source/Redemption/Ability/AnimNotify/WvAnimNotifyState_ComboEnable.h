@@ -8,6 +8,8 @@
 #include "Ability/Task/WvAT_WaitKeyPress.h"
 #include "WvAnimNotifyState_ComboEnable.generated.h"
 
+class ABaseCharacter;
+
 /**
  * 
  */
@@ -39,7 +41,7 @@ private:
 	FGameplayTag GetInputCombo(const class UWvAbilityDataAsset* AbilityData) const;
 
 	UFUNCTION()
-	void OnRelease(const FGameplayTag InTag, const bool bIsPressed);
+	void OnPressed(const FGameplayTag InTag, const bool bIsPressed);
 	void TryCombo();
 	void PressedToCombo();
 
@@ -48,5 +50,8 @@ private:
 	FGameplayTag LastPressedTag;
 	float CurTime;
 	bool IsImmediatelyExecute;
+
+	UPROPERTY()
+	TWeakObjectPtr<ABaseCharacter> Character;
 };
 

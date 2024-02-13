@@ -26,6 +26,9 @@ protected:
 	UPROPERTY(EditDefaultsOnly)
 	UAnimMontage* Montage;
 
+	UPROPERTY(EditDefaultsOnly)
+	UAnimMontage* SprintToMontage;
+
 private:
 	UFUNCTION()
 	void OnPlayMontageCompleted_Event(FGameplayTag EventTag, FGameplayEventData EventData);

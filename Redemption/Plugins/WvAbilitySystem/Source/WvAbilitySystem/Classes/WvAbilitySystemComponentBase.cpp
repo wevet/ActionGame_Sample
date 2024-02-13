@@ -1,6 +1,7 @@
 // Copyright 2020 wevet works All Rights Reserved.
 
 #include "WvAbilitySystemComponentBase.h"
+#include "WvAbilitySystem.h"
 #include "WvGameplayCueManager.h"
 #include "WvAbilitySystemGlobals.h"
 #include "WvAbilityDataAsset.h"
@@ -144,14 +145,14 @@ int32 UWvAbilitySystemComponentBase::PressTriggerInputEvent(FGameplayTag Tag, bo
 
 		if (!Spec.SourceObject.Get())
 		{
-			UE_LOG(LogTemp, Error, TEXT("AbilitySystemComponent. ActivatableAbilitie SourceObject is nil. path:%s"), *Spec.Ability->GetPathName());
+			UE_LOG(LogWvAbility, Error, TEXT("AbilitySystemComponent. ActivatableAbilitie SourceObject is nil. path:%s"), *Spec.Ability->GetPathName());
 			continue;
 		}
 
 		UWvAbilityDataAsset* AbilityData = CastChecked<UWvAbilityDataAsset>(Spec.SourceObject);
 		if (!AbilityData)
 		{
-			UE_LOG(LogTemp, Error, TEXT("AbilitySystemComponent. ActivatableAbilitie SourceObject is not UWvAbilityDataAsset. path:%s"), *Spec.Ability->GetPathName());
+			UE_LOG(LogWvAbility, Error, TEXT("AbilitySystemComponent. ActivatableAbilitie SourceObject is not UWvAbilityDataAsset. path:%s"), *Spec.Ability->GetPathName());
 			continue;
 		}
 
@@ -196,14 +197,14 @@ void UWvAbilitySystemComponentBase::ReleasedTriggerInputEvent(FGameplayTag Tag)
 
 		if (!Spec.SourceObject.Get())
 		{
-			UE_LOG(LogTemp, Error, TEXT("AbilitySystemComponent. ActivatableAbilitie SourceObject is nil. path:%s"), *Spec.Ability->GetPathName());
+			UE_LOG(LogWvAbility, Error, TEXT("AbilitySystemComponent. ActivatableAbilitie SourceObject is nil. path:%s"), *Spec.Ability->GetPathName());
 			continue;
 		}
 
 		UWvAbilityDataAsset* AbilityData = CastChecked<UWvAbilityDataAsset>(Spec.SourceObject);
 		if (!AbilityData)
 		{
-			UE_LOG(LogTemp, Error, TEXT("AbilitySystemComponent. ActivatableAbilitie SourceObject is not UWvAbilityDataAsset. path:%s"), *Spec.Ability->GetPathName());
+			UE_LOG(LogWvAbility, Error, TEXT("AbilitySystemComponent. ActivatableAbilitie SourceObject is not UWvAbilityDataAsset. path:%s"), *Spec.Ability->GetPathName());
 			continue;
 		}
 
@@ -483,19 +484,19 @@ TArray<FActiveGameplayEffectHandle> UWvAbilitySystemComponentBase::MakeEffectToT
 
 	if (!Avatar)
 	{
-		UE_LOG(LogTemp, Error, TEXT("not valid Avatar => %s"), *FString(__FUNCTION__));
+		UE_LOG(LogWvAbility, Error, TEXT("not valid Avatar => %s"), *FString(__FUNCTION__));
 		return MakeEffectHandleList;
 	}
 
 	if (!Avatar->HasAuthority() && !CanPredict())
 	{
-		UE_LOG(LogTemp, Error, TEXT("!Avatar->HasAuthority() && !CanPredict() => %s"), *FString(__FUNCTION__));
+		UE_LOG(LogWvAbility, Error, TEXT("!Avatar->HasAuthority() && !CanPredict() => %s"), *FString(__FUNCTION__));
 		return MakeEffectHandleList;
 	}
 
 	if (TargetDataHandle.Num() <= 0)
 	{
-		UE_LOG(LogTemp, Error, TEXT("empty TargetDataHandle => %s"), *FString(__FUNCTION__));
+		UE_LOG(LogWvAbility, Error, TEXT("empty TargetDataHandle => %s"), *FString(__FUNCTION__));
 		return MakeEffectHandleList;
 	}
 
@@ -521,7 +522,7 @@ TArray<FActiveGameplayEffectHandle> UWvAbilitySystemComponentBase::MakeEffectToT
 
 	if (!bIsApplyEffect)
 	{
-		UE_LOG(LogTemp, Error, TEXT("not bIsApplyEffect => %s"), *FString(__FUNCTION__));
+		UE_LOG(LogWvAbility, Error, TEXT("not bIsApplyEffect => %s"), *FString(__FUNCTION__));
 		return MakeEffectHandleList;
 	}
 
@@ -536,9 +537,9 @@ TArray<FActiveGameplayEffectHandle> UWvAbilitySystemComponentBase::MakeEffectToT
 
 		FGameplayEffectSpec* Spec = EffectSpecHandle.Data.Get();
 		TMap<FGameplayTag, float> DefaultMagnitudeSet;
-		if (ABILITY_GLOBAL()->IsValidLowLevelFast() && ABILITY_GLOBAL()->EffectParamTable->IsValidLowLevelFast())
+		if (ASC_GLOBAL()->IsValidLowLevelFast() && ASC_GLOBAL()->EffectParamTable->IsValidLowLevelFast())
 		{
-			ABILITY_GLOBAL()->EffectParamTable->ForeachRow<FWvGameplayEffectParam>(TEXT("MakeEffectToTargetData foreach"), [&](const FName& Key, const FWvGameplayEffectParam& Row)
+			ASC_GLOBAL()->EffectParamTable->ForeachRow<FWvGameplayEffectParam>(TEXT("MakeEffectToTargetData foreach"), [&](const FName& Key, const FWvGameplayEffectParam& Row)
 			{
 				if (Row.EffectClass == ApplyEffect.EffectClass)
 				{
@@ -605,7 +606,7 @@ TArray<FActiveGameplayEffectHandle> UWvAbilitySystemComponentBase::MakeEffectToT
 		}
 	}
 
-	UE_LOG(LogTemp, Log, TEXT("function => %s, MakeEffectHandleList => %d"), *FString(__FUNCTION__), MakeEffectHandleList.Num());
+	UE_LOG(LogWvAbility, Log, TEXT("function => %s, MakeEffectHandleList => %d"), *FString(__FUNCTION__), MakeEffectHandleList.Num());
 	return MakeEffectHandleList;
 }
 
@@ -687,7 +688,7 @@ void UWvAbilitySystemComponentBase::ApplyEffectToSelf(UWvAbilitySystemComponentB
 	FGameplayEffectContextHandle EffectContextHandle = InstigatorASC->MakeEffectContext();
 	UWvAbilitySystemBlueprintFunctionLibrary::EffectContextSetEffectDataAsset(EffectContextHandle, EffectData, EffectGroupIndex);
 
-	UE_LOG(LogTemp, Log, TEXT("%s"), *FString(__FUNCTION__));
+	UE_LOG(LogWvAbility, Log, TEXT("%s"), *FString(__FUNCTION__));
 	MakeEffectToTargetData(EffectContextHandle, TargetDataHandle, FGameplayEffectQuery());
 }
 
@@ -747,7 +748,7 @@ void UWvAbilitySystemComponentBase::AddStartupGameplayAbilities()
 {
 	if (!IsOwnerActorAuthoritative())
 	{
-		UE_LOG(LogTemp, Error, TEXT("not IsOwnerActorAuthoritative => %s"), *FString(__FUNCTION__));
+		UE_LOG(LogWvAbility, Error, TEXT("not IsOwnerActorAuthoritative => %s"), *FString(__FUNCTION__));
 		return;
 	}
 
@@ -757,7 +758,7 @@ void UWvAbilitySystemComponentBase::AddStartupGameplayAbilities()
 	AActor* Avatar = GetAvatarActor();
 	if (!Avatar)
 	{
-		UE_LOG(LogTemp, Error, TEXT("not Valid Avatar => %s"), *FString(__FUNCTION__));
+		UE_LOG(LogWvAbility, Error, TEXT("not Valid Avatar => %s"), *FString(__FUNCTION__));
 		return;
 	}
 

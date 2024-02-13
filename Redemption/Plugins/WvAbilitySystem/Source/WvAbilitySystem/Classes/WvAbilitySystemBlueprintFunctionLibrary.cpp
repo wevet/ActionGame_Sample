@@ -278,7 +278,7 @@ class UApplyEffectExData* UWvAbilitySystemBlueprintFunctionLibrary::GetOnecEffec
 
 void UWvAbilitySystemBlueprintFunctionLibrary::SetAttributeSetValue(UWvAbilitySystemComponentBase* ASC, FGameplayAttribute Attribute, const float InValue)
 {
-	if (!ABILITY_GLOBAL()->GE_DynamicValue)
+	if (!ASC_GLOBAL()->GE_DynamicValue)
 	{
 		return;
 	}
@@ -289,7 +289,7 @@ void UWvAbilitySystemBlueprintFunctionLibrary::SetAttributeSetValue(UWvAbilitySy
 		return;
 	}
 
-	UGameplayEffect* GE = ABILITY_GLOBAL()->GE_DynamicValue->GetDefaultObject<UGameplayEffect>();
+	UGameplayEffect* GE = ASC_GLOBAL()->GE_DynamicValue->GetDefaultObject<UGameplayEffect>();
 	FGameplayEffectSpec* GESpec = new FGameplayEffectSpec(GE, EffectContexHandle, 1);
 
 	FGameplayModifierInfo ModifierInfo = FGameplayModifierInfo();

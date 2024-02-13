@@ -30,6 +30,7 @@ public:
 
 	void SetDrivingByPawn(APawn* InPawn);
 	void UnSetDrivingByPawn();
+	bool IsDrivingByPawnOwner() const;
 
 	UFUNCTION(BlueprintCallable, Category = "WvWheeledVehiclePawn")
 	float GetForwardSpeed() const;
@@ -72,7 +73,7 @@ private:
 
 	void HandleDriveAction();
 
-	bool IsDrivingByPawnOwner() const;
+
 };
 
 

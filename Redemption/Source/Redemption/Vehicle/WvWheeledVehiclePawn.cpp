@@ -93,7 +93,7 @@ void AWvWheeledVehiclePawn::UnPossessed()
 
 	Super::UnPossessed();
 
-	UE_LOG(LogTemp, Log, TEXT("%s"), *FString(__FUNCTION__));
+	//UE_LOG(LogTemp, Log, TEXT("%s"), *FString(__FUNCTION__));
 }
 
 void AWvWheeledVehiclePawn::Tick(float DeltaTime)

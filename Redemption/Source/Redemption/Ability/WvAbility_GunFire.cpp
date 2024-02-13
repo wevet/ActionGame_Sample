@@ -3,19 +3,13 @@
 
 #include "WvAbility_GunFire.h"
 #include "Redemption.h"
-#include "WvGameplayEffectContext.h"
-#include "WvGameplayTargetData.h"
-#include "WvAbilitySystemBlueprintFunctionLibrary.h"
-
 #include "Character/BaseCharacter.h"
-#include "Component/InventoryComponent.h"
 #include "Misc/WvCommonUtils.h"
-#include "Item/BulletHoldWeaponActor.h"
+#include "Component/InventoryComponent.h"
 
-#include "Kismet/KismetMathLibrary.h"
-#include "Kismet/KismetSystemLibrary.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(WvAbility_GunFire)
+
 
 UWvAbility_GunFire::UWvAbility_GunFire(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
@@ -62,9 +56,9 @@ void UWvAbility_GunFire::ActivateAbility(const FGameplayAbilitySpecHandle Handle
 	FWeaponCharacterAnimation AnimationData = CharacterAnimationDA->Find(Character->GetAvatarTag(), WeaponBaseActor->GetAttackWeaponState());
 	auto Montage = AnimationData.ShotAnimation;
 
-	if (!bWeaponEvent && !Montage)
+	if (!IsValid(Montage))
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[%s : bWeaponEvent false or Montage is null.]"), *FString(__FUNCTION__));
+		UE_LOG(LogTemp, Warning, TEXT("[%s : Montage is null.]"), *FString(__FUNCTION__));
 		CancelAbility(Handle, ActorInfo, ActivationInfo, false);
 		return;
 	}
@@ -90,7 +84,7 @@ void UWvAbility_GunFire::ActivateAbility(const FGameplayAbilitySpecHandle Handle
 		Randomize,
 		GameplayEffectGroupIndexs);
 
-	DamageTask->OnCompleted.AddDynamic(this, &UWvAbility_GunFire::OnPlayMontageCompleted_Event);
+	DamageTask->OnCompleted.AddDynamic(this, &UWvAbility_GunFire::OnPlayGunFireCompleted_Event);
 	DamageTask->ReadyForActivation();
 
 	MontageTask = UWvAT_PlayMontageAndWaitForEvent::PlayMontageAndWaitForEvent(
@@ -118,4 +112,8 @@ void UWvAbility_GunFire::OnPlayMontageCompleted_Event(FGameplayTag EventTag, FGa
 	WeaponBaseActor.Reset();
 }
 
+void UWvAbility_GunFire::OnPlayGunFireCompleted_Event(FGameplayTag EventTag, FGameplayEventData EventData)
+{
+
+}
 

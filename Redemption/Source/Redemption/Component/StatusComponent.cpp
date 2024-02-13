@@ -6,6 +6,7 @@
 #include "Ability/WvAbilitySystemComponent.h"
 #include "WvAbilityAttributeSet.h"
 #include "Ability/WvInheritanceAttributeSet.h"
+#include "WvAbilitySystemBlueprintFunctionLibrary.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(StatusComponent)
 
@@ -115,7 +116,9 @@ void UStatusComponent::DoAlive()
 {
 	if (AAS.IsValid())
 	{
-		AAS->SetHP(AAS->GetHPMax());
+		const float HPMax = AAS->GetHPMax();
+		//AAS->SetHP(AAS->GetHPMax());
+		UWvAbilitySystemBlueprintFunctionLibrary::RecoverHP(Character.Get(), HPMax);
 	}
 }
 
@@ -123,8 +126,11 @@ void UStatusComponent::DoKill()
 {
 	if (AAS.IsValid())
 	{
-		AAS->SetHP(0);
+
 	}
+
+	//const float HPCurrent = AAS->GetHP();
+	UWvAbilitySystemBlueprintFunctionLibrary::KillMySelf(Character.Get());
 }
 
 

@@ -60,6 +60,8 @@ public:
 	void RemoveInventory(class AItemBaseActor* InItem);
 
 	AItemBaseActor* FindItem(const ELSOverlayState InLSOverlayState) const;
+	AWeaponBaseActor* FindWeaponItem(const ELSOverlayState InLSOverlayState) const;
+
 	AWeaponBaseActor* GetEquipWeapon() const;
 	FName GetEquipWeaponName() const;
 	EAttackWeaponState GetEquipWeaponType() const;

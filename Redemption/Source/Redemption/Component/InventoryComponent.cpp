@@ -171,7 +171,7 @@ void UInventoryComponent::AddInventory(class AItemBaseActor* NewItem)
 
 	if (AWeaponBaseActor* Weapon = Cast<AWeaponBaseActor>(NewItem))
 	{
-		auto AttackState = Weapon->GetAttackWeaponState();
+		const EAttackWeaponState AttackState = Weapon->GetAttackWeaponState();
 		if (!WeaponActorMap.Contains(AttackState))
 		{
 			WeaponActorMap.Add(AttackState, TArray<AWeaponBaseActor*>({}));
@@ -198,7 +198,7 @@ void UInventoryComponent::RemoveInventory(class AItemBaseActor* InItem)
 
 	if (AWeaponBaseActor* Weapon = Cast<AWeaponBaseActor>(InItem))
 	{
-		auto AttackState = Weapon->GetAttackWeaponState();
+		const EAttackWeaponState AttackState = Weapon->GetAttackWeaponState();
 		if (WeaponActorMap.Contains(AttackState))
 		{
 			WeaponActorMap[AttackState].Remove(Weapon);
@@ -216,6 +216,12 @@ void UInventoryComponent::RemoveInventory(class AItemBaseActor* InItem)
 
 AItemBaseActor* UInventoryComponent::FindItem(const ELSOverlayState InLSOverlayState) const
 {
+	auto Weapon = FindWeaponItem(InLSOverlayState);
+	if (IsValid(Weapon))
+	{
+		return Weapon;
+	}
+
 	for (auto Item : ItemArray)
 	{
 		if (Item && Item->GetOverlayState() == InLSOverlayState)
@@ -223,7 +229,11 @@ AItemBaseActor* UInventoryComponent::FindItem(const ELSOverlayState InLSOverlayS
 			return Item;
 		}
 	}
+	return nullptr;
+}
 
+AWeaponBaseActor* UInventoryComponent::FindWeaponItem(const ELSOverlayState InLSOverlayState) const
+{
 	TArray<AWeaponBaseActor*> WeaponArray = FindOverlayWeaponArray(InLSOverlayState);
 	for (auto Weapon : WeaponArray)
 	{
@@ -232,8 +242,23 @@ AItemBaseActor* UInventoryComponent::FindItem(const ELSOverlayState InLSOverlayS
 			return Weapon;
 		}
 	}
-
 	return nullptr;
+}
+
+TArray<AWeaponBaseActor*> UInventoryComponent::FindOverlayWeaponArray(const ELSOverlayState InLSOverlayState) const
+{
+	TArray<AWeaponBaseActor*> Temp;
+	for (TPair<EAttackWeaponState, TArray<AWeaponBaseActor*>>Pair : WeaponActorMap)
+	{
+		for (auto& Item : Pair.Value)
+		{
+			if (Item && Item->GetOverlayState() == InLSOverlayState)
+			{
+				Temp.AddUnique(Item);
+			}
+		}
+	}
+	return Temp;
 }
 
 AWeaponBaseActor* UInventoryComponent::GetEquipWeapon() const
@@ -261,23 +286,6 @@ EAttackWeaponState UInventoryComponent::GetEquipWeaponType() const
 	return EAttackWeaponState::EmptyWeapon;
 }
 
-TArray<AWeaponBaseActor*> UInventoryComponent::FindOverlayWeaponArray(const ELSOverlayState InLSOverlayState) const
-{
-	TArray<AWeaponBaseActor*> Temp;
-	for (TPair<EAttackWeaponState, TArray<AWeaponBaseActor*>>Pair : WeaponActorMap)
-	{
-		for (auto& Item : Pair.Value)
-		{
-			if (Item && Item->GetOverlayState() == InLSOverlayState)
-			{
-				Temp.AddUnique(Item);
-			}
-		}
-	}
-	return Temp;
-
-}
-
 bool UInventoryComponent::CanAimingWeapon() const
 {
 	auto WeaponType = GetEquipWeaponType();
@@ -303,7 +311,7 @@ const bool UInventoryComponent::ChangeWeapon(AWeaponBaseActor* NewWeapon, ELSOve
 
 	if (CurrentWeaponActor.IsValid())
 	{
-		OutLSOverlayState = CurrentWeaponActor.Get()->GetOverlayState();
+		OutLSOverlayState = CurrentWeaponActor->GetOverlayState();
 		return true;
 	}
 
@@ -359,8 +367,8 @@ void UInventoryComponent::EquipWeapon_Internal(AWeaponBaseActor* NewWeapon)
 	CurrentWeaponActor = NewWeapon;
 	if (CurrentWeaponActor.IsValid())
 	{
-		CurrentWeaponActor.Get()->Notify_Equip();
-		CurrentWeaponActor.Get()->SetActorHiddenInGame(false);
+		CurrentWeaponActor->Notify_Equip();
+		CurrentWeaponActor->SetActorHiddenInGame(false);
 	}
 }
 
@@ -368,8 +376,8 @@ void UInventoryComponent::UnEquipWeapon_Internal()
 {
 	if (CurrentWeaponActor.IsValid())
 	{
-		CurrentWeaponActor.Get()->Notify_UnEquip();
-		CurrentWeaponActor.Get()->SetActorHiddenInGame(true);
+		CurrentWeaponActor->Notify_UnEquip();
+		CurrentWeaponActor->SetActorHiddenInGame(true);
 		CurrentWeaponActor.Reset();
 	}
 }

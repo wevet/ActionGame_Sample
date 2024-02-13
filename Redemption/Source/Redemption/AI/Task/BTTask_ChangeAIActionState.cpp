@@ -25,12 +25,14 @@ EBTNodeResult::Type UBTTask_ChangeAIActionState::ExecuteTask(UBehaviorTreeCompon
 			if (bOverridenActionState)
 			{
 				ASI->SetAIActionState(OverrideAIActionState);
-				AIActionState = OverrideAIActionState;
+				//AIActionState = OverrideAIActionState;
 			}
 			else
 			{
-				AIActionState = ASI->GetAIActionState();
+				//AIActionState = ASI->GetAIActionState();
 			}
+
+			AIActionState = ASI->GetAIActionState();
 		}
 
 		// @TODO

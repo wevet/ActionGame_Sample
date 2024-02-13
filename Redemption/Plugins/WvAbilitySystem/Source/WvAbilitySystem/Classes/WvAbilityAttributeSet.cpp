@@ -2,6 +2,7 @@
 
 #include "WvAbilityAttributeSet.h"
 #include "WvAbilityDataAsset.h"
+#include "WvAbilitySystem.h"
 #include "Interface/WvAbilityTargetInterface.h"
 #include "WvAbilitySystemComponentBase.h"
 #include "WvAbilitySystemBlueprintFunctionLibrary.h"
@@ -72,7 +73,7 @@ void UWvAbilityAttributeSet::PreAttributeChange(const FGameplayAttribute& Attrib
 		if (OwnedGameplayTag.HasTag(TAG_Character_DamageBlock))
 		{
 			NewValue = 0;
-			UE_LOG(LogTemp, Log, TEXT("damage block => %s, function => %s"), *GetNameSafe(GetOwningActor()), *FString(__FUNCTION__));
+			UE_LOG(LogWvAbility, Log, TEXT("damage block => %s, function => %s"), *GetNameSafe(GetOwningActor()), *FString(__FUNCTION__));
 		}
 	}
 }
@@ -196,7 +197,7 @@ void UWvAbilityAttributeSet::HandleDeadEvent(const FGameplayEffectModCallbackDat
 		return;
 	}
 
-	UE_LOG(LogTemp, Log, TEXT("%s"), *FString(__FUNCTION__));
+	UE_LOG(LogWvAbility, Log, TEXT("%s"), *FString(__FUNCTION__));
 
 	FGameplayEffectContextHandle Context = Data.EffectSpec.GetContext();
 	AActor* SenderActor = Context.GetInstigatorAbilitySystemComponent()->GetAvatarActor();

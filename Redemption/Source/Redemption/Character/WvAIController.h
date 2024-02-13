@@ -28,6 +28,7 @@ class APlayerState;
 class ABaseCharacter;
 class UWvAbilitySystemComponent;
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FAIInputEventGameplayTagDelegate, FGameplayTag, GameplayTag, bool, IsPressed);
 /**
  * 
  */
@@ -60,6 +61,10 @@ public:
 	virtual void Freeze() override;
 	virtual void UnFreeze() override;
 	//~End of IWvAbilityTargetInterface interface
+
+
+	UPROPERTY(BlueprintAssignable)
+	FAIInputEventGameplayTagDelegate OnInputEventGameplayTagTrigger;
 
 #pragma region Core
 	void ResumeTree();

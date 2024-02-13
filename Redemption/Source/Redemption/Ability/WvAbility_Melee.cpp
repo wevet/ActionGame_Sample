@@ -3,15 +3,8 @@
 
 #include "WvAbility_Melee.h"
 #include "Redemption.h"
-#include "WvGameplayEffectContext.h"
-#include "WvGameplayTargetData.h"
-#include "WvAbilitySystemBlueprintFunctionLibrary.h"
-
+#include "Locomotion/LocomotionComponent.h"
 #include "Character/BaseCharacter.h"
-#include "Component/CombatComponent.h"
-#include "Component/InventoryComponent.h"
-#include "Misc/WvCommonUtils.h"
-#include "Item/WeaponBaseActor.h"
 
 #include "Kismet/KismetMathLibrary.h"
 #include "Kismet/KismetSystemLibrary.h"
@@ -51,6 +44,10 @@ void UWvAbility_Melee::ActivateAbility(const FGameplayAbilitySpecHandle Handle, 
 		Character->ResetNearlestTarget();
 	}
 
+	const auto LocomotionEssencialVariables = Character->GetLocomotionComponent()->GetLocomotionEssencialVariables();
+
+	UAnimMontage* CurAnimMontage = (IsValid(SprintToMontage) && LocomotionEssencialVariables.LSGait == ELSGait::Sprinting) ? SprintToMontage : Montage;
+
 	if (MontageTask)
 	{
 		MontageTask->OnCompleted.Clear();
@@ -62,7 +59,7 @@ void UWvAbility_Melee::ActivateAbility(const FGameplayAbilitySpecHandle Handle, 
 	MontageTask = UWvAT_PlayMontageAndWaitForEvent::PlayMontageAndWaitForEvent(
 		this,
 		FName("Melee"),
-		Montage,
+		CurAnimMontage,
 		FGameplayTagContainer(),
 		1.0, 0.f, FName("Default"), true, 1.0f);
 
