@@ -100,5 +100,11 @@ const bool UWvAbilitySystemComponent::TryActivateAbilityByClassPressing(TSubclas
 	return bIsSucceed;
 }
 
+void UWvAbilitySystemComponent::OnTagUpdated(const FGameplayTag& Tag, bool TagExists)
+{
+	Super::OnTagUpdated(Tag, TagExists);
+	AbilityTagUpdateDelegate.Broadcast(Tag, TagExists);
+}
+
 
 

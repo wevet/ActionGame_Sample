@@ -197,8 +197,6 @@ void UWvAbilityAttributeSet::HandleDeadEvent(const FGameplayEffectModCallbackDat
 		return;
 	}
 
-	UE_LOG(LogWvAbility, Log, TEXT("%s"), *FString(__FUNCTION__));
-
 	FGameplayEffectContextHandle Context = Data.EffectSpec.GetContext();
 	AActor* SenderActor = Context.GetInstigatorAbilitySystemComponent()->GetAvatarActor();
 	AActor* ReceiverActor = GetOwningAbilitySystemComponent()->GetAvatarActor();
@@ -228,6 +226,8 @@ void UWvAbilityAttributeSet::HandleDeadEvent(const FGameplayEffectModCallbackDat
 
 		if (UAbilitySystemComponent* ASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(ReceiverActor))
 		{
+			UE_LOG(LogWvAbility, Error, TEXT("%s"), *FString(__FUNCTION__));
+
 			ASC->HandleGameplayEvent(TAG_Common_PassiveAbilityTrigger_KillReact, &Payload);
 		}
 	}

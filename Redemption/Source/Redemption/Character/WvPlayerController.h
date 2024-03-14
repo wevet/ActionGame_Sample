@@ -36,6 +36,10 @@ public:
 	virtual void SetGenericTeamId(const FGenericTeamId& NewTeamID) override;
 	virtual FGenericTeamId GetGenericTeamId() const override;
 	virtual FOnTeamIndexChangedDelegate* GetOnTeamIndexChangedDelegate() override;
+	//ETeamAttitude::Type GetTeamAttitudeTowards(const AActor& Other) const override;
+	virtual void OnReceiveKillTarget(AActor* Actor, const float Damage) override;
+	virtual void OnSendKillTarget(AActor* Actor, const float Damage) override;
+	//virtual bool IsInBattled() const override;
 	virtual void Freeze() override;
 	virtual void UnFreeze() override;
 	//~End of IWvAbilityTargetInterface interface

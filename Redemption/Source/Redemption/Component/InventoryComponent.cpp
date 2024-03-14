@@ -334,18 +334,8 @@ AWeaponBaseActor* UInventoryComponent::GetAvailableWeapon() const
 		}
 	}
 
-	AvailableWeapons.RemoveAll([](AWeaponBaseActor* Item)
-	{
-		return Item == nullptr;
-	});
-
 	// 2. priority high sort
-	AvailableWeapons.Sort([&](const AWeaponBaseActor& A, const AWeaponBaseActor& B)
-	{
-		int32 PriorityA = A.GetPriority();
-		int32 PriorityB = B.GetPriority();
-		return PriorityA > PriorityB;
-	});
+	ConvertPriorityWeapons(AvailableWeapons);
 
 #if false
 	for (auto AvailableWeapon : AvailableWeapons)
@@ -360,6 +350,42 @@ AWeaponBaseActor* UInventoryComponent::GetAvailableWeapon() const
 		return AvailableWeapon;
 	}
 	return nullptr;
+}
+
+TArray<AWeaponBaseActor*> UInventoryComponent::GetAvailableWeapons() const
+{
+	TArray<AWeaponBaseActor*> AvailableWeapons;
+
+	// 1. filtered available weapon
+	for (TPair<EAttackWeaponState, TArray<AWeaponBaseActor*>>Pair : WeaponActorMap)
+	{
+		for (auto& Item : Pair.Value)
+		{
+			if (Item && Item->IsAvailable())
+			{
+				AvailableWeapons.Add(Item);
+			}
+		}
+	}
+
+	ConvertPriorityWeapons(AvailableWeapons);
+	return AvailableWeapons;
+}
+
+void UInventoryComponent::ConvertPriorityWeapons(TArray<AWeaponBaseActor*>& OutAvailableWeapons)
+{
+	// priority high sort
+	OutAvailableWeapons.RemoveAll([](AWeaponBaseActor* Item)
+	{
+		return Item == nullptr;
+	});
+
+	OutAvailableWeapons.Sort([&](const AWeaponBaseActor& A, const AWeaponBaseActor& B)
+	{
+		int32 PriorityA = A.GetPriority();
+		int32 PriorityB = B.GetPriority();
+		return PriorityA > PriorityB;
+	});
 }
 
 void UInventoryComponent::EquipWeapon_Internal(AWeaponBaseActor* NewWeapon)

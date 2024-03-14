@@ -19,6 +19,11 @@ void UVehicleUIController::BeginDestroy()
 	Super::BeginDestroy();
 }
 
+void UVehicleUIController::RemoveFromParent()
+{
+	Super::RemoveFromParent();
+}
+
 void UVehicleUIController::Initializer(AWvWheeledVehiclePawn* NewWheeledVehiclePawn)
 {
 	WheeledVehiclePawn = NewWheeledVehiclePawn;

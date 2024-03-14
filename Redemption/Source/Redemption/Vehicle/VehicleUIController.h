@@ -19,6 +19,7 @@ public:
 	UVehicleUIController(const FObjectInitializer& ObjectInitializer);
 	virtual void NativeConstruct() override;
 	virtual void BeginDestroy() override;
+	virtual void RemoveFromParent() override;
 
 public:
 	void Initializer(AWvWheeledVehiclePawn* NewWheeledVehiclePawn);

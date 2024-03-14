@@ -67,6 +67,7 @@ public:
 	EAttackWeaponState GetEquipWeaponType() const;
 
 	AWeaponBaseActor* GetAvailableWeapon() const;
+	TArray<AWeaponBaseActor*> GetAvailableWeapons() const;
 	const bool ChangeWeapon(AWeaponBaseActor* NewWeapon, ELSOverlayState& OutLSOverlayState);
 
 	const EAttackWeaponState ConvertWeaponState(const ELSOverlayState InLSOverlayState, bool& OutbCanAttack);
@@ -98,4 +99,5 @@ private:
 	void EquipWeapon_Internal(AWeaponBaseActor* NewWeapon);
 	void UnEquipWeapon_Internal();
 
+	static void ConvertPriorityWeapons(TArray<AWeaponBaseActor*>& OutAvailableWeapons);
 };

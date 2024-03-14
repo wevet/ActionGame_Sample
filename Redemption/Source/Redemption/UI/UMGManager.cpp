@@ -37,12 +37,14 @@ void UUMGManager::Initializer(ABaseCharacter* NewCharacter)
 	NewCharacter->InputComponent->BindAction("Pause", IE_Pressed, this, &UUMGManager::SetTickableWhenPaused);
 }
 
-void UUMGManager::UnInitializer()
+void UUMGManager::RemoveFromParent()
 {
 	if (CombatUIController)
 	{
 		CombatUIController->RemoveFromParent();
 	}
+
+	Super::RemoveFromParent();
 }
 
 void UUMGManager::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)

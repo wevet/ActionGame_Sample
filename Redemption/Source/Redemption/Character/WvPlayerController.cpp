@@ -123,6 +123,7 @@ EWvInputMode AWvPlayerController::GetInputModeType() const
 	return InputEventComponent->GetInputModeType();
 }
 
+
 #pragma region IWvAbilityTargetInterface
 void AWvPlayerController::SetGenericTeamId(const FGenericTeamId& NewTeamID)
 {
@@ -143,6 +144,15 @@ FOnTeamIndexChangedDelegate* AWvPlayerController::GetOnTeamIndexChangedDelegate(
 	return &OnTeamChangedDelegate;
 }
 
+void AWvPlayerController::OnReceiveKillTarget(AActor* Actor, const float Damage)
+{
+	UE_LOG(LogTemp, Warning, TEXT("Pawn is neutralized and AIPerception is stopped. => %s, Pawn => %s"), *FString(__FUNCTION__), *GetNameSafe(GetPawn()));
+}
+
+void AWvPlayerController::OnSendKillTarget(AActor* Actor, const float Damage)
+{
+}
+
 void AWvPlayerController::Freeze()
 {
 }
@@ -152,6 +162,8 @@ void AWvPlayerController::UnFreeze()
 }
 #pragma endregion
 
+
+#pragma region Possess
 void AWvPlayerController::OnDefaultPossess(APawn* InPawn)
 {
 	UMGManager = CreateWidget<UUMGManager>(this, UMGManagerTemplate);
@@ -168,12 +180,9 @@ void AWvPlayerController::OnDefaultUnPossess()
 {
 	if (UMGManager)
 	{
-		UMGManager->UnInitializer();
 		UMGManager->RemoveFromParent();
-		//UE_LOG(LogTemp, Error, TEXT("%s"), *FString(__FUNCTION__));
 	}
 	UMGManager = nullptr;
-
 	BP_DefaultUnPossess();
 }
 
@@ -194,14 +203,16 @@ void AWvPlayerController::OnVehicleUnPossess()
 	if (VehicleUIController)
 	{
 		VehicleUIController->RemoveFromParent();
-		//UE_LOG(LogTemp, Error, TEXT("%s"), *FString(__FUNCTION__));
 	}
 	VehicleUIController = nullptr;
-
 	BP_VehicleUnPossess();
 }
+#pragma endregion
+
 
 FVector AWvPlayerController::GetCameraForwardVector() const
 {
 	return Manager ? Manager->GetTransformComponent()->GetForwardVector() : FVector::ZeroVector;
 }
+
+

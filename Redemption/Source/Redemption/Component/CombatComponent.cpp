@@ -458,13 +458,14 @@ TArray<class UBoneShakeExecuteData*> UCombatComponent::GetBoneShakeDatas() const
 
 void UCombatComponent::OnTagUpdate(const FGameplayTag Tag, const bool bIsTagExists)
 {
-	if (Tag == TAG_Character_StateDead)
+	//if (Tag == TAG_Character_StateDead)
+	if (Tag == TAG_Common_PassiveAbilityTrigger_KillReact)
 	{
 		IsDead = bIsTagExists;
 		if (IsDead)
 		{
 			GetWorld()->GetTimerManager().SetTimer(TimerHandle, this, &UCombatComponent::HandleDeath, 0.01, true);
-			UE_LOG(LogTemp, Log, TEXT("HandleDeath => %s"), *FString(__FUNCTION__));
+			UE_LOG(LogTemp, Error, TEXT("HandleDeath => %s"), *FString(__FUNCTION__));
 		}
 	}
 }
@@ -481,13 +482,12 @@ void UCombatComponent::HandleDeath()
 		return;
 	}
 
-	if (ASC->HasMatchingGameplayTag(StateDead) && !ASC->HasMatchingGameplayTag(StateHitReact))
-	{
-		GetWorld()->GetTimerManager().ClearTimer(TimerHandle);
-
-		FGameplayEventData Payload;
-		ASC->HandleGameplayEvent(TAG_Character_StateDead_Action, &Payload);
-	}
+	//if (ASC->HasMatchingGameplayTag(StateDead) && !ASC->HasMatchingGameplayTag(StateHitReact))
+	//{
+	//	GetWorld()->GetTimerManager().ClearTimer(TimerHandle);
+	//	FGameplayEventData Payload;
+	//	ASC->HandleGameplayEvent(TAG_Character_StateDead_Action, &Payload);
+	//}
 }
 
 void UCombatComponent::StartHitReact(FGameplayEffectContextHandle& Context, const bool bIsDeath, const float Damage)

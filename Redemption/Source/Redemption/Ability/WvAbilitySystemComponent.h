@@ -29,6 +29,7 @@ class REDEMPTION_API UWvAbilitySystemComponent : public UWvAbilitySystemComponen
 	
 public:
 	UWvAbilitySystemComponent();
+	virtual void OnTagUpdated(const FGameplayTag& Tag, bool TagExists) override;
 
 public:
 	UPROPERTY(BlueprintAssignable, BlueprintReadWrite, EditAnywhere)

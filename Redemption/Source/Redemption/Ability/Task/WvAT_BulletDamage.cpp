@@ -101,22 +101,5 @@ void UWvAT_BulletDamage::LineOfSightTraceExecute()
 	const EAttackWeaponState WeaponType = HoldWeapon->GetAttackWeaponState();
 	CombatComponent->LineOfSightTraceOuter(WvAbility, (int32)WeaponType, EffectGroupIndex, HitResults, WeaponLoc);
 
-#if false
-	FHitResult HitResult(ForceInit);
-	const bool bHitResult = HoldWeapon->LineOfSightOuter(HitResult);
-	if (bHitResult)
-	{
-		if (CombatComponent->HasEnvironmentFilterClass(HitResult))
-		{
-			CombatComponent->LineOfSightTraceOuterEnvironment(WvAbility, EffectGroupIndex, HitResult, WeaponLoc);
-		}
-		else
-		{
-			TArray<FHitResult> Hits({ HitResult });
-			CombatComponent->LineOfSightTraceOuter(WvAbility, EffectGroupIndex, Hits, WeaponLoc);
-		}
-	}
-#endif
-
 }
 

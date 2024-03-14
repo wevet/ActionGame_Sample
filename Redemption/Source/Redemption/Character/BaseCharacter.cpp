@@ -511,7 +511,7 @@ void ABaseCharacter::OnSendKillTarget(AActor* Actor, const float Damage)
 	{
 		Interface->OnSendKillTarget(Actor, Damage);
 	}
-	UE_LOG(LogTemp, Log, TEXT("Owner => %s, Actor => %s, function => %s"), *GetPathNameSafe(this), *GetPathNameSafe(Actor), *FString(__FUNCTION__));
+	//UE_LOG(LogTemp, Log, TEXT("Owner => %s, Actor => %s, function => %s"), *GetPathNameSafe(this), *GetPathNameSafe(Actor), *FString(__FUNCTION__));
 }
 
 void ABaseCharacter::OnReceiveWeaknessAttack(AActor* Actor, const FName WeaknessName, const float Damage)
@@ -607,16 +607,6 @@ void ABaseCharacter::DoAttack()
 			WvAbilitySystemComponent->TryActivateAbilityByTag(TriggerTag);
 		}
 	}
-}
-
-const bool ABaseCharacter::HandleAttackPawnPrepare()
-{
-	const auto Weapon = ItemInventoryComponent->GetEquipWeapon();
-	if (Weapon)
-	{
-		return Weapon->HandleAttackPrepare();
-	}
-	return false;
 }
 
 void ABaseCharacter::DoResumeAttack()
@@ -942,6 +932,16 @@ void ABaseCharacter::HandleGuardAction(const bool bGuardEnable, bool& OutResult)
 			OutResult = true;
 		}
 	}
+}
+
+const bool ABaseCharacter::HandleAttackPawnPrepare()
+{
+	const auto Weapon = ItemInventoryComponent->GetEquipWeapon();
+	if (Weapon)
+	{
+		return Weapon->HandleAttackPrepare();
+	}
+	return false;
 }
 #pragma endregion
 

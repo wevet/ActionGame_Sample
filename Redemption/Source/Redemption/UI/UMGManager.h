@@ -32,13 +32,14 @@ public:
 	UUMGManager(const FObjectInitializer& ObjectInitializer);
 	virtual void NativeConstruct() override;
 	virtual void BeginDestroy() override;
+	virtual void RemoveFromParent() override;
+
 
 protected:
 	virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
 
 public:
 	void Initializer(ABaseCharacter* NewCharacter);
-	void UnInitializer();
 
 private:
 	TObjectPtr<class UCombatUIController> CombatUIController;

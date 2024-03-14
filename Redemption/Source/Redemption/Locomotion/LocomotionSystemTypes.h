@@ -77,6 +77,7 @@ enum class EAttackWeaponState : uint8
 	Gun UMETA(DisplayName = "Gun"),
 	Rifle UMETA(DisplayName = "Rifle"),
 	Knife UMETA(DisplayName = "Knife"),
+	Bomb UMETA(DisplayName = "Bomb"),
 	InValid UMETA(Hidden)
 };
 
