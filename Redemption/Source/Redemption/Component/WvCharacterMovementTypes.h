@@ -17,6 +17,7 @@ enum ECustomMovementMode
 	CUSTOM_MOVE_Climbing UMETA(DisplayName = "CustomClimbing"),
 	CUSTOM_MOVE_Mantling UMETA(DisplayName = "CustomMantling"),
 	CUSTOM_MOVE_WallClimbing UMETA(DisplayName = "CustomWallClimbing"),
+	CUSTOM_MOVE_Ladder UMETA(DisplayName = "CustomLadder"),
 	CUSTOM_MOVE_MAX	UMETA(Hidden),
 };
 

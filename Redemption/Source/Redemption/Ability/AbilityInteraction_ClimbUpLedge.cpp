@@ -3,6 +3,7 @@
 
 #include "Ability/AbilityInteraction_ClimbUpLedge.h"
 #include "Character/BaseCharacter.h"
+#include "Climbing/ClimbingComponent.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(AbilityInteraction_ClimbUpLedge)
 
@@ -85,11 +86,11 @@ void UAbilityInteraction_ClimbUpLedge::EndAbility(const FGameplayAbilitySpecHand
 	ABaseCharacter* Character = GetBaseCharacter();
 	if (Character)
 	{
-		//UClimbingSystemComponent* ClimbingComponent = Cast<UClimbingSystemComponent>(Character->GetComponentByClass(UClimbingSystemComponent::StaticClass()));
-		//if (ClimbingComponent)
-		//{
-		//	ClimbingComponent->Notify_StopMantling();
-		//}
+		UClimbingComponent* ClimbingComponent = Cast<UClimbingComponent>(Character->GetComponentByClass(UClimbingComponent::StaticClass()));
+		if (ClimbingComponent)
+		{
+			ClimbingComponent->Notify_StopMantling();
+		}
 	}
 
 	MovementComponent->TryLedgeEndAction();

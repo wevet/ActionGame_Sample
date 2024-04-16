@@ -9,6 +9,7 @@
 #include "Component/HitTargetComponent.h"
 #include "Component/WvCharacterMovementComponent.h"
 #include "Locomotion/LocomotionComponent.h"
+#include "Climbing/ClimbingComponent.h"
 
 // built in
 #include "Camera/CameraComponent.h"
@@ -50,6 +51,8 @@ APlayerCharacter::APlayerCharacter(const FObjectInitializer& ObjectInitializer) 
 void APlayerCharacter::BeginPlay()
 {
 	Super::BeginPlay();
+
+	WvCameraFollowComponent->PrimaryComponentTick.AddPrerequisite(this, this->PrimaryActorTick);
 
 	//Add Input Mapping Context
 	if (AWvPlayerController* PC = Cast<AWvPlayerController>(Controller))
@@ -372,6 +375,16 @@ void APlayerCharacter::HandleSprinting(const bool bIsPress)
 			{
 				auto CMC = GetWvCharacterMovementComponent();
 				CMC->AbortClimbing();
+			}
+			break;
+			case ELSMovementMode::Climbing:
+			{
+				UClimbingComponent* ClimbingComponent = Cast<UClimbingComponent>(GetComponentByClass(UClimbingComponent::StaticClass()));
+
+				if (IsValid(ClimbingComponent) && ClimbingComponent->IsClimbingState())
+				{
+					ClimbingComponent->ApplyStopClimbingInput(0.3f, false);
+				}
 			}
 			break;
 		}

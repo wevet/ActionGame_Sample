@@ -112,12 +112,20 @@ public:
 public:
 	void WakeUpPoseSnapShot();
 
+	// ladder
+	void UpdateLadderIKData(UPrimitiveComponent* Component, const FClimbingIKData LeftIKHand, const FClimbingIKData RightIKHand, const FClimbingIKData LeftIKFoot, const FClimbingIKData RightIKFoot);
+	void SetBalanceMode(const bool InBalanceMode);
+	void SetBalanceBlendParameter(const float InBlendOverlay, const float InBlendWeight);
+
 protected:
 	UPROPERTY()
 	TWeakObjectPtr<class ABaseCharacter> Character;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<class UWvCharacterMovementComponent> CharacterMovementComponent;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<class UCharacterTrajectoryComponent> CharacterTrajectoryComponent;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
 	FCharacterOverlayInfo CharacterOverlayInfo;

@@ -610,6 +610,10 @@ void AWvAIController::DoFriendlyActionState(AActor* Actor)
 				ClearFriendlyTarget();
 			});
 		}
+		else
+		{
+			//
+		}
 	}
 	else
 	{

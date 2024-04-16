@@ -31,6 +31,7 @@
 UWvCameraFollowComponent::UWvCameraFollowComponent()
 {
 	PrimaryComponentTick.bCanEverTick = true;
+	PrimaryComponentTick.bRunOnAnyThread = true;
 
 	TargetableCollisionChannel = ECollisionChannel::ECC_Pawn;
 }
@@ -104,6 +105,12 @@ void UWvCameraFollowComponent::UpdateCamera(UCurveFloat* LerpCurve)
 {
 	if (!IsValid(LerpCurve))
 	{
+		return;
+	}
+
+	if (!IsInGameThread())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("failed Any thread => %s"), *FString(__FUNCTION__));
 		return;
 	}
 

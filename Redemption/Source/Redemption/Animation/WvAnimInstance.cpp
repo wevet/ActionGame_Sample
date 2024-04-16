@@ -100,6 +100,8 @@ void UWvAnimInstance::NativeInitializeAnimation()
 	LocomotionComponent = Character->GetLocomotionComponent();
 	CapsuleComponent = Character->GetCapsuleComponent();
 
+	CharacterTrajectoryComponent = Character->GetCharacterTrajectoryComponent();
+
 	if (UAbilitySystemComponent* ASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(Character.Get()))
 	{
 		InitializeWithAbilitySystem(ASC);
@@ -526,4 +528,21 @@ void UWvAnimInstance::WakeUpPoseSnapShot()
 {
 	SavePoseSnapshot(RagdollPoseSnapshot);
 }
+
+#pragma region LadderOrBalance
+void UWvAnimInstance::UpdateLadderIKData(UPrimitiveComponent* Component, const FClimbingIKData LeftIKHand, const FClimbingIKData RightIKHand, const FClimbingIKData LeftIKFoot, const FClimbingIKData RightIKFoot)
+{
+
+}
+
+void UWvAnimInstance::SetBalanceMode(const bool InBalanceMode)
+{
+
+}
+
+void UWvAnimInstance::SetBalanceBlendParameter(const float InBlendOverlay, const float InBlendWeight)
+{
+
+}
+#pragma endregion
 

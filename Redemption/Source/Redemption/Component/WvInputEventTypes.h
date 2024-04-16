@@ -84,6 +84,12 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, meta = (EditCondition = "bHoldAction"))
 	float Delay = 2.0f;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	bool bCheckStateTag = false;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, meta = (EditCondition = "bCheckStateTag"))
+	FGameplayTag StateCheckTag;
+
 protected:
 	FString Extend;
 	bool IsUseExtend{ false };

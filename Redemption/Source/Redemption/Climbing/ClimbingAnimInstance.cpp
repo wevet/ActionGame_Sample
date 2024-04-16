@@ -3,8 +3,8 @@
 
 #include "Climbing/ClimbingAnimInstance.h"
 #include "Locomotion/LocomotionComponent.h"
-//#include "Climbing/ClimbingComponent.h"
-//#include "Climbing/LadderComponent.h"
+#include "Climbing/ClimbingComponent.h"
+#include "Climbing/LadderComponent.h"
 #include "Character/BaseCharacter.h"
 #include "Component/WvCharacterMovementComponent.h"
 
@@ -41,6 +41,12 @@ void UClimbingAnimInstance::NativeInitializeAnimation()
 void UClimbingAnimInstance::NativeUpdateAnimation(float DeltaTimeX)
 {
 	Super::NativeUpdateAnimation(DeltaTimeX);
+}
+
+void UClimbingAnimInstance::NativeThreadSafeUpdateAnimation(float DeltaTimeX)
+{
+	Super::NativeThreadSafeUpdateAnimation(DeltaTimeX);
+
 	SetCharacterReferences();
 
 #if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
@@ -50,11 +56,6 @@ void UClimbingAnimInstance::NativeUpdateAnimation(float DeltaTimeX)
 #else
 	bDebugTrace = false;
 #endif
-}
-
-void UClimbingAnimInstance::NativeThreadSafeUpdateAnimation(float DeltaTimeX)
-{
-	Super::NativeThreadSafeUpdateAnimation(DeltaTimeX);
 
 	if (IsValid(LocomotionComponent))
 	{
@@ -62,12 +63,12 @@ void UClimbingAnimInstance::NativeThreadSafeUpdateAnimation(float DeltaTimeX)
 		PrevMovementMode = LocomotionEssencialVariables.LSPrevMovementMode;
 	}
 
-	//if (IsValid(ClimbingComponent) && ClimbingSystemComponent->GetCharacterOwner())
-	//{
-	//	PrepareAnimTypeIndex = ClimbingSystemComponent->GetPrepareToClimbEvent();
-	//	bIsClimbing = ClimbingSystemComponent->IsClimbingState();
-	//	bIsStartMantling = ClimbingSystemComponent->IsMantlingState();
-	//}
+	if (IsValid(ClimbingComponent))
+	{
+		PrepareAnimTypeIndex = ClimbingComponent->GetPrepareToClimbEvent();
+		bIsClimbing = ClimbingComponent->IsClimbingState();
+		bIsStartMantling = ClimbingComponent->IsMantlingState();
+	}
 
 	if (IsValid(CharacterMovementComponent))
 	{
@@ -75,10 +76,10 @@ void UClimbingAnimInstance::NativeThreadSafeUpdateAnimation(float DeltaTimeX)
 		bIsWallClimbingJumping = CharacterMovementComponent->IsClimbJumping();
 	}
 
-	//if (IsValid(LadderComponent))
-	//{
-	//	bIsLaddering = LadderSystemComponent->IsLadderState();
-	//}
+	if (IsValid(LadderComponent))
+	{
+		bIsLaddering = LadderComponent->IsLadderState();
+	}
 }
 
 void UClimbingAnimInstance::SetCharacterReferences()
@@ -89,31 +90,33 @@ void UClimbingAnimInstance::SetCharacterReferences()
 	}
 
 	if (!IsValid(Character))
+	{
 		return;
+	}
 
 	if (!IsValid(LocomotionComponent))
 	{
 		LocomotionComponent = Cast<ULocomotionComponent>(Character->GetComponentByClass(ULocomotionComponent::StaticClass()));
 	}
 
-	//if (!IsValid(LadderComponent))
-	//{
-	//	LadderComponent = Cast<ULadderComponent>(Character->GetComponentByClass(ULadderComponent::StaticClass()));
-	//}
+	if (!IsValid(LadderComponent))
+	{
+		LadderComponent = Cast<ULadderComponent>(Character->GetComponentByClass(ULadderComponent::StaticClass()));
+	}
 
 	if (!IsValid(CharacterMovementComponent))
 	{
 		CharacterMovementComponent = Cast<UWvCharacterMovementComponent>(Character->GetCharacterMovement());
 	}
 
-	//if (!IsValid(ClimbingComponent))
-	//{
-	//	ClimbingSystemComponent = Cast<UClimbingComponent>(Character->GetComponentByClass(UClimbingComponent::StaticClass()));
-	//	if (ClimbingSystemComponent)
-	//	{
-	//		RootOffset.Z = (ClimbingSystemComponent->ConstCapsuleOffset - 10.0f);
-	//	}
-	//}
+	if (!IsValid(ClimbingComponent))
+	{
+		ClimbingComponent = Cast<UClimbingComponent>(Character->GetComponentByClass(UClimbingComponent::StaticClass()));
+		if (ClimbingComponent)
+		{
+			RootOffset.Z = (ClimbingComponent->ConstCapsuleOffset - 10.0f);
+		}
+	}
 
 
 }
@@ -215,11 +218,11 @@ const bool UClimbingAnimInstance::FreeHangStateEvent_Internal(const bool bDetect
 	if (ClimbingActionType != EClimbActionType::Turn180 && CurveValue < Threshold && !bIsLockUpdatingHangingMode)
 	{
 		bIsFreeHang = !bDetectedIK;
-		//if (IsValid(ClimbingSystemComponent))
-		//{
-		//	ClimbingSystemComponent->ModifyFreeHangMode(bIsFreeHang);
-		//}
-		//return false;
+		if (IsValid(ClimbingComponent))
+		{
+			ClimbingComponent->ModifyFreeHangMode(bIsFreeHang);
+		}
+		return false;
 	}
 
 	if (bIsLockUpdatingHangingMode)

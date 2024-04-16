@@ -62,6 +62,12 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Character|Components|CharacterMovement")
 	bool IsWallClimbing() const;
 
+	UFUNCTION(BlueprintCallable, Category = "Character|Components|CharacterMovement")
+	bool IsClimbing() const;
+
+	UFUNCTION(BlueprintCallable, Category = "Character|Components|CharacterMovement")
+	bool IsLaddering() const;
+
 	UPROPERTY(BlueprintAssignable)
 	FHandleImpact OnHandleImpact;
 
@@ -95,6 +101,7 @@ public:
 	void AbortClimbing();
 	void ForbidClimbing(const bool bIsTagAdd);
 	void TryLedgeEndAction();
+	const bool TryClimbUpLedge();
 
 	// Apply UAbilityInteraction_ClimbUpLedge
 	UAnimMontage* GetClimbUpLedgeMontage() const;
@@ -249,7 +256,7 @@ private:
 	bool ClimbDownToFloor() const;
 	bool CheckFloor(FHitResult& FloorHit) const;
 	void SetRotationToStand() const;
-	const bool TryClimbUpLedge();
+
 	bool HasReachedEdge() const;
 	const bool IsLocationWalkable(const FVector& CheckLocation);
 	const bool CanMoveToLedgeClimbLocation();

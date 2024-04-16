@@ -1182,3 +1182,4 @@ public:
 	UPROPERTY(EditDefaultsOnly)
 	int32 FollowStackCount = 5;
 };
+

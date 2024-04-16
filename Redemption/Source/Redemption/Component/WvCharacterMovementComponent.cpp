@@ -2908,3 +2908,21 @@ UAnimMontage* UWvCharacterMovementComponent::GetClimbUpLedgeMontage() const
 }
 #pragma endregion
 
+/// <summary>
+/// apply to ClimbingComponent
+/// </summary>
+/// <returns></returns>
+bool UWvCharacterMovementComponent::IsClimbing() const
+{
+	return ((MovementMode == MOVE_Custom) && (CustomMovementMode == CUSTOM_MOVE_Climbing)) && UpdatedComponent;
+}
+
+/// <summary>
+/// apply to LadderComponent
+/// </summary>
+/// <returns></returns>
+bool UWvCharacterMovementComponent::IsLaddering() const
+{
+	return ((MovementMode == MOVE_Custom) && (CustomMovementMode == CUSTOM_MOVE_Ladder)) && UpdatedComponent;
+}
+

@@ -77,8 +77,7 @@ FGameplayTag ULocomotionStateDataAsset::FindGaitTag(const ELSGait LSGait) const
 ULocomotionComponent::ULocomotionComponent(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
 	PrimaryComponentTick.bCanEverTick = true;
-	// @TODO
-	//PrimaryComponentTick.bRunOnAnyThread = true;
+	PrimaryComponentTick.bRunOnAnyThread = true;
 
 	RagdollPoseSnapshot = FName(TEXT("RagdollPose"));
 	PelvisBoneName = FName(TEXT("pelvis"));

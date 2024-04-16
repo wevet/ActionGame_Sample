@@ -20,6 +20,8 @@
 #include "Vehicle/WvWheeledVehiclePawn.h"
 #include "Item/BulletHoldWeaponActor.h"
 #include "GameExtension.h"
+#include "Climbing/ClimbingComponent.h"
+#include "Climbing/LadderComponent.h"
 
 #include "Components/CapsuleComponent.h"
 #include "Components/InputComponent.h"
@@ -199,7 +201,7 @@ void ABaseCharacter::BeginPlay()
 
 	LocomotionComponent->OnRotationModeChangeDelegate.AddDynamic(this, &ThisClass::OnRoationChange_Callback);
 	LocomotionComponent->OnGaitChangeDelegate.AddDynamic(this, &ThisClass::OnGaitChange_Callback);
-	LocomotionComponent->AddTickPrerequisiteActor(this);
+	LocomotionComponent->PrimaryComponentTick.AddPrerequisite(this, this->PrimaryActorTick);
 
 	RequestAsyncLoad();
 
@@ -773,11 +775,33 @@ void ABaseCharacter::Jump()
 				switch (CustomMovementMode)
 				{
 					case CUSTOM_MOVE_Climbing:
+					{
+						UClimbingComponent* ClimbingComponent = Cast<UClimbingComponent>(GetComponentByClass(UClimbingComponent::StaticClass()));
+						if (ClimbingComponent)
+						{
+							ClimbingComponent->SetJumpInputPressed(true);
+						}
+					}
 					break;
 					case CUSTOM_MOVE_WallClimbing:
-					CMC->TryClimbJumping();
+					{
+						// wall climbing when jump action
+						CMC->TryClimbJumping();
+					}
 					break;
 					case CUSTOM_MOVE_Mantling:
+					{
+						//
+					}
+					break;
+					case CUSTOM_MOVE_Ladder:
+					{
+						ULadderComponent* LadderComponent = Cast<ULadderComponent>(GetComponentByClass(ULadderComponent::StaticClass()));
+						if (LadderComponent)
+						{
+							LadderComponent->SetJumpInputPressed(true);
+						}
+					}
 					break;
 				}
 			}
