@@ -189,10 +189,10 @@ void ABaseCharacter::BeginPlay()
 	AnimInstance = Cast<UWvAnimInstance>(GetMesh()->GetAnimInstance());
 
 	USkeletalMeshComponent* SkelMesh = GetMesh();
-	SkelMesh->AddTickPrerequisiteActor(this);
+	//SkelMesh->PrimaryComponentTick.AddPrerequisite(this, this->PrimaryActorTick);
 
-	CombatComponent->AddTickPrerequisiteActor(this);
-	PawnNoiseEmitterComponent->AddTickPrerequisiteActor(this);
+	CombatComponent->PrimaryComponentTick.AddPrerequisite(this, this->PrimaryActorTick);
+	PawnNoiseEmitterComponent->PrimaryComponentTick.AddPrerequisite(this, this->PrimaryActorTick);
 
 	UWvCharacterMovementComponent* CMC = GetWvCharacterMovementComponent();
 	CMC->OnWallClimbingBeginDelegate.AddDynamic(this, &ABaseCharacter::OnWallClimbingBegin_Callback);

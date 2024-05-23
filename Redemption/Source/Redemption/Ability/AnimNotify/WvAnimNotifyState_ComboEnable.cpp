@@ -49,8 +49,15 @@ void UWvAnimNotifyState_ComboEnable::AbilityNotifyBegin(USkeletalMeshComponent* 
 	//	UE_LOG(LogTemp, Log, TEXT("Tag => %s"), *Tag.GetTagName().ToString());
 	//}
 
-	const FGameplayTagContainer EventTagContainer = FGameplayTagContainer::CreateFromArray(TagArray);
+	auto Tags = RequiredGameplayTags.GetGameplayTagArray();
 
+	for (FGameplayTag Tag : Tags)
+	{
+		UE_LOG(LogTemp, Log, TEXT("Added Tag => %s, func => %s"), *Tag.GetTagName().ToString(), *FString(__FUNCTION__));
+	}
+
+	const FGameplayTagContainer EventTagContainer = FGameplayTagContainer::CreateFromArray(TagArray);
+	
 	IsImmediatelyExecute = (ExecuteTime <= 0.f);
 	WaitReleaseTask = UWvAT_WaitKeyPress::WaitKeyPress(Ability, FName(TEXT("WaitKeyInput_ComboEnable")), EventTagContainer);
 	WaitReleaseTask->OnActive.__Internal_AddDynamic(this, &UWvAnimNotifyState_ComboEnable::OnPressed, FName(TEXT("OnPressed")));

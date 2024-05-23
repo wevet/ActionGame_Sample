@@ -190,8 +190,9 @@ void ULocomotionComponent::DoTick()
 
 void ULocomotionComponent::DoTick(const float DeltaTime)
 {
+
 #if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
-	bDebugTrace = (CVarDebugLocomotionSystem.GetValueOnGameThread() > 0);
+	bDebugTrace = (CVarDebugLocomotionSystem.GetValueOnAnyThread() > 0);
 #else
 	bDebugTrace = false;
 #endif

@@ -19,6 +19,17 @@ public:
     static UWvGameInstance* GetGameInstance();
     static FStreamableManager& GetStreamableManager();
 
+    UFUNCTION(BlueprintCallable, Category = GameInstance)
+    void StartNight();
+
+    UFUNCTION(BlueprintCallable, Category = GameInstance)
+    void StartDay();
+
+    UFUNCTION(BlueprintCallable, Category = GameInstance)
+    bool IsInNight() const { return bIsInNight; }
+
 private:
     static FStreamableManager StreamableManager;
+
+    bool bIsInNight = false;
 };

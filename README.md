@@ -1,7 +1,7 @@
 # ActionGame_Sample
 
 Using GameEngine UnrealEngine\
-EngineVersion 5.3 Based CustomEngine
+EngineVersion 5.3
 
 ##### using plugin
 - QuadrupedIK

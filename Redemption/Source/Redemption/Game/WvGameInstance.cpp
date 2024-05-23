@@ -8,18 +8,28 @@ FStreamableManager UWvGameInstance::StreamableManager;
 
 UWvGameInstance* UWvGameInstance::GetGameInstance()
 {
-    UWvGameInstance* Instance = nullptr;
-    if (GEngine != nullptr)
-    {
-        FWorldContext* Context = GEngine->GetWorldContextFromGameViewport(GEngine->GameViewport);
-        Instance = Cast<UWvGameInstance>(Context->OwningGameInstance);
-    }
-    return Instance;
+	UWvGameInstance* Instance = nullptr;
+	if (GEngine != nullptr)
+	{
+		FWorldContext* Context = GEngine->GetWorldContextFromGameViewport(GEngine->GameViewport);
+		Instance = Cast<UWvGameInstance>(Context->OwningGameInstance);
+	}
+	return Instance;
 }
 
 FStreamableManager& UWvGameInstance::GetStreamableManager()
 {
-    return StreamableManager;
+	return StreamableManager;
+}
+
+void UWvGameInstance::StartNight()
+{
+	bIsInNight = true;
+}
+
+void UWvGameInstance::StartDay()
+{
+	bIsInNight = false;
 }
 
 

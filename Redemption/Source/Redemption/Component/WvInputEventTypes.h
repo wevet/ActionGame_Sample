@@ -87,6 +87,7 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	bool bCheckStateTag = false;
 
+	// @TODO remove later
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, meta = (EditCondition = "bCheckStateTag"))
 	FGameplayTag StateCheckTag;
 

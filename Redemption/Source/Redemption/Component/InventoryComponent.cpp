@@ -12,7 +12,7 @@
 
 UInventoryComponent::UInventoryComponent(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
-	PrimaryComponentTick.bCanEverTick = false;
+	PrimaryComponentTick.bCanEverTick = true;
 
 	InitAttackWeaponState = EAttackWeaponState::EmptyWeapon;
 }
@@ -20,6 +20,7 @@ UInventoryComponent::UInventoryComponent(const FObjectInitializer& ObjectInitial
 void UInventoryComponent::BeginPlay()
 {
 	Super::BeginPlay();
+	Super::SetComponentTickEnabled(false);
 
 	Character = Cast<ABaseCharacter>(GetOwner());
 

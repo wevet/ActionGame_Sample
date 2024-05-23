@@ -369,6 +369,15 @@ void UWvInputEventComponent::InputCallBack(const FKey InputKey, const FName Key,
 		//}
 	}
 
+	if (InputEvent->bCheckStateTag)
+	{
+		if (ASC.IsValid() && ASC->HasMatchingGameplayTag(TAG_Character_ActionMelee_ComboRequire))
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Enable ComboRequire Tag => %s"), *FString(__FUNCTION__));
+			//return;
+		}
+	}
+
 	if (InputEvent->GetIsUseExtend())
 	{
 		ProcessGameEventExtend(InputEvent->GetEventTagNameWithExtend(), bPress);

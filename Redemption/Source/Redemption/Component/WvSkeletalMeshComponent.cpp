@@ -16,7 +16,6 @@ UWvSkeletalMeshComponent::UWvSkeletalMeshComponent(const FObjectInitializer& Obj
 	//bShouldUseActorRenderedFlag = true;
 
 	PrimaryComponentTick.bCanEverTick = true;
-	// @TODO
 	//PrimaryComponentTick.bRunOnAnyThread = true;
 }
 
