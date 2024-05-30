@@ -2,6 +2,7 @@
 
 #include "RedemptionGameMode.h"
 #include "UObject/ConstructorHelpers.h"
+#include "Game/WvGameInstance.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(RedemptionGameMode)
 
@@ -12,5 +13,17 @@ ARedemptionGameMode::ARedemptionGameMode()
 	//{
 	//	DefaultPawnClass = PlayerPawnBPClass.Class;
 	//}
+}
+
+void ARedemptionGameMode::StartPlay()
+{
+	Super::StartPlay();
+
+	const bool bIsGameCleared = UWvGameInstance::GetGameInstance()->IsGameClear();
+
+	UE_LOG(LogTemp, Log, TEXT("start %s"), *FString(__FUNCTION__));
+	UE_LOG(LogTemp, Log, TEXT("bIsGameCleared => %s"), bIsGameCleared ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(LogTemp, Log, TEXT("end %s"), *FString(__FUNCTION__));
 }
 
