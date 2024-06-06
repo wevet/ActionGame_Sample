@@ -224,9 +224,6 @@ struct QUADRUPEDIK_API FCustomBone_FootData
 	float FeetAlpha = 1.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = SkeletalControl, meta = (PinHiddenByDefault))
-	FName DisableCurveName;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = SkeletalControl, meta = (PinHiddenByDefault))
 	float MinFeetExtension = 0.35f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = SkeletalControl, meta = (PinHiddenByDefault))

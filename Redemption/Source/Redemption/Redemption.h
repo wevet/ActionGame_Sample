@@ -144,11 +144,4 @@ REDEMPTION_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Vehicle_State_Drive); // curre
 */
 #define K_CHARACTER_COLLISION_PRESET FName(TEXT("BaseCharacter"))
 
-/*
-* save game
-*/
-#define K_PLAYER_SLOT_NAME TEXT("PlayerID")
-#define K_PLAYER_SLOT_ID 0
-
-
 

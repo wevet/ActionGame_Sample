@@ -5,40 +5,31 @@
 #include "CoreMinimal.h"
 #include "Engine/GameInstance.h"
 #include "Engine/StreamableManager.h"
-#include "Game/WvSaveGame.h"
 #include "WvGameInstance.generated.h"
 
 /**
- *
+ * 
  */
 UCLASS()
 class REDEMPTION_API UWvGameInstance : public UGameInstance
 {
 	GENERATED_BODY()
-
+	
 public:
-	static UWvGameInstance* GetGameInstance();
-	static FStreamableManager& GetStreamableManager();
+    static UWvGameInstance* GetGameInstance();
+    static FStreamableManager& GetStreamableManager();
 
-	UWvSaveGame* GetWvSaveGame(const FString& SlotName, const int32& SlotIndex);
-	void Save(const FString& SlotName, const int32& SlotIndex);
-	void Load(const FString& SlotName, const int32& SlotIndex);
+    UFUNCTION(BlueprintCallable, Category = GameInstance)
+    void StartNight();
 
-	bool LoadMissionData(const int32 InMissionId, FMissionBaseData& OutMissionData);
+    UFUNCTION(BlueprintCallable, Category = GameInstance)
+    void StartDay();
 
-	// start region mission
-	void RegisterMission(FMissionBaseData& NewMissionData);
-	void CompleteMission(const FMissionBaseData InMissionData);
-	void InterruptionMission(const FMissionBaseData InMissionData);
-	// end region mission
-
-	void SetGameClear();
-	const bool IsGameClear();
-
-	void SetHour(const int32 InHour);
-	const int32 GetHour();
+    UFUNCTION(BlueprintCallable, Category = GameInstance)
+    bool IsInNight() const { return bIsInNight; }
 
 private:
-	static FStreamableManager StreamableManager;
+    static FStreamableManager StreamableManager;
 
+    bool bIsInNight = false;
 };

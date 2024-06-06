@@ -13,8 +13,6 @@ class ARedemptionGameMode : public AGameModeBase
 
 public:
 	ARedemptionGameMode();
-
-	virtual void StartPlay() override;
 };
 
 

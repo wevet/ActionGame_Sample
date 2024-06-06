@@ -5,7 +5,6 @@
 #include "CoreMinimal.h"
 #include "GameplayTagContainer.h"
 #include "Component/WvInputEventComponent.h"
-#include "Component/MissionComponent.h"
 #include "WvPlayerCameraManager.h"
 #include "GameFramework/PlayerController.h"
 #include "Interface/WvAbilityTargetInterface.h"
@@ -91,9 +90,6 @@ public:
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Component, meta = (AllowPrivateAccess = "true"))
 	class UWvInputEventComponent* InputEventComponent;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Component, meta = (AllowPrivateAccess = "true"))
-	TObjectPtr<class UMissionComponent> MissionComponent;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PlayerController|Config")
 	int32 OverrideSquadID = 1;

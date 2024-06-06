@@ -15,7 +15,6 @@
 AWvPlayerController::AWvPlayerController(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
 	InputEventComponent = CreateDefaultSubobject<UWvInputEventComponent>(TEXT("InputComponent"));
-	MissionComponent = CreateDefaultSubobject<UMissionComponent>(TEXT("MissionComponent"));
 
 	//bCanPossessWithoutAuthority = true;
 }
