@@ -916,21 +916,25 @@ void FAnimNode_CustomFeetSolver::ApplyTwoBoneIK(
 
 		FeetModofyTransformArray[SpineIndex][FeetIndex].SetLocation(EffectorLocationPoint);
 
+		const float DeltaSeconds = SkeletalMeshComponent->GetWorld()->GetDeltaSeconds();
+
 		if (SpineHitPairs[SpineIndex].FeetHitArray[FeetIndex].bBlockingHit || FirstTimeCounter < 3)
 		{
+
+			FCustomBone_FootData& FootData = SolverInputData.FeetBones[SpineFeetPair[SpineIndex].OrderIndexArray[FeetIndex]];
+			float Value = 0.f;
+			PredictionAnimInstance->GetCurveValue(FootData.DisableCurveName, Value);
+			const float K_Alpha = FMath::Clamp(FootData.FeetAlpha - Value, 0.0f, 1.f);
+
 			FootAlphaArray[SpineIndex][FeetIndex] = UKismetMathLibrary::FInterpTo(
 				FootAlphaArray[SpineIndex][FeetIndex], 
-				SolverInputData.FeetBones[SpineFeetPair[SpineIndex].OrderIndexArray[FeetIndex]].FeetAlpha, 
-				1.0f - FMath::Exp(-10 * SkeletalMeshComponent->GetWorld()->GetDeltaSeconds()), 
-				ShiftSpeed);
+				K_Alpha, 1.0f - FMath::Exp(-10 * DeltaSeconds), ShiftSpeed);
 		}
 		else
 		{
 			FootAlphaArray[SpineIndex][FeetIndex] = UKismetMathLibrary::FInterpTo(
 				FootAlphaArray[SpineIndex][FeetIndex], 
-				0.0f, 
-				1.0f - FMath::Exp(-10 * SkeletalMeshComponent->GetWorld()->GetDeltaSeconds()), 
-				ShiftSpeed);
+				0.0f, 1.0f - FMath::Exp(-10 * DeltaSeconds), ShiftSpeed);
 		}
 	}
 
@@ -1245,9 +1249,15 @@ void FAnimNode_CustomFeetSolver::ApplySingleBoneIK(
 
 		}
 		FeetModofyTransformArray[SpineIndex][FeetIndex].SetLocation(EffectorLocation_Point);
+
+		FCustomBone_FootData& FootData = SolverInputData.FeetBones[SpineFeetPair[SpineIndex].OrderIndexArray[FeetIndex]];
+		float Value = 0.f;
+		PredictionAnimInstance->GetCurveValue(FootData.DisableCurveName, Value);
+		const float K_Alpha = FMath::Clamp(FootData.FeetAlpha - Value, 0.0f, 1.f);
+
 		FootAlphaArray[SpineIndex][FeetIndex] = UKismetMathLibrary::FInterpTo(
 			FootAlphaArray[SpineIndex][FeetIndex], 
-			SolverInputData.FeetBones[SpineFeetPair[SpineIndex].OrderIndexArray[FeetIndex]].FeetAlpha,
+			K_Alpha,
 			1.0f - FMath::Exp(-10.0f * DeltaSeconds),
 			ShiftSpeed);
 	}
@@ -1767,7 +1777,8 @@ TArray<FName> FAnimNode_CustomFeetSolver::BoneArrayMachine_Feet(int32 Index, FNa
 				Index, 
 				SolverInputData.FeetBones[Index].FeetSlopeOffsetMultiplier, 
 				SolverInputData.FeetBones[Index].FingerBoneArray, 
-				SolverInputData.FeetBones[Index].FeetAlpha, 
+				1.0f, 
+				//SolverInputData.FeetBones[Index].FeetAlpha, 
 				SolverInputData.FeetBones[Index].MinFeetExtension, 
 				SolverInputData.FeetBones[Index].FeetTraceOffset,
 				SolverInputData.FeetBones[Index].KneeDirectionOffset, 
@@ -1953,31 +1964,6 @@ void FAnimNode_CustomFeetSolver::ApplyLineTrace(
 				FRotator::ZeroRotator, TraceChannel, true, IgnoreActors, DebugTrace, HitResult, true, DebugColor);
 			break;
 		}
-
-#if false
-		if ((RayTraceType == EIKRaycastType::LineTrace || SelectedTraceRadius < 0.2f) || bDrawLine)
-		{
-			UKismetSystemLibrary::LineTraceSingle(CharacterOwner, StartLocation, EndLocation, TraceChannel, true, IgnoreActors, DebugTrace, HitResult, true, DebugColor);
-		}
-		else
-		{
-			if (RayTraceType == EIKRaycastType::SphereTrace)
-			{
-				UKismetSystemLibrary::SphereTraceSingle(
-					CharacterOwner, StartLocation + CharacterDirection * ScaledTraceRadius, EndLocation + CharacterDirection * ScaledTraceRadius,
-					ScaledTraceRadius, TraceChannel, true, IgnoreActors, DebugTrace, HitResult, true, DebugColor);
-			}
-			else
-			{
-				if (RayTraceType == EIKRaycastType::BoxTrace)
-				{
-					UKismetSystemLibrary::BoxTraceSingle(
-						CharacterOwner, StartLocation, EndLocation, FVector(1.0f, 1.0f, 0.0f) * ScaledTraceRadius,
-						FRotator::ZeroRotator, TraceChannel, true, IgnoreActors, DebugTrace, HitResult, true, DebugColor);
-				}
-			}
-		}
-#endif
 
 	}
 
