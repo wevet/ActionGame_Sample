@@ -90,6 +90,7 @@ public:
 	TArray<FMissionPhase> MissionPhases;
 
 	FMissionPhase GetCurrentMissionPhase() const;
+	FMissionPhase GetMissionPhaseByIndex(const int32 InMissionID) const;
 	void CompleteMissionPhase(const FMissionPhase InMissionPhase);
 };
 

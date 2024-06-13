@@ -124,7 +124,7 @@ ABaseCharacter::ABaseCharacter(const FObjectInitializer& ObjectInitializer)
 	MotionWarpingComponent = ObjectInitializer.CreateDefaultSubobject<UMotionWarpingComponent>(this, TEXT("MotionWarpingComponent"));
 	MotionWarpingComponent->bSearchForWindowsInAnimsWithinMontages = true;
 
-	// motion mathing
+	// motion matching
 	CharacterTrajectoryComponent = ObjectInitializer.CreateDefaultSubobject<UCharacterTrajectoryComponent>(this, TEXT("CharacterTrajectoryComponent"));
 	CharacterTrajectoryComponent->bAutoActivate = 1;
 
@@ -1723,7 +1723,7 @@ void ABaseCharacter::OnLoadOverlayABP()
 		bIsResult = (IsValid(OverlayAnimDAInstance));
 
 	} while (!bIsResult);
-	//UE_LOG(LogTemp, Log, TEXT("Complete => [%s]"), *FString(__FUNCTION__));
+	UE_LOG(LogTemp, Log, TEXT("Complete OverlayAnimDAInstance => [%s]"), *FString(__FUNCTION__));
 }
 
 void ABaseCharacter::OnFinisherAnimAssetLoadComplete()
@@ -1745,7 +1745,7 @@ void ABaseCharacter::OnLoadFinisherAssets()
 				bIsResult = (IsValid(FinisherSender));
 
 			} while (!bIsResult);
-			//UE_LOG(LogTemp, Log, TEXT("Complete => [%s]"), *FString(__FUNCTION__));
+			UE_LOG(LogTemp, Log, TEXT("Complete FinisherSender => [%s]"), *FString(__FUNCTION__));
 		}
 	}
 
@@ -1760,7 +1760,7 @@ void ABaseCharacter::OnLoadFinisherAssets()
 				bIsResult = (IsValid(FinisherReceiner));
 
 			} while (!bIsResult);
-			//UE_LOG(LogTemp, Log, TEXT("Complete => [%s]"), *FString(__FUNCTION__));
+			UE_LOG(LogTemp, Log, TEXT("Complete FinisherReceiner => [%s]"), *FString(__FUNCTION__));
 		}
 	}
 

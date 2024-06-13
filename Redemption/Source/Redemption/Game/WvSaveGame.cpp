@@ -4,6 +4,7 @@
 #include "Game/WvSaveGame.h"
 #include "Engine.h"
 
+#pragma region MissionPhase
 void FMissionPhase::Complete()
 {
 	bIsCompleted = true;
@@ -13,8 +14,9 @@ bool FMissionPhase::HasComplete() const
 {
 	return bIsCompleted;
 }
+#pragma endregion
 
-
+#pragma region MissionBaseData
 void FMissionBaseData::Complete()
 {
 	bIsCompleted = true;
@@ -39,7 +41,9 @@ bool FMissionBaseData::IsValid() const
 {
 	return MainIndex != INDEX_NONE;
 }
+#pragma endregion
 
+#pragma region MissionGameData
 FMissionPhase FMissionGameData::GetCurrentMissionPhase() const
 {
 	auto FindMissionPhaseData = MissionPhases.FindByPredicate([&](FMissionPhase Item)
@@ -56,17 +60,37 @@ FMissionPhase FMissionGameData::GetCurrentMissionPhase() const
 	return Temp;
 }
 
+FMissionPhase FMissionGameData::GetMissionPhaseByIndex(const int32 InMissionID) const
+{
+	auto FindMissionPhaseData = MissionPhases.FindByPredicate([&](FMissionPhase Item)
+	{
+		return (Item.Index == InMissionID);
+	});
+
+	if (FindMissionPhaseData)
+	{
+		return *FindMissionPhaseData;
+	}
+
+	FMissionPhase Temp;
+	return Temp;
+}
+
 void FMissionGameData::CompleteMissionPhase(const FMissionPhase InMissionPhase)
 {
 	const auto ID = InMissionPhase.Index;
-	for (FMissionPhase MissionPhase : MissionPhases)
+
+	auto FindissionGameData = MissionPhases.FindByPredicate([&](FMissionPhase Item)
 	{
-		if (ID == MissionPhase.Index)
-		{
-			MissionPhase.Complete();
-		}
+		return (Item.Index == ID);
+	});
+
+	if (FindissionGameData)
+	{
+		FindissionGameData->Complete();
 	}
 }
+#pragma endregion
 
 FMissionGameData UMissionGameDataAsset::GetMissionGameData(const int32 MissionId)
 {
