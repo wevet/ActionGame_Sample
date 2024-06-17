@@ -77,7 +77,7 @@ DerivedDataCache/*
 
 Content/UltraDynamicSky/*
 Content/WB_Dresswear/*
-Content/Assets/*
+#Content/Assets/*
 Content/MetaHumans/*
 Content/Main_City/*
 
