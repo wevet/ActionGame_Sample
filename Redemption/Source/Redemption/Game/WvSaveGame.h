@@ -121,40 +121,40 @@ class REDEMPTION_API UWvSaveGame : public USaveGame
 	GENERATED_BODY()
 
 public:
-	// player name
-	UPROPERTY()
-	FName Name;
-
+	UWvSaveGame();
 	void RegisterMission(FMissionBaseData& NewMissionData);
 	void CompleteMission(const FMissionBaseData InMissionData);
 	void InterruptionMission(const FMissionBaseData InMissionData);
 
 	bool LoadMissionData(const int32 InMissionId, FMissionBaseData& OutMissionData);
-
 	void SetGameClear();
 	bool IsGameClear() const;
-
 	void SetHour(const int32 InHour);
 	int32 GetHour() const { return Hour; }
 
+protected:
+	// player name
+	UPROPERTY(VisibleAnywhere, Category = SaveGame)
+	FName Name;
 
-private:
 	// gameì‡éûä‘
-	UPROPERTY()
+	UPROPERTY(VisibleAnywhere, Category = SaveGame)
 	int32 Hour;
 
 	// is game cleard ?
-	UPROPERTY()
+	UPROPERTY(VisibleAnywhere, Category = SaveGame)
 	bool bIsGameCompleted = false;
 
+	UPROPERTY(VisibleAnywhere, Category = SaveGame)
+	TArray<FMissionBaseData> MissionArray;
+
+private:
 	// åªç›ÇÃéÛíçmission dict
 	// key mission id
 	// value phase id
 	UPROPERTY()
 	TMap<int32, int32> MissionDataMap;
 
-	UPROPERTY()
-	TArray<FMissionBaseData> MissionArray;
 };
 
 

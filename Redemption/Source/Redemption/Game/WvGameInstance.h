@@ -20,9 +20,9 @@ public:
 	static UWvGameInstance* GetGameInstance();
 	static FStreamableManager& GetStreamableManager();
 
-	UWvSaveGame* GetWvSaveGame(const FString& SlotName, const int32& SlotIndex);
-	void Save(const FString& SlotName, const int32& SlotIndex);
-	void Load(const FString& SlotName, const int32& SlotIndex);
+	UWvSaveGame* GetOrCreateWvSaveGame(const FString SlotName);
+	void Save(const FString SlotName);
+	void Load();
 
 	bool LoadMissionData(const int32 InMissionId, FMissionBaseData& OutMissionData);
 
@@ -38,7 +38,11 @@ public:
 	void SetHour(const int32 InHour);
 	const int32 GetHour();
 
+	static void SetSaveSlotID(const int32 NewSaveSlotID);
+	static int32 GetSaveSlotID();
+
 private:
 	static FStreamableManager StreamableManager;
 
+	static int32 SaveSlotID;
 };

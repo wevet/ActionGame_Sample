@@ -109,6 +109,11 @@ FMissionGameData UMissionGameDataAsset::GetMissionGameData(const int32 MissionId
 	return Temp;
 }
 
+UWvSaveGame::UWvSaveGame() : Super()
+{
+	Hour = 0;
+}
+
 void UWvSaveGame::RegisterMission(FMissionBaseData& NewMissionData)
 {
 	auto FindissionGameData = MissionArray.FindByPredicate([&](FMissionBaseData Item)
