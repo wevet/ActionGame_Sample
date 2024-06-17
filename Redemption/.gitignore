@@ -77,9 +77,9 @@ DerivedDataCache/*
 
 Content/UltraDynamicSky/*
 Content/WB_Dresswear/*
-#Content/Assets/*
 Content/MetaHumans/*
 Content/Main_City/*
+Content/Assets/Environment_Set/*
 
 .vsconfig
 
