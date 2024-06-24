@@ -22,6 +22,7 @@ enum class EWvInputEventType : uint8
 	Released UMETA(DisplayName = "Released"),
 	Clicked UMETA(DisplayName = "Clicked"),
 	HoldPressed UMETA(DisplayName = "HoldPressed"),
+	DoubleClicked UMETA(DisplayName = "DoubleClicked"),
 };
 
 USTRUCT(BlueprintType)
@@ -111,6 +112,7 @@ public:
 };
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FHoldActionDelegate, FGameplayTag, GameplayTag, bool, IsPressed);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FDoubleClickActionDelegate, FGameplayTag, GameplayTag, bool, IsPressed);
 
 UCLASS()
 class UWvInputEventCallbackInfo : public UObject
@@ -129,14 +131,26 @@ public:
 	UPROPERTY(BlueprintAssignable)
 	FHoldActionDelegate OnHoldingCallback;
 
+	UPROPERTY(BlueprintAssignable)
+	FDoubleClickActionDelegate OnDoubleClickCallback;
+
 	void OnPressed(const UWorld* World);
 	void OnReleased();
 	void Update(const float DeltaTime);
+
+
+	const bool OnDoubleClickPressed();
+	void OnDoubleClickReleased();
+	
 
 private:
 	FTimerHandle HoldActionTH;
 	bool bCallbackResult = false;
 	float Interval = 0.f;
 
+	bool bDoubleClickStarted = false;
+	int32 ClickCount = 0;
+
+	void OnDoubleClickEnded();
 };
 

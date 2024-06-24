@@ -1647,36 +1647,18 @@ const bool UWvCharacterMovementComponent::MantleCheck(const FMantleTraceSettings
 	TraceForwardToFindWall(InTraceSetting, TracePoint, TraceNormal, OutHitResult);
 	if (!OutHitResult)
 	{
-#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
-		if (CVarDebugMantlingSystem.GetValueOnGameThread() > 0)
-		{
-			UE_LOG(LogTemp, Warning, TEXT("TraceForwardToFindWall => false"));
-		}
-#endif
 		return false;
 	}
 
 	SphereTraceByMantleCheck(InTraceSetting, TracePoint, TraceNormal, OutHitResult, DownTraceLocation, HitComponent);
 	if (!OutHitResult)
 	{
-#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
-		if (CVarDebugMantlingSystem.GetValueOnGameThread() > 0)
-		{
-			UE_LOG(LogTemp, Warning, TEXT("SphereTraceByMantleCheck => false"));
-		}
-#endif
 		return false;
 	}
 
 	ConvertMantleHeight(DownTraceLocation, TraceNormal, OutHitResult, TargetTransform, MantleHeight);
 	if (!OutHitResult)
 	{
-#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
-		if (CVarDebugMantlingSystem.GetValueOnGameThread() > 0)
-		{
-			UE_LOG(LogTemp, Warning, TEXT("ConvertMantleHeight => false"));
-		}
-#endif
 		return false;
 	}
 
@@ -1709,12 +1691,11 @@ FVector UWvCharacterMovementComponent::GetCapsuleLocationFromBase(const FVector 
 bool UWvCharacterMovementComponent::CapsuleHasRoomCheck(const FVector TargetLocation, const float HeightOffset, const float RadiusOffset) const
 {
 	check(CharacterOwner->GetCapsuleComponent());
-	const float InvRadiusOffset = RadiusOffset * -1.f;
 	const float Hemisphere = CharacterOwner->GetCapsuleComponent()->GetScaledCapsuleHalfHeight_WithoutHemisphere();
-	const float Offset = Hemisphere + InvRadiusOffset + HeightOffset;
+	const float Offset = Hemisphere + (RadiusOffset * -1.f) + HeightOffset;
 
 	// Editor Settings
-	const FName ProfileName(TEXT("Pawn"));
+	const FName ProfileName = K_CHARACTER_COLLISION_PRESET;
 	const FVector OffsetPosition = FVector(0.0f, 0.0f, Offset);
 	const FVector StartLocation = (TargetLocation + OffsetPosition);
 	const FVector EndLocation = (TargetLocation - OffsetPosition);
@@ -1743,11 +1724,22 @@ bool UWvCharacterMovementComponent::CapsuleHasRoomCheck(const FVector TargetLoca
 		TraceType,
 		HitData,
 		true,
-		FLinearColor::Green,
-		FLinearColor::FLinearColor(0.9f, 0.3f, 1.0f, 1.0),
+		FLinearColor::FLinearColor(0.13f, 0.89f, 0.14f, 1.0),
+		FLinearColor::FLinearColor(0.93f, 0.29f, 1.0f, 1.0),
 		DrawTime);
 
-	return !(HitData.bBlockingHit || HitData.bStartPenetrating);
+	//const bool bIsHitResult = !(HitData.bBlockingHit || HitData.bStartPenetrating);
+	const bool bIsHitResult = (HitData.bBlockingHit);// || HitData.bStartPenetrating
+
+#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
+	if (CVarDebugMantlingSystem.GetValueOnGameThread() > 0)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("%s"), *FString(__FUNCTION__));
+		UE_LOG(LogTemp, Warning, TEXT("result => %s"), bIsHitResult ? TEXT("true") : TEXT("false"));
+	}
+#endif
+
+	return bIsHitResult;
 }
 
 // Step 1: Trace forward to find a wall / object the character cannot walk on.
@@ -1795,15 +1787,23 @@ void UWvCharacterMovementComponent::TraceForwardToFindWall(const FMantleTraceSet
 		TraceType,
 		HitData,
 		true,
-		FLinearColor::Red,
-		FLinearColor::Green,
+		FLinearColor::Black,
+		FLinearColor::White,
 		DrawTime);
 
+	const bool bIsBlockHit = HitData.bBlockingHit;
 	const bool bNotWalkableHit = !IsWalkable(HitData);
-	const bool bBlockingHit = HitData.bBlockingHit;
 	const bool bNotInitialOverlap = !(HitData.bStartPenetrating);
 
-	OutHitResult = (bNotWalkableHit && bBlockingHit && bNotInitialOverlap);
+	OutHitResult = (bNotWalkableHit && bIsBlockHit && bNotInitialOverlap);
+
+#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
+	if (CVarDebugMantlingSystem.GetValueOnGameThread() > 0)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("%s"), *FString(__FUNCTION__));
+		UE_LOG(LogTemp, Warning, TEXT("result => %s"), OutHitResult ? TEXT("true") : TEXT("false"));
+	}
+#endif
 
 	if (OutHitResult)
 	{
@@ -1861,11 +1861,20 @@ void UWvCharacterMovementComponent::SphereTraceByMantleCheck(const FMantleTraceS
 		DrawTime);
 
 	const bool bWalkableHit = IsWalkable(HitData);
-	const bool bResult = HitData.bBlockingHit;
+	//const bool bResult = HitData.bBlockingHit;
 
-	OutHitResult = (bWalkableHit && bResult);
+	//OutHitResult = (bWalkableHit && bResult);
+	OutHitResult = bWalkableHit;
 	OutDownTraceLocation = FVector(HitData.Location.X, HitData.Location.Y, HitData.ImpactPoint.Z);
 	OutPrimitiveComponent = HitData.Component.Get();
+
+#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
+	if (CVarDebugMantlingSystem.GetValueOnGameThread() > 0)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("%s"), *FString(__FUNCTION__));
+		UE_LOG(LogTemp, Warning, TEXT("result => %s"), OutHitResult ? TEXT("true") : TEXT("false"));
+	}
+#endif
 }
 
 // step3 Check if the capsule has room to stand at the downward trace's location. 
@@ -1900,7 +1909,7 @@ void UWvCharacterMovementComponent::ConvertMantleHeight(const FVector DownTraceL
 // step4 Determine the Mantle Type by checking the movement mode and Mantle Height.
 EMantleType UWvCharacterMovementComponent::GetMantleType(const float InMantleHeight) const
 {
-	EMantleType Current = EMantleType::HighMantle;
+	EMantleType Current = EMantleType::LowMantle;
 	switch (MovementMode)
 	{
 		case EMovementMode::MOVE_Falling:
@@ -1911,19 +1920,17 @@ EMantleType UWvCharacterMovementComponent::GetMantleType(const float InMantleHei
 
 		case EMovementMode::MOVE_NavWalking:
 		case EMovementMode::MOVE_Walking:
-		{
-			const float LowBorder = 125.f;
-			if (InMantleHeight < LowBorder)
-			{
-				Current = EMantleType::LowMantle;
-			}
-		}
-		break;
-
 		case EMovementMode::MOVE_Swimming:
 		case EMovementMode::MOVE_Flying:
 		case EMovementMode::MOVE_Custom:
 		case EMovementMode::MOVE_None:
+		{
+			const float LowBorder = 125.f;
+			if (InMantleHeight > LowBorder)
+			{
+				Current = EMantleType::HighMantle;
+			}
+		}
 		break;
 	}
 	return Current;

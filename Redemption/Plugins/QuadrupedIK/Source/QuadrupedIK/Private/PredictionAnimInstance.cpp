@@ -15,6 +15,10 @@ float UPredictionAnimInstance::DEFAULT_TOE_HEIGHT_LIMIT = -999.f;
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(PredictionAnimInstance)
 
+#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
+static TAutoConsoleVariable<int32> CVarDebugFootIKPredictive(TEXT("wv.DebugFootIKPredictive"), 0, TEXT("Debug FootIKPredictive\n") TEXT("<=0: Debug off\n") TEXT(">=1: Debug on\n"), ECVF_Default);
+#endif
+
 UPredictionAnimInstance::UPredictionAnimInstance()
 {
 	bDrawDebug = false;
@@ -172,23 +176,6 @@ bool UPredictionAnimInstance::TickPredictiveFootIK(float DeltaSeconds, float& Ou
 {
 	Step0_Prepare();
 
-#if false
-	if (bIsOwnerPlayerController)
-	{
-		if (!bDrawDebugForToe)
-		{
-			bDrawDebugForToe = bDrawDebug;
-		}
-		if (!bDrawDebugForPelvis)
-		{
-			bDrawDebugForPelvis = bDrawDebug;
-		}
-		if (!bDrawDebugForTrace)
-		{
-			bDrawDebugForTrace = bDrawDebug;
-		}
-	}
-#endif
 
 	if (!BlockPredictive && !CharacterMovementComponent->GetCurrentAcceleration().IsNearlyZero() && ValidPredictiveWeight)
 	{
@@ -243,13 +230,19 @@ bool UPredictionAnimInstance::TickPredictiveFootIK(float DeltaSeconds, float& Ou
 		if (!AbnormalMove && (RightToePath.Num() > 1 || LeftToePath.Num() > 1))
 		{
 
+#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
 			if (bDrawDebugForToe)
+			{
+			}
+
+
+			if (CVarDebugFootIKPredictive.GetValueOnGameThread() > 0 && bIsOwnerPlayerController)
 			{
 				UE_LOG(LogQuadrupedIK, Verbose, TEXT("ToePath Num R: %d L: %d"), RightToePath.Num(), LeftToePath.Num());
 				DebugDrawToePath(RightToePath, RightToePathInfo.CurToePos, FLinearColor::Yellow);
 				DebugDrawToePath(LeftToePath, LeftToePathInfo.CurToePos, FLinearColor::Green);
 			}
-
+#endif
 			FVector RightToePredictivePos = FVector::ZeroVector;
 			float RightToeEndDistance = INVALID_TOE_DISTANCE;
 			if (RightToePath.Num() > 1)
@@ -268,10 +261,18 @@ bool UPredictionAnimInstance::TickPredictiveFootIK(float DeltaSeconds, float& Ou
 
 			Step3_CalcMeshPosZ(OutTargetMeshPosZ, RightToeEndDistance, LeftToeEndDistance, RightToePathInfo.CurToePos, LeftToePathInfo.CurToePos, RightToePredictivePos, LeftToePredictivePos, DeltaSeconds);
 
+#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
 			if (bDrawDebugForPelvis)
+			{
+
+			}
+
+			if (CVarDebugFootIKPredictive.GetValueOnGameThread() > 0 && bIsOwnerPlayerController)
 			{
 				DebugDrawPelvisPath();
 			}
+#endif
+
 		}
 		else
 		{
@@ -667,7 +668,14 @@ void UPredictionAnimInstance::TraceForTwoFoots(float DeltaSeconds, float& OutMin
 
 	TArray<AActor*> IgnoreActors({ Character, });
 
-	const auto TraceType = bDrawDebugForTrace ? EDrawDebugTrace::ForOneFrame : EDrawDebugTrace::None;
+	EDrawDebugTrace::Type TraceType = EDrawDebugTrace::None;
+
+#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
+	if (CVarDebugFootIKPredictive.GetValueOnGameThread() > 0 && bIsOwnerPlayerController)
+	{
+		TraceType = EDrawDebugTrace::ForOneFrame;
+	}
+#endif
 
 	FHitResult RightHit;
 	UKismetSystemLibrary::LineTraceSingle(GetWorld(), RightFootPos + TraceUp, RightFootPos - TraceDown,

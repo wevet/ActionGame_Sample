@@ -60,6 +60,7 @@ void APlayerCharacter::BeginPlay()
 		PC->OnInputEventGameplayTagTrigger_Game.AddDynamic(this, &APlayerCharacter::GameplayTagTrigger_Callback);
 		PC->OnPluralInputEventTrigger.AddDynamic(this, &APlayerCharacter::OnPluralInputEventTrigger_Callback);
 		PC->OnHoldingInputEventTrigger.AddDynamic(this, &APlayerCharacter::OnHoldingInputEventTrigger_Callback);
+		PC->OnDoubleClickInputEventTrigger.AddDynamic(this, &APlayerCharacter::OnDoubleClickInputEventTrigger_Callback);
 	}
 
 	WvCameraFollowComponent->OnTargetLockedOn.AddDynamic(this, &APlayerCharacter::OnTargetLockedOn_Callback);
@@ -74,6 +75,7 @@ void APlayerCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
 		PC->OnInputEventGameplayTagTrigger_Game.RemoveDynamic(this, &APlayerCharacter::GameplayTagTrigger_Callback);
 		PC->OnPluralInputEventTrigger.RemoveDynamic(this, &APlayerCharacter::OnPluralInputEventTrigger_Callback);
 		PC->OnHoldingInputEventTrigger.RemoveDynamic(this, &APlayerCharacter::OnHoldingInputEventTrigger_Callback);
+		PC->OnDoubleClickInputEventTrigger.RemoveDynamic(this, &APlayerCharacter::OnDoubleClickInputEventTrigger_Callback);
 	}
 
 	WvCameraFollowComponent->OnTargetLockedOn.RemoveDynamic(this, &APlayerCharacter::OnTargetLockedOn_Callback);
@@ -316,6 +318,11 @@ void APlayerCharacter::OnHoldingInputEventTrigger_Callback(const FGameplayTag Ta
 	{
 		HandleHoldAimAction(bIsPress);
 	}
+}
+
+void APlayerCharacter::OnDoubleClickInputEventTrigger_Callback(const FGameplayTag Tag, const bool bIsPress)
+{
+
 }
 
 void APlayerCharacter::OverlayStateChange_Callback(const ELSOverlayState PrevOverlay, const ELSOverlayState CurrentOverlay)

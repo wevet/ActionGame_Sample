@@ -590,6 +590,23 @@ void UWvInputEventComponent::PluralInputCallBack(const FKey InputKey, const FNam
 			CachePluralInputArray.Remove(IECallbackInfo);
 		}
 	}
+	else if (TriggerInputEventType == EWvInputEventType::DoubleClicked)
+	{
+		if (bPress)
+		{
+			bIsValid = IECallbackInfo->OnDoubleClickPressed();
+			IECallbackInfo->EventTag = InputEvent->EventTag;
+			IECallbackInfo->IsPress = true;
+			IECallbackInfo->OnDoubleClickCallback.AddDynamic(this, &ThisClass::OnDoubleClickCallBackExecute);
+			CachePluralInputArray.AddUnique(IECallbackInfo);
+		}
+		else
+		{
+			IECallbackInfo->OnDoubleClickReleased();
+			IECallbackInfo->OnHoldingCallback.RemoveDynamic(this, &ThisClass::OnDoubleClickCallBackExecute);
+			CachePluralInputArray.Remove(IECallbackInfo);
+		}
+	}
 
 	if (!bIsValid)
 	{
@@ -628,6 +645,17 @@ void UWvInputEventComponent::OnHoldingInputCallBackExecute(FGameplayTag EventTag
 	//ASC->PluralInputTriggerInputEvent(EventTag);
 	ASC->TryActivateAbilityByTag(EventTag);
 	PlayerController->OnHoldingInputEventTrigger.Broadcast(EventTag, bPress);
+}
+
+void UWvInputEventComponent::OnDoubleClickCallBackExecute(FGameplayTag EventTag, bool bPress)
+{
+	if (!PlayerController.Get() || !ASC.Get())
+	{
+		return;
+	}
+
+	ASC->TryActivateAbilityByTag(EventTag);
+	PlayerController->OnDoubleClickInputEventTrigger.Broadcast(EventTag, bPress);
 }
 
 void UWvInputEventComponent::UpdateCachePluralInput()

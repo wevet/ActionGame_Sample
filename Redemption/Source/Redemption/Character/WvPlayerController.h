@@ -86,6 +86,9 @@ public:
 	FPluralInputEventTriggerDelegate OnHoldingInputEventTrigger;
 
 	UPROPERTY(BlueprintAssignable)
+	FPluralInputEventTriggerDelegate OnDoubleClickInputEventTrigger;
+
+	UPROPERTY(BlueprintAssignable)
 	FInputEventGameplayTagExtendDelegate InputEventGameplayTagExtendDelegate_All;
 
 protected:

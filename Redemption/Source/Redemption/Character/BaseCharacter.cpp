@@ -280,7 +280,7 @@ void ABaseCharacter::Tick(float DeltaTime)
 		MovementInputAmount = Acc / MaxAcc;
 		bHasMovementInput = (MovementInputAmount > 0.0f);
 
-		if (CMC->IsFalling())
+		if (CMC->IsFalling() && bHasMovementInput)
 		{
 			CMC->FallingMantling();
 		}

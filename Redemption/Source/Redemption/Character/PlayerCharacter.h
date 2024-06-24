@@ -104,6 +104,9 @@ private:
 	void OnHoldingInputEventTrigger_Callback(const FGameplayTag Tag, const bool bIsPress);
 
 	UFUNCTION()
+	void OnDoubleClickInputEventTrigger_Callback(const FGameplayTag Tag, const bool bIsPress);
+
+	UFUNCTION()
 	void OverlayStateChange_Callback(const ELSOverlayState PrevOverlay, const ELSOverlayState CurrentOverlay);
 
 	UFUNCTION()
