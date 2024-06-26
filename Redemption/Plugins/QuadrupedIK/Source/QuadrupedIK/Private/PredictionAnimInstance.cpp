@@ -236,7 +236,7 @@ bool UPredictionAnimInstance::TickPredictiveFootIK(float DeltaSeconds, float& Ou
 			}
 
 
-			if (CVarDebugFootIKPredictive.GetValueOnGameThread() > 0 && bIsOwnerPlayerController)
+			if (CVarDebugFootIKPredictive.GetValueOnAnyThread() > 0 && bIsOwnerPlayerController)
 			{
 				UE_LOG(LogQuadrupedIK, Verbose, TEXT("ToePath Num R: %d L: %d"), RightToePath.Num(), LeftToePath.Num());
 				DebugDrawToePath(RightToePath, RightToePathInfo.CurToePos, FLinearColor::Yellow);
@@ -267,7 +267,7 @@ bool UPredictionAnimInstance::TickPredictiveFootIK(float DeltaSeconds, float& Ou
 
 			}
 
-			if (CVarDebugFootIKPredictive.GetValueOnGameThread() > 0 && bIsOwnerPlayerController)
+			if (CVarDebugFootIKPredictive.GetValueOnAnyThread() > 0 && bIsOwnerPlayerController)
 			{
 				DebugDrawPelvisPath();
 			}
@@ -671,7 +671,7 @@ void UPredictionAnimInstance::TraceForTwoFoots(float DeltaSeconds, float& OutMin
 	EDrawDebugTrace::Type TraceType = EDrawDebugTrace::None;
 
 #if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
-	if (CVarDebugFootIKPredictive.GetValueOnGameThread() > 0 && bIsOwnerPlayerController)
+	if (CVarDebugFootIKPredictive.GetValueOnAnyThread() > 0 && bIsOwnerPlayerController)
 	{
 		TraceType = EDrawDebugTrace::ForOneFrame;
 	}

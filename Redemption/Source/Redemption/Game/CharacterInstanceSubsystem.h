@@ -45,9 +45,13 @@ public:
 
 	TArray<ABaseCharacter*> GetLeaderAgent() const;
 
+	void SendDayNightPhaseCharacter(const uint8 InDayNightPhase, bool bFindWorldActorIterator = false);
+
 private:
 	UPROPERTY()
 	TArray<ABaseCharacter*> Characters;
 
 	static UCharacterInstanceSubsystem* Instance;
+
+	void UpdateCharacterInWorld();
 };

@@ -55,14 +55,7 @@ void UCharacterInstanceSubsystem::FreezeAlCharacters(bool bFindWorldActorIterato
 {
 	if (bFindWorldActorIterator)
 	{
-		TArray<ABaseCharacter*> Array;
-		WorldCharacterIterator(Array);
-		Characters += Array;
-
-		Characters.RemoveAll([](ABaseCharacter* Character)
-		{
-			return IsValid(Character) == false;
-		});
+		UpdateCharacterInWorld();
 	}
 
 	for (ABaseCharacter* Character : Characters)
@@ -78,14 +71,7 @@ void UCharacterInstanceSubsystem::UnFreezeAlCharacters(bool bFindWorldActorItera
 {
 	if (bFindWorldActorIterator)
 	{
-		TArray<ABaseCharacter*> Array;
-		WorldCharacterIterator(Array);
-		Characters += Array;
-
-		Characters.RemoveAll([](ABaseCharacter* Character)
-		{
-			return IsValid(Character) == false;
-		});
+		UpdateCharacterInWorld();
 	}
 
 	for (ABaseCharacter* Character : Characters)
@@ -93,6 +79,38 @@ void UCharacterInstanceSubsystem::UnFreezeAlCharacters(bool bFindWorldActorItera
 		if (IsValid(Character))
 		{
 			Character->UnFreeze();
+		}
+	}
+}
+
+void UCharacterInstanceSubsystem::DoForceKill(bool bFindWorldActorIterator/* = false*/)
+{
+	if (bFindWorldActorIterator)
+	{
+		UpdateCharacterInWorld();
+	}
+
+	for (ABaseCharacter* Character : Characters)
+	{
+		if (IsValid(Character))
+		{
+			Character->DoForceKill();
+		}
+	}
+}
+
+void UCharacterInstanceSubsystem::SendDayNightPhaseCharacter(const uint8 InDayNightPhase, bool bFindWorldActorIterator/* = false*/)
+{
+	if (bFindWorldActorIterator)
+	{
+		UpdateCharacterInWorld();
+	}
+
+	for (ABaseCharacter* Character : Characters)
+	{
+		if (IsValid(Character))
+		{
+			Character->SetDayNightPhase(InDayNightPhase);
 		}
 	}
 }
@@ -159,27 +177,15 @@ void UCharacterInstanceSubsystem::GeneratorSpawnedFinish()
 {
 }
 
-void UCharacterInstanceSubsystem::DoForceKill(bool bFindWorldActorIterator/* = false*/)
+void UCharacterInstanceSubsystem::UpdateCharacterInWorld()
 {
-	if (bFindWorldActorIterator)
-	{
-		TArray<ABaseCharacter*> Array;
-		WorldCharacterIterator(Array);
-		Characters += Array;
+	TArray<ABaseCharacter*> Array;
+	WorldCharacterIterator(Array);
+	Characters += Array;
 
-		Characters.RemoveAll([](ABaseCharacter* Character)
-		{
-			return IsValid(Character) == false;
-		});
-	}
-
-	for (ABaseCharacter* Character : Characters)
+	Characters.RemoveAll([](ABaseCharacter* Character)
 	{
-		if (IsValid(Character))
-		{
-			Character->DoForceKill();
-		}
-	}
+		return IsValid(Character) == false;
+	});
 }
-
 

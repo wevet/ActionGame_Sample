@@ -220,6 +220,10 @@
 		{
 			"Name": "ZoneGraphAnnotations",
 			"Enabled": true
+		},
+		{
+			"Name": "NaniteDisplacedMesh",
+			"Enabled": true
 		}
 	]
 }

@@ -1863,3 +1863,14 @@ void ABaseCharacter::EndCinematic()
 	}
 }
 
+void ABaseCharacter::SetDayNightPhase(const uint8 InDayNightPhase)
+{
+	DayNightPhase = InDayNightPhase;
+}
+
+uint8 ABaseCharacter::GetDayNightPhase() const
+{
+	return DayNightPhase;
+}
+
+

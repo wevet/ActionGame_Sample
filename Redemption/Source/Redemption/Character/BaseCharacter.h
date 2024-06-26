@@ -309,6 +309,9 @@ public:
 
 	void DrawActionState();
 
+	void SetDayNightPhase(const uint8 InDayNightPhase);
+	uint8 GetDayNightPhase() const;
+
 #pragma region NearlestAction
 	void CalcurateNearlestTarget(const float SyncPointWeight);
 	void ResetNearlestTarget();
@@ -455,6 +458,8 @@ protected:
 	float AvoidanceConsiderationRadius;
 
 	FDelegateHandle AbilityFailedDelegateHandle;
+
+	uint8 DayNightPhase = 0;
 
 #pragma region NearlestAction
 	const TArray<AActor*> FindNearlestTargets(const float Distance, const float AngleThreshold);

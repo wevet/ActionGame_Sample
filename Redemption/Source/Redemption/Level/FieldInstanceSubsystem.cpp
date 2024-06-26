@@ -2,8 +2,8 @@
 
 
 #include "Level/FieldInstanceSubsystem.h"
-#include "Level/DayNightActorInterface.h"
 #include "Game/WvGameInstance.h"
+#include "Game/CharacterInstanceSubsystem.h"
 
 #include "Redemption.h"
 #include "Kismet/GameplayStatics.h"
@@ -36,6 +36,10 @@ void UFieldInstanceSubsystem::Deinitialize()
 
 }
 
+/// <summary>
+/// set day night system hour
+/// </summary>
+/// <param name="InHour"></param>
 void UFieldInstanceSubsystem::SetHour(const int32 InHour)
 {
 	UWvGameInstance::GetGameInstance()->SetHour(InHour);
@@ -49,7 +53,7 @@ void UFieldInstanceSubsystem::SetHour(const int32 InHour)
 		}
 		else if (InHour <= NIGHT_TIME)
 		{
-			EndNight();
+			StartDay();
 		}
 	}
 }
@@ -59,19 +63,25 @@ int32 UFieldInstanceSubsystem::GetHour() const
 	return UWvGameInstance::GetGameInstance()->GetHour();
 }
 
+/// <summary>
+/// set day night system actor
+/// </summary>
+/// <param name="InActor"></param>
 void UFieldInstanceSubsystem::AddDayNightActor(AActor* InActor)
 {
 	if (!DayNightActors.Contains(InActor))
 	{
-		if (IDayNightActorInterface* Interface = Cast<IDayNightActorInterface>(InActor))
+		if (ADayNightBaseActor* DayNightBaseActor = Cast<ADayNightBaseActor>(InActor))
 		{
-			DayNightActors.Add(InActor);
+			DayNightActors.Add(DayNightBaseActor);
 		}
-
 	}
 
 }
 
+/// <summary>
+/// call environment actor night mode
+/// </summary>
 void UFieldInstanceSubsystem::StartNight()
 {
 	if (DayNightPhase == EDayNightPhase::Night)
@@ -83,17 +93,20 @@ void UFieldInstanceSubsystem::StartNight()
 
 	for (auto Actor : DayNightActors)
 	{
-		if (IDayNightActorInterface* Interface = Cast<IDayNightActorInterface>(Actor))
+		if (IsValid(Actor))
 		{
-			Interface->EndDay_Implementation();
-			Interface->StartNight_Implementation();
+			Actor->StartNight();
 		}
 	}
 
+	UCharacterInstanceSubsystem::Get()->SendDayNightPhaseCharacter((uint8)DayNightPhase);
 	UE_LOG(LogTemp, Log, TEXT("%s"), *FString(__FUNCTION__));
 }
 
-void UFieldInstanceSubsystem::EndNight()
+/// <summary>
+/// call environment actor day mode
+/// </summary>
+void UFieldInstanceSubsystem::StartDay()
 {
 	if (DayNightPhase == EDayNightPhase::Day)
 	{
@@ -104,13 +117,13 @@ void UFieldInstanceSubsystem::EndNight()
 
 	for (auto Actor : DayNightActors)
 	{
-		if (IDayNightActorInterface* Interface = Cast<IDayNightActorInterface>(Actor))
+		if (IsValid(Actor))
 		{
-			Interface->EndNight_Implementation();
-			Interface->StartDay_Implementation();
+			Actor->StartDay();
 		}
 	}
 
+	UCharacterInstanceSubsystem::Get()->SendDayNightPhaseCharacter((uint8)DayNightPhase);
 	UE_LOG(LogTemp, Log, TEXT("%s"), *FString(__FUNCTION__));
 }
 

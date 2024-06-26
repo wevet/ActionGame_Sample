@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Subsystems/GameInstanceSubsystem.h"
+#include "DayNightBaseActor.h"
 #include "FieldInstanceSubsystem.generated.h"
 
 UENUM(BlueprintType)
@@ -35,17 +36,19 @@ public:
 	UFUNCTION(BlueprintCallable, Category = Level)
 	int32 GetHour() const;
 
+	UFUNCTION(BlueprintCallable, Category = Level)
 	void AddDayNightActor(AActor* InActor);
 	void StartNight();
-	void EndNight();
+	void StartDay();
 	EDayNightPhase GetDayNightPhase() const { return DayNightPhase; };
 
 private:
 	static UFieldInstanceSubsystem* Instance;
 
 	UPROPERTY()
-	TArray<AActor*> DayNightActors;
+	TArray<ADayNightBaseActor*> DayNightActors;
 
 	EDayNightPhase DayNightPhase = EDayNightPhase::Day;
+
 };
 
