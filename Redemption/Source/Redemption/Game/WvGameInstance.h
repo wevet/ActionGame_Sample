@@ -21,7 +21,6 @@ public:
 	static FStreamableManager& GetStreamableManager();
 
 	UWvSaveGame* GetOrCreateWvSaveGame(const FString SlotName);
-	void Save(const FString SlotName);
 	void Load();
 
 	bool LoadMissionData(const int32 InMissionId, FMissionBaseData& OutMissionData);
@@ -30,6 +29,7 @@ public:
 	void RegisterMission(FMissionBaseData& NewMissionData);
 	void CompleteMission(const FMissionBaseData InMissionData);
 	void InterruptionMission(const FMissionBaseData InMissionData);
+	void CurrentInterruptionMission();
 	// end region mission
 
 	void SetGameClear();
@@ -37,6 +37,10 @@ public:
 
 	void SetHour(const int32 InHour);
 	const int32 GetHour();
+
+	void IncrementMoney(const int32 AddMoney);
+	void DecrementMoney(const int32 InMoney);
+	const int32 GetMoney();
 
 	static void SetSaveSlotID(const int32 NewSaveSlotID);
 	static int32 GetSaveSlotID();

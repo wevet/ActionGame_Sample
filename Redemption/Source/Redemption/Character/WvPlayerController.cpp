@@ -216,4 +216,34 @@ FVector AWvPlayerController::GetCameraForwardVector() const
 	return Manager ? Manager->GetTransformComponent()->GetForwardVector() : FVector::ZeroVector;
 }
 
+void AWvPlayerController::RegisterMission(const int32 MissionIndex)
+{
+	MissionComponent->RegisterMission(MissionIndex);
+}
+
+void AWvPlayerController::RegisterMission(const TArray<int32> MissionIndexes)
+{
+	MissionComponent->RegisterMission(MissionIndexes);
+}
+
+void AWvPlayerController::CompleteMission(const int32 MissionIndex)
+{
+	MissionComponent->CompleteMission(MissionIndex);
+}
+
+void AWvPlayerController::CurrentInterruptionMission()
+{
+	MissionComponent->CurrentInterruptionMission();
+}
+
+void AWvPlayerController::InterruptionMission(const int32 MissionIndex)
+{
+	MissionComponent->InterruptionMission(MissionIndex);
+}
+
+void AWvPlayerController::InterruptionMission(const TArray<int32> MissionIndexes)
+{
+	MissionComponent->InterruptionMission(MissionIndexes);
+}
+
 

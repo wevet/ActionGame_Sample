@@ -61,6 +61,10 @@ AWvAIController::AWvAIController(const FObjectInitializer& ObjectInitializer) : 
 
 	AIPerceptionComponent->SetDominantSense(SightConfig->GetSenseImplementation());
 	SetPerceptionComponent(*AIPerceptionComponent);
+
+
+	// ai mission component
+	MissionComponent = CreateDefaultSubobject<UAIMissionComponent>(TEXT("MissionComponent"));
 }
 
 void AWvAIController::PreInitializeComponents()
@@ -71,8 +75,10 @@ void AWvAIController::PreInitializeComponents()
 void AWvAIController::BeginPlay()
 {
 	Super::BeginPlay();
-	AIPerceptionComponent->OnTargetPerceptionUpdated.AddDynamic(this, &AWvAIController::OnTargetPerceptionUpdatedRecieve);
-	AIPerceptionComponent->OnPerceptionUpdated.AddDynamic(this, &AWvAIController::OnActorsPerceptionUpdatedRecieve);
+	AIPerceptionComponent->OnTargetPerceptionUpdated.AddDynamic(this, &ThisClass::OnTargetPerceptionUpdatedRecieve);
+	AIPerceptionComponent->OnPerceptionUpdated.AddDynamic(this, &ThisClass::OnActorsPerceptionUpdatedRecieve);
+
+	MissionComponent->RegisterMissionDelegate.AddDynamic(this, &ThisClass::RegisterMission_Callback);
 }
 
 void AWvAIController::Tick(float DeltaTime)
@@ -138,15 +144,9 @@ void AWvAIController::OnUnPossess()
 
 void AWvAIController::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-	if (AIPerceptionComponent->OnTargetPerceptionUpdated.IsBound())
-	{
-		AIPerceptionComponent->OnTargetPerceptionUpdated.RemoveDynamic(this, &AWvAIController::OnTargetPerceptionUpdatedRecieve);
-	}
+	HandleRemoveAIPerception();
 
-	if (AIPerceptionComponent->OnPerceptionUpdated.IsBound())
-	{
-		AIPerceptionComponent->OnPerceptionUpdated.RemoveDynamic(this, &AWvAIController::OnActorsPerceptionUpdatedRecieve);
-	}
+	MissionComponent->RegisterMissionDelegate.RemoveDynamic(this, &ThisClass::RegisterMission_Callback);
 	Super::EndPlay(EndPlayReason);
 }
 
@@ -268,8 +268,7 @@ ETeamAttitude::Type AWvAIController::GetTeamAttitudeTowards(const AActor& Other)
 
 void AWvAIController::OnReceiveKillTarget(AActor* Actor, const float Damage)
 {
-	AIPerceptionComponent->OnTargetPerceptionUpdated.RemoveDynamic(this, &AWvAIController::OnTargetPerceptionUpdatedRecieve);
-	AIPerceptionComponent->OnPerceptionUpdated.RemoveDynamic(this, &AWvAIController::OnActorsPerceptionUpdatedRecieve);
+	HandleRemoveAIPerception();
 
 	AbortTasks();
 	StopTree();
@@ -779,6 +778,8 @@ bool AWvAIController::IsPerceptionConfigsValid() const
 
 void AWvAIController::OnActorsPerceptionUpdatedRecieve(const TArray<AActor*>& UpdatedActors)
 {
+
+#if false
 	for (AActor* Actor : UpdatedActors)
 	{
 		if (IgnoreTargets.Contains(Actor))
@@ -786,6 +787,8 @@ void AWvAIController::OnActorsPerceptionUpdatedRecieve(const TArray<AActor*>& Up
 			continue;
 		}
 	}
+#endif
+
 }
 
 void AWvAIController::OnTargetPerceptionUpdatedRecieve(AActor* Actor, FAIStimulus Stimulus)
@@ -996,4 +999,23 @@ void AWvAIController::ClearFollowTarget()
 	SetBlackboardLeader(nullptr);
 }
 #pragma endregion
+
+void AWvAIController::RegisterMission_Callback(const int32 MissionIndex)
+{
+	UE_LOG(LogTemp, Log, TEXT("Send Order => %d, function => %s"), MissionIndex, *FString(__FUNCTION__));
+}
+
+void AWvAIController::HandleRemoveAIPerception()
+{
+	if (AIPerceptionComponent->OnTargetPerceptionUpdated.IsBound())
+	{
+		AIPerceptionComponent->OnTargetPerceptionUpdated.RemoveDynamic(this, &ThisClass::OnTargetPerceptionUpdatedRecieve);
+	}
+
+	if (AIPerceptionComponent->OnPerceptionUpdated.IsBound())
+	{
+		AIPerceptionComponent->OnPerceptionUpdated.RemoveDynamic(this, &ThisClass::OnActorsPerceptionUpdatedRecieve);
+	}
+}
+
 

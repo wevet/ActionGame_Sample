@@ -23,7 +23,7 @@ void UMissionComponent::TickComponent(float DeltaTime, ELevelTick TickType, FAct
 /// mission‚ğó’‚·‚é
 /// </summary>
 /// <param name="MissionIndex"></param>
-void UMissionComponent::ReceiveOrder(const int32 MissionIndex)
+void UMissionComponent::RegisterMission(const int32 MissionIndex)
 {
 	if (!IsValid(MissionDA))
 	{
@@ -31,16 +31,55 @@ void UMissionComponent::ReceiveOrder(const int32 MissionIndex)
 	}
 
 	auto MissionData = MissionDA->GetMissionGameData(MissionIndex);
-
 	UWvGameInstance::GetGameInstance()->RegisterMission(MissionData);
 }
 
-/// <summary>
-/// mission‚ğ’†’f‚·‚é
-/// </summary>
-void UMissionComponent::InterruptionOrder()
+void UMissionComponent::RegisterMission(const TArray<int32> MissionIndexes)
 {
-
+	for (int32 MissionIndex : MissionIndexes)
+	{
+		RegisterMission(MissionIndex);
+	}
 }
 
+void UMissionComponent::CompleteMission(const int32 MissionIndex)
+{
+	if (!IsValid(MissionDA))
+	{
+		return;
+	}
+
+	auto MissionData = MissionDA->GetMissionGameData(MissionIndex);
+	UWvGameInstance::GetGameInstance()->CompleteMission(MissionData);
+}
+
+/// <summary>
+/// Œ»İó’’†‚Ìmission‚ğ‘S‚Ä’†’f‚·‚é
+/// </summary>
+void UMissionComponent::CurrentInterruptionMission()
+{
+	UWvGameInstance::GetGameInstance()->CurrentInterruptionMission();
+}
+
+/// <summary>
+/// “Á’è‚Ìmission‚ğ’†’f‚·‚é
+/// </summary>
+void UMissionComponent::InterruptionMission(const int32 MissionIndex)
+{
+	if (!IsValid(MissionDA))
+	{
+		return;
+	}
+
+	auto MissionData = MissionDA->GetMissionGameData(MissionIndex);
+	UWvGameInstance::GetGameInstance()->InterruptionMission(MissionData);
+}
+
+void UMissionComponent::InterruptionMission(const TArray<int32> MissionIndexes)
+{
+	for (int32 MissionIndex : MissionIndexes)
+	{
+		InterruptionMission(MissionIndex);
+	}
+}
 

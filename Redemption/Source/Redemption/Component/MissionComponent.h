@@ -24,7 +24,13 @@ protected:
 	UMissionGameDataAsset* MissionDA;
 
 public:
-	void ReceiveOrder(const int32 MissionIndex);
-	void InterruptionOrder();
+	void RegisterMission(const int32 MissionIndex);
+	void RegisterMission(const TArray<int32> MissionIndexes);
+
+	void CompleteMission(const int32 MissionIndex);
+
+	void CurrentInterruptionMission();
+	void InterruptionMission(const int32 MissionIndex);
+	void InterruptionMission(const TArray<int32> MissionIndexes);
 };
 

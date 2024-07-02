@@ -33,8 +33,6 @@ public:
 	UFUNCTION(BlueprintCallable, Category = CharacterInstanceSubsystem)
 	void DoForceKill(bool bFindWorldActorIterator = false);
 
-	void WorldCharacterIterator(TArray<class ABaseCharacter*>& OutCharacterArray);
-
 	void AssignAICharacter(ABaseCharacter* NewCharacter);
 	void RemoveAICharacter(ABaseCharacter* InCharacter);
 	void GeneratorSpawnedFinish();
@@ -54,4 +52,6 @@ private:
 	static UCharacterInstanceSubsystem* Instance;
 
 	void UpdateCharacterInWorld();
+	void WorldCharacterIterator(TArray<class ABaseCharacter*>& OutCharacterArray);
+
 };

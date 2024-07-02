@@ -66,6 +66,15 @@ public:
 
 	FVector GetCameraForwardVector() const;
 
+	void RegisterMission(const int32 MissionIndex);
+	void RegisterMission(const TArray<int32> MissionIndexes);
+
+	void CompleteMission(const int32 MissionIndex);
+
+	void CurrentInterruptionMission();
+	void InterruptionMission(const int32 MissionIndex);
+	void InterruptionMission(const TArray<int32> MissionIndexes);
+
 public:
 	//All keys pressed will be notified
 	UPROPERTY(BlueprintAssignable)

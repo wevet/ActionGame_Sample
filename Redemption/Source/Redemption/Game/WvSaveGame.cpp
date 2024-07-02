@@ -19,14 +19,45 @@ bool FMissionPhase::HasComplete() const
 #pragma region MissionBaseData
 void FMissionBaseData::Complete()
 {
+	bool bIsValid = true;
+	for (auto Phase : MissionPhases)
+	{
+		if (!Phase.HasComplete())
+		{
+			UE_LOG(LogTemp, Error, TEXT("Error Phase => %d, function => %s"), Phase.Index, *FString(__FUNCTION__));
+			bIsValid = false;
+		}
+	}
+
+	if (bIsValid)
+	{
+		//
+	}
+
 	bIsCompleted = true;
 }
 
+/// <summary>
+/// missionクリア判定
+/// </summary>
+/// <returns></returns>
 bool FMissionBaseData::HasComplete() const
 {
 	return bIsCompleted;
 }
 
+/// <summary>
+/// mission開始中判定
+/// </summary>
+/// <returns></returns>
+bool FMissionBaseData::IsBeginning() const
+{
+	return bIsMissionPlaying;
+}
+
+/// <summary>
+/// mission開始
+/// </summary>
 void FMissionBaseData::Begin()
 {
 	bIsMissionPlaying = true;
@@ -41,10 +72,12 @@ bool FMissionBaseData::IsValid() const
 {
 	return MainIndex != INDEX_NONE;
 }
-#pragma endregion
 
-#pragma region MissionGameData
-FMissionPhase FMissionGameData::GetCurrentMissionPhase() const
+/// <summary>
+/// 現在のmissionの詳細(phase)を取得する
+/// </summary>
+/// <returns></returns>
+FMissionPhase FMissionBaseData::GetCurrentMissionPhase() const
 {
 	auto FindMissionPhaseData = MissionPhases.FindByPredicate([&](FMissionPhase Item)
 	{
@@ -60,7 +93,11 @@ FMissionPhase FMissionGameData::GetCurrentMissionPhase() const
 	return Temp;
 }
 
-FMissionPhase FMissionGameData::GetMissionPhaseByIndex(const int32 InMissionID) const
+/// <summary>
+/// 現在のmissionの特定のphaseを取得する
+/// </summary>
+/// <returns></returns>
+FMissionPhase FMissionBaseData::GetMissionPhaseByIndex(const int32 InMissionID) const
 {
 	auto FindMissionPhaseData = MissionPhases.FindByPredicate([&](FMissionPhase Item)
 	{
@@ -76,13 +113,14 @@ FMissionPhase FMissionGameData::GetMissionPhaseByIndex(const int32 InMissionID) 
 	return Temp;
 }
 
-void FMissionGameData::CompleteMissionPhase(const FMissionPhase InMissionPhase)
+/// <summary>
+/// 現在のmissionの特定のphaseをクリアする
+/// </summary>
+void FMissionBaseData::CompleteMissionPhase(const FMissionPhase InMissionPhase)
 {
-	const auto ID = InMissionPhase.Index;
-
 	auto FindissionGameData = MissionPhases.FindByPredicate([&](FMissionPhase Item)
 	{
-		return (Item.Index == ID);
+		return (Item.Index == InMissionPhase.Index);
 	});
 
 	if (FindissionGameData)
@@ -92,7 +130,7 @@ void FMissionGameData::CompleteMissionPhase(const FMissionPhase InMissionPhase)
 }
 #pragma endregion
 
-FMissionGameData UMissionGameDataAsset::GetMissionGameData(const int32 MissionId)
+FMissionBaseData UMissionGameDataAsset::GetMissionGameData(const int32 MissionId)
 {
 	// get da setting . array main index match iten
 	auto FindissionGameData = MissionGameDatas.FindByPredicate([&](FMissionBaseData Item)
@@ -105,13 +143,30 @@ FMissionGameData UMissionGameDataAsset::GetMissionGameData(const int32 MissionId
 		return *FindissionGameData;
 	}
 
-	FMissionGameData Temp;
+	FMissionBaseData Temp;
 	return Temp;
 }
 
+
+#pragma region SaveGame
 UWvSaveGame::UWvSaveGame() : Super()
 {
 	Hour = 0;
+}
+
+const bool UWvSaveGame::BeginMission(const int32 InMissionIndex)
+{
+	auto FindissionGameData = MissionArray.FindByPredicate([&](FMissionBaseData Item)
+	{
+		return (Item.MainIndex == InMissionIndex);
+	});
+
+	if (FindissionGameData)
+	{
+		FindissionGameData->Begin();
+		return true;
+	}
+	return false;
 }
 
 void UWvSaveGame::RegisterMission(FMissionBaseData& NewMissionData)
@@ -120,7 +175,6 @@ void UWvSaveGame::RegisterMission(FMissionBaseData& NewMissionData)
 	{
 		return (Item.MainIndex == NewMissionData.MainIndex);
 	});
-
 
 	if (FindissionGameData)
 	{
@@ -149,6 +203,17 @@ void UWvSaveGame::InterruptionMission(const FMissionBaseData InMissionData)
 	for (FMissionBaseData MissionData : MissionArray)
 	{
 		if (ID == MissionData.MainIndex)
+		{
+			MissionData.Interruption();
+		}
+	}
+}
+
+void UWvSaveGame::CurrentInterruptionMission()
+{
+	for (FMissionBaseData MissionData : MissionArray)
+	{
+		if (!MissionData.HasComplete())
 		{
 			MissionData.Interruption();
 		}
@@ -191,5 +256,24 @@ void UWvSaveGame::SetHour(const int32 InHour)
 {
 	Hour = InHour;
 }
+
+void UWvSaveGame::IncrementMoney(const int32 AddMoney)
+{
+	auto Value = Money + AddMoney;
+	SetMoney(Value);
+}
+
+void UWvSaveGame::DecrementMoney(const int32 InMoney)
+{
+	auto Value = Money - InMoney;
+	Value = FMath::Clamp(Value, 0, INT32_MAX);
+	SetMoney(Value);
+}
+
+void UWvSaveGame::SetMoney(const int32 InMoney)
+{
+	Money = InMoney;
+}
+#pragma endregion
 
 

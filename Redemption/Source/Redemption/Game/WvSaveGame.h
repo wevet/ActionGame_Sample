@@ -60,38 +60,28 @@ public:
 	FString Title;
 
 	void Complete();
-	bool HasComplete() const;
 
 	void Begin();
 	void Interruption();
 
+	bool HasComplete() const;
 	bool IsValid() const;
+	bool IsBeginning() const;
 
-private:
-	// is mission comlplete?
-	UPROPERTY()
-	bool bIsCompleted = false;
-
-	UPROPERTY()
-	bool bIsMissionPlaying = false;
-};
-
-
-/*
- * é¿ç€Ç…GameÇ≈égópÇ∑ÇÈMission Data
-*/
-USTRUCT(BlueprintType)
-struct REDEMPTION_API FMissionGameData : public FMissionBaseData
-{
-	GENERATED_BODY()
-
-public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	TArray<FMissionPhase> MissionPhases;
 
 	FMissionPhase GetCurrentMissionPhase() const;
 	FMissionPhase GetMissionPhaseByIndex(const int32 InMissionID) const;
 	void CompleteMissionPhase(const FMissionPhase InMissionPhase);
+
+
+private:
+	// is mission comlplete?
+	UPROPERTY()
+	bool bIsCompleted = false;
+
+	bool bIsMissionPlaying = false;
 };
 
 
@@ -105,9 +95,9 @@ class REDEMPTION_API UMissionGameDataAsset : public UDataAsset
 
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	TArray<FMissionGameData> MissionGameDatas;
+	TArray<FMissionBaseData> MissionGameDatas;
 
-	FMissionGameData GetMissionGameData(const int32 MissionId);
+	FMissionBaseData GetMissionGameData(const int32 MissionId);
 };
 
 
@@ -123,14 +113,23 @@ class REDEMPTION_API UWvSaveGame : public USaveGame
 public:
 	UWvSaveGame();
 	void RegisterMission(FMissionBaseData& NewMissionData);
+
+	const bool BeginMission(const int32 InMissionIndex);
 	void CompleteMission(const FMissionBaseData InMissionData);
 	void InterruptionMission(const FMissionBaseData InMissionData);
+
+	void CurrentInterruptionMission();
 
 	bool LoadMissionData(const int32 InMissionId, FMissionBaseData& OutMissionData);
 	void SetGameClear();
 	bool IsGameClear() const;
 	void SetHour(const int32 InHour);
 	int32 GetHour() const { return Hour; }
+
+	void IncrementMoney(const int32 AddMoney);
+	void DecrementMoney(const int32 InMoney);
+
+	int32 GetMoney() const { return Money; }
 
 protected:
 	// player name
@@ -140,6 +139,9 @@ protected:
 	// gameì‡éûä‘
 	UPROPERTY(VisibleAnywhere, Category = SaveGame)
 	int32 Hour;
+
+	UPROPERTY(VisibleAnywhere, Category = SaveGame)
+	int32 Money;
 
 	// is game cleard ?
 	UPROPERTY(VisibleAnywhere, Category = SaveGame)
@@ -155,6 +157,8 @@ private:
 	UPROPERTY()
 	TMap<int32, int32> MissionDataMap;
 
+
+	void SetMoney(const int32 InMoney);
 };
 
 

@@ -36,21 +36,6 @@ UWvSaveGame* UWvGameInstance::GetOrCreateWvSaveGame(const FString SlotName)
 	return Cast<UWvSaveGame>(UGameplayStatics::CreateSaveGameObject(UWvSaveGame::StaticClass()));
 }
 
-void UWvGameInstance::Save(const FString SlotName)
-{
-	UWvSaveGame* WvSaveGame = GetOrCreateWvSaveGame(SlotName);
-
-	if (WvSaveGame)
-	{
-		if (UGameplayStatics::SaveGameToSlot(WvSaveGame, SlotName, SaveSlotID))
-		{
-			UE_LOG(LogTemp, Log, TEXT("%s"), *FString(__FUNCTION__));
-		}
-
-	}
-
-}
-
 void UWvGameInstance::Load()
 {
 	const UWvSaveGame* WvSaveGame = GetOrCreateWvSaveGame(K_PLAYER_SLOT_NAME);
@@ -74,23 +59,11 @@ bool UWvGameInstance::LoadMissionData(const int32 InMissionId, FMissionBaseData&
 	return WvSaveGame->LoadMissionData(InMissionId, OutMissionData);
 }
 
-
-#pragma region WriteSaveGame
-void UWvGameInstance::SetGameClear()
-{
-	UWvSaveGame* WvSaveGame = GetOrCreateWvSaveGame(K_PLAYER_SLOT_NAME);
-	WvSaveGame->SetGameClear();
-
-	//Save(K_PLAYER_SLOT_NAME, K_PLAYER_SLOT_ID);
-	UGameplayStatics::SaveGameToSlot(WvSaveGame, K_PLAYER_SLOT_NAME, SaveSlotID);
-}
-
+#pragma region Mission
 void UWvGameInstance::RegisterMission(FMissionBaseData& NewMissionData)
 {
 	UWvSaveGame* WvSaveGame = GetOrCreateWvSaveGame(K_PLAYER_SLOT_NAME);
 	WvSaveGame->RegisterMission(NewMissionData);
-
-	//Save(K_PLAYER_SLOT_NAME, K_PLAYER_SLOT_ID);
 	UGameplayStatics::SaveGameToSlot(WvSaveGame, K_PLAYER_SLOT_NAME, SaveSlotID);
 }
 
@@ -98,8 +71,6 @@ void UWvGameInstance::CompleteMission(const FMissionBaseData InMissionData)
 {
 	UWvSaveGame* WvSaveGame = GetOrCreateWvSaveGame(K_PLAYER_SLOT_NAME);
 	WvSaveGame->CompleteMission(InMissionData);
-
-	//Save(K_PLAYER_SLOT_NAME, K_PLAYER_SLOT_ID);
 	UGameplayStatics::SaveGameToSlot(WvSaveGame, K_PLAYER_SLOT_NAME, SaveSlotID);
 }
 
@@ -107,29 +78,55 @@ void UWvGameInstance::InterruptionMission(const FMissionBaseData InMissionData)
 {
 	UWvSaveGame* WvSaveGame = GetOrCreateWvSaveGame(K_PLAYER_SLOT_NAME);
 	WvSaveGame->InterruptionMission(InMissionData);
-
-	//Save(K_PLAYER_SLOT_NAME, K_PLAYER_SLOT_ID);
 	UGameplayStatics::SaveGameToSlot(WvSaveGame, K_PLAYER_SLOT_NAME, SaveSlotID);
+}
 
+void UWvGameInstance::CurrentInterruptionMission()
+{
+	UWvSaveGame* WvSaveGame = GetOrCreateWvSaveGame(K_PLAYER_SLOT_NAME);
+	WvSaveGame->CurrentInterruptionMission();
+	UGameplayStatics::SaveGameToSlot(WvSaveGame, K_PLAYER_SLOT_NAME, SaveSlotID);
+}
+#pragma endregion
+
+void UWvGameInstance::SetGameClear()
+{
+	UWvSaveGame* WvSaveGame = GetOrCreateWvSaveGame(K_PLAYER_SLOT_NAME);
+	WvSaveGame->SetGameClear();
+	UGameplayStatics::SaveGameToSlot(WvSaveGame, K_PLAYER_SLOT_NAME, SaveSlotID);
 }
 
 void UWvGameInstance::SetHour(const int32 InHour)
 {
 	UWvSaveGame* WvSaveGame = GetOrCreateWvSaveGame(K_PLAYER_SLOT_NAME);
-
 	WvSaveGame->SetHour(InHour);
-	//Save(K_PLAYER_SLOT_NAME, K_PLAYER_SLOT_ID);
 	UGameplayStatics::SaveGameToSlot(WvSaveGame, K_PLAYER_SLOT_NAME, SaveSlotID);
-
 }
 
-#pragma endregion
+void UWvGameInstance::IncrementMoney(const int32 AddMoney)
+{
+	UWvSaveGame* WvSaveGame = GetOrCreateWvSaveGame(K_PLAYER_SLOT_NAME);
+	WvSaveGame->IncrementMoney(AddMoney);
+	UGameplayStatics::SaveGameToSlot(WvSaveGame, K_PLAYER_SLOT_NAME, SaveSlotID);
+}
 
+void UWvGameInstance::DecrementMoney(const int32 InMoney)
+{
+	UWvSaveGame* WvSaveGame = GetOrCreateWvSaveGame(K_PLAYER_SLOT_NAME);
+	WvSaveGame->DecrementMoney(InMoney);
+	UGameplayStatics::SaveGameToSlot(WvSaveGame, K_PLAYER_SLOT_NAME, SaveSlotID);
+}
 
 const int32 UWvGameInstance::GetHour()
 {
 	const UWvSaveGame* WvSaveGame = GetOrCreateWvSaveGame(K_PLAYER_SLOT_NAME);
 	return WvSaveGame->GetHour();
+}
+
+const int32 UWvGameInstance::GetMoney()
+{
+	const UWvSaveGame* WvSaveGame = GetOrCreateWvSaveGame(K_PLAYER_SLOT_NAME);
+	return WvSaveGame->GetMoney();
 }
 
 void UWvGameInstance::SetSaveSlotID(const int32 NewSaveSlotID)

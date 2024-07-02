@@ -18,7 +18,10 @@
 #include "BehaviorTree/BlackboardComponent.h"
 #include "BehaviorTree/BehaviorTreeComponent.h"
 #include "Blueprint/AIBlueprintHelperLibrary.h"
+
 #include "Interface/WvAbilityTargetInterface.h"
+#include "Component/AIMissionComponent.h"
+
 #include "WvAIController.generated.h"
 
 namespace ETeamAttitude { enum Type : int; }
@@ -153,6 +156,9 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Components, meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<class UAIPerceptionComponent> AIPerceptionComponent;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Component, meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<class UAIMissionComponent> MissionComponent;
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	class UAISenseConfig_Sight* SightConfig;
 
@@ -195,6 +201,9 @@ private:
 	UFUNCTION()
 	void ClearFollowTarget();
 
+	UFUNCTION()
+	void RegisterMission_Callback(const int32 MissionIndex);
+
 	bool IsPerceptionConfigsValid() const;
 	void OnSightPerceptionUpdatedRecieve(AActor* Actor);
 	void OnHearPerceptionUpdatedRecieve(AActor* Actor);
@@ -202,6 +211,8 @@ private:
 	void OnPredictionPerceptionUpdatedRecieve(AActor* Actor);
 
 	void AbortTasks(bool bIsForce = false);
+
+	void HandleRemoveAIPerception();
 
 	UPROPERTY()
 	struct FAIStimulus CurrentStimulus;
