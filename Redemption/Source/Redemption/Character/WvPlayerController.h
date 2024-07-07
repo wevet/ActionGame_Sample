@@ -66,14 +66,7 @@ public:
 
 	FVector GetCameraForwardVector() const;
 
-	void RegisterMission(const int32 MissionIndex);
-	void RegisterMission(const TArray<int32> MissionIndexes);
-
-	void CompleteMission(const int32 MissionIndex);
-
-	void CurrentInterruptionMission();
-	void InterruptionMission(const int32 MissionIndex);
-	void InterruptionMission(const TArray<int32> MissionIndexes);
+	FORCEINLINE TObjectPtr<class UMissionComponent> GetMissionComponent() const { return MissionComponent; }
 
 public:
 	//All keys pressed will be notified
@@ -127,6 +120,10 @@ protected:
 
 	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "Vehicle")
 	void BP_VehicleUnPossess();
+
+private:
+	UFUNCTION()
+	void RegisterMission_Callback(const int32 MissionIndex);
 
 private:
 	UPROPERTY()

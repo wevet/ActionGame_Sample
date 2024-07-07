@@ -27,9 +27,17 @@ public:
 
 	// start region mission
 	void RegisterMission(FMissionBaseData& NewMissionData);
-	void CompleteMission(const FMissionBaseData InMissionData);
-	void InterruptionMission(const FMissionBaseData InMissionData);
+	void InterruptionMission(const int32 InMissionIndex);
 	void CurrentInterruptionMission();
+
+	void CompleteMission(const int32 InMissionIndex);
+	const bool HasCompleteMission(const int32 InMissionIndex);
+	const bool HasProgressMission(const int32 InMissionIndex);
+
+	const bool CompleteMissionPhaseByID(const int32 InMissionIndex, const int32 InMissionPhaseID);
+	const FMissionPhase GetMissionPhaseByIndex(const int32 InMissionIndex, const int32 InMissionID);
+
+	void CompleteMissionPhaseCurrent(const int32 InMissionIndex);
 	// end region mission
 
 	void SetGameClear();

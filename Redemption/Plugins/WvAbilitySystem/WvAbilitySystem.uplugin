@@ -3,9 +3,9 @@
 	"Version": 1,
 	"VersionName": "1.0",
 	"FriendlyName": "WvAbilitySystem",
-	"Description": "",
+	"Description": "Custom Ability System",
 	"Category": "Other",
-	"CreatedBy": "",
+	"CreatedBy": "Shunji Nagasawa",
 	"CreatedByURL": "",
 	"DocsURL": "",
 	"MarketplaceURL": "",
@@ -13,7 +13,7 @@
 	"CanContainContent": true,
 	"IsBetaVersion": false,
 	"IsExperimentalVersion": false,
-	"Installed": false,
+	"Installed": true,
 	"Modules": [
 		{
 			"Name": "WvAbilitySystem",

@@ -30,8 +30,17 @@ void UMissionComponent::RegisterMission(const int32 MissionIndex)
 		return;
 	}
 
-	auto MissionData = MissionDA->GetMissionGameData(MissionIndex);
-	UWvGameInstance::GetGameInstance()->RegisterMission(MissionData);
+	bool bIsValid = false;
+	auto MissionData = MissionDA->GetMissionGameData(MissionIndex, bIsValid);
+	if (bIsValid)
+	{
+		if (RegisterMissionDelegate.IsBound())
+		{
+			RegisterMissionDelegate.Broadcast(MissionIndex);
+		}
+
+		UWvGameInstance::GetGameInstance()->RegisterMission(MissionData);
+	}
 }
 
 void UMissionComponent::RegisterMission(const TArray<int32> MissionIndexes)
@@ -44,13 +53,12 @@ void UMissionComponent::RegisterMission(const TArray<int32> MissionIndexes)
 
 void UMissionComponent::CompleteMission(const int32 MissionIndex)
 {
-	if (!IsValid(MissionDA))
-	{
-		return;
-	}
+	UWvGameInstance::GetGameInstance()->CompleteMission(MissionIndex);
+}
 
-	auto MissionData = MissionDA->GetMissionGameData(MissionIndex);
-	UWvGameInstance::GetGameInstance()->CompleteMission(MissionData);
+const bool UMissionComponent::HasCompleteMission(const int32 InMissionIndex)
+{
+	return UWvGameInstance::GetGameInstance()->HasCompleteMission(InMissionIndex);
 }
 
 /// <summary>
@@ -66,13 +74,7 @@ void UMissionComponent::CurrentInterruptionMission()
 /// </summary>
 void UMissionComponent::InterruptionMission(const int32 MissionIndex)
 {
-	if (!IsValid(MissionDA))
-	{
-		return;
-	}
-
-	auto MissionData = MissionDA->GetMissionGameData(MissionIndex);
-	UWvGameInstance::GetGameInstance()->InterruptionMission(MissionData);
+	UWvGameInstance::GetGameInstance()->InterruptionMission(MissionIndex);
 }
 
 void UMissionComponent::InterruptionMission(const TArray<int32> MissionIndexes)
@@ -81,5 +83,15 @@ void UMissionComponent::InterruptionMission(const TArray<int32> MissionIndexes)
 	{
 		InterruptionMission(MissionIndex);
 	}
+}
+
+const bool UMissionComponent::CompleteMissionPhaseByID(const int32 MissionIndex, const int32 InMissionPhaseID)
+{
+	return UWvGameInstance::GetGameInstance()->CompleteMissionPhaseByID(MissionIndex, InMissionPhaseID);
+}
+
+const FMissionPhase UMissionComponent::GetMissionPhaseByIndex(const int32 MissionIndex, const int32 InMissionID)
+{
+	return UWvGameInstance::GetGameInstance()->GetMissionPhaseByIndex(MissionIndex, InMissionID);
 }
 

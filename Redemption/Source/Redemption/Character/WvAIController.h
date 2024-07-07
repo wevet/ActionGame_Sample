@@ -143,6 +143,8 @@ public:
 	ABaseCharacter* GetBlackboardTargetAsCharacter() const;
 #pragma endregion
 
+	FORCEINLINE TObjectPtr<class UAIMissionComponent> GetMissionComponent() const { return MissionComponent; }
+
 protected:
 	// Called when the player state is set or cleared
 	virtual void OnPlayerStateChanged();

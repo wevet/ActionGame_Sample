@@ -24,12 +24,16 @@ void AWvPlayerController::BeginPlay()
 {
 	Super::BeginPlay();
 
+	MissionComponent->RegisterMissionDelegate.AddDynamic(this, &ThisClass::RegisterMission_Callback);
 	//ConsoleCommand(TEXT("p.AsyncCharacterMovement 1"), true);
 }
 
 void AWvPlayerController::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	Manager = nullptr;
+
+	MissionComponent->RegisterMissionDelegate.RemoveDynamic(this, &ThisClass::RegisterMission_Callback);
+
 	Super::EndPlay(EndPlayReason);
 }
 
@@ -124,7 +128,6 @@ EWvInputMode AWvPlayerController::GetInputModeType() const
 	return InputEventComponent->GetInputModeType();
 }
 
-
 #pragma region IWvAbilityTargetInterface
 void AWvPlayerController::SetGenericTeamId(const FGenericTeamId& NewTeamID)
 {
@@ -162,7 +165,6 @@ void AWvPlayerController::UnFreeze()
 {
 }
 #pragma endregion
-
 
 #pragma region Possess
 void AWvPlayerController::OnDefaultPossess(APawn* InPawn)
@@ -216,34 +218,11 @@ FVector AWvPlayerController::GetCameraForwardVector() const
 	return Manager ? Manager->GetTransformComponent()->GetForwardVector() : FVector::ZeroVector;
 }
 
-void AWvPlayerController::RegisterMission(const int32 MissionIndex)
+void AWvPlayerController::RegisterMission_Callback(const int32 MissionIndex)
 {
-	MissionComponent->RegisterMission(MissionIndex);
+	if (IsValid(PC))
+	{
+		PC->RegisterMission_Callback(MissionIndex);
+	}
 }
-
-void AWvPlayerController::RegisterMission(const TArray<int32> MissionIndexes)
-{
-	MissionComponent->RegisterMission(MissionIndexes);
-}
-
-void AWvPlayerController::CompleteMission(const int32 MissionIndex)
-{
-	MissionComponent->CompleteMission(MissionIndex);
-}
-
-void AWvPlayerController::CurrentInterruptionMission()
-{
-	MissionComponent->CurrentInterruptionMission();
-}
-
-void AWvPlayerController::InterruptionMission(const int32 MissionIndex)
-{
-	MissionComponent->InterruptionMission(MissionIndex);
-}
-
-void AWvPlayerController::InterruptionMission(const TArray<int32> MissionIndexes)
-{
-	MissionComponent->InterruptionMission(MissionIndexes);
-}
-
 

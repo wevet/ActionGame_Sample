@@ -4,9 +4,10 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
+#include "Mission/MissionSystemTypes.h"
 #include "AIMissionComponent.generated.h"
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FRegisterMissionDelegate, int32, InSendMissionIndex);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FSendRegisterMissionDelegate, int32, InSendMissionIndex);
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class REDEMPTION_API UAIMissionComponent : public UActorComponent
@@ -22,18 +23,23 @@ protected:
 
 public:
 	UPROPERTY(BlueprintAssignable)
-	FRegisterMissionDelegate RegisterMissionDelegate;
+	FSendRegisterMissionDelegate RegisterMissionDelegate;
 
 	void RegisterMission();
 	void SetAllowRegisterMission(const bool NewbAllowSendMissionPlayer);
-	bool GetAllowRegisterMission() const { return bAllowReregistration; }
+	bool GetAllowRegisterMission() const;
+
+	const bool HasMissionAllComplete();
+	const bool HasMainMissionComplete();
+	const bool HasRelevanceMissionComplete();
+
+	void SetSendMissionData(const FSendMissionData& InSendMissionData);
 
 protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Mission")
-	bool bAllowSendMissionPlayer = false;
+	USendMissionDataAsset* SendMissionDA;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Mission", meta = (EditCondition = "bAllowSendMissionPlayer"))
-	int32 SendMissionIndex = INDEX_NONE;
-		
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Mission")
+	FSendMissionData SendMissionData;
 };
 

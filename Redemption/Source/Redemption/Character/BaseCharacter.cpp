@@ -56,6 +56,8 @@
 // Misc
 #include "Engine/SkeletalMeshSocket.h"
 
+#include "WvAIController.h"
+
 #include UE_INLINE_GENERATED_CPP_BY_NAME(BaseCharacter)
 
 TSubclassOf<UAnimInstance> UOverlayAnimInstanceDataAsset::FindAnimInstance(const ELSOverlayState InOverlayState) const
@@ -203,6 +205,10 @@ void ABaseCharacter::BeginPlay()
 	LocomotionComponent->OnGaitChangeDelegate.AddDynamic(this, &ThisClass::OnGaitChange_Callback);
 	LocomotionComponent->PrimaryComponentTick.AddPrerequisite(this, this->PrimaryActorTick);
 
+	if (AWvAIController* AIC = Cast<AWvAIController>(GetController()))
+	{
+		AIC->GetMissionComponent()->SetSendMissionData(SendMissionData);
+	}
 	RequestAsyncLoad();
 
 }

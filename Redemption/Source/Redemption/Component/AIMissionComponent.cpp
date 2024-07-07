@@ -23,12 +23,37 @@ void UAIMissionComponent::TickComponent(float DeltaTime, ELevelTick TickType, FA
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 }
 
+void UAIMissionComponent::SetSendMissionData(const FSendMissionData& InSendMissionData)
+{
+	if (IsValid(SendMissionDA))
+	{
+		bool bIsValid = false;
+		const auto CurSendMissionData = SendMissionDA->Find(InSendMissionData.SendMissionIndex, bIsValid);
+		if (bIsValid)
+		{
+			SendMissionData = CurSendMissionData;
+		}
+	}
+}
+
+bool UAIMissionComponent::GetAllowRegisterMission() const 
+{
+	return SendMissionData.bAllowSendMissionPlayer;
+}
+
 /// <summary>
 /// player‚Émission‚ðˆË—Š‚·‚é
 /// </summary>
 void UAIMissionComponent::RegisterMission()
 {
-	if (!bAllowSendMissionPlayer)
+	// missionI—¹Ï‚Ý
+	if (HasMissionAllComplete())
+	{
+		return;
+	}
+
+	// missionƒtƒ‰ƒO‚ª‹–‰Â‚³‚ê‚Ä‚¢‚È‚¢
+	if (!SendMissionData.bAllowSendMissionPlayer)
 	{
 		UE_LOG(LogTemp, Error, TEXT("this owner not allow mission registered !! => %s, function => %s"), *GetNameSafe(GetOwner()), *FString(__FUNCTION__));
 		return;
@@ -37,12 +62,32 @@ void UAIMissionComponent::RegisterMission()
 	auto PC = Cast<AWvPlayerController>(Game::ControllerExtension::GetPlayer(GetWorld()));
 	if (IsValid(PC))
 	{
-		PC->RegisterMission(SendMissionIndex);
-
-		if (RegisterMissionDelegate.IsBound())
+		if (HasMainMissionComplete())
 		{
-			RegisterMissionDelegate.Broadcast(SendMissionIndex);
+			if (SendMissionData.bAllowRelevanceMission && !PC->GetMissionComponent()->HasCompleteMission(SendMissionData.RelevanceMainIndex))
+			{
+				PC->GetMissionComponent()->RegisterMission(SendMissionData.RelevanceMainIndex);
+
+				if (RegisterMissionDelegate.IsBound())
+				{
+					RegisterMissionDelegate.Broadcast(SendMissionData.RelevanceMainIndex);
+				}
+
+				UE_LOG(LogTemp, Warning, TEXT("Relevance Mission Registered => %s"), *FString(__FUNCTION__));
+			}
 		}
+		else
+		{
+			PC->GetMissionComponent()->RegisterMission(SendMissionData.SendMissionIndex);
+
+			if (RegisterMissionDelegate.IsBound())
+			{
+				RegisterMissionDelegate.Broadcast(SendMissionData.SendMissionIndex);
+			}
+
+			UE_LOG(LogTemp, Log, TEXT("Mission Registered => %s"), *FString(__FUNCTION__));
+		}
+
 	}
 }
 
@@ -52,6 +97,32 @@ void UAIMissionComponent::RegisterMission()
 /// <param name="NewbAllowSendMissionPlayer"></param>
 void UAIMissionComponent::SetAllowRegisterMission(const bool NewbAllowSendMissionPlayer)
 {
-	bAllowSendMissionPlayer = NewbAllowSendMissionPlayer;
+	SendMissionData.bAllowSendMissionPlayer = NewbAllowSendMissionPlayer;
+}
+
+const bool UAIMissionComponent::HasMissionAllComplete()
+{
+	return HasMainMissionComplete() && SendMissionData.bAllowRelevanceMission == false ||
+		HasMainMissionComplete() && HasRelevanceMissionComplete();
+}
+
+const bool UAIMissionComponent::HasMainMissionComplete()
+{
+	auto PC = Cast<AWvPlayerController>(Game::ControllerExtension::GetPlayer(GetWorld()));
+	if (IsValid(PC))
+	{
+		return (SendMissionData.bAllowSendMissionPlayer && PC->GetMissionComponent()->HasCompleteMission(SendMissionData.SendMissionIndex));
+	}
+	return false;
+}
+
+const bool UAIMissionComponent::HasRelevanceMissionComplete()
+{
+	auto PC = Cast<AWvPlayerController>(Game::ControllerExtension::GetPlayer(GetWorld()));
+	if (IsValid(PC))
+	{
+		return (SendMissionData.bAllowRelevanceMission && PC->GetMissionComponent()->HasCompleteMission(SendMissionData.RelevanceMainIndex));
+	}
+	return false;
 }
 

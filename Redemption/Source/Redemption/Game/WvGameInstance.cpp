@@ -67,17 +67,29 @@ void UWvGameInstance::RegisterMission(FMissionBaseData& NewMissionData)
 	UGameplayStatics::SaveGameToSlot(WvSaveGame, K_PLAYER_SLOT_NAME, SaveSlotID);
 }
 
-void UWvGameInstance::CompleteMission(const FMissionBaseData InMissionData)
+void UWvGameInstance::CompleteMission(const int32 InMissionIndex)
 {
 	UWvSaveGame* WvSaveGame = GetOrCreateWvSaveGame(K_PLAYER_SLOT_NAME);
-	WvSaveGame->CompleteMission(InMissionData);
+	WvSaveGame->CompleteMission(InMissionIndex);
 	UGameplayStatics::SaveGameToSlot(WvSaveGame, K_PLAYER_SLOT_NAME, SaveSlotID);
 }
 
-void UWvGameInstance::InterruptionMission(const FMissionBaseData InMissionData)
+const bool UWvGameInstance::HasCompleteMission(const int32 InMissionIndex)
 {
 	UWvSaveGame* WvSaveGame = GetOrCreateWvSaveGame(K_PLAYER_SLOT_NAME);
-	WvSaveGame->InterruptionMission(InMissionData);
+	return WvSaveGame->HasCompleteMission(InMissionIndex);
+}
+
+const bool UWvGameInstance::HasProgressMission(const int32 InMissionIndex)
+{
+	UWvSaveGame* WvSaveGame = GetOrCreateWvSaveGame(K_PLAYER_SLOT_NAME);
+	return WvSaveGame->HasProgressMission(InMissionIndex);
+}
+
+void UWvGameInstance::InterruptionMission(const int32 InMissionIndex)
+{
+	UWvSaveGame* WvSaveGame = GetOrCreateWvSaveGame(K_PLAYER_SLOT_NAME);
+	WvSaveGame->InterruptionMission(InMissionIndex);
 	UGameplayStatics::SaveGameToSlot(WvSaveGame, K_PLAYER_SLOT_NAME, SaveSlotID);
 }
 
@@ -86,6 +98,32 @@ void UWvGameInstance::CurrentInterruptionMission()
 	UWvSaveGame* WvSaveGame = GetOrCreateWvSaveGame(K_PLAYER_SLOT_NAME);
 	WvSaveGame->CurrentInterruptionMission();
 	UGameplayStatics::SaveGameToSlot(WvSaveGame, K_PLAYER_SLOT_NAME, SaveSlotID);
+}
+
+const bool UWvGameInstance::CompleteMissionPhaseByID(const int32 InMissionIndex, const int32 InMissionPhaseID)
+{
+	UWvSaveGame* WvSaveGame = GetOrCreateWvSaveGame(K_PLAYER_SLOT_NAME);
+
+	const bool bWasResult = WvSaveGame->CompleteMissionPhaseByID(InMissionIndex, InMissionPhaseID);
+	if (bWasResult)
+	{
+		UGameplayStatics::SaveGameToSlot(WvSaveGame, K_PLAYER_SLOT_NAME, SaveSlotID);
+	}
+
+	return bWasResult;
+}
+
+void UWvGameInstance::CompleteMissionPhaseCurrent(const int32 InMissionIndex)
+{
+	UWvSaveGame* WvSaveGame = GetOrCreateWvSaveGame(K_PLAYER_SLOT_NAME);
+	WvSaveGame->CompleteMissionPhaseCurrent(InMissionIndex);
+	UGameplayStatics::SaveGameToSlot(WvSaveGame, K_PLAYER_SLOT_NAME, SaveSlotID);
+}
+
+const FMissionPhase UWvGameInstance::GetMissionPhaseByIndex(const int32 InMissionIndex, const int32 InMissionID)
+{
+	UWvSaveGame* WvSaveGame = GetOrCreateWvSaveGame(K_PLAYER_SLOT_NAME);
+	return WvSaveGame->GetMissionPhaseByIndex(InMissionIndex, InMissionID);
 }
 #pragma endregion
 

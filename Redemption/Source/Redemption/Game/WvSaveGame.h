@@ -7,8 +7,8 @@
 #include "Engine/DataAsset.h"
 #include "WvSaveGame.generated.h"
 
-// save game 現在進行中のミッション
-// 配列でMission dataを保存し、Complatedがfalseの場合は進行中と判定する
+// save game Current mission in progress
+// save mission data in an array, and if Complicated is false, determine that the mission is in progress
 // 
 
 USTRUCT(BlueprintType)
@@ -25,8 +25,15 @@ public:
 
 	void Complete();
 	bool HasComplete() const;
+	bool HasFinalPhase() const;
+
+protected:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	bool bIsFinalPhase = false;
 
 private:
+
+
 	// is phase comlplete?
 	UPROPERTY()
 	bool bIsCompleted = false;
@@ -65,8 +72,8 @@ public:
 	void Interruption();
 
 	bool HasComplete() const;
+	bool HasProgress() const;
 	bool IsValid() const;
-	bool IsBeginning() const;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	TArray<FMissionPhase> MissionPhases;
@@ -75,6 +82,11 @@ public:
 	FMissionPhase GetMissionPhaseByIndex(const int32 InMissionID) const;
 	void CompleteMissionPhase(const FMissionPhase InMissionPhase);
 
+	const bool CompleteMissionPhaseByID(const int32 InMissionPhaseID);
+
+	const int32 CompleteMissionPhaseCurrent();
+
+	bool HasMissionFinalPhase(const int32 InMissionPhaseID) const;
 
 private:
 	// is mission comlplete?
@@ -97,7 +109,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	TArray<FMissionBaseData> MissionGameDatas;
 
-	FMissionBaseData GetMissionGameData(const int32 MissionId);
+	FMissionBaseData GetMissionGameData(const int32 MissionId, bool &bIsValid);
 };
 
 
@@ -112,15 +124,26 @@ class REDEMPTION_API UWvSaveGame : public USaveGame
 
 public:
 	UWvSaveGame();
+
+	// start region mission
 	void RegisterMission(FMissionBaseData& NewMissionData);
 
 	const bool BeginMission(const int32 InMissionIndex);
-	void CompleteMission(const FMissionBaseData InMissionData);
-	void InterruptionMission(const FMissionBaseData InMissionData);
-
+	void InterruptionMission(const int32 InMissionIndex);
 	void CurrentInterruptionMission();
 
+	void CompleteMission(const int32 InMissionIndex);
+	bool HasCompleteMission(const int32 InMissionIndex) const;
+	bool HasProgressMission(const int32 InMissionIndex) const;
+
+	const bool CompleteMissionPhaseByID(const int32 InMissionIndex, const int32 InMissionPhaseID);
+	FMissionPhase GetMissionPhaseByIndex(const int32 InMissionIndex, const int32 InMissionID) const;
+
 	bool LoadMissionData(const int32 InMissionId, FMissionBaseData& OutMissionData);
+
+	void CompleteMissionPhaseCurrent(const int32 InMissionIndex);
+	// end region mission
+
 	void SetGameClear();
 	bool IsGameClear() const;
 	void SetHour(const int32 InHour);
@@ -151,7 +174,6 @@ protected:
 	TArray<FMissionBaseData> MissionArray;
 
 private:
-	// 現在の受注mission dict
 	// key mission id
 	// value phase id
 	UPROPERTY()
@@ -159,6 +181,7 @@ private:
 
 
 	void SetMoney(const int32 InMoney);
+
 };
 
 

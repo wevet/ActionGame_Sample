@@ -1,6 +1,6 @@
 {
 	"FileVersion": 3,
-	"EngineAssociation": "5.3",
+	"EngineAssociation": "{95F6211E-451C-5906-C808-F9BC2FE6F9E0}",
 	"Category": "",
 	"Description": "",
 	"Modules": [
@@ -188,6 +188,10 @@
 		},
 		{
 			"Name": "WvAbilitySystem",
+			"Enabled": true
+		},
+		{
+			"Name": "WvPostProcess",
 			"Enabled": true
 		},
 		{

@@ -54,33 +54,37 @@ void APlayerCharacter::BeginPlay()
 
 	WvCameraFollowComponent->PrimaryComponentTick.AddPrerequisite(this, this->PrimaryActorTick);
 
+	P_Controller = Cast<AWvPlayerController>(Controller);
+
 	//Add Input Mapping Context
-	if (AWvPlayerController* PC = Cast<AWvPlayerController>(Controller))
+	if (P_Controller.IsValid())
 	{
-		PC->OnInputEventGameplayTagTrigger_Game.AddDynamic(this, &APlayerCharacter::GameplayTagTrigger_Callback);
-		PC->OnPluralInputEventTrigger.AddDynamic(this, &APlayerCharacter::OnPluralInputEventTrigger_Callback);
-		PC->OnHoldingInputEventTrigger.AddDynamic(this, &APlayerCharacter::OnHoldingInputEventTrigger_Callback);
-		PC->OnDoubleClickInputEventTrigger.AddDynamic(this, &APlayerCharacter::OnDoubleClickInputEventTrigger_Callback);
+		P_Controller->OnInputEventGameplayTagTrigger_Game.AddDynamic(this, &ThisClass::GameplayTagTrigger_Callback);
+		P_Controller->OnPluralInputEventTrigger.AddDynamic(this, &ThisClass::OnPluralInputEventTrigger_Callback);
+		P_Controller->OnHoldingInputEventTrigger.AddDynamic(this, &ThisClass::OnHoldingInputEventTrigger_Callback);
+		P_Controller->OnDoubleClickInputEventTrigger.AddDynamic(this, &ThisClass::OnDoubleClickInputEventTrigger_Callback);
 	}
 
-	WvCameraFollowComponent->OnTargetLockedOn.AddDynamic(this, &APlayerCharacter::OnTargetLockedOn_Callback);
-	WvCameraFollowComponent->OnTargetLockedOff.AddDynamic(this, &APlayerCharacter::OnTargetLockedOff_Callback);
-	LocomotionComponent->OnOverlayChangeDelegate.AddDynamic(this, &APlayerCharacter::OverlayStateChange_Callback);
+	WvCameraFollowComponent->OnTargetLockedOn.AddDynamic(this, &ThisClass::OnTargetLockedOn_Callback);
+	WvCameraFollowComponent->OnTargetLockedOff.AddDynamic(this, &ThisClass::OnTargetLockedOff_Callback);
+	LocomotionComponent->OnOverlayChangeDelegate.AddDynamic(this, &ThisClass::OverlayStateChange_Callback);
 }
 
 void APlayerCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-	if (AWvPlayerController* PC = Cast<AWvPlayerController>(Controller))
+	if (P_Controller.IsValid())
 	{
-		PC->OnInputEventGameplayTagTrigger_Game.RemoveDynamic(this, &APlayerCharacter::GameplayTagTrigger_Callback);
-		PC->OnPluralInputEventTrigger.RemoveDynamic(this, &APlayerCharacter::OnPluralInputEventTrigger_Callback);
-		PC->OnHoldingInputEventTrigger.RemoveDynamic(this, &APlayerCharacter::OnHoldingInputEventTrigger_Callback);
-		PC->OnDoubleClickInputEventTrigger.RemoveDynamic(this, &APlayerCharacter::OnDoubleClickInputEventTrigger_Callback);
+		P_Controller->OnInputEventGameplayTagTrigger_Game.RemoveDynamic(this, &ThisClass::GameplayTagTrigger_Callback);
+		P_Controller->OnPluralInputEventTrigger.RemoveDynamic(this, &ThisClass::OnPluralInputEventTrigger_Callback);
+		P_Controller->OnHoldingInputEventTrigger.RemoveDynamic(this, &ThisClass::OnHoldingInputEventTrigger_Callback);
+		P_Controller->OnDoubleClickInputEventTrigger.RemoveDynamic(this, &ThisClass::OnDoubleClickInputEventTrigger_Callback);
 	}
 
-	WvCameraFollowComponent->OnTargetLockedOn.RemoveDynamic(this, &APlayerCharacter::OnTargetLockedOn_Callback);
-	WvCameraFollowComponent->OnTargetLockedOff.RemoveDynamic(this, &APlayerCharacter::OnTargetLockedOff_Callback);
-	LocomotionComponent->OnOverlayChangeDelegate.RemoveDynamic(this, &APlayerCharacter::OverlayStateChange_Callback);
+	P_Controller.Reset();
+
+	WvCameraFollowComponent->OnTargetLockedOn.RemoveDynamic(this, &ThisClass::OnTargetLockedOn_Callback);
+	WvCameraFollowComponent->OnTargetLockedOff.RemoveDynamic(this, &ThisClass::OnTargetLockedOff_Callback);
+	LocomotionComponent->OnOverlayChangeDelegate.RemoveDynamic(this, &ThisClass::OverlayStateChange_Callback);
 
 	Super::EndPlay(EndPlayReason);
 }
@@ -146,101 +150,24 @@ void APlayerCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerIn
 
 void APlayerCharacter::Move(const FInputActionValue& Value)
 {
+	if (IsInputKeyDisable())
+	{
+		return;
+	}
+
 	// input is a Vector2D
 	InputAxis = Value.Get<FVector2D>();
 	LocomotionComponent->Move(InputAxis);
 
 }
 
-
-void APlayerCharacter::ToggleAimMode()
-{
-	//float HoldValue = Value.Get<float>();
-	const auto LocomotionEssencialVariables = LocomotionComponent->GetLocomotionEssencialVariables();
-
-	if (!LocomotionEssencialVariables.bAiming)
-	{
-		DoStartAiming();
-	}
-	else
-	{
-		DoStopAiming();
-	}
-
-}
-
-void APlayerCharacter::ToggleStanceMode()
-{
-	const auto LocomotionEssencialVariables = LocomotionComponent->GetLocomotionEssencialVariables();
-	const ELSStance LSStance = LocomotionEssencialVariables.LSStance;
-	if (LSStance == ELSStance::Standing)
-	{
-		DoStartCrouch();
-	}
-	else
-	{
-		DoStopCrouch();
-	}
-}
-
-void APlayerCharacter::ToggleTargetLock()
-{
-	if (!IsValid(WvCameraFollowComponent))
-	{
-		return;
-	}
-
-	if (IsDead())
-	{
-		return;
-	}
-
-	if (!IsTargetLock())
-	{
-		WvCameraFollowComponent->TargetActor();
-		WvAbilitySystemComponent->AddGameplayTag(TAG_Character_TargetLocking, 1);
-
-		if (IsValid(ItemInventoryComponent))
-		{
-			auto WeaponType = ItemInventoryComponent->GetEquipWeaponType();
-			switch (WeaponType)
-			{
-			case EAttackWeaponState::Gun:
-			case EAttackWeaponState::Rifle:
-				LocomotionComponent->SetLSAiming(true);
-				break;
-			}
-		}
-
-	}
-	else
-	{
-		WvCameraFollowComponent->TargetLockOff();
-		WvAbilitySystemComponent->RemoveGameplayTag(TAG_Character_TargetLocking, 1);
-	}
-}
-
-void APlayerCharacter::ToggleRotationMode()
-{
-	if (IsTargetLock())
-	{
-		return;
-	}
-
-	const auto LocomotionEssencialVariables = LocomotionComponent->GetLocomotionEssencialVariables();
-	const ELSRotationMode LSRotationMode = LocomotionEssencialVariables.LSRotationMode;
-	if (LSRotationMode == ELSRotationMode::VelocityDirection)
-	{
-		StrafeMovement();
-	}
-	else
-	{
-		VelocityMovement();
-	}
-}
-
 void APlayerCharacter::Look(const FInputActionValue& Value)
 {
+	if (IsInputKeyDisable())
+	{
+		return;
+	}
+
 	FVector2D LookAxisVector = Value.Get<FVector2D>();
 	TurnAtRate(LookAxisVector.X);
 	LookUpAtRate(LookAxisVector.Y);
@@ -268,6 +195,11 @@ void APlayerCharacter::LookUpAtRate(float Rate)
 
 void APlayerCharacter::GameplayTagTrigger_Callback(const FGameplayTag Tag, const bool bIsPress)
 {
+	if (IsInputKeyDisable())
+	{
+		return;
+	}
+
 	if (Tag == TAG_Character_ActionJump)
 	{
 		HandleJump(bIsPress);
@@ -292,17 +224,22 @@ void APlayerCharacter::GameplayTagTrigger_Callback(const FGameplayTag Tag, const
 
 void APlayerCharacter::OnPluralInputEventTrigger_Callback(const FGameplayTag Tag, const bool bIsPress)
 {
+	if (IsInputKeyDisable())
+	{
+		return;
+	}
+
 	if (Tag == TAG_Character_ActionCrouch)
 	{
-		ToggleStanceMode();
+		HandleStanceMode();
 	}
 	else if (Tag == TAG_Character_TargetLock)
 	{
-		ToggleTargetLock();
+		HandleTargetLock();
 	}
 	else if (Tag == TAG_Character_ActionStrafeChange)
 	{
-		ToggleRotationMode();
+		HandleRotationMode();
 	}
 	else if (HasFinisherAction(Tag) && !Super::IsVehicleDriving())
 	{
@@ -314,6 +251,11 @@ void APlayerCharacter::OnPluralInputEventTrigger_Callback(const FGameplayTag Tag
 
 void APlayerCharacter::OnHoldingInputEventTrigger_Callback(const FGameplayTag Tag, const bool bIsPress)
 {
+	if (IsInputKeyDisable())
+	{
+		return;
+	}
+
 	if (Tag == TAG_Character_ActionAimChange)
 	{
 		HandleHoldAimAction(bIsPress);
@@ -322,37 +264,15 @@ void APlayerCharacter::OnHoldingInputEventTrigger_Callback(const FGameplayTag Ta
 
 void APlayerCharacter::OnDoubleClickInputEventTrigger_Callback(const FGameplayTag Tag, const bool bIsPress)
 {
-
-}
-
-void APlayerCharacter::OverlayStateChange_Callback(const ELSOverlayState PrevOverlay, const ELSOverlayState CurrentOverlay)
-{
-	if (!IsValid(ItemInventoryComponent))
+	if (IsInputKeyDisable())
 	{
 		return;
 	}
 
-	bool bCanAttack = false;
-	const auto WeaponType = ItemInventoryComponent->ConvertWeaponState(CurrentOverlay, bCanAttack);
-	const bool bResult = ItemInventoryComponent->ChangeAttackWeapon(WeaponType);
-
-	if (bResult)
-	{
-		Super::OverlayStateChange(CurrentOverlay);
-	}
 
 }
 
-void APlayerCharacter::OnTargetLockedOn_Callback(AActor* LookOnTarget, UHitTargetComponent* TargetComponent)
-{
-	LocomotionComponent->SetLookAimTarget(true, LookOnTarget, TargetComponent);
-}
-
-void APlayerCharacter::OnTargetLockedOff_Callback(AActor* LookOnTarget, UHitTargetComponent* TargetComponent)
-{
-	LocomotionComponent->SetLookAimTarget(false, nullptr, nullptr);
-}
-
+#pragma region HandleEvent
 void APlayerCharacter::HandleJump(const bool bIsPress)
 {
 	if (bIsPress)
@@ -431,10 +351,9 @@ void APlayerCharacter::HandleHoldAimAction(const bool bIsPress)
 {
 	if (bIsPress)
 	{
-		ToggleAimMode();
+		HandleAimMode();
 	}
 }
-
 
 void APlayerCharacter::HandleFinisherAction(const FGameplayTag Tag, const bool bIsPress)
 {
@@ -451,14 +370,87 @@ void APlayerCharacter::HandleFinisherAction(const FGameplayTag Tag, const bool b
 	}
 }
 
-bool APlayerCharacter::HasFinisherAction(const FGameplayTag Tag) const
+void APlayerCharacter::HandleAimMode()
 {
-	FGameplayTagContainer Container;
-	Container.AddTag(TAG_Weapon_Finisher);
-	Container.AddTag(TAG_Weapon_HoldUp);
-	Container.AddTag(TAG_Weapon_KnockOut);
-	return Container.HasTag(Tag);
+	//float HoldValue = Value.Get<float>();
+	const auto LocomotionEssencialVariables = LocomotionComponent->GetLocomotionEssencialVariables();
+
+	if (!LocomotionEssencialVariables.bAiming)
+	{
+		DoStartAiming();
+	}
+	else
+	{
+		DoStopAiming();
+	}
+
 }
+
+void APlayerCharacter::HandleStanceMode()
+{
+	const auto LocomotionEssencialVariables = LocomotionComponent->GetLocomotionEssencialVariables();
+	const ELSStance LSStance = LocomotionEssencialVariables.LSStance;
+	if (LSStance == ELSStance::Standing)
+	{
+		DoStartCrouch();
+	}
+	else
+	{
+		DoStopCrouch();
+	}
+}
+
+void APlayerCharacter::HandleTargetLock()
+{
+	if (!IsValid(WvCameraFollowComponent) || IsDead())
+	{
+		return;
+	}
+
+	if (!IsTargetLock())
+	{
+		WvCameraFollowComponent->TargetActor();
+		WvAbilitySystemComponent->AddGameplayTag(TAG_Character_TargetLocking, 1);
+
+		if (IsValid(ItemInventoryComponent))
+		{
+			auto WeaponType = ItemInventoryComponent->GetEquipWeaponType();
+			switch (WeaponType)
+			{
+			case EAttackWeaponState::Gun:
+			case EAttackWeaponState::Rifle:
+				LocomotionComponent->SetLSAiming(true);
+				break;
+			}
+		}
+
+	}
+	else
+	{
+		WvCameraFollowComponent->TargetLockOff();
+		WvAbilitySystemComponent->RemoveGameplayTag(TAG_Character_TargetLocking, 1);
+	}
+}
+
+void APlayerCharacter::HandleRotationMode()
+{
+	if (IsTargetLock())
+	{
+		return;
+	}
+
+	const auto LocomotionEssencialVariables = LocomotionComponent->GetLocomotionEssencialVariables();
+	const ELSRotationMode LSRotationMode = LocomotionEssencialVariables.LSRotationMode;
+	if (LSRotationMode == ELSRotationMode::VelocityDirection)
+	{
+		StrafeMovement();
+	}
+	else
+	{
+		VelocityMovement();
+	}
+}
+#pragma endregion
 
 #pragma region Input
 void APlayerCharacter::SetKeyInputEnable()
@@ -477,6 +469,15 @@ bool APlayerCharacter::IsInputKeyDisable() const
 }
 #pragma endregion
 
+bool APlayerCharacter::HasFinisherAction(const FGameplayTag Tag) const
+{
+	FGameplayTagContainer Container;
+	Container.AddTag(TAG_Weapon_Finisher);
+	Container.AddTag(TAG_Weapon_HoldUp);
+	Container.AddTag(TAG_Weapon_KnockOut);
+	return Container.HasTag(Tag);
+}
+
 bool APlayerCharacter::IsTargetLock() const
 {
 	const bool bHasTag = WvAbilitySystemComponent->HasMatchingGameplayTag(TAG_Character_TargetLocking);
@@ -488,4 +489,40 @@ FVector APlayerCharacter::GetFollowCameraLocation() const
 {
 	return FollowCamera->GetForwardVector();
 }
+
+// callback
+
+void APlayerCharacter::OverlayStateChange_Callback(const ELSOverlayState PrevOverlay, const ELSOverlayState CurrentOverlay)
+{
+	if (!IsValid(ItemInventoryComponent))
+	{
+		return;
+	}
+
+	bool bCanAttack = false;
+	const auto WeaponType = ItemInventoryComponent->ConvertWeaponState(CurrentOverlay, bCanAttack);
+	const bool bResult = ItemInventoryComponent->ChangeAttackWeapon(WeaponType);
+
+	if (bResult)
+	{
+		Super::OverlayStateChange(CurrentOverlay);
+	}
+
+}
+
+void APlayerCharacter::OnTargetLockedOn_Callback(AActor* LookOnTarget, UHitTargetComponent* TargetComponent)
+{
+	LocomotionComponent->SetLookAimTarget(true, LookOnTarget, TargetComponent);
+}
+
+void APlayerCharacter::OnTargetLockedOff_Callback(AActor* LookOnTarget, UHitTargetComponent* TargetComponent)
+{
+	LocomotionComponent->SetLookAimTarget(false, nullptr, nullptr);
+}
+
+void APlayerCharacter::RegisterMission_Callback(const int32 MissionIndex)
+{
+
+}
+
 

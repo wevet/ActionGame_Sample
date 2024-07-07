@@ -12,6 +12,7 @@
 #include "Ability/WvAbilitySystemComponent.h"
 #include "Ability/WvAbilityType.h"
 #include "Locomotion/LocomotionSystemTypes.h"
+#include "Mission/MissionSystemTypes.h"
 
 // builtin
 #include "Runtime/Launch/Resources/Version.h"
@@ -312,6 +313,8 @@ public:
 	void SetDayNightPhase(const uint8 InDayNightPhase);
 	uint8 GetDayNightPhase() const;
 
+	virtual void RegisterMission_Callback(const int32 MissionIndex) {};
+
 #pragma region NearlestAction
 	void CalcurateNearlestTarget(const float SyncPointWeight);
 	void ResetNearlestTarget();
@@ -444,6 +447,10 @@ protected:
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input)
 	float InputDirVerAngleThreshold = 40.0f;
+
+	// ai only mission property
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = Mission)
+	FSendMissionData SendMissionData;
 	
 	FVector2D InputAxis = FVector2D::ZeroVector;
 	bool bHasMovementInput = false;

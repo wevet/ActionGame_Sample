@@ -14,6 +14,11 @@ bool FMissionPhase::HasComplete() const
 {
 	return bIsCompleted;
 }
+
+bool FMissionPhase::HasFinalPhase() const
+{
+	return bIsFinalPhase;
+}
 #pragma endregion
 
 #pragma region MissionBaseData
@@ -50,7 +55,7 @@ bool FMissionBaseData::HasComplete() const
 /// missionäJéníÜîªíË
 /// </summary>
 /// <returns></returns>
-bool FMissionBaseData::IsBeginning() const
+bool FMissionBaseData::HasProgress() const
 {
 	return bIsMissionPlaying;
 }
@@ -74,7 +79,7 @@ bool FMissionBaseData::IsValid() const
 }
 
 /// <summary>
-/// åªç›ÇÃmissionÇÃè⁄ç◊(phase)ÇéÊìæÇ∑ÇÈ
+/// Get the details of the current mission (phase)
 /// </summary>
 /// <returns></returns>
 FMissionPhase FMissionBaseData::GetCurrentMissionPhase() const
@@ -94,7 +99,7 @@ FMissionPhase FMissionBaseData::GetCurrentMissionPhase() const
 }
 
 /// <summary>
-/// åªç›ÇÃmissionÇÃì¡íËÇÃphaseÇéÊìæÇ∑ÇÈ
+/// Get a specific phase of the current mission
 /// </summary>
 /// <returns></returns>
 FMissionPhase FMissionBaseData::GetMissionPhaseByIndex(const int32 InMissionID) const
@@ -128,19 +133,74 @@ void FMissionBaseData::CompleteMissionPhase(const FMissionPhase InMissionPhase)
 		FindissionGameData->Complete();
 	}
 }
+
+const bool FMissionBaseData::CompleteMissionPhaseByID(const int32 InMissionPhaseID)
+{
+	auto FindMissionPhase = MissionPhases.FindByPredicate([&](FMissionPhase Item)
+	{
+		return (Item.Index == InMissionPhaseID);
+	});
+
+	if (FindMissionPhase)
+	{
+		FindMissionPhase->Complete();
+		return true;
+	}
+	return false;
+}
+
+const int32 FMissionBaseData::CompleteMissionPhaseCurrent()
+{
+	TArray<FMissionPhase> Temp;
+	for (FMissionPhase Item : MissionPhases)
+	{
+		if (!Item.HasComplete())
+		{
+			Temp.Add(Item);
+		}
+	}
+
+	Temp.Sort([&](const FMissionPhase& A, const FMissionPhase& B)
+	{
+		return A.Index < A.Index;
+	});
+
+	const int32 FirstIndex = 0;
+	if (Temp.IsValidIndex(FirstIndex))
+	{
+		Temp[FirstIndex].Complete();
+		return Temp[FirstIndex].Index;
+	}
+	return INDEX_NONE;
+}
+
+bool FMissionBaseData::HasMissionFinalPhase(const int32 InMissionPhaseID) const
+{
+	auto FindMissionPhase = MissionPhases.FindByPredicate([&](FMissionPhase Item)
+	{
+		return (Item.Index == InMissionPhaseID);
+	});
+
+	if (FindMissionPhase)
+	{
+		return FindMissionPhase->HasFinalPhase();
+	}
+	return false;
+}
 #pragma endregion
 
-FMissionBaseData UMissionGameDataAsset::GetMissionGameData(const int32 MissionId)
+FMissionBaseData UMissionGameDataAsset::GetMissionGameData(const int32 MissionId, bool& bIsValid)
 {
 	// get da setting . array main index match iten
-	auto FindissionGameData = MissionGameDatas.FindByPredicate([&](FMissionBaseData Item)
+	auto FindMissionGameData = MissionGameDatas.FindByPredicate([&](FMissionBaseData Item)
 	{
 		return (Item.MainIndex == MissionId);
 	});
 
-	if (FindissionGameData)
+	if (FindMissionGameData)
 	{
-		return *FindissionGameData;
+		bIsValid = true;
+		return *FindMissionGameData;
 	}
 
 	FMissionBaseData Temp;
@@ -183,26 +243,29 @@ void UWvSaveGame::RegisterMission(FMissionBaseData& NewMissionData)
 	}
 
 	MissionArray.Add(NewMissionData);
+
+	if (!MissionDataMap.Contains(NewMissionData.MainIndex))
+	{
+		MissionDataMap.Add(NewMissionData.MainIndex, INDEX_NONE);
+	}
 }
 
-void UWvSaveGame::CompleteMission(const FMissionBaseData InMissionData)
+void UWvSaveGame::CompleteMission(const int32 InMissionIndex)
 {
-	const auto ID = InMissionData.MainIndex;
 	for (FMissionBaseData MissionData : MissionArray)
 	{
-		if (ID == MissionData.MainIndex)
+		if (InMissionIndex == MissionData.MainIndex)
 		{
 			MissionData.Complete();
 		}
 	}
 }
 
-void UWvSaveGame::InterruptionMission(const FMissionBaseData InMissionData)
+void UWvSaveGame::InterruptionMission(const int32 InMissionIndex)
 {
-	const auto ID = InMissionData.MainIndex;
 	for (FMissionBaseData MissionData : MissionArray)
 	{
-		if (ID == MissionData.MainIndex)
+		if (InMissionIndex == MissionData.MainIndex)
 		{
 			MissionData.Interruption();
 		}
@@ -218,6 +281,72 @@ void UWvSaveGame::CurrentInterruptionMission()
 			MissionData.Interruption();
 		}
 	}
+}
+
+bool UWvSaveGame::HasCompleteMission(const int32 InMissionIndex) const
+{
+	auto FindissionGameData = MissionArray.FindByPredicate([&](FMissionBaseData Item)
+	{
+		return (Item.MainIndex == InMissionIndex);
+	});
+
+	if (FindissionGameData)
+	{
+		return FindissionGameData->HasComplete();
+	}
+	return false;
+}
+
+bool UWvSaveGame::HasProgressMission(const int32 InMissionIndex) const
+{
+	auto FindissionGameData = MissionArray.FindByPredicate([&](FMissionBaseData Item)
+	{
+		return (Item.MainIndex == InMissionIndex);
+	});
+
+	if (FindissionGameData)
+	{
+		return FindissionGameData->HasProgress();
+	}
+	return false;
+}
+
+const bool UWvSaveGame::CompleteMissionPhaseByID(const int32 InMissionIndex, const int32 InMissionPhaseID)
+{
+	FMissionBaseData CurMissionData;
+	const bool bWasResult = LoadMissionData(InMissionIndex, CurMissionData);
+
+	if (bWasResult)
+	{
+		return CurMissionData.CompleteMissionPhaseByID(InMissionPhaseID);
+	}
+	return false;
+
+	//FMissionBaseData CurMissionData;
+	//for (FMissionBaseData MissionData : MissionArray)
+	//{
+	//	if (InMissionIndex == MissionData.MainIndex)
+	//	{
+	//		CurMissionData = MissionData;
+	//		break;
+	//	}
+	//}
+	//return CurMissionData.CompleteMissionPhaseByID(InMissionPhaseID);
+}
+
+FMissionPhase UWvSaveGame::GetMissionPhaseByIndex(const int32 InMissionIndex, const int32 InMissionID) const
+{
+	FMissionBaseData CurMissionData;
+	for (FMissionBaseData MissionData : MissionArray)
+	{
+		if (InMissionIndex == MissionData.MainIndex)
+		{
+			CurMissionData = MissionData;
+			break;
+		}
+	}
+
+	return CurMissionData.GetMissionPhaseByIndex(InMissionID);
 }
 
 /// <summary>
@@ -237,6 +366,23 @@ bool UWvSaveGame::LoadMissionData(const int32 InMissionId, FMissionBaseData& Out
 		}
 	}
 	return false;
+}
+
+void UWvSaveGame::CompleteMissionPhaseCurrent(const int32 InMissionIndex)
+{
+	FMissionBaseData MissionData;
+	const bool bWasResult = LoadMissionData(InMissionIndex, MissionData);
+
+	if (bWasResult)
+	{
+		const int32 PhaseIndex = MissionData.CompleteMissionPhaseCurrent();
+
+		if (MissionDataMap.Contains(InMissionIndex))
+		{
+			MissionDataMap.Add(InMissionIndex, PhaseIndex);
+		}
+
+	}
 }
 
 void UWvSaveGame::SetGameClear()

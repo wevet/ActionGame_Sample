@@ -10,6 +10,7 @@
 class UWvSpringArmComponent;
 class UWvCameraFollowComponent;
 class UHitTargetComponent;
+class AWvPlayerController;
 
 /**
  * 
@@ -39,6 +40,8 @@ public:
 	void SetKeyInputEnable();
 
 	FVector GetFollowCameraLocation() const;
+
+	virtual void RegisterMission_Callback(const int32 MissionIndex) override;
 
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
@@ -79,10 +82,10 @@ private:
 	void Look(const FInputActionValue& Value);
 
 
-	void ToggleStanceMode();
-	void ToggleTargetLock();
-	void ToggleRotationMode();
-	void ToggleAimMode();
+	void HandleStanceMode();
+	void HandleTargetLock();
+	void HandleRotationMode();
+	void HandleAimMode();
 
 	void HandleJump(const bool bIsPress);
 	void HandleSprinting(const bool bIsPress);
@@ -114,6 +117,9 @@ private:
 
 	UFUNCTION()
 	void OnTargetLockedOff_Callback(AActor* LookOnTarget, UHitTargetComponent* TargetComponent);
+
+	UPROPERTY()
+	TWeakObjectPtr<AWvPlayerController> P_Controller;
 
 public:
 	FORCEINLINE class UWvSpringArmComponent* GetCameraBoom() const { return CameraBoom; }
