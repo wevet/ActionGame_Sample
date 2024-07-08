@@ -11,11 +11,11 @@
 #include "PostProcess/SceneFilterRendering.h"
 #include "PostProcess/PostProcessing.h"
 
-#define DEV 0
+#define CUSTOM_LENS_FLARE_DEVELOP 1
+DECLARE_GPU_STAT(LensFlaresWv)
 
 namespace
 {
-	// TODO_SHADER_SCREENPASS
 	// RDG buffer input shared by all passes
 	BEGIN_SHADER_PARAMETER_STRUCT(FCustomLensFlarePassParameters, )
 		SHADER_PARAMETER_RDG_TEXTURE(Texture2D, InputTexture)
@@ -38,10 +38,9 @@ namespace
 			: FGlobalShader(Initializer)
 		{}
 	};
-	IMPLEMENT_GLOBAL_SHADER(FCustomScreenPassVS, "/Shaders/ScreenPass.usf", "CustomScreenPassVS", SF_Vertex);
+	IMPLEMENT_GLOBAL_SHADER(FCustomScreenPassVS, "/CustomShaders/ScreenPass.usf", "CustomScreenPassVS", SF_Vertex);
 
 
-	// TODO_SHADER_RESCALE
 	#if WITH_EDITOR
 	// Rescale shader
 	class FLensFlareRescalePS : public FGlobalShader
@@ -61,11 +60,10 @@ namespace
 			return IsFeatureLevelSupported(Parameters.Platform, ERHIFeatureLevel::SM5);
 		}
 	};
-	IMPLEMENT_GLOBAL_SHADER(FLensFlareRescalePS, "/Shaders/Rescale.usf", "RescalePS", SF_Pixel);
+	IMPLEMENT_GLOBAL_SHADER(FLensFlareRescalePS, "/CustomShaders/Rescale.usf", "RescalePS", SF_Pixel);
 	#endif
 
 
-	// TODO_SHADER_DOWNSAMPLE
 	class FDownsamplePS : public FGlobalShader
 	{
 	public:
@@ -85,10 +83,9 @@ namespace
 			return IsFeatureLevelSupported(Parameters.Platform, ERHIFeatureLevel::SM5);
 		}
 	};
-	IMPLEMENT_GLOBAL_SHADER(FDownsamplePS, "/Shaders/DownsampleThreshold.usf", "DownsampleThresholdPS", SF_Pixel);
+	IMPLEMENT_GLOBAL_SHADER(FDownsamplePS, "/CustomShaders/DownsampleThreshold.usf", "DownsampleThresholdPS", SF_Pixel);
 	
 
-	// TODO_SHADER_KAWASE
 	class FKawaseBlurDownPS : public FGlobalShader
 	{
 	public:
@@ -123,11 +120,10 @@ namespace
 			return IsFeatureLevelSupported(Parameters.Platform, ERHIFeatureLevel::SM5);
 		}
 	};
-	IMPLEMENT_GLOBAL_SHADER(FKawaseBlurDownPS, "/Shaders/DualKawaseBlur.usf", "KawaseBlurDownsamplePS", SF_Pixel);
-	IMPLEMENT_GLOBAL_SHADER(FKawaseBlurUpPS, "/Shaders/DualKawaseBlur.usf", "KawaseBlurUpsamplePS", SF_Pixel);
+	IMPLEMENT_GLOBAL_SHADER(FKawaseBlurDownPS, "/CustomShaders/DualKawaseBlur.usf", "KawaseBlurDownsamplePS", SF_Pixel);
+	IMPLEMENT_GLOBAL_SHADER(FKawaseBlurUpPS, "/CustomShaders/DualKawaseBlur.usf", "KawaseBlurUpsamplePS", SF_Pixel);
 	
 
-	// TODO_SHADER_CHROMA
 	class FLensFlareChromaPS : public FGlobalShader
 	{
 	public:
@@ -145,10 +141,9 @@ namespace
 			return IsFeatureLevelSupported(Parameters.Platform, ERHIFeatureLevel::SM5);
 		}
 	};
-	IMPLEMENT_GLOBAL_SHADER(FLensFlareChromaPS, "/Shaders/Chroma.usf", "ChromaPS", SF_Pixel);
+	IMPLEMENT_GLOBAL_SHADER(FLensFlareChromaPS, "/CustomShaders/Chroma.usf", "ChromaPS", SF_Pixel);
 	
 
-	// TODO_SHADER_GHOSTS
 	class FLensFlareGhostsPS : public FGlobalShader
 	{
 	public:
@@ -160,8 +155,8 @@ namespace
 			SHADER_PARAMETER_SAMPLER(SamplerState, InputSampler)
 			SHADER_PARAMETER_ARRAY(FVector4f, GhostColors, [8])
 
-#if DEV
-			SHADER_PARAMETER_ARRAY(float, GhostScales, [8])
+#if CUSTOM_LENS_FLARE_DEVELOP
+			SHADER_PARAMETER_SCALAR_ARRAY(float, GhostScales, [8])
 #endif
 			SHADER_PARAMETER(float, Intensity)
 		END_SHADER_PARAMETER_STRUCT()
@@ -171,10 +166,9 @@ namespace
 			return IsFeatureLevelSupported(Parameters.Platform, ERHIFeatureLevel::SM5);
 		}
 	};
-	IMPLEMENT_GLOBAL_SHADER(FLensFlareGhostsPS, "/Shaders/Ghosts.usf", "GhostsPS", SF_Pixel);
+	IMPLEMENT_GLOBAL_SHADER(FLensFlareGhostsPS, "/CustomShaders/Ghosts.usf", "GhostsPS", SF_Pixel);
 	
 
-	// TODO_SHADER_HALO
 	class FLensFlareHaloPS : public FGlobalShader
 	{
 	public:
@@ -196,10 +190,9 @@ namespace
 			return IsFeatureLevelSupported(Parameters.Platform, ERHIFeatureLevel::SM5);
 		}
 	};
-	IMPLEMENT_GLOBAL_SHADER(FLensFlareHaloPS, "/Shaders/Halo.usf", "HaloPS", SF_Pixel);
+	IMPLEMENT_GLOBAL_SHADER(FLensFlareHaloPS, "/CustomShaders/Halo.usf", "HaloPS", SF_Pixel);
 	
 
-	// TODO_SHADER_GLARE
 	class FLensFlareGlareVS : public FGlobalShader
 	{
 	public:
@@ -227,8 +220,8 @@ namespace
 			SHADER_PARAMETER(FVector2f, BufferRatio)
 			SHADER_PARAMETER(float, GlareIntensity)
 			SHADER_PARAMETER(float, GlareDivider)
-#if DEV
-			SHADER_PARAMETER_ARRAY(float, GlareScales, [3])
+#if CUSTOM_LENS_FLARE_DEVELOP
+			SHADER_PARAMETER_SCALAR_ARRAY(float, GlareScales, [3])
 #endif
 		END_SHADER_PARAMETER_STRUCT()
 	};
@@ -248,12 +241,11 @@ namespace
 			return IsFeatureLevelSupported(Parameters.Platform, ERHIFeatureLevel::SM5);
 		}
 	};
-	IMPLEMENT_GLOBAL_SHADER(FLensFlareGlareVS, "/Shaders/Glare.usf", "GlareVS", SF_Vertex);
-	IMPLEMENT_GLOBAL_SHADER(FLensFlareGlareGS, "/Shaders/Glare.usf", "GlareGS", SF_Geometry);
-	IMPLEMENT_GLOBAL_SHADER(FLensFlareGlarePS, "/Shaders/Glare.usf", "GlarePS", SF_Pixel);
+	IMPLEMENT_GLOBAL_SHADER(FLensFlareGlareVS, "/CustomShaders/Glare.usf", "GlareVS", SF_Vertex);
+	IMPLEMENT_GLOBAL_SHADER(FLensFlareGlareGS, "/CustomShaders/Glare.usf", "GlareGS", SF_Geometry);
+	IMPLEMENT_GLOBAL_SHADER(FLensFlareGlarePS, "/CustomShaders/Glare.usf", "GlarePS", SF_Pixel);
 
 
-	// TODO_SHADER_MIX
 	class FLensFlareBloomMixPS : public FGlobalShader
 	{
 	public:
@@ -280,7 +272,7 @@ namespace
 			return IsFeatureLevelSupported(Parameters.Platform, ERHIFeatureLevel::SM5);
 		}
 	};
-	IMPLEMENT_GLOBAL_SHADER(FLensFlareBloomMixPS, "/Shaders/Mix.usf", "MixPS", SF_Pixel);
+	IMPLEMENT_GLOBAL_SHADER(FLensFlareBloomMixPS, "/CustomShaders/Mix.usf", "MixPS", SF_Pixel);
 }
 
 
@@ -335,6 +327,7 @@ inline void DrawShaderPass(FRDGBuilder& GraphBuilder, const FString& PassName, T
 				EDrawRectangleFlags::EDRF_Default // EDrawRectangleFlags Flags
 			);
 
+			UE_LOG(LogTemp, Log, TEXT("%s"), *FString(__FUNCTION__));
 		});
 }
 
@@ -376,6 +369,11 @@ void UWvPostProcessSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 	const FString Path = "PostProcessLensFlareAsset'/WvPostProcess/DA_LensFlare.DA_LensFlare'";
 	PostProcessAsset = LoadObject<UPostProcessLensFlareAsset>(nullptr, *Path);
 	//check(PostProcessAsset);
+
+	if (PostProcessAsset)
+	{
+		UE_LOG(LogTemp, Log, TEXT("SET Custom LensFlare DA => %s"), *FString(__FUNCTION__));
+	}
 }
 
 void UWvPostProcessSubsystem::Deinitialize()
@@ -473,12 +471,12 @@ void UWvPostProcessSubsystem::RenderLensFlare(FRDGBuilder& GraphBuilder, const F
 
 	ThresholdTexture = RenderThreshold(GraphBuilder, InputTexture, InputRect, View);
 
-	if (CVarLensFlareRenderFlarePass.GetValueOnRenderThread())
+	if (CVarLensFlareRenderFlarePass.GetValueOnRenderThread() > 0)
 	{
 		FlareTexture = RenderFlare(GraphBuilder, ThresholdTexture, InputRect, View);
 	}
 
-	if (CVarLensFlareRenderGlarePass.GetValueOnRenderThread())
+	if (CVarLensFlareRenderGlarePass.GetValueOnRenderThread() > 0)
 	{
 		GlareTexture = RenderGlare(GraphBuilder, ThresholdTexture, InputRect, View);
 	}
@@ -523,11 +521,7 @@ void UWvPostProcessSubsystem::RenderLensFlare(FRDGBuilder& GraphBuilder, const F
 		// Plug in buffers
 		const int32 MixBloomPass = CVarLensFlareRenderBloom.GetValueOnRenderThread();
 
-		PassParameters->MixPass = FIntVector(
-			(Inputs.bCompositeWithBloom && MixBloomPass),
-			(FlareTexture != nullptr),
-			(GlareTexture != nullptr)
-		);
+		PassParameters->MixPass = FIntVector((Inputs.bCompositeWithBloom && MixBloomPass), (FlareTexture != nullptr), (GlareTexture != nullptr));
 
 		if (Inputs.bCompositeWithBloom && MixBloomPass)
 		{
@@ -562,9 +556,7 @@ void UWvPostProcessSubsystem::RenderLensFlare(FRDGBuilder& GraphBuilder, const F
 		OutputRect = MixViewport;
 	}
 
-	////////////////////////////////////////////////////////////////////////
-	// Final Output
-	////////////////////////////////////////////////////////////////////////
+
 	Outputs.Texture = OutputTexture;
 	Outputs.Rect = OutputRect;
 }
@@ -770,15 +762,15 @@ FRDGTextureRef UWvPostProcessSubsystem::RenderFlare(FRDGBuilder& GraphBuilder, F
 		PassParameters->GhostColors[6] = PostProcessAsset->Ghost7.Color;
 		PassParameters->GhostColors[7] = PostProcessAsset->Ghost8.Color;
 
-#if DEV
-		PassParameters->GhostScales[0] = PostProcessAsset->Ghost1.Scale;
-		PassParameters->GhostScales[1] = PostProcessAsset->Ghost2.Scale;
-		PassParameters->GhostScales[2] = PostProcessAsset->Ghost3.Scale;
-		PassParameters->GhostScales[3] = PostProcessAsset->Ghost4.Scale;
-		PassParameters->GhostScales[4] = PostProcessAsset->Ghost5.Scale;
-		PassParameters->GhostScales[5] = PostProcessAsset->Ghost6.Scale;
-		PassParameters->GhostScales[6] = PostProcessAsset->Ghost7.Scale;
-		PassParameters->GhostScales[7] = PostProcessAsset->Ghost8.Scale;
+#if CUSTOM_LENS_FLARE_DEVELOP
+		GET_SCALAR_ARRAY_ELEMENT(PassParameters->GhostScales, 0) = PostProcessAsset->Ghost1.Scale;
+		GET_SCALAR_ARRAY_ELEMENT(PassParameters->GhostScales, 1) = PostProcessAsset->Ghost2.Scale;
+		GET_SCALAR_ARRAY_ELEMENT(PassParameters->GhostScales, 2) = PostProcessAsset->Ghost3.Scale;
+		GET_SCALAR_ARRAY_ELEMENT(PassParameters->GhostScales, 3) = PostProcessAsset->Ghost4.Scale;
+		GET_SCALAR_ARRAY_ELEMENT(PassParameters->GhostScales, 4) = PostProcessAsset->Ghost5.Scale;
+		GET_SCALAR_ARRAY_ELEMENT(PassParameters->GhostScales, 5) = PostProcessAsset->Ghost6.Scale;
+		GET_SCALAR_ARRAY_ELEMENT(PassParameters->GhostScales, 6) = PostProcessAsset->Ghost7.Scale;
+		GET_SCALAR_ARRAY_ELEMENT(PassParameters->GhostScales, 7) = PostProcessAsset->Ghost8.Scale;
 #endif
 
 		// Render
@@ -882,10 +874,10 @@ FRDGTextureRef UWvPostProcessSubsystem::RenderGlare(FRDGBuilder& GraphBuilder, F
 
 		GeometryParameters.GlareIntensity = PostProcessAsset->GlareIntensity;
 		
-#if DEV
-		GeometryParameters.GlareScales[0] = PostProcessAsset->GlareScale.X;
-		GeometryParameters.GlareScales[1] = PostProcessAsset->GlareScale.Y;
-		GeometryParameters.GlareScales[2] = PostProcessAsset->GlareScale.Z;
+#if CUSTOM_LENS_FLARE_DEVELOP
+		GET_SCALAR_ARRAY_ELEMENT(GeometryParameters.GlareScales, 0) = PostProcessAsset->GlareScale.X;
+		GET_SCALAR_ARRAY_ELEMENT(GeometryParameters.GlareScales, 1) = PostProcessAsset->GlareScale.Y;
+		GET_SCALAR_ARRAY_ELEMENT(GeometryParameters.GlareScales, 2) = PostProcessAsset->GlareScale.Z;
 #endif
 
 		GeometryParameters.GlareDivider = FMath::Max(PostProcessAsset->GlareDivider, 0.01f);
@@ -944,7 +936,4 @@ FRDGTextureRef UWvPostProcessSubsystem::RenderGlare(FRDGBuilder& GraphBuilder, F
 
 	return OutputTexture;
 }
-
-
-
 

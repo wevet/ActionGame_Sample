@@ -2,7 +2,6 @@
 
 uint2 TileCount;
 float GlareIntensity;
-float GlareScales[3];
 float4 GlareTint;
 float2 BufferSize;
 float4 PixelSize;
@@ -10,6 +9,9 @@ float2 BufferRatio;
 float GlareDivider;
 SamplerState GlareSampler;
 Texture2D GlareTexture;
+
+DECLARE_SCALAR_ARRAY(float, GlareScales, 3);
+
 
 // This struct is used to pass information from the
 // Vertex shader to the Geometry shader.
@@ -183,9 +185,9 @@ void GlareGS(point FVertexToGeometry Inputs[1], inout TriangleStream<FGeometryTo
         for( int i = 0; i < 3; i++ )
         {
             // Emit a quad by producing 4 vertices
-            if( GlareScales[i] > 0.0001f )
+            if (GET_SCALAR_ARRAY_ELEMENT(GlareScales, i) > 0.0001f)
             {
-                float2 QuadScale = Scale * GlareScales[i];
+                float2 QuadScale = Scale * GET_SCALAR_ARRAY_ELEMENT(GlareScales, i);
                 float QuadAngle = AngleBase[i];
 
                 FGeometryToPixel Vertex0;

@@ -11,28 +11,13 @@ extern RENDERER_API FPP_LensFlares PP_LensFlares;
 
 class UPostProcessLensFlareAsset;
 
-TAutoConsoleVariable<int32> CVarLensFlareRenderBloom(
-	TEXT("r.LensFlare.RenderBloom"),
-	1,
-	TEXT(" 0: Don't mix Bloom into lens-flare\n")
-	TEXT(" 1: Mix the Bloom into the lens-flare"),
-	ECVF_RenderThreadSafe);
+namespace
+{
+	TAutoConsoleVariable<int32> CVarLensFlareRenderBloom(TEXT("r.LensFlare.RenderBloom"), 1, TEXT(" 0: Don't mix Bloom into lens-flare\n") TEXT(" 1: Mix the Bloom into the lens-flare"), ECVF_RenderThreadSafe);
+	TAutoConsoleVariable<int32> CVarLensFlareRenderFlarePass(TEXT("r.LensFlare.RenderFlare"), 1, TEXT(" 0: Don't render flare pass\n") TEXT(" 1: Render flare pass (ghosts and halos)"), ECVF_RenderThreadSafe);
+	TAutoConsoleVariable<int32> CVarLensFlareRenderGlarePass(TEXT("r.LensFlare.RenderGlare"), 1, TEXT(" 0: Don't render glare pass\n") TEXT(" 1: Render flare pass (star shape)"), ECVF_RenderThreadSafe);
 
-TAutoConsoleVariable<int32> CVarLensFlareRenderFlarePass(
-	TEXT("r.LensFlare.RenderFlare"),
-	1,
-	TEXT(" 0: Don't render flare pass\n")
-	TEXT(" 1: Render flare pass (ghosts and halos)"),
-	ECVF_RenderThreadSafe);
-
-TAutoConsoleVariable<int32> CVarLensFlareRenderGlarePass(
-	TEXT("r.LensFlare.RenderGlare"),
-	1,
-	TEXT(" 0: Don't render glare pass\n")
-	TEXT(" 1: Render flare pass (star shape)"),
-	ECVF_RenderThreadSafe);
-
-DECLARE_GPU_STAT(LensFlaresWv)
+}
 
 UCLASS()
 class WVPOSTPROCESS_API UWvPostProcessSubsystem : public UEngineSubsystem
@@ -40,10 +25,7 @@ class WVPOSTPROCESS_API UWvPostProcessSubsystem : public UEngineSubsystem
 	GENERATED_BODY()
 
 public:
-	// Init function to setup the delegate and load the data asset
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
-
-	// Used for cleanup
 	virtual void Deinitialize() override;
 
 private:
