@@ -209,3 +209,124 @@ void FAILeaderTask::Notify()
 #pragma endregion
 
 
+#pragma region CloseCombat
+#define MAX_COMBO_CNT 3
+
+
+FAICloseCombatData::FAICloseCombatData()
+{
+	bIsComboCheckEnded = false;
+	bIsPlaying = false;
+	CurSeeds = 0.f;
+}
+
+void FAICloseCombatData::Initialize()
+{
+	bIsPlaying = true;
+	CurAttackComboCount = 0;
+	AttackComboCount = FMath::RandRange(0, MAX_COMBO_CNT);
+
+	for (const float Seed : BaseRandomSeeds)
+	{
+		{
+			const float Value = FMath::FRandRange(0.f, Seed);
+			ModifySeeds.Add(Value);
+			//UE_LOG(LogWvAI, Log, TEXT("ModifySeed => %.3f"), Value);
+		}
+
+		{
+			const float Value = FMath::FRandRange(0.1f, 0.2f);
+			IntervalSeeds.Add(Value);
+		}
+	}
+
+	UE_LOG(LogWvAI, Warning, TEXT("[%s]"), *FString(__FUNCTION__));
+	UE_LOG(LogWvAI, Verbose, TEXT("CurAttackComboCount => %d, AttackComboCount => %d"), CurAttackComboCount, AttackComboCount);
+}
+
+void FAICloseCombatData::Deinitialize()
+{
+	bIsPlaying = false;
+	UE_LOG(LogWvAI, Warning, TEXT("[%s]"), *FString(__FUNCTION__));
+}
+
+bool FAICloseCombatData::CanAttack() const
+{
+	return CurAttackComboCount >= AttackComboCount;
+}
+
+void FAICloseCombatData::ComboSeedBegin(TFunction<void(void)> InFinishDelegate)
+{
+	if (CanAttack())
+	{
+		return;
+	}
+
+	FinishDelegate = InFinishDelegate;
+	bIsComboCheckEnded = false;
+	CurSeeds = ModifySeeds[CurAttackComboCount];
+	CurIntervalSeeds = IntervalSeeds[CurAttackComboCount];
+
+	UE_LOG(LogWvAI, Verbose, TEXT("[%s]"), *FString(__FUNCTION__));
+}
+
+void FAICloseCombatData::ComboSeedUpdate(const float DeltaTime)
+{
+	if (CanAttack() || bIsComboCheckEnded)
+	{
+		// combo is full
+		return;
+	}
+	
+	if (CurInterval >= CurIntervalSeeds)
+	{
+		bIsComboCheckEnded = CurSeeds >= FMath::FRandRange(0.f, 100.0f);
+
+		if (bIsComboCheckEnded && FinishDelegate)
+		{
+			FinishDelegate();
+			UE_LOG(LogWvAI, Verbose, TEXT("[%s]"), *FString(__FUNCTION__));
+			this->Internal_Update();
+		}
+	}
+	else
+	{
+		CurInterval += DeltaTime;
+	}
+}
+
+void FAICloseCombatData::Internal_Update()
+{
+	if (!CanAttack())
+	{
+		++CurAttackComboCount;
+	}
+
+	//CurAttackComboCount = FMath::Clamp(CurAttackComboCount, 0, AttackComboCount);
+	UE_LOG(LogWvAI, Verbose, TEXT("CurAttackComboCount => %d, AttackComboCount => %d"), CurAttackComboCount, AttackComboCount);
+
+	CurInterval = 0.f;
+}
+
+void FAICloseCombatData::ComboSeedEnd()
+{
+	if (!bIsComboCheckEnded)
+	{
+		UE_LOG(LogWvAI, Log, TEXT("[%s]"), *FString(__FUNCTION__));
+		Deinitialize();
+	}
+
+}
+
+void FAICloseCombatData::ComboAbort()
+{
+	Deinitialize();
+}
+
+void FAICloseCombatData::SetComboTypeIndex(const int32 InComboTypeIndex)
+{
+	ComboTypeIndex = InComboTypeIndex;
+}
+#pragma endregion
+
+

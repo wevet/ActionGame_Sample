@@ -799,6 +799,8 @@ void FAnimNode_CustomFeetSolver::ApplyTwoBoneIK(
 	FVector EffectorLocationPoint = SkeletalMeshComponent->GetComponentToWorld().InverseTransformPosition(
 		SpineAnimatedTransformPairs[SpineIndex].AssociatedFootArray[FeetIndex].GetLocation());
 
+	const float DeltaSeconds = SkeletalMeshComponent->GetWorld()->GetDeltaSeconds();
+
 	if (!bFirstTimeSetup && bHasAtleastHit && bEnableSolver)
 	{
 		FTransform EndBoneWorldTransform = EndBoneCSTransform;
@@ -916,7 +918,7 @@ void FAnimNode_CustomFeetSolver::ApplyTwoBoneIK(
 
 		FeetModofyTransformArray[SpineIndex][FeetIndex].SetLocation(EffectorLocationPoint);
 
-		const float DeltaSeconds = SkeletalMeshComponent->GetWorld()->GetDeltaSeconds();
+		const float DX = 1.0f - FMath::Exp(-10 * DeltaSeconds);
 
 		if (SpineHitPairs[SpineIndex].FeetHitArray[FeetIndex].bBlockingHit || FirstTimeCounter < 3)
 		{
@@ -927,14 +929,15 @@ void FAnimNode_CustomFeetSolver::ApplyTwoBoneIK(
 			const float K_Alpha = FMath::Clamp(FootData.FeetAlpha - Value, 0.0f, 1.f);
 
 			FootAlphaArray[SpineIndex][FeetIndex] = UKismetMathLibrary::FInterpTo(
-				FootAlphaArray[SpineIndex][FeetIndex], 
-				K_Alpha, 1.0f - FMath::Exp(-10 * DeltaSeconds), ShiftSpeed);
+				FootAlphaArray[SpineIndex][FeetIndex],
+				K_Alpha, DX, ShiftSpeed);
+
 		}
 		else
 		{
 			FootAlphaArray[SpineIndex][FeetIndex] = UKismetMathLibrary::FInterpTo(
 				FootAlphaArray[SpineIndex][FeetIndex], 
-				0.0f, 1.0f - FMath::Exp(-10 * DeltaSeconds), ShiftSpeed);
+				0.0f, DX, ShiftSpeed);
 		}
 	}
 
@@ -1131,7 +1134,9 @@ void FAnimNode_CustomFeetSolver::ApplyTwoBoneIK(
 
 	}
 
-	const float AlphaTemp = FootAlphaArray[SpineIndex][FeetIndex];
+	//const float AlphaTemp = FootAlphaArray[SpineIndex][FeetIndex];
+	float AlphaTemp = FootAlphaArray[SpineIndex][FeetIndex];
+
 	//if (bIgnoreShiftSpeed)
 	//{
 	//	FootAlphaArray[SpineIndex][FeetIndex] = 1.0f;
@@ -1140,12 +1145,12 @@ void FAnimNode_CustomFeetSolver::ApplyTwoBoneIK(
 
 	if (!SkeletalMeshComponent->GetWorld()->IsGameWorld())
 	{
-		FootAlphaArray[SpineIndex][FeetIndex] = 0.0f;
+		AlphaTemp = 0.f;
+		//FootAlphaArray[SpineIndex][FeetIndex] = 0.0f;
 	}
 
 	FTransform FeetTransform = EndBoneCSTransformX;
-	FAnimationRuntime::ConvertCSTransformToBoneSpace(SkeletalMeshComponent->GetComponentTransform(), MeshBasesSaved.Pose, FeetTransform, 
-		IKBoneCompactPoseIndex, EBoneControlSpace::BCS_ParentBoneSpace);
+	FAnimationRuntime::ConvertCSTransformToBoneSpace(SkeletalMeshComponent->GetComponentTransform(), MeshBasesSaved.Pose, FeetTransform, IKBoneCompactPoseIndex, EBoneControlSpace::BCS_ParentBoneSpace);
 
 	FRotator OffsetLocal = SpineFeetPair[SpineIndex].FeetRotationOffsetArray[FeetIndex];
 	const FQuat BoneInput(OffsetLocal);

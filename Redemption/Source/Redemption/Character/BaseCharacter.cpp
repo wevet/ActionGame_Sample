@@ -57,6 +57,7 @@
 #include "Engine/SkeletalMeshSocket.h"
 
 #include "WvAIController.h"
+#include "Level/FieldInstanceSubsystem.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(BaseCharacter)
 
@@ -193,8 +194,8 @@ void ABaseCharacter::BeginPlay()
 	USkeletalMeshComponent* SkelMesh = GetMesh();
 	//SkelMesh->PrimaryComponentTick.AddPrerequisite(this, this->PrimaryActorTick);
 
-	CombatComponent->PrimaryComponentTick.AddPrerequisite(this, this->PrimaryActorTick);
-	PawnNoiseEmitterComponent->PrimaryComponentTick.AddPrerequisite(this, this->PrimaryActorTick);
+	CombatComponent->AddTickPrerequisiteActor(this);
+	PawnNoiseEmitterComponent->AddTickPrerequisiteActor(this);
 
 	UWvCharacterMovementComponent* CMC = GetWvCharacterMovementComponent();
 	CMC->OnWallClimbingBeginDelegate.AddDynamic(this, &ABaseCharacter::OnWallClimbingBegin_Callback);
@@ -203,7 +204,7 @@ void ABaseCharacter::BeginPlay()
 
 	LocomotionComponent->OnRotationModeChangeDelegate.AddDynamic(this, &ThisClass::OnRoationChange_Callback);
 	LocomotionComponent->OnGaitChangeDelegate.AddDynamic(this, &ThisClass::OnGaitChange_Callback);
-	LocomotionComponent->PrimaryComponentTick.AddPrerequisite(this, this->PrimaryActorTick);
+	LocomotionComponent->AddTickPrerequisiteActor(this);
 
 	if (AWvAIController* AIC = Cast<AWvAIController>(GetController()))
 	{
@@ -230,6 +231,7 @@ void ABaseCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	ResetFinisherAnimationData();
 
 	OverlayAnimDAInstance = nullptr;
+	CloseCombatAnimationDAInstance = nullptr;
 
 	FinisherSender = nullptr;
 	FinisherReceiner = nullptr;
@@ -278,6 +280,11 @@ void ABaseCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+	if (!Super::WasRecentlyRendered(0.2f))
+	{
+		return;
+	}
+
 	UWvCharacterMovementComponent* CMC = GetWvCharacterMovementComponent();
 	if (IsValid(CMC))
 	{
@@ -292,6 +299,10 @@ void ABaseCharacter::Tick(float DeltaTime)
 		}
 	}
 
+	if (LocomotionComponent->IsInRagdolling())
+	{
+		LocomotionComponent->DoWhileRagdolling();
+	}
 	//LocomotionComponent->DoTick(DeltaTime);
 }
 
@@ -510,7 +521,7 @@ void ABaseCharacter::OnSendWeaknessAttack(AActor* Actor, const FName WeaknessNam
 
 void ABaseCharacter::OnSendAbilityAttack(AActor* Actor, const FWvBattleDamageAttackSourceInfo SourceInfo, const float Damage)
 {
-	//UE_LOG(LogTemp, Log, TEXT("Owner => %s, Actor => %s, function => %s"), *GetPathName(this), *GetPathName(Actor), *FString(__FUNCTION__));
+	//UE_LOG(LogTemp, Log, TEXT("Owner => %s, Actor => %s, function => %s"), *GetNameSafe(this), *GetNameSafe(Actor), *FString(__FUNCTION__));
 }
 
 void ABaseCharacter::OnSendKillTarget(AActor* Actor, const float Damage)
@@ -528,6 +539,10 @@ void ABaseCharacter::OnReceiveWeaknessAttack(AActor* Actor, const FName Weakness
 
 void ABaseCharacter::OnReceiveAbilityAttack(AActor* Actor, const FWvBattleDamageAttackSourceInfo SourceInfo, const float Damage)
 {
+	if (IWvAbilityTargetInterface* Interface = Cast<IWvAbilityTargetInterface>(GetController()))
+	{
+		Interface->OnReceiveAbilityAttack(Actor, SourceInfo, Damage);
+	}
 }
 
 void ABaseCharacter::OnReceiveKillTarget(AActor* Actor, const float Damage)
@@ -625,6 +640,11 @@ void ABaseCharacter::DoResumeAttack()
 void ABaseCharacter::DoStopAttack()
 {
 	WvAbilitySystemComponent->AddGameplayTag(TAG_Character_ActionMelee_Forbid, 1);
+}
+
+bool ABaseCharacter::IsAttackAllowed() const
+{
+	return !WvAbilitySystemComponent->HasMatchingGameplayTag(TAG_Character_AI_NotAllowed_Attack);
 }
 #pragma endregion
 
@@ -1225,6 +1245,18 @@ bool ABaseCharacter::IsLeader() const
 	return WvAbilitySystemComponent->HasMatchingGameplayTag(TAG_AI_Character_Leader);
 }
 
+void ABaseCharacter::HandleAllowAttack(const bool InAllow)
+{
+	if (InAllow)
+	{
+		WvAbilitySystemComponent->RemoveGameplayTag(TAG_Character_AI_NotAllowed_Attack, 1);
+	}
+	else
+	{
+		WvAbilitySystemComponent->AddGameplayTag(TAG_Character_AI_NotAllowed_Attack, 1);
+	}
+}
+
 void ABaseCharacter::SetLeaderTag()
 {
 	WvAbilitySystemComponent->AddGameplayTag(TAG_AI_Character_Leader, 1);
@@ -1700,6 +1732,12 @@ void ABaseCharacter::RequestAsyncLoad()
 		ABPStreamableHandle = StreamableManager.RequestAsyncLoad(ObjectPath, FStreamableDelegate::CreateUObject(this, &ThisClass::OnABPAnimAssetLoadComplete));
 	}
 
+	if (CloseCombatAnimationDA.IsValid())
+	{
+		const FSoftObjectPath ObjectPath = CloseCombatAnimationDA.ToSoftObjectPath();
+		CCStreamableHandle = StreamableManager.RequestAsyncLoad(ObjectPath, FStreamableDelegate::CreateUObject(this, &ThisClass::OnCloseCombatAnimAssetLoadComplete));
+	}
+
 	TArray<FSoftObjectPath> Paths;
 	for (TPair<FGameplayTag, TSoftObjectPtr<UFinisherDataAsset>>Pair : FinisherDAList)
 	{
@@ -1712,7 +1750,6 @@ void ABaseCharacter::RequestAsyncLoad()
 	FinisherStreamableHandle = StreamableManager.RequestAsyncLoad(Paths, FStreamableDelegate::CreateUObject(this, &ThisClass::OnFinisherAnimAssetLoadComplete));
 
 }
-
 
 void ABaseCharacter::OnABPAnimAssetLoadComplete()
 {
@@ -1770,6 +1807,24 @@ void ABaseCharacter::OnLoadFinisherAssets()
 		}
 	}
 
+}
+
+void ABaseCharacter::OnCloseCombatAnimAssetLoadComplete()
+{
+	OnLoadCloseCombatAssets();
+	CCStreamableHandle.Reset();
+}
+
+void ABaseCharacter::OnLoadCloseCombatAssets()
+{
+	bool bIsResult = false;
+	do
+	{
+		CloseCombatAnimationDAInstance = CloseCombatAnimationDA.LoadSynchronous();
+		bIsResult = (IsValid(CloseCombatAnimationDAInstance));
+
+	} while (!bIsResult);
+	UE_LOG(LogTemp, Log, TEXT("Complete CloseCombatAnimationDAInstance => [%s]"), *FString(__FUNCTION__));
 }
 #pragma endregion
 
@@ -1869,14 +1924,25 @@ void ABaseCharacter::EndCinematic()
 	}
 }
 
-void ABaseCharacter::SetDayNightPhase(const uint8 InDayNightPhase)
+void ABaseCharacter::ModifyCombatAnimationIndex(int32& OutIndex)
 {
-	DayNightPhase = InDayNightPhase;
+	if (IsValid(CloseCombatAnimationDAInstance))
+	{
+		CloseCombatAnimationDAInstance->ModifyCombatAnimationIndex(OutIndex);
+		return;
+	}
+
+	UE_LOG(LogTemp, Error, TEXT("not valid CloseCombatAnimationDAInstance => %s"), *FString(__FUNCTION__));
 }
 
-uint8 ABaseCharacter::GetDayNightPhase() const
+UAnimMontage* ABaseCharacter::GetCloseCombatAnimMontage(const int32 Index, const FGameplayTag Tag) const
 {
-	return DayNightPhase;
+	if (IsValid(CloseCombatAnimationDAInstance))
+	{
+		return CloseCombatAnimationDAInstance->GetAnimMontage(Index, Tag);
+	}
+	return nullptr;
 }
+
 
 

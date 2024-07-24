@@ -6,13 +6,13 @@
 #include "Components/ActorComponent.h"
 #include "Item/WeaponBaseActor.h"
 #include "Locomotion/LocomotionSystemTypes.h"
-#include "Engine/DataAsset.h"
 #include "Ability/WvAbilityType.h"
 #include "CombatComponent.generated.h"
 
 class UWvAbilityBase;
 class UWvAbilitySystemComponent;
 class ABaseCharacter;
+
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class REDEMPTION_API UCombatComponent : public UActorComponent
@@ -35,6 +35,9 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, Category = "Combat|Config")
 	class UHitReactBoneShakeDataAsset* HitReactBoneShakeDA;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Combat|AI")
+	EAttackWeaponState AttackWeaponState = EAttackWeaponState::EmptyWeapon;
 
 public:
 	static int32 DEFAULT_FOLLOW_NUM;
@@ -67,6 +70,8 @@ public:
 	const FVector GetFormationPoint(const APawn* InPawn);
 
 	bool CanFollow() const;
+
+	bool IsCloseCombatWeapon() const;
 
 #pragma region BattleCommand
 	UFUNCTION(BlueprintCallable, Category = "CombatComponent|BattleCommand")

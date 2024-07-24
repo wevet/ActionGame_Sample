@@ -11,6 +11,7 @@
 #else
 #include "Engine/EngineTypes.h"
 #endif
+#include "Async/TaskGraphInterfaces.h"
 #include "Engine/DataAsset.h"
 #include "WvCameraFollowComponent.generated.h"
 
@@ -249,6 +250,8 @@ public:
 	FComponentSetRotation OnTargetSetRotation;
 
 
+	void DoTick();
+
 private:
 	UPROPERTY()
 	TWeakObjectPtr<class APlayerCharacter> Character;
@@ -275,6 +278,8 @@ private:
 	FTimerHandle SwitchingTargetTimerHandle;
 	FTimerHandle SwitchingTargetComponentTimerHandle;
 	FTimerHandle CameraLerpTimerHandle;
+
+	FGraphEventRef AsyncWork;
 	float CameraLerpTimerTotalTime;
 	float CameraLerpTimerCurTime;
 	float RotationSensitiveValue;
@@ -294,7 +299,7 @@ private:
 
 
 	//~ Actors search / trace
-	void TickTargetSystemUpdate(const float DeltaTime);
+	void DoTick(const float DeltaTime);
 	TArray<AActor*> GetAllTargetableOfClass() const;
 	TArray<AActor*> FindTargetsInRange(TArray<AActor*> ActorsToLook, float RangeMin, float RangeMax) const;
 	AActor* FindNearestTarget(TArray<AActor*> Actors) const;
@@ -337,4 +342,64 @@ private:
 	void ModifyHitTargetComponents();
 };
 
+
+USTRUCT()
+struct FCameraTargetPostPhysicsTickFunction : public FTickFunction
+{
+	GENERATED_USTRUCT_BODY()
+
+	class UWvCameraFollowComponent* Target;
+
+	/**
+	 * Abstract function actually execute the tick.
+	 * @param DeltaTime - frame time to advance, in seconds
+	 * @param TickType - kind of tick for this frame
+	 * @param CurrentThread - thread we are executing on, useful to pass along as new tasks are created
+	 * @param MyCompletionGraphEvent - completion event for this task. Useful for holding the completion of this task until certain child tasks are complete.
+	 **/
+	virtual void ExecuteTick(float DeltaTime, enum ELevelTick TickType, ENamedThreads::Type CurrentThread, const FGraphEventRef& MyCompletionGraphEvent) override;
+
+	/** Abstract function to describe this tick. Used to print messages about illegal cycles in the dependency graph **/
+	virtual FString DiagnosticMessage() override;
+
+	/** Function used to describe this tick for active tick reporting. **/
+	virtual FName DiagnosticContext(bool bDetailed) override;
+};
+
+template<>
+struct TStructOpsTypeTraits<FCameraTargetPostPhysicsTickFunction> : public TStructOpsTypeTraitsBase2<FCameraTargetPostPhysicsTickFunction>
+{
+	enum
+	{
+		WithCopy = false
+	};
+};
+
+class FWvCameraTargetTask
+{
+	UWvCameraFollowComponent* TargetComponent;
+public:
+	FORCEINLINE FWvCameraTargetTask(UWvCameraFollowComponent* InComponent) : TargetComponent(InComponent) {}
+	~FWvCameraTargetTask() {}
+
+	static FORCEINLINE TStatId GetStatId()
+	{
+		RETURN_QUICK_DECLARE_CYCLE_STAT(FWvCameraTargetTask, STATGROUP_TaskGraphTasks);
+	}
+
+	static FORCEINLINE ENamedThreads::Type GetDesiredThread()
+	{
+		return ENamedThreads::AnyHiPriThreadNormalTask;
+	}
+
+	static FORCEINLINE ESubsequentsMode::Type GetSubsequentsMode()
+	{
+		return ESubsequentsMode::TrackSubsequents;
+	}
+
+	void DoTask(ENamedThreads::Type CurrentThread, const FGraphEventRef& MyCompleteGraphEvent)
+	{
+		TargetComponent->DoTick();
+	}
+};
 

@@ -2074,7 +2074,7 @@ void UWvCharacterMovementComponent::PhysMantling(float deltaTime, int32 Iteratio
 
 	if (MantleMovementParams.IsMovingDetectChecked)
 	{
-
+		//UE_LOG(LogTemp, Log, TEXT("Mantling Detected => %s"), *FString(__FUNCTION__));
 	}
 
 	if (!bJustTeleported && !HasAnimRootMotion() && !CurrentRootMotion.HasOverrideVelocity())

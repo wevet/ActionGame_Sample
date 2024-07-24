@@ -1183,3 +1183,45 @@ public:
 	int32 FollowStackCount = 5;
 };
 
+
+#pragma region CloseCombat
+USTRUCT(BlueprintType)
+struct FCloseCombatAnimation
+{
+	GENERATED_BODY()
+
+public:
+	FCloseCombatAnimation()
+	{
+		DefaultComboMontage = nullptr;
+	}
+
+	UPROPERTY(EditDefaultsOnly)
+	UAnimMontage* DefaultComboMontage;
+
+	UPROPERTY(EditDefaultsOnly)
+	TMap<FGameplayTag, UAnimMontage*> TagToComboMontageMap;
+
+	UAnimMontage* GetComboMatchMontage(const FGameplayTag ComboTag) const;
+};
+
+UCLASS(BlueprintType)
+class WVABILITYSYSTEM_API UCloseCombatAnimationDataAsset : public UDataAsset
+{
+	GENERATED_BODY()
+
+protected:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	TArray<FCloseCombatAnimation> ComboAnimations;
+
+public:
+	FCloseCombatAnimation GetRandCombatAnimation() const;
+	FCloseCombatAnimation GetChooseCombatAnimation(const int32 Index) const;
+
+	void ModifyCombatAnimationIndex(int32 &OutIndex);
+
+	UAnimMontage* GetAnimMontage(const int32 Index, const FGameplayTag Tag) const;
+};
+#pragma endregion
+
+

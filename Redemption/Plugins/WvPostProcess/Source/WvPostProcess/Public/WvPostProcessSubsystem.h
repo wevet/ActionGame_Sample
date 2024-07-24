@@ -33,19 +33,10 @@ private:
 	UPROPERTY(Transient)
 	UPostProcessLensFlareAsset* PostProcessAsset;
 
-	// Called by engine delegate Render Thread
 	void RenderLensFlare(FRDGBuilder& GraphBuilder, const FViewInfo& View, const FLensFlareInputs& Inputs, FLensFlareOutputsData& Outputs);
-
-	// Threshold prender pass
 	FRDGTextureRef RenderThreshold(FRDGBuilder& GraphBuilder, FRDGTextureRef InputTexture, FIntRect& InputRect, const FViewInfo& View);
-
-	// Ghosts + Halo render pass
 	FRDGTextureRef RenderFlare(FRDGBuilder& GraphBuilder, FRDGTextureRef InputTexture, FIntRect& InputRect, const FViewInfo& View);
-
-	// Glare render pass
 	FRDGTextureRef RenderGlare(FRDGBuilder& GraphBuilder, FRDGTextureRef InputTexture, FIntRect& InputRect, const FViewInfo& View);
-
-	// Sub-pass for blurring
 	FRDGTextureRef RenderBlur(FRDGBuilder& GraphBuilder, FRDGTextureRef InputTexture, const FViewInfo& View, const FIntRect& Viewport, int BlurSteps);
 
 	// Cached blending and sampling states

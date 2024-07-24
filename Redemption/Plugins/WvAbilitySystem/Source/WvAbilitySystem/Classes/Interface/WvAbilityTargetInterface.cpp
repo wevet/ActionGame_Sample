@@ -78,6 +78,11 @@ void IWvAbilityTargetInterface::OnReceiveKillTarget(AActor* Actor, const float D
 {
 }
 
+bool IWvAbilityTargetInterface::IsAttackAllowed() const
+{
+	return true;
+}
+
 bool IWvAbilityTargetInterface::IsDead() const
 {
 	return false;

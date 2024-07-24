@@ -210,6 +210,7 @@ void UCombatComponent::HitResultEnemyFilter(TArray<FHitResult>& Hits, TArray<FWv
 					// Character hit specifies the use of PhysicsAsset collision box
 					if (HitComponent == nullptr || !HitComponent->GetClass()->IsChildOf(USkeletalMeshComponent::StaticClass()))
 					{
+						UE_LOG(LogTemp, Warning, TEXT("Character hit specifies the use of PhysicsAsset collision box"));
 						continue;
 					}
 				}
@@ -226,7 +227,7 @@ void UCombatComponent::HitResultEnemyFilter(TArray<FHitResult>& Hits, TArray<FWv
 			}
 			else
 			{
-				//UE_LOG(LogTemp, Log, TEXT("not enemy ?? => %s, function => %s"), *GetNameSafe(HitActor), *FString(__FUNCTION__));
+				UE_LOG(LogTemp, Warning, TEXT("not enemy ?? => %s, function => %s"), *GetNameSafe(HitActor), *FString(__FUNCTION__));
 			}
 		}
 
@@ -878,7 +879,21 @@ void UCombatComponent::EquipAvailableWeapon()
 	auto Inventory = Character->GetInventoryComponent();
 	if (Inventory)
 	{
-		AWeaponBaseActor* Weapon = Inventory->GetAvailableWeapon();
+		AWeaponBaseActor* Weapon = nullptr;
+
+		switch (AttackWeaponState)
+		{
+		case EAttackWeaponState::EmptyWeapon:
+			Weapon = Inventory->FindWeaponItem(ELSOverlayState::None);
+			break;
+		case EAttackWeaponState::Gun:
+		case EAttackWeaponState::Rifle:
+		case EAttackWeaponState::Bomb:
+		case EAttackWeaponState::Knife:
+			Weapon = Inventory->GetAvailableWeapon();
+			break;
+		}
+
 		if (Weapon)
 		{
 			ELSOverlayState LSOverlayState;
@@ -890,6 +905,15 @@ void UCombatComponent::EquipAvailableWeapon()
 			}
 		}
 	}
+}
+
+bool UCombatComponent::IsCloseCombatWeapon() const
+{
+	auto Inventory = Character->GetInventoryComponent();
+
+	const EAttackWeaponState WeaponType = Inventory->GetEquipWeaponType();
+
+	return WeaponType == EAttackWeaponState::EmptyWeapon || WeaponType == EAttackWeaponState::Knife;
 }
 #pragma endregion
 

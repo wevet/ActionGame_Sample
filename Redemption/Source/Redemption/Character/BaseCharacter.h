@@ -288,6 +288,11 @@ public:
 	bool IsLeader() const;
 	void SetLeaderTag();
 
+	UFUNCTION(BlueprintCallable, Category = AI)
+	void HandleAllowAttack(const bool InAllow);
+
+	virtual bool IsAttackAllowed() const override;
+
 	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "AI")
 	void SetLeaderDisplay();
 
@@ -310,10 +315,10 @@ public:
 
 	void DrawActionState();
 
-	void SetDayNightPhase(const uint8 InDayNightPhase);
-	uint8 GetDayNightPhase() const;
-
 	virtual void RegisterMission_Callback(const int32 MissionIndex) {};
+
+	void ModifyCombatAnimationIndex(int32& OutIndex);
+	UAnimMontage* GetCloseCombatAnimMontage(const int32 Index, const FGameplayTag Tag) const;
 
 #pragma region NearlestAction
 	void CalcurateNearlestTarget(const float SyncPointWeight);
@@ -372,6 +377,7 @@ protected:
 	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = "BaseCharacter|Config")
 	FCustomWvAbilitySystemAvatarData AbilitySystemData;
 
+#pragma region DA
 	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = "BaseCharacter|Config")
 	TSoftObjectPtr<UOverlayAnimInstanceDataAsset> OverlayAnimInstanceDA;
 
@@ -380,6 +386,10 @@ protected:
 
 	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = "BaseCharacter|Config")
 	UAIActionStateDataAsset* AIActionStateDA;
+
+	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = "BaseCharacter|Config")
+	TSoftObjectPtr<UCloseCombatAnimationDataAsset> CloseCombatAnimationDA;
+#pragma endregion
 
 	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = "BaseCharacter|Config")
 	FFinisherConfig FinisherConfig;
@@ -466,7 +476,6 @@ protected:
 
 	FDelegateHandle AbilityFailedDelegateHandle;
 
-	uint8 DayNightPhase = 0;
 
 #pragma region NearlestAction
 	const TArray<AActor*> FindNearlestTargets(const float Distance, const float AngleThreshold);
@@ -480,6 +489,9 @@ protected:
 	TObjectPtr<UOverlayAnimInstanceDataAsset> OverlayAnimDAInstance;
 
 	UPROPERTY()
+	TObjectPtr<UCloseCombatAnimationDataAsset> CloseCombatAnimationDAInstance;
+
+	UPROPERTY()
 	TObjectPtr<UFinisherDataAsset> FinisherSender;
 
 	UPROPERTY()
@@ -487,12 +499,15 @@ protected:
 
 	TSharedPtr<FStreamableHandle> ABPStreamableHandle;
 	TSharedPtr<FStreamableHandle> FinisherStreamableHandle;
+	TSharedPtr<FStreamableHandle> CCStreamableHandle;
 
 	void OnABPAnimAssetLoadComplete();
 	void OnFinisherAnimAssetLoadComplete();
+	void OnCloseCombatAnimAssetLoadComplete();
 
-	void OnLoadFinisherAssets();
 	void OnLoadOverlayABP();
+	void OnLoadFinisherAssets();
+	void OnLoadCloseCombatAssets();
 #pragma endregion
 
 };

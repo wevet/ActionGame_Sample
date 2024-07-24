@@ -32,6 +32,7 @@ class ABaseCharacter;
 class UWvAbilitySystemComponent;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FAIInputEventGameplayTagDelegate, FGameplayTag, GameplayTag, bool, IsPressed);
+
 /**
  * 
  */
@@ -63,11 +64,18 @@ public:
 	virtual bool IsInBattled() const override;
 	virtual void Freeze() override;
 	virtual void UnFreeze() override;
+
+	virtual bool IsAttackAllowed() const override;
+
+	virtual void OnReceiveAbilityAttack(AActor* Actor, const FWvBattleDamageAttackSourceInfo SourceInfo, const float Damage) override;
 	//~End of IWvAbilityTargetInterface interface
 
 
 	UPROPERTY(BlueprintAssignable)
 	FAIInputEventGameplayTagDelegate OnInputEventGameplayTagTrigger;
+
+	UPROPERTY(BlueprintAssignable)
+	FOnTeamHandleAttackDelegate OnTeamHandleAttackCallback;
 
 #pragma region Core
 	void ResumeTree();
@@ -113,6 +121,7 @@ public:
 
 	void ClearSearchNodeHolders();
 	void SetBlackboardDead(const bool IsDead);
+	void SetBlackboardCloseCombat(const bool IsCloseCombat);
 
 	UFUNCTION(BlueprintCallable, Category = AI)
 	void Execute_DoAttack();
@@ -139,8 +148,34 @@ public:
 	void Notify_Follow();
 	void Notify_UnFollow(bool bIsInImpact = false);
 
-
 	ABaseCharacter* GetBlackboardTargetAsCharacter() const;
+
+	/// <summary>
+	/// apply to anim notity
+	/// </summary>
+	void NotifyCloseCombatBegin();
+	void NotifyCloseCombatUpdate();
+	void NotifyCloseCombatEnd();
+
+	/// <summary>
+	/// apply to black board
+	/// </summary>
+	UFUNCTION(BlueprintCallable, Category = AI)
+	void CloseCombatActionBegin();
+
+	UFUNCTION(BlueprintCallable, Category = AI)
+	bool CanCloseCombatAttack() const;
+
+	UFUNCTION(BlueprintCallable, Category = AI)
+	bool IsCloseCombatPlaying() const;
+
+	UFUNCTION(BlueprintCallable, Category = AI)
+	void CloseCombatActionEnd();
+
+	void CloseCombatAbort();
+	void ModifyCombatAnimationIndex();
+	int32 GetComboTypeIndex() const;
+
 #pragma endregion
 
 	FORCEINLINE TObjectPtr<class UAIMissionComponent> GetMissionComponent() const { return MissionComponent; }
@@ -262,6 +297,9 @@ private:
 	FAIPerceptionTask FriendlyTask;
 
 	FVector LastSeenLocation;
+
+	UPROPERTY()
+	FAICloseCombatData AICloseCombatData;
 };
 
 

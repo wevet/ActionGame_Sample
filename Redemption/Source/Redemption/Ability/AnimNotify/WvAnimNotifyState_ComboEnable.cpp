@@ -3,12 +3,14 @@
 
 #include "WvAnimNotifyState_ComboEnable.h"
 #include "Character/WvPlayerController.h"
-#include "GameplayTagContainer.h"
+#include "Character/WvAIController.h"
 #include "Component/WvInputEventComponent.h"
 #include "Component/InventoryComponent.h"
 #include "Item/WeaponBaseActor.h"
-#include "Abilities/GameplayAbility.h"
 #include "Redemption.h"
+
+#include "GameplayTagContainer.h"
+#include "Abilities/GameplayAbility.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(WvAnimNotifyState_ComboEnable)
 
@@ -44,20 +46,17 @@ void UWvAnimNotifyState_ComboEnable::AbilityNotifyBegin(USkeletalMeshComponent* 
 	TagArray.Add(TriggerTag);
 	TagArray.Add(TAG_Character_Player_Melee);
 
-	//for (FGameplayTag Tag : TagArray)
-	//{
-	//	UE_LOG(LogTemp, Log, TEXT("Tag => %s"), *Tag.GetTagName().ToString());
-	//}
 
+#if false
 	auto Tags = RequiredGameplayTags.GetGameplayTagArray();
-
 	for (FGameplayTag Tag : Tags)
 	{
 		UE_LOG(LogTemp, Log, TEXT("Added Tag => %s, func => %s"), *Tag.GetTagName().ToString(), *FString(__FUNCTION__));
 	}
+#endif
+
 
 	const FGameplayTagContainer EventTagContainer = FGameplayTagContainer::CreateFromArray(TagArray);
-	
 	IsImmediatelyExecute = (ExecuteTime <= 0.f);
 	WaitReleaseTask = UWvAT_WaitKeyPress::WaitKeyPress(Ability, FName(TEXT("WaitKeyInput_ComboEnable")), EventTagContainer);
 	WaitReleaseTask->OnActive.__Internal_AddDynamic(this, &UWvAnimNotifyState_ComboEnable::OnPressed, FName(TEXT("OnPressed")));
@@ -75,6 +74,11 @@ void UWvAnimNotifyState_ComboEnable::AbilityNotifyBegin(USkeletalMeshComponent* 
 			}
 		}
 	}
+
+	if (AWvAIController* AIC = Cast<AWvAIController>(AbilitySystemComponent->GetAvatarController()))
+	{
+		AIC->NotifyCloseCombatBegin();
+	}
 }
 
 void UWvAnimNotifyState_ComboEnable::AbilityNotifyTick(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, float FrameDeltaTime, const FAnimNotifyEventReference& EventReference)
@@ -84,6 +88,12 @@ void UWvAnimNotifyState_ComboEnable::AbilityNotifyTick(USkeletalMeshComponent* M
 	{
 		TryCombo();
 	}
+
+	if (AWvAIController* AIC = Cast<AWvAIController>(AbilitySystemComponent->GetAvatarController()))
+	{
+		AIC->NotifyCloseCombatUpdate();
+	}
+
 }
 
 void UWvAnimNotifyState_ComboEnable::AbilityNotifyEnd(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, const FAnimNotifyEventReference& EventReference)
@@ -92,6 +102,11 @@ void UWvAnimNotifyState_ComboEnable::AbilityNotifyEnd(USkeletalMeshComponent* Me
 	{
 		WaitReleaseTask->EndTask();
 		WaitReleaseTask = nullptr;
+	}
+
+	if (AWvAIController* AIC = Cast<AWvAIController>(AbilitySystemComponent->GetAvatarController()))
+	{
+		AIC->NotifyCloseCombatEnd();
 	}
 
 	AbilitySystemComponent->RemoveLooseGameplayTags(RequiredGameplayTags, 1);

@@ -11,8 +11,8 @@
 #include "PostProcess/SceneFilterRendering.h"
 #include "PostProcess/PostProcessing.h"
 
-#define CUSTOM_LENS_FLARE_DEVELOP 1
 DECLARE_GPU_STAT(LensFlaresWv)
+
 
 namespace
 {
@@ -154,10 +154,7 @@ namespace
 			SHADER_PARAMETER_STRUCT_INCLUDE(FCustomLensFlarePassParameters, Pass)
 			SHADER_PARAMETER_SAMPLER(SamplerState, InputSampler)
 			SHADER_PARAMETER_ARRAY(FVector4f, GhostColors, [8])
-
-#if CUSTOM_LENS_FLARE_DEVELOP
 			SHADER_PARAMETER_SCALAR_ARRAY(float, GhostScales, [8])
-#endif
 			SHADER_PARAMETER(float, Intensity)
 		END_SHADER_PARAMETER_STRUCT()
 
@@ -220,9 +217,7 @@ namespace
 			SHADER_PARAMETER(FVector2f, BufferRatio)
 			SHADER_PARAMETER(float, GlareIntensity)
 			SHADER_PARAMETER(float, GlareDivider)
-#if CUSTOM_LENS_FLARE_DEVELOP
 			SHADER_PARAMETER_SCALAR_ARRAY(float, GlareScales, [3])
-#endif
 		END_SHADER_PARAMETER_STRUCT()
 	};
 	class FLensFlareGlarePS : public FGlobalShader
@@ -327,8 +322,9 @@ inline void DrawShaderPass(FRDGBuilder& GraphBuilder, const FString& PassName, T
 				EDrawRectangleFlags::EDRF_Default // EDrawRectangleFlags Flags
 			);
 
-			UE_LOG(LogTemp, Log, TEXT("%s"), *FString(__FUNCTION__));
 		});
+
+	//UE_LOG(LogTemp, Log, TEXT("PassName => %s, function => %s"), *PassName, *FString(__FUNCTION__));
 }
 
 FVector2D GetInputViewportSize(const FIntRect& Input, const FIntPoint& Extent)
@@ -363,9 +359,6 @@ void UWvPostProcessSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 	});
 
 
-	//--------------------------------
-	// Data asset loading
-	//--------------------------------
 	const FString Path = "PostProcessLensFlareAsset'/WvPostProcess/DA_LensFlare.DA_LensFlare'";
 	PostProcessAsset = LoadObject<UPostProcessLensFlareAsset>(nullptr, *Path);
 	//check(PostProcessAsset);
@@ -514,7 +507,7 @@ void UWvPostProcessSubsystem::RenderLensFlare(FRDGBuilder& GraphBuilder, const F
 
 		if (PostProcessAsset->Gradient != nullptr)
 		{
-			const FTextureRHIRef TextureRHI = PostProcessAsset->Gradient->Resource->TextureRHI;
+			const FTextureRHIRef TextureRHI = PostProcessAsset->Gradient->GetResource()->TextureRHI;
 			PassParameters->GradientTexture = TextureRHI;
 		}
 
@@ -557,6 +550,7 @@ void UWvPostProcessSubsystem::RenderLensFlare(FRDGBuilder& GraphBuilder, const F
 	}
 
 
+	//UE_LOG(LogTemp, Log, TEXT("%s"), *FString(__FUNCTION__));
 	Outputs.Texture = OutputTexture;
 	Outputs.Rect = OutputRect;
 }
@@ -762,7 +756,6 @@ FRDGTextureRef UWvPostProcessSubsystem::RenderFlare(FRDGBuilder& GraphBuilder, F
 		PassParameters->GhostColors[6] = PostProcessAsset->Ghost7.Color;
 		PassParameters->GhostColors[7] = PostProcessAsset->Ghost8.Color;
 
-#if CUSTOM_LENS_FLARE_DEVELOP
 		GET_SCALAR_ARRAY_ELEMENT(PassParameters->GhostScales, 0) = PostProcessAsset->Ghost1.Scale;
 		GET_SCALAR_ARRAY_ELEMENT(PassParameters->GhostScales, 1) = PostProcessAsset->Ghost2.Scale;
 		GET_SCALAR_ARRAY_ELEMENT(PassParameters->GhostScales, 2) = PostProcessAsset->Ghost3.Scale;
@@ -771,7 +764,6 @@ FRDGTextureRef UWvPostProcessSubsystem::RenderFlare(FRDGBuilder& GraphBuilder, F
 		GET_SCALAR_ARRAY_ELEMENT(PassParameters->GhostScales, 5) = PostProcessAsset->Ghost6.Scale;
 		GET_SCALAR_ARRAY_ELEMENT(PassParameters->GhostScales, 6) = PostProcessAsset->Ghost7.Scale;
 		GET_SCALAR_ARRAY_ELEMENT(PassParameters->GhostScales, 7) = PostProcessAsset->Ghost8.Scale;
-#endif
 
 		// Render
 		DrawShaderPass(GraphBuilder, PassName, PassParameters, VertexShader, PixelShader, ClearBlendState, Viewport2);
@@ -874,11 +866,9 @@ FRDGTextureRef UWvPostProcessSubsystem::RenderGlare(FRDGBuilder& GraphBuilder, F
 
 		GeometryParameters.GlareIntensity = PostProcessAsset->GlareIntensity;
 		
-#if CUSTOM_LENS_FLARE_DEVELOP
 		GET_SCALAR_ARRAY_ELEMENT(GeometryParameters.GlareScales, 0) = PostProcessAsset->GlareScale.X;
 		GET_SCALAR_ARRAY_ELEMENT(GeometryParameters.GlareScales, 1) = PostProcessAsset->GlareScale.Y;
 		GET_SCALAR_ARRAY_ELEMENT(GeometryParameters.GlareScales, 2) = PostProcessAsset->GlareScale.Z;
-#endif
 
 		GeometryParameters.GlareDivider = FMath::Max(PostProcessAsset->GlareDivider, 0.01f);
 
@@ -889,7 +879,7 @@ FRDGTextureRef UWvPostProcessSubsystem::RenderGlare(FRDGBuilder& GraphBuilder, F
 
 		if (PostProcessAsset->GlareLineMask != nullptr)
 		{
-			const FTextureRHIRef TextureRHI = PostProcessAsset->GlareLineMask->Resource->TextureRHI;
+			const FTextureRHIRef TextureRHI = PostProcessAsset->GlareLineMask->GetResource()->TextureRHI;
 			PixelParameters.GlareTexture = TextureRHI;
 		}
 

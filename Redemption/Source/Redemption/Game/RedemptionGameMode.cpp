@@ -3,6 +3,7 @@
 #include "RedemptionGameMode.h"
 #include "UObject/ConstructorHelpers.h"
 #include "Game/WvGameInstance.h"
+#include "GameExtension.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(RedemptionGameMode)
 
@@ -25,5 +26,15 @@ void ARedemptionGameMode::StartPlay()
 	UE_LOG(LogTemp, Log, TEXT("bIsGameCleared => %s"), bIsGameCleared ? TEXT("true") : TEXT("false"));
 
 	UE_LOG(LogTemp, Log, TEXT("end %s"), *FString(__FUNCTION__));
+
+
+	auto PC = Game::ControllerExtension::GetPlayer(GetWorld());
+
+	// apply to custom lensflare
+	if (IsValid(PC))
+	{
+		PC->ConsoleCommand("r.LensFlareMethod 1");
+	}
 }
+
 

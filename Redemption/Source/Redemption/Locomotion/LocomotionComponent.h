@@ -264,6 +264,9 @@ public:
 	void DoTick();
 	void DoTick(const float DeltaTime);
 
+	void DoWhileRagdolling();
+	bool IsInRagdolling() const;
+
 	void SetLockUpdatingRotation(const bool NewLockUpdatingRotation);
 	bool GetLockUpdatingRotation() const;
 
@@ -317,11 +320,8 @@ private:
 	void OnLandedCallback();
 
 	void DoWhileGrounded();
-	void DoWhileRagdolling();
 	void SprintCheck();
 
-	void UpdateRagdollTransform(FRotator& OutActorRotation, FVector& OutActorLocation);
-	void CalcurateRagdollParams(const FVector InRagdollVelocity, const FVector InRagdollLocation, const FRotator InActorRotation, const FVector InActorLocation);
 	void DoCharacterFalling();
 
 	void DoCharacterGrounded();
@@ -341,8 +341,10 @@ private:
 	void ClimbingMovementInput(const bool bForwardAxis);
 
 	void RagdollMovementInput();
-	void CalculateActorTransformRagdoll(const FRotator InRagdollRotation, const FVector InRagdollLocation, FRotator& OutActorRotation, FVector& OutActorLocation);
-	void CalculateEssentialVariables();
+	const FTransform CalculateActorTransformRagdoll();
+	void RagdollingAsyncTrace_Callback(const FTraceHandle& TraceHandle, FTraceDatum& TraceDatum);
+
+	void CalculateEssentialVariables(const float DeltaSeconds);
 
 	void SetForwardOrRightVector(FVector& OutForwardVector, FVector& OutRightVector);
 	const float CalculateRotationRate(const float SlowSpeed, const float InSlowSpeedRate, const float FastSpeed, const float InFastSpeedRate);
@@ -446,4 +448,3 @@ public:
 		TargetComponent->DoTick();
 	}
 };
-

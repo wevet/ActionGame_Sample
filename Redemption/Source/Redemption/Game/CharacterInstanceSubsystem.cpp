@@ -99,22 +99,6 @@ void UCharacterInstanceSubsystem::DoForceKill(bool bFindWorldActorIterator/* = f
 	}
 }
 
-void UCharacterInstanceSubsystem::SendDayNightPhaseCharacter(const uint8 InDayNightPhase, bool bFindWorldActorIterator/* = false*/)
-{
-	if (bFindWorldActorIterator)
-	{
-		UpdateCharacterInWorld();
-	}
-
-	for (ABaseCharacter* Character : Characters)
-	{
-		if (IsValid(Character))
-		{
-			Character->SetDayNightPhase(InDayNightPhase);
-		}
-	}
-}
-
 void UCharacterInstanceSubsystem::AssignAICharacter(ABaseCharacter* NewCharacter)
 {
 	if (!Characters.Contains(NewCharacter))

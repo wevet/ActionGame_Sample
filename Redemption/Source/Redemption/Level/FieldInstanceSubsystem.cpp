@@ -99,7 +99,6 @@ void UFieldInstanceSubsystem::StartNight()
 		}
 	}
 
-	UCharacterInstanceSubsystem::Get()->SendDayNightPhaseCharacter((uint8)DayNightPhase);
 	UE_LOG(LogTemp, Log, TEXT("%s"), *FString(__FUNCTION__));
 }
 
@@ -123,8 +122,21 @@ void UFieldInstanceSubsystem::StartDay()
 		}
 	}
 
-	UCharacterInstanceSubsystem::Get()->SendDayNightPhaseCharacter((uint8)DayNightPhase);
 	UE_LOG(LogTemp, Log, TEXT("%s"), *FString(__FUNCTION__));
 }
 
+EDayNightPhase UFieldInstanceSubsystem::GetDayNightPhase() const
+{
+	return DayNightPhase; 
+};
+
+bool UFieldInstanceSubsystem::IsInNight() const
+{
+	return DayNightPhase == EDayNightPhase::Night;
+}
+
+bool UFieldInstanceSubsystem::IsInDay() const
+{
+	return DayNightPhase == EDayNightPhase::Day;
+}
 

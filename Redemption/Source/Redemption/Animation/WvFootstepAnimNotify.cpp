@@ -58,7 +58,7 @@ void UWvFootstepAnimNotify::TraceFoot(USkeletalMeshComponent* MeshComp, UAnimSeq
 		if (World->IsGameWorld())
 		{
 			FTraceDelegate TraceFootDelegate;
-			TraceFootDelegate.BindUObject(this, &UWvFootstepAnimNotify::TraceFootDone, MeshComp, Animation);
+			TraceFootDelegate.BindUObject(this, &ThisClass::TraceFootDone, MeshComp, Animation);
 			World->AsyncLineTraceByChannel(
 				EAsyncTraceType::Single, 
 				TraceBegin, 

@@ -53,5 +53,6 @@ private:
 
 	UPROPERTY()
 	TWeakObjectPtr<ABaseCharacter> Character;
+
 };
 

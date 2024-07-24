@@ -16,6 +16,9 @@ REDEMPTION_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Game_Input_Disable);
 // PlayerAction
 REDEMPTION_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Character_Player_Melee);
 
+// Is AI allowed to attack Player?
+REDEMPTION_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Character_AI_NotAllowed_Attack);
+
 // Combo frag tag
 REDEMPTION_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Character_ActionMelee_ComboRequire);
 

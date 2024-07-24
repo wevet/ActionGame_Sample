@@ -40,7 +40,10 @@ public:
 	void AddDayNightActor(AActor* InActor);
 	void StartNight();
 	void StartDay();
-	EDayNightPhase GetDayNightPhase() const { return DayNightPhase; };
+	EDayNightPhase GetDayNightPhase() const;
+
+	bool IsInNight() const;
+	bool IsInDay() const;
 
 private:
 	static UFieldInstanceSubsystem* Instance;

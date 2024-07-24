@@ -15,6 +15,8 @@
 
 DECLARE_MULTICAST_DELEGATE_OneParam(FAbilityDeadAnimProcessForEventDelegate, AActor* /*Actor*/);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnTeamIndexChangedDelegate, UObject*, ObjectChangingTeam, int32, OldTeamID, int32, NewTeamID);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnTeamHandleAttackDelegate, AActor*, Actor, FWvBattleDamageAttackSourceInfo, SourceInfo, float, Damage);
+
 
 inline int32 GenericTeamIdToInteger(FGenericTeamId ID)
 {
@@ -57,6 +59,8 @@ public:
 	virtual void OnReceiveWeaknessAttack(AActor* Actor, const FName WeaknessName, const float Damage);
 	virtual void OnReceiveHitReact(FGameplayEffectContextHandle Context, const bool IsInDead, const float Damage);
 	virtual void OnReceiveKillTarget(AActor* Actor, const float Damage);
+
+	virtual bool IsAttackAllowed() const;
 
 	virtual bool IsDead() const;
 	virtual bool IsTargetable() const;

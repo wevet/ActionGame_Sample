@@ -9,6 +9,9 @@ UE_DEFINE_GAMEPLAY_TAG(TAG_Game_Input_Disable, "Game.Input.Disable");
 // PlayerAction
 UE_DEFINE_GAMEPLAY_TAG(TAG_Character_Player_Melee, "Character.Player.Melee");
 
+// Is AI allowed to attack Player?
+UE_DEFINE_GAMEPLAY_TAG(TAG_Character_AI_NotAllowed_Attack, "Character.AI.NotAllowed.Attack");
+
 // Combo frag tag
 UE_DEFINE_GAMEPLAY_TAG(TAG_Character_ActionMelee_ComboRequire, "Character.Action.Melee.ComboRequire");
 

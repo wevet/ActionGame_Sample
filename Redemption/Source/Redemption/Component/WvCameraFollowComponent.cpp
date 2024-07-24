@@ -28,10 +28,32 @@
 #define SWITCH_COMPONENT_DELAY 2.5f
 #define SWITCH_TARGET_DELAY 4.0f
 
+void FCameraTargetPostPhysicsTickFunction::ExecuteTick(float DeltaTime, enum ELevelTick TickType, ENamedThreads::Type CurrentThread, const FGraphEventRef& MyCompletionGraphEvent)
+{
+	FActorComponentTickFunction::ExecuteTickHelper(Target, /*bTickInEditor=*/ false, DeltaTime, TickType, [this](float DilatedTime)
+	{
+		//Target->DoTick(DilatedTime, *this);
+	});
+}
+
+FString FCameraTargetPostPhysicsTickFunction::DiagnosticMessage()
+{
+	return Target->GetFullName() + TEXT("[UWvCameraFollowComponent::PostPhysicsTick]");
+}
+
+FName FCameraTargetPostPhysicsTickFunction::DiagnosticContext(bool bDetailed)
+{
+	if (bDetailed)
+	{
+		return FName(*FString::Printf(TEXT("WvCameraFollowComponentPostPhysicsTick/%s"), *GetFullNameSafe(Target)));
+	}
+	return FName(TEXT("WvCameraFollowComponentPostPhysicsTick"));
+}
+
 UWvCameraFollowComponent::UWvCameraFollowComponent()
 {
 	PrimaryComponentTick.bCanEverTick = true;
-	PrimaryComponentTick.bRunOnAnyThread = true;
+	//PrimaryComponentTick.bRunOnAnyThread = true;
 
 	TargetableCollisionChannel = ECollisionChannel::ECC_Pawn;
 }
@@ -92,7 +114,11 @@ void UWvCameraFollowComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 void UWvCameraFollowComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
-	TickTargetSystemUpdate(DeltaTime);
+
+	AsyncWork = TGraphTask<FWvCameraTargetTask>::CreateTask().ConstructAndDispatchWhenReady(this);
+	ThisTickFunction->GetCompletionHandle()->DontCompleteUntil(AsyncWork);
+
+	DoTick(DeltaTime);
 }
 
 #pragma region LocomotionCamera
@@ -128,7 +154,6 @@ void UWvCameraFollowComponent::UpdateCamera(UCurveFloat* LerpCurve)
 	{
 		TM.ClearTimer(CameraLerpTimerHandle);
 	}
-
 	const float DT = GetWorld()->GetDeltaSeconds();
 	TM.SetTimer(CameraLerpTimerHandle, this, &UWvCameraFollowComponent::LerpUpdateCameraTimerCallback, DT, true);
 }
@@ -148,7 +173,7 @@ void UWvCameraFollowComponent::LerpUpdateCameraTimerCallback()
 	{
 		FTimerManager& TM = GetWorld()->GetTimerManager();
 		TM.ClearTimer(CameraLerpTimerHandle);
-		CameraLerpTimerHandle.Invalidate();
+		//CameraLerpTimerHandle.Invalidate();
 	}
 }
 
@@ -313,6 +338,24 @@ void UWvCameraFollowComponent::LocomotionAimChangeCallback()
 #pragma endregion
 
 #pragma region TargetSystem_Public
+void UWvCameraFollowComponent::DoTick()
+{
+	//const float DeltaTime = GetWorld()->GetDeltaSeconds();
+	//DoTick(DeltaTime);
+
+	if (IsInGameThread())
+	{
+		//const float DeltaTime = GetWorld()->GetDeltaSeconds();
+		//DoTick(DeltaTime);
+
+		UE_LOG(LogTemp, Log, TEXT("safe thread => %s"), *FString(__FUNCTION__));
+	}
+	else
+	{
+		//UE_LOG(LogTemp, Warning, TEXT("not game thread => %s"), *FString(__FUNCTION__));
+	}
+}
+
 void UWvCameraFollowComponent::TargetActor()
 {
 	ClosestTargetDistance = MinimumDistanceToEnable;
@@ -541,7 +584,7 @@ bool UWvCameraFollowComponent::IsLocked() const
 #pragma endregion
 
 #pragma region TargetSystem_Private
-void UWvCameraFollowComponent::TickTargetSystemUpdate(const float DeltaTime)
+void UWvCameraFollowComponent::DoTick(const float DeltaTime)
 {
 	if (!bTargetLocked || !LockedOnTargetActor.IsValid())
 	{
@@ -583,7 +626,6 @@ void UWvCameraFollowComponent::LineOfSightBreakHandler()
 	{
 		TM.ClearTimer(LineOfSightBreakTimerHandle);
 	}
-
 	bIsBreakingLineOfSight = true;
 	TM.SetTimer(LineOfSightBreakTimerHandle, this, &UWvCameraFollowComponent::BreakLineOfSight, BreakLineOfSightDelay);
 }
@@ -897,13 +939,11 @@ bool UWvCameraFollowComponent::TargetIsTargetable(const AActor* Actor)
 		return false;
 	}
 
-	const bool bIsImplemented = Actor->GetClass()->ImplementsInterface(UWvAbilityTargetInterface::StaticClass());
-	if (bIsImplemented)
+	AActor* Target = const_cast<AActor*>(Actor);
+	if (IWvAbilityTargetInterface* Interface = Cast<IWvAbilityTargetInterface>(Target))
 	{
-		const bool bIsTargetable = Cast<IWvAbilityTargetInterface>(Actor)->IsTargetable();
-		return bIsTargetable;
+		return Interface->IsTargetable();
 	}
-
 	return false;
 }
 
@@ -1031,15 +1071,18 @@ void UWvCameraFollowComponent::SetControlRotationOnTarget(AActor* TargetActor) c
 	{
 		return;
 	}
+
 	const FRotator ControlRotation = GetControlRotationOnTarget(TargetActor);
-	if (OnTargetSetRotation.IsBound())
-	{
-		OnTargetSetRotation.Broadcast(TargetActor, ControlRotation);
-	}
-	else
-	{
-		PlayerController->SetControlRotation(ControlRotation);
-	}
+	//if (OnTargetSetRotation.IsBound())
+	//{
+	//	OnTargetSetRotation.Broadcast(TargetActor, ControlRotation);
+	//}
+	//else
+	//{
+	//	PlayerController->SetControlRotation(ControlRotation);
+	//}
+
+	PlayerController->SetControlRotation(ControlRotation);
 }
 
 float UWvCameraFollowComponent::GetDistanceFromCharacter(const AActor* OtherActor) const
@@ -1081,8 +1124,6 @@ void UWvCameraFollowComponent::ControlRotation(const bool bStrafeMovement) const
 	{
 		Character->VelocityMovement();
 	}
-	//Character->bUseControllerRotationYaw = bStrafeMovement;
-	//Character->GetCharacterMovement()->bOrientRotationToMovement = !bStrafeMovement;
 }
 #pragma endregion
 

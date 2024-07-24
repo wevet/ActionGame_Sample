@@ -46,6 +46,9 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FName IsDeadKeyName = FName(TEXT("IsDead"));
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FName IsCloseCombat = FName(TEXT("IsCloseCombat"));
 };
 
 USTRUCT(BlueprintType)
@@ -93,3 +96,55 @@ public:
 
 	void Notify();
 };
+
+
+/// <summary>
+/// close combat setting params
+/// etc. knife action or punch action
+/// </summary>
+USTRUCT(BlueprintType)
+struct REDEMPTION_API FAICloseCombatData
+{
+	GENERATED_BODY()
+
+public:
+	FAICloseCombatData();
+	void Initialize();
+	void Deinitialize();
+	bool CanAttack() const;
+
+	void ComboSeedBegin(TFunction<void(void)> InFinishDelegate);
+	void ComboSeedUpdate(const float DeltaTime);
+	void ComboSeedEnd();
+
+	void ComboAbort();
+
+	bool IsPlaying() const { return bIsPlaying; }
+
+	void SetComboTypeIndex(const int32 InComboTypeIndex);
+	int32 GetComboTypeIndex() const { return ComboTypeIndex; }
+
+private:
+	int32 AttackComboCount = INDEX_NONE;
+	int32 CurAttackComboCount = INDEX_NONE;
+
+	TArray<float> BaseRandomSeeds = { 80.0f, 60.0f, 30.0f, 10.0f, 5.0f };
+	TArray<float> ModifySeeds;
+
+	TArray<float> IntervalSeeds;
+	float CurIntervalSeeds = 0.f;
+	float CurInterval;
+
+	bool bIsComboCheckEnded;
+	bool bIsPlaying;
+	float CurSeeds;
+
+	TFunction<void(void)> FinishDelegate;
+
+	void Internal_Update();
+
+	int32 ComboTypeIndex = INDEX_NONE;
+};
+
+
+

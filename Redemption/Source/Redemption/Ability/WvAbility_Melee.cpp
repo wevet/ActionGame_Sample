@@ -5,6 +5,9 @@
 #include "Redemption.h"
 #include "Locomotion/LocomotionComponent.h"
 #include "Character/BaseCharacter.h"
+#include "Character/WvAIController.h"
+
+#include "Misc/WvCommonUtils.h"
 
 #include "Kismet/KismetMathLibrary.h"
 #include "Kismet/KismetSystemLibrary.h"
@@ -45,8 +48,39 @@ void UWvAbility_Melee::ActivateAbility(const FGameplayAbilitySpecHandle Handle, 
 	}
 
 	const auto LocomotionEssencialVariables = Character->GetLocomotionComponent()->GetLocomotionEssencialVariables();
-
 	UAnimMontage* CurAnimMontage = (IsValid(SprintToMontage) && LocomotionEssencialVariables.LSGait == ELSGait::Sprinting) ? SprintToMontage : Montage;
+
+	if (UWvCommonUtils::IsBotPawn(Character))
+	{
+		// @todo
+		// custom combo montage overriden
+		// get the combat component montage da
+		FGameplayTag ComboTag = FGameplayTag::EmptyTag;
+		auto DA = GetWvAbilityDataChecked();
+		if (DA)
+		{
+			auto Tags = DA->ActivationRequiredTags;
+			for (const FGameplayTag Tag : Tags)
+			{
+				if (Tag.ToString().Contains("Combo") && !Tag.ToString().Contains("ComboRequire"))
+				{
+					ComboTag = Tag;
+					break;
+				}
+			}
+		}
+
+		if (AWvAIController* AIC = Cast<AWvAIController>(Character->GetController()))
+		{
+			const int32 ComboTypeIndex = AIC->GetComboTypeIndex();
+			auto OverrideMontage = Character->GetCloseCombatAnimMontage(ComboTypeIndex, ComboTag);
+			if (OverrideMontage)
+			{
+				CurAnimMontage = OverrideMontage;
+				UE_LOG(LogWvAI, Verbose, TEXT("Montage Override => %s"), *GetNameSafe(OverrideMontage));
+			}
+		}
+	}
 
 	if (MontageTask)
 	{

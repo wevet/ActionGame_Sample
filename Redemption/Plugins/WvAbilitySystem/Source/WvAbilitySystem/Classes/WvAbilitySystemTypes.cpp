@@ -581,3 +581,47 @@ FFinisherAnimationContainer UFinisherDataAsset::FindContainer(const FGameplayTag
 	return FinisherAnimationMap[Tag];
 }
 
+
+UAnimMontage* FCloseCombatAnimation::GetComboMatchMontage(const FGameplayTag ComboTag) const
+{
+	if (!ComboTag.IsValid())
+	{
+		return DefaultComboMontage;
+	}
+
+	if (TagToComboMontageMap.Contains(ComboTag))
+	{
+		return TagToComboMontageMap.FindRef(ComboTag);
+	}
+	return nullptr;
+}
+
+FCloseCombatAnimation UCloseCombatAnimationDataAsset::GetRandCombatAnimation() const
+{
+	const int32 Index = FMath::RandRange(0, ComboAnimations.Num() - 1);
+	auto Result = ComboAnimations[Index];
+	return Result;
+}
+
+FCloseCombatAnimation UCloseCombatAnimationDataAsset::GetChooseCombatAnimation(const int32 Index) const
+{
+	if (ComboAnimations.IsValidIndex(Index))
+	{
+		return ComboAnimations[Index];
+	}
+
+	UE_LOG(LogTemp, Warning, TEXT("not valid index => %d, returned default ComboAnimationData"), Index);
+	return ComboAnimations[0];
+}
+
+void UCloseCombatAnimationDataAsset::ModifyCombatAnimationIndex(int32& OutIndex)
+{
+	OutIndex = FMath::RandRange(0, ComboAnimations.Num() - 1);
+}
+
+UAnimMontage* UCloseCombatAnimationDataAsset::GetAnimMontage(const int32 Index, const FGameplayTag Tag) const
+{
+	const FCloseCombatAnimation AnimData = GetChooseCombatAnimation(Index);
+	return AnimData.GetComboMatchMontage(Tag);
+}
+

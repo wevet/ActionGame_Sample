@@ -306,6 +306,27 @@ void AWvAIController::UnFreeze()
 {
 	ResumeTree();
 }
+
+bool AWvAIController::IsAttackAllowed() const
+{
+	if (const IWvAbilityTargetInterface* TeamAgent = Cast<IWvAbilityTargetInterface>(GetPawn()))
+	{
+		return TeamAgent->IsAttackAllowed();
+	}
+	return true;
+}
+
+void AWvAIController::OnReceiveAbilityAttack(AActor* Actor, const FWvBattleDamageAttackSourceInfo SourceInfo, const float Damage)
+{
+	// controlled pawn is damaged !
+	if (OnTeamHandleAttackCallback.IsBound())
+	{
+		OnTeamHandleAttackCallback.Broadcast(Actor, SourceInfo, Damage);
+	}
+
+
+	CloseCombatAbort();
+}
 #pragma endregion
 
 #pragma region Core
@@ -347,13 +368,21 @@ void AWvAIController::SetBlackboardTarget(AActor* NewTarget)
 
 	BlackboardComponent->SetValueAsObject(BlackboardKeyConfig.TargetKeyName, NewTarget);
 
-	ULocomotionComponent* Locomotion = GetPawn()->FindComponentByClass<ULocomotionComponent>();
-	if (IsValid(Locomotion))
-	{
-		Locomotion->SetLookAimTarget(IsValid(NewTarget), NewTarget, nullptr);
-	}
-	SetAIActionState(IsValid(NewTarget) ? EAIActionState::Combat : EAIActionState::Patrol);
+	const bool bHasValidAttack = IsValid(NewTarget);// && IsAttackAllowed()
 
+	if (ULocomotionComponent* Locomotion = GetPawn()->FindComponentByClass<ULocomotionComponent>())
+	{
+		Locomotion->SetLookAimTarget(bHasValidAttack, NewTarget, nullptr);
+	}
+
+	if (UCombatComponent* Combat = GetPawn()->FindComponentByClass<UCombatComponent>())
+	{
+		const bool bIsCloseCombat = Combat->IsCloseCombatWeapon();
+		SetBlackboardCloseCombat(bIsCloseCombat);
+
+	}
+
+	SetAIActionState(bHasValidAttack ? EAIActionState::Combat : EAIActionState::Patrol);
 }
 
 void AWvAIController::SetBlackboardSearchNodeHolder(AActor* NewTarget)
@@ -401,6 +430,11 @@ void AWvAIController::SetBlackboardDestinationLocation(const FVector NewDestinat
 void AWvAIController::SetBlackboardDead(const bool IsDead)
 {
 	BlackboardComponent->SetValueAsBool(BlackboardKeyConfig.IsDeadKeyName, IsDead);
+}
+
+void AWvAIController::SetBlackboardCloseCombat(const bool IsCloseCombat)
+{
+	BlackboardComponent->SetValueAsBool(BlackboardKeyConfig.IsCloseCombat, IsCloseCombat);
 }
 
 AActor* AWvAIController::GetBlackboardTarget() const
@@ -455,53 +489,7 @@ void AWvAIController::DoSearchEnemyState(AActor* Actor, FVector OverridePosition
 		return;
 	}
 
-	if (!HearTask.IsRunning())
-	{
-		UNavigationSystemV1* NavSys = UNavigationSystemV1::GetCurrent(GetWorld());
-		FNavLocation EndPathLocation;
-
-		// Search range of nearest Mesh from endPoint
-		const FVector Extent(500, 500, 10000);
-
-		FVector TargetLocation = OverridePosition.IsNearlyZero() ? CurrentStimulus.StimulusLocation : OverridePosition;
-
-		FVector EndPosition;
-		// get the coordinates on the nearest nav mesh
-		const bool bValidPoint = NavSys->ProjectPointToNavigation(TargetLocation, EndPathLocation, Extent);
-		EndPosition = (!bValidPoint) ? GetPawn()->GetActorLocation() : EndPathLocation.Location;
-
-		if (!bValidPoint)
-		{
-			UE_LOG(LogTemp, Warning, TEXT("not valid ProjectPointToNavigation => %s"), *FString(__FUNCTION__));
-		}
-
-		UNavigationPath* NavPath = NavSys->FindPathToLocationSynchronously(GetWorld(), GetPawn()->GetActorLocation(), EndPosition);
-
-#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
-		if (CVarDebugCharacterBehaviorTree.GetValueOnGameThread() > 0)
-		{
-			UKismetSystemLibrary::DrawDebugSphere(GetWorld(), TargetLocation, 60.f, 12, FColor::Blue, false, 4);
-			UKismetSystemLibrary::DrawDebugSphere(GetWorld(), EndPosition, 60.f, 12, FColor::Blue, false, 4);
-			DrawDebugDirectionalArrow(GetWorld(), TargetLocation, EndPosition, 20.f, FColor::Red, false, 4);
-		}
-#endif
-
-		const FTransform Origin{ FRotator::ZeroRotator, EndPosition, FVector::ZeroVector};
-		FActorSpawnParameters SpawnParams;
-		SpawnParams.Owner = BaseCharacter.Get();
-		SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
-		auto Generator = GetWorld()->SpawnActor<ABaseInvestigationGenerator>(NodeGeneratorClasses, Origin, SpawnParams);
-
-		SetBlackboardSearchNodeHolder(Generator);
-		SetBlackboardDestinationLocation(EndPosition);
-
-		HearTask.Begin(HEAR_AGE, [this]()
-		{
-			ClearSearchNodeHolders();
-			UE_LOG(LogTemp, Log, TEXT("finish search node perception => %s"), *FString(__FUNCTION__));
-		});
-	}
-	else
+	if (HearTask.IsRunning())
 	{
 		if (!IsValid(GetBlackboardSearchNodeHolder()))
 		{
@@ -513,8 +501,53 @@ void AWvAIController::DoSearchEnemyState(AActor* Actor, FVector OverridePosition
 			// already running
 			UE_LOG(LogTemp, Log, TEXT("had searchnode actor.. hear running => %s"), *FString(__FUNCTION__));
 		}
-
+		return;
 	}
+
+
+	UNavigationSystemV1* NavSys = UNavigationSystemV1::GetCurrent(GetWorld());
+	FNavLocation EndPathLocation;
+
+	// Search range of nearest Mesh from endPoint
+	const FVector Extent(500, 500, 10000);
+
+	FVector TargetLocation = OverridePosition.IsNearlyZero() ? CurrentStimulus.StimulusLocation : OverridePosition;
+
+	FVector EndPosition;
+	// get the coordinates on the nearest nav mesh
+	const bool bValidPoint = NavSys->ProjectPointToNavigation(TargetLocation, EndPathLocation, Extent);
+	EndPosition = (!bValidPoint) ? GetPawn()->GetActorLocation() : EndPathLocation.Location;
+
+	if (!bValidPoint)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("not valid ProjectPointToNavigation => %s"), *FString(__FUNCTION__));
+	}
+
+	UNavigationPath* NavPath = NavSys->FindPathToLocationSynchronously(GetWorld(), GetPawn()->GetActorLocation(), EndPosition);
+
+#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
+	if (CVarDebugCharacterBehaviorTree.GetValueOnGameThread() > 0)
+	{
+		UKismetSystemLibrary::DrawDebugSphere(GetWorld(), TargetLocation, 60.f, 12, FColor::Blue, false, 4);
+		UKismetSystemLibrary::DrawDebugSphere(GetWorld(), EndPosition, 60.f, 12, FColor::Blue, false, 4);
+		DrawDebugDirectionalArrow(GetWorld(), TargetLocation, EndPosition, 20.f, FColor::Red, false, 4);
+	}
+#endif
+
+	const FTransform Origin{ FRotator::ZeroRotator, EndPosition, FVector::ZeroVector };
+	FActorSpawnParameters SpawnParams;
+	SpawnParams.Owner = BaseCharacter.Get();
+	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+	auto Generator = GetWorld()->SpawnActor<ABaseInvestigationGenerator>(NodeGeneratorClasses, Origin, SpawnParams);
+
+	SetBlackboardSearchNodeHolder(Generator);
+	SetBlackboardDestinationLocation(EndPosition);
+
+	HearTask.Begin(HEAR_AGE, [this]()
+	{
+		ClearSearchNodeHolders();
+		UE_LOG(LogTemp, Log, TEXT("finish search node perception => %s"), *FString(__FUNCTION__));
+	});
 
 }
 
@@ -528,29 +561,28 @@ void AWvAIController::DoCombatEnemyState(AActor* Actor)
 				return;
 		}
 
-		if (!SightTask.IsRunning())
-		{
-			ClearSearchNodeHolders();
-			SetBlackboardTarget(Actor);
-
-			SightTask.Begin(SIGHT_AGE, [this]()
-			{
-				// not hear task running and lost target is alive
-				auto LostTarget = GetBlackboardTargetAsCharacter();
-				if ((LostTarget && !LostTarget->IsDead()) && !HearTask.IsRunning())
-				{
-					DoSearchEnemyState(LostTarget, LostTarget->GetActorLocation());
-					UE_LOG(LogWvAI, Warning, TEXT("%s has lost my target and I will warn me."), *GetNameSafe(GetPawn()));
-				}
-
-				ClearSightTaget();
-			});
-		}
-		else
+		if (SightTask.IsRunning())
 		{
 			// already running
 			SightTask.AddLength(SIGHT_AGE);
+			return;
 		}
+
+		ClearSearchNodeHolders();
+		SetBlackboardTarget(Actor);
+
+		SightTask.Begin(SIGHT_AGE, [this]()
+		{
+			// not hear task running and lost target is alive
+			auto LostTarget = GetBlackboardTargetAsCharacter();
+			if ((LostTarget && !LostTarget->IsDead()) && !HearTask.IsRunning())
+			{
+				DoSearchEnemyState(LostTarget, LostTarget->GetActorLocation());
+				UE_LOG(LogWvAI, Warning, TEXT("%s has lost my target and I will warn me."), *GetNameSafe(GetPawn()));
+			}
+			ClearSightTaget();
+		});
+
 	}
 	else
 	{
@@ -620,7 +652,6 @@ void AWvAIController::DoFriendlyActionState(AActor* Actor)
 		SetBlackboardFriendLocation(FVector::ZeroVector);
 	}
 }
-
 
 void AWvAIController::Notify_Follow()
 {
@@ -1017,5 +1048,69 @@ void AWvAIController::HandleRemoveAIPerception()
 		AIPerceptionComponent->OnPerceptionUpdated.RemoveDynamic(this, &ThisClass::OnActorsPerceptionUpdatedRecieve);
 	}
 }
+
+#pragma region CloseCombat
+void AWvAIController::CloseCombatActionBegin()
+{
+	AICloseCombatData.Initialize();
+	ModifyCombatAnimationIndex();
+
+
+}
+
+void AWvAIController::CloseCombatActionEnd()
+{
+	AICloseCombatData.Deinitialize();
+}
+
+void AWvAIController::NotifyCloseCombatBegin()
+{
+	AICloseCombatData.ComboSeedBegin([this]
+	{
+		this->Execute_DoAttack();
+	});
+}
+
+void AWvAIController::NotifyCloseCombatUpdate()
+{
+	const float DeltaTime = GetWorld()->GetDeltaSeconds();
+	AICloseCombatData.ComboSeedUpdate(DeltaTime);
+}
+
+void AWvAIController::NotifyCloseCombatEnd()
+{
+	AICloseCombatData.ComboSeedEnd();
+}
+
+bool AWvAIController::CanCloseCombatAttack() const
+{
+	return AICloseCombatData.CanAttack();
+}
+
+bool AWvAIController::IsCloseCombatPlaying() const
+{
+	return AICloseCombatData.IsPlaying();
+}
+
+void AWvAIController::CloseCombatAbort()
+{
+	AICloseCombatData.ComboAbort();
+}
+
+void AWvAIController::ModifyCombatAnimationIndex()
+{
+	if (BaseCharacter.IsValid())
+	{
+		int32 Result;
+		BaseCharacter->ModifyCombatAnimationIndex(Result);
+		AICloseCombatData.SetComboTypeIndex(Result);
+	}
+}
+
+int32 AWvAIController::GetComboTypeIndex() const
+{
+	return AICloseCombatData.GetComboTypeIndex();
+}
+#pragma endregion
 
 

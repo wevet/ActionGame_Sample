@@ -16,11 +16,13 @@
 #include "AbilitySystemBlueprintLibrary.h"
 #include "MotionWarpingComponent.h"
 #include "DrawDebugHelpers.h"
+//#include "PhysicsEngine/PhysicsSettings.h"
+//#include "PhysicalMaterials/PhysicalMaterial.h"
 
 // ragdoll define speeds
 #define WALK_SPEED 200.f
 #define RUN_SPEED 400.f
-#define SPRINT_SPEED 800.f
+#define SPRINT_SPEED 600.f
 
 #if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
 static TAutoConsoleVariable<int32> CVarDebugLocomotionSystem(TEXT("wv.LocomotionSystem.Debug"), 0, TEXT("LocomotionSystem Debug .\n") TEXT("<=0: off\n") TEXT("  1: on\n"), ECVF_Default);
@@ -171,21 +173,26 @@ void ULocomotionComponent::TickComponent(float DeltaTime, ELevelTick TickType, F
 	AsyncWork = TGraphTask<FLocomotionTask>::CreateTask().ConstructAndDispatchWhenReady(this);
 	ThisTickFunction->GetCompletionHandle()->DontCompleteUntil(AsyncWork);
 
-	DoTick(DeltaTime);
+	//DoTick(DeltaTime);
 }
 
 void ULocomotionComponent::DoTick()
 {
-	//if (IsInGameThread())
-	//{
-	//	const float DeltaTime = GetWorld()->GetDeltaSeconds();
-	//	DoTick(DeltaTime);
-	//}
-	//else
-	//{
-	//	UE_LOG(LogTemp, Warning, TEXT("not game thread => %s"), *FString(__FUNCTION__));
-	//}
+	if (IsInGameThread())
+	{
+		//const float DeltaTime = GetWorld()->GetDeltaSeconds();
+		//DoTick(DeltaTime);
 
+		UE_LOG(LogTemp, Log, TEXT("safe thread => %s"), *FString(__FUNCTION__));
+	}
+	else
+	{
+		//UE_LOG(LogTemp, Warning, TEXT("not game thread => %s"), *FString(__FUNCTION__));
+	}
+
+
+	const float DeltaTime = GetWorld()->GetDeltaSeconds();
+	DoTick(DeltaTime);
 }
 
 void ULocomotionComponent::DoTick(const float DeltaTime)
@@ -197,7 +204,7 @@ void ULocomotionComponent::DoTick(const float DeltaTime)
 	bDebugTrace = false;
 #endif
 
-	CalculateEssentialVariables();
+	CalculateEssentialVariables(DeltaTime);
 
 	switch (LocomotionEssencialVariables.LSMovementMode)
 	{
@@ -205,7 +212,7 @@ void ULocomotionComponent::DoTick(const float DeltaTime)
 		DoWhileGrounded();
 		break;
 		case ELSMovementMode::Ragdoll:
-		DoWhileRagdolling();
+		//DoWhileRagdolling();
 		break;
 	}
 
@@ -673,6 +680,22 @@ void ULocomotionComponent::SprintCheck()
 #pragma endregion
 
 #pragma region Ragdolling
+bool ULocomotionComponent::IsInRagdolling() const
+{
+	return LocomotionEssencialVariables.LSMovementMode == ELSMovementMode::Ragdoll;
+}
+
+bool ULocomotionComponent::IsRagdollingGetUpFront() const
+{
+	if (LocomotionEssencialVariables.bRagdollOnGround)
+	{
+		const FRotator Rotation = SkeletalMeshComponent->GetSocketRotation(PelvisBoneName);
+		UE_LOG(LogTemp, Log, TEXT("Rotation %s"), *Rotation.ToString());
+		return (Rotation.Roll > 0.0f);
+	}
+	return false;
+}
+
 void ULocomotionComponent::StartRagdollAction()
 {
 	Character->SetReplicateMovement(false);
@@ -712,28 +735,14 @@ void ULocomotionComponent::StopRagdollAction()
 	SkeletalMeshComponent->SetAllBodiesSimulatePhysics(false);
 }
 
-bool ULocomotionComponent::IsRagdollingGetUpFront() const
-{
-	if (LocomotionEssencialVariables.bRagdollOnGround)
-	{
-		const FRotator Rotation = SkeletalMeshComponent->GetSocketRotation(PelvisBoneName);
-		UE_LOG(LogTemp, Log, TEXT("Rotation %s"), *Rotation.ToString());
-		return (Rotation.Roll > 0.0f);
-	}
-	return false;
-
-}
-
 void ULocomotionComponent::DoWhileRagdolling()
 {
-	FRotator ActorRotation = FRotator::ZeroRotator;
-	FVector ActorLocation = FVector::ZeroVector;
-	UpdateRagdollTransform(ActorRotation, ActorLocation);
-	CalcurateRagdollParams(LocomotionEssencialVariables.RagdollVelocity, LocomotionEssencialVariables.RagdollLocation, ActorRotation, ActorLocation);
-}
+	if (!Character.IsValid())
+	{
+		return;
+	}
 
-void ULocomotionComponent::UpdateRagdollTransform(FRotator& OutActorRotation, FVector& OutActorLocation)
-{
+	
 	// Set the "stiffness" of the ragdoll based on the speed.
 	// The faster the ragdoll moves, the more rigid the joint.
 	const float Length = UKismetMathLibrary::VSize(ChooseVelocity());
@@ -757,26 +766,83 @@ void ULocomotionComponent::UpdateRagdollTransform(FRotator& OutActorRotation, FV
 
 	LocomotionEssencialVariables.RagdollVelocity = ChooseVelocity();
 	LocomotionEssencialVariables.RagdollLocation = SkeletalMeshComponent->GetSocketLocation(PelvisBoneName);
-	const FRotator BoneRotation = SkeletalMeshComponent->GetSocketRotation(PelvisBoneName);
-	CalculateActorTransformRagdoll(BoneRotation, LocomotionEssencialVariables.RagdollLocation, OutActorRotation, OutActorLocation);
-	Character->SetActorLocation(OutActorLocation);
+	//const FRotator BoneRotation = SkeletalMeshComponent->GetSocketRotation(PelvisBoneName);
 
-	LocomotionEssencialVariables.TargetRotation = OutActorRotation;
-	LocomotionEssencialVariables.RotationDifference = UKismetMathLibrary::NormalizedDeltaRotator(LocomotionEssencialVariables.TargetRotation,
-		LocomotionEssencialVariables.CharacterRotation).Yaw;
-	LocomotionEssencialVariables.CharacterRotation = OutActorRotation;
-	Character->SetActorRotation(OutActorRotation);
+	auto RagdollLocation = LocomotionEssencialVariables.RagdollLocation;
+	const float CapsuleHalfHeight = Character->GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
+	const FVector StartLocation(RagdollLocation);
+	const FVector EndLocation(RagdollLocation.X, RagdollLocation.Y, RagdollLocation.Z - CapsuleHalfHeight);
 
+	FTransform RagdollTransform = FTransform::Identity;
+	FCollisionQueryParams TraceParams(NAME_None, false, Character.Get());
+	TraceParams.bReturnPhysicalMaterial = false;
+
+	FTraceDelegate TraceFootDelegate;
+	TraceFootDelegate.BindUObject(this, &ThisClass::RagdollingAsyncTrace_Callback);
+
+	GetWorld()->AsyncLineTraceByChannel(
+		EAsyncTraceType::Single,
+		StartLocation,
+		EndLocation,
+		ECC_Visibility,
+		TraceParams,
+		FCollisionResponseParams::DefaultResponseParam,
+		&TraceFootDelegate);
+
+#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
+	if (bDebugTrace)
+	{
+		const FVector From = StartLocation;
+		const FVector To = EndLocation;
+		DrawDebugSphere(GetWorld(), From, 20.f, 12, FColor::Blue, false, 2);
+		DrawDebugSphere(GetWorld(), To, 20.f, 12, FColor::Blue, false, 2);
+		DrawDebugDirectionalArrow(GetWorld(), From, To, 20.f, FColor::Red, false, 2);
+	}
+#endif
+	
 }
 
-void ULocomotionComponent::CalculateActorTransformRagdoll(const FRotator InRagdollRotation, const FVector InRagdollLocation, FRotator& OutActorRotation, FVector& OutActorLocation)
+void ULocomotionComponent::RagdollingAsyncTrace_Callback(const FTraceHandle& TraceHandle, FTraceDatum& TraceDatum)
 {
-	if (!Character.IsValid())
+	if (TraceDatum.OutHits.Num() == 0)
+	{
 		return;
+	}
 
+	const FHitResult& HitResult = TraceDatum.OutHits[0];
 	const float CapsuleHalfHeight = Character->GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
-	const FVector StartLocation(InRagdollLocation);
-	const FVector EndLocation(InRagdollLocation.X, InRagdollLocation.Y, InRagdollLocation.Z - CapsuleHalfHeight);
+	const FVector RagdollLocation = HitResult.TraceStart;
+
+	LocomotionEssencialVariables.bRagdollOnGround = HitResult.bBlockingHit;
+	const float Offset = 2.0f;
+	const float Diff = FMath::Abs(HitResult.ImpactPoint.Z - HitResult.TraceStart.Z);
+	const float Value = LocomotionEssencialVariables.bRagdollOnGround ? (CapsuleHalfHeight - Diff) + Offset : 0.0f;
+	const FVector ActorLocation = FVector(RagdollLocation.X, RagdollLocation.Y, RagdollLocation.Z + Value);
+
+	const FRotator BoneRotation = SkeletalMeshComponent->GetSocketRotation(PelvisBoneName);
+	//const auto CurCharacterRotation = LocomotionEssencialVariables.CharacterRotation;
+	const float Yaw = (BoneRotation.Roll > 0.0f) ? BoneRotation.Yaw : BoneRotation.Yaw - 180.f;
+	const FRotator ActorRotation = FRotator(0.0f, Yaw, 0.0f);
+
+	LocomotionEssencialVariables.TargetRotation = ActorRotation;
+
+	const auto DeltaRot = UKismetMathLibrary::NormalizedDeltaRotator(LocomotionEssencialVariables.TargetRotation, LocomotionEssencialVariables.CharacterRotation);
+	LocomotionEssencialVariables.RotationDifference = DeltaRot.Yaw;
+	LocomotionEssencialVariables.CharacterRotation = ActorRotation;
+
+	LocomotionEssencialVariables.TargetRotation = LocomotionEssencialVariables.CharacterRotation;
+	Character->SetActorLocationAndRotation(ActorLocation, ActorRotation);
+}
+
+/// <summary>
+/// not using
+/// </summary>
+const FTransform ULocomotionComponent::CalculateActorTransformRagdoll()
+{
+	auto RagdollLocation = LocomotionEssencialVariables.RagdollLocation;
+	const float CapsuleHalfHeight = Character->GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
+	const FVector StartLocation(RagdollLocation);
+	const FVector EndLocation(RagdollLocation.X, RagdollLocation.Y, RagdollLocation.Z - CapsuleHalfHeight);
 
 	TArray<AActor*> ActorsToIgnore;
 	FHitResult HitResult;
@@ -791,27 +857,17 @@ void ULocomotionComponent::CalculateActorTransformRagdoll(const FRotator InRagdo
 		HitResult,
 		true);
 
+	FTransform Result = FTransform::Identity;
 	LocomotionEssencialVariables.bRagdollOnGround = HitResult.bBlockingHit;
 	const float Offset = 2.0f;
 	const float Diff = FMath::Abs(HitResult.ImpactPoint.Z - HitResult.TraceStart.Z);
 	const float Value = LocomotionEssencialVariables.bRagdollOnGround ? (CapsuleHalfHeight - Diff) + Offset : 0.0f;
-	OutActorLocation = FVector(InRagdollLocation.X, InRagdollLocation.Y, InRagdollLocation.Z + Value);
+	Result.SetLocation(FVector(RagdollLocation.X, RagdollLocation.Y, RagdollLocation.Z + Value));
 
-	const float Yaw = (OutActorRotation.Roll > 0.0f) ? OutActorRotation.Yaw : OutActorRotation.Yaw - 180.f;
-	OutActorRotation = FRotator(0.0f, Yaw, 0.0f);
-}
-
-void ULocomotionComponent::CalcurateRagdollParams(const FVector InRagdollVelocity, const FVector InRagdollLocation, const FRotator InActorRotation, const FVector InActorLocation)
-{
-	LocomotionEssencialVariables.RagdollVelocity = InRagdollVelocity;
-	LocomotionEssencialVariables.RagdollLocation = InRagdollLocation;
-	LocomotionEssencialVariables.CharacterRotation = InActorRotation;
-	LocomotionEssencialVariables.TargetRotation = LocomotionEssencialVariables.CharacterRotation;
-
-	if (Character.IsValid())
-	{
-		Character->SetActorLocationAndRotation(InActorLocation, InActorRotation);
-	}
+	const FRotator BoneRotation = SkeletalMeshComponent->GetSocketRotation(PelvisBoneName);
+	const float Yaw = (BoneRotation.Roll > 0.0f) ? BoneRotation.Yaw : BoneRotation.Yaw - 180.f;
+	Result.SetRotation(FQuat(FRotator(0.0f, Yaw, 0.0f)));
+	return Result;
 }
 
 void ULocomotionComponent::RagdollMovementInput()
@@ -1144,7 +1200,7 @@ void ULocomotionComponent::ClimbingMovementInput(const bool bForwardAxis)
 	}
 }
 
-void ULocomotionComponent::CalculateEssentialVariables()
+void ULocomotionComponent::CalculateEssentialVariables(const float DeltaSeconds)
 {
 	if (!Character.IsValid() || !CharacterMovementComponent.IsValid())
 	{
@@ -1187,7 +1243,7 @@ void ULocomotionComponent::CalculateEssentialVariables()
 
 	{
 		const float PrevAimYaw = LocomotionEssencialVariables.LookingRotation.Yaw;
-		const float DeltaSeconds = GetWorld()->GetDeltaSeconds();
+		//const float DeltaSeconds = GetWorld()->GetDeltaSeconds();
 		const FRotator CurrentLockingRotation = LocomotionEssencialVariables.LookingRotation;
 		if (LocomotionEssencialVariables.bLookAtAimOffset)
 		{
