@@ -313,13 +313,14 @@ void UWvInputEventComponent::TriggerCacheInputEvent(UGameplayAbility* CallFromAb
 	if (AnimatingAbility != CallFromAbility)
 	{
 		//comsumed, cache finished
-		UE_LOG(LogTemp, Log, TEXT("comsumed, cache finished"));
+		UE_LOG(LogTemp, Log, TEXT("comsumed, cache finished AnimatingAbility => %s, CallFromAbility => %s, [%s]"), 
+			*GetNameSafe(AnimatingAbility), *GetNameSafe(CallFromAbility) , *FString(__FUNCTION__));
 		ResetCacheInput();
 		ResetWaitTillEnd();
 	}
 	else
 	{
-		UE_LOG(LogTemp, Log, TEXT("same AnimatingAbility"));
+		UE_LOG(LogTemp, Log, TEXT("same AnimatingAbility => %s, [%s]"), *GetNameSafe(AnimatingAbility), *FString(__FUNCTION__));
 		if (CallFromAbility)
 		{
 			ResetWaitTillEnd(CallFromAbility);

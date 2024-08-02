@@ -6,9 +6,12 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "WvCharacterMovementTypes.h"
 #include "Locomotion/LocomotionSystemTypes.h"
+#include "Component/AsyncComponentInterface.h"
+
 #include "Math/Rotator.h"
 #include "Math/UnrealMathSSE.h"
 #include "UObject/UObjectGlobals.h"
+#include "Engine/StreamableManager.h"
 #include "WvCharacterMovementComponent.generated.h"
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FMovementActionDelegate);
@@ -23,7 +26,7 @@ class UWvAbilitySystemComponent;
  * 
  */
 UCLASS()
-class REDEMPTION_API UWvCharacterMovementComponent : public UCharacterMovementComponent
+class REDEMPTION_API UWvCharacterMovementComponent : public UCharacterMovementComponent, public IAsyncComponentInterface
 {
 	GENERATED_BODY()
 	
@@ -49,11 +52,16 @@ public:
 
 	virtual void HandleImpact(const FHitResult& Hit, float TimeSlice = 0.f, const FVector& MoveDelta = FVector::ZeroVector) override;
 	virtual float SlideAlongSurface(const FVector& Delta, float Time, const FVector& InNormal, FHitResult& Hit, bool bHandleImpact) override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+
 
 	UFUNCTION(BlueprintCallable, Category = "Wv|CharacterMovement")
 	const FWvCharacterGroundInfo& GetGroundInfo();
 
 	void SetReplicatedAcceleration(const FVector& InAcceleration);
+
+public:
+	virtual void RequestAsyncLoad() override;
 
 public:
 	UFUNCTION(BlueprintCallable, Category = "Character|Components|CharacterMovement")
@@ -90,6 +98,8 @@ public:
 	FMantleParams GetMantleParams() const;
 	const bool GroundMantling();
 	const bool FallingMantling();
+
+	UFUNCTION(BlueprintCallable)
 	void MantleEnd();
 
 	// WallClimbing public
@@ -100,7 +110,6 @@ public:
 	void TryClimbJumping();
 	void AbortClimbing();
 	void ForbidClimbing(const bool bIsTagAdd);
-	void TryLedgeEndAction();
 	const bool TryClimbUpLedge();
 
 	// Apply UAbilityInteraction_ClimbUpLedge
@@ -144,10 +153,10 @@ protected:
 	bool bPrePenetrationAdjustmentVelocityValid;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Character Movement: Mantle")
-	class UMantleAnimationDataAsset* MantleDataAsset;
+	TSoftObjectPtr<UMantleAnimationDataAsset> MantleDA;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Character Movement: WallClimbing")
-	class UClimbingDataAsset* ClimbingDataAsset;
+	TSoftObjectPtr<UClimbingDataAsset> WallClimbingDA;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Character Movement: Falling")
 	bool bIsDrawGroundTrace = false;
@@ -199,11 +208,6 @@ private:
 	float GetSlopeAngle(const FHitResult& InHitResult) const;
 	float GetMaxWalkSpeedCrouched() const;
 
-	struct FMantleMovementParams 
-	{
-	public:
-		bool IsMovingDetectChecked = true;
-	} MantleMovementParams;
 
 #pragma region LedgeEnd
 	FVector GetLedgeInputVelocity() const;
@@ -211,6 +215,8 @@ private:
 	void DetectLedgeEndCompleted(const FTraceHandle& TraceHandle, FTraceDatum& TraceDatum);
 	void DetectLedgeDownCompleted(const FTraceHandle& TraceHandle, FTraceDatum& TraceDatum);
 	void DetectLedgeSideCompleted(const FTraceHandle& TraceHandle, FTraceDatum& TraceDatum);
+	void DropToHoldingLedge();
+
 	bool bHasFallEdge = false;
 	bool bHasFallEdgeHitDown = false;
 	bool bHasFallEdgeHitSide = false;
@@ -220,7 +226,18 @@ private:
 	FVector LastFallEdgeInput = FVector::ZeroVector;
 #pragma endregion
 
+
 #pragma region Mantling
+	struct FMantleMovementParams
+	{
+	public:
+		float MantlePlayPosition = 0.f;
+		FTransform MantleTarget;
+		FTransform MantleActualStartOffset;
+		FTransform MantleAnimatedStartOffset;
+
+	} MantleMovementParams;
+
 	UPROPERTY()
 	FMantleParams MantleParams;
 
@@ -242,8 +259,12 @@ private:
 
 	// MantleStart Details
 	void MantleStart(const float InMantleHeight, const FLSComponentAndTransform MantleLedgeWorldSpace, const EMantleType InMantleType);
+
+	void MantleUpdate(const float BlendIn);
+
 	void PhysMantling(float deltaTime, int32 Iterations);
 #pragma endregion
+
 
 #pragma region WallClimbing
 	void PhysWallClimbing(float deltaTime, int32 Iterations);
@@ -258,8 +279,8 @@ private:
 	void SetRotationToStand() const;
 
 	bool HasReachedEdge() const;
-	const bool IsLocationWalkable(const FVector& CheckLocation);
-	const bool CanMoveToLedgeClimbLocation();
+	const bool IsLocationWalkable(const FVector& CheckLocation, FHitResult& OutHitResult);
+	const bool CanMoveToLedgeClimbLocation(FHitResult& OutHitResult);
 	bool CanStartClimbing();
 	const bool GetWallWidth(FHitResult& HitResult);
 	bool IsFacingSurface(float Steepness) const;
@@ -284,9 +305,27 @@ private:
 	FVector ClimbDashDirection;
 	FVector CurrentClimbingNormal;
 	FVector CurrentClimbingPosition;
-	FTransform ClimbUpLedgeTransform;
+	FLSComponentAndTransform ClimbUpLedgeLS;
 	float CurrentClimbDashTime;
 	bool bPrepareStrafeMovement = false;
 #pragma endregion
 
+
+	void PhysLaddering(float deltaTime, int32 Iterations);
+
+	// ~Start AsyncLoadMantle
+	UPROPERTY()
+	TObjectPtr<class UMantleAnimationDataAsset> MantleDAInstance;
+	TSharedPtr<FStreamableHandle> MantleStreamableHandle;
+	void OnMantleAssetLoadComplete();
+	void OnLoadMantleDA();
+	// ~End AsyncLoadMantle
+
+	// ~Start AsyncWallClimbing
+	UPROPERTY()
+	TObjectPtr<class UClimbingDataAsset> WallClimbingDAInstance;
+	TSharedPtr<FStreamableHandle> WallClimbingStreamableHandle;
+	void OnWallClimbingAssetLoadComplete();
+	void OnLoadWallClimbingDA();
+	// ~End AsyncWallClimbing
 };

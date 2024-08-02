@@ -3,6 +3,8 @@
 
 #include "Climbing/ClimbingObject.h"
 
+#include UE_INLINE_GENERATED_CPP_BY_NAME(ClimbingObject)
+
 AClimbingObject::AClimbingObject()
 {
 	PrimaryActorTick.bCanEverTick = true;

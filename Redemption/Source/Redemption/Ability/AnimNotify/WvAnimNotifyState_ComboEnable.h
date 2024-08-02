@@ -42,6 +42,10 @@ private:
 
 	UFUNCTION()
 	void OnPressed(const FGameplayTag InTag, const bool bIsPressed);
+
+	//UFUNCTION()
+	//void OnPressed(const FGameplayTag InTag, const bool bIsPressed);
+
 	void TryCombo();
 	void PressedToCombo();
 
@@ -54,5 +58,6 @@ private:
 	UPROPERTY()
 	TWeakObjectPtr<ABaseCharacter> Character;
 
+	void HandleAIRemoveDelegate();
 };
 

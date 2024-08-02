@@ -35,10 +35,10 @@ protected:
 	TObjectPtr<class ULocomotionComponent> LocomotionComponent;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
-	class UClimbingComponent* ClimbingComponent;
+	TObjectPtr<class UClimbingComponent> ClimbingComponent;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
-	class ULadderComponent* LadderComponent;
+	TObjectPtr<class ULadderComponent> LadderComponent;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	TObjectPtr<class UWvCharacterMovementComponent> CharacterMovementComponent;

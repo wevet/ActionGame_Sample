@@ -10,6 +10,7 @@
 #include "Component/WvCharacterMovementComponent.h"
 #include "Locomotion/LocomotionComponent.h"
 #include "Climbing/ClimbingComponent.h"
+#include "Animation/WvAnimInstance.h"
 
 // built in
 #include "Camera/CameraComponent.h"
@@ -68,6 +69,16 @@ void APlayerCharacter::BeginPlay()
 	WvCameraFollowComponent->OnTargetLockedOn.AddDynamic(this, &ThisClass::OnTargetLockedOn_Callback);
 	WvCameraFollowComponent->OnTargetLockedOff.AddDynamic(this, &ThisClass::OnTargetLockedOff_Callback);
 	LocomotionComponent->OnOverlayChangeDelegate.AddDynamic(this, &ThisClass::OverlayStateChange_Callback);
+
+	// init unarmed ABP
+	//if (IsValid(OverlayAnimDAInstance))
+	//{
+	//	auto AnimInstanceClass = OverlayAnimDAInstance->FindAnimInstance(ELSOverlayState::None);
+	//	if (AnimInstanceClass)
+	//	{
+	//		AnimInstance->LinkAnimClassLayers(AnimInstanceClass);
+	//	}
+	//}
 }
 
 void APlayerCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -128,10 +139,15 @@ void APlayerCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerIn
 {
 	check(PlayerInputComponent);
 
+	//PlayerInputComponent->BindAxis("MoveForward", this, &ThisClass::InputAxis_MoveForward);
+	//PlayerInputComponent->BindAxis("MoveRight", this, &ThisClass::InputAxis_MoveRight);
+
 	if (UEnhancedInputComponent* EnhancedInputComponent = CastChecked<UEnhancedInputComponent>(PlayerInputComponent))
 	{
+
 		if (MoveAction)
 		{
+			EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::None, this, &APlayerCharacter::Move);
 			EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &APlayerCharacter::Move);
 		}
 
@@ -144,6 +160,11 @@ void APlayerCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerIn
 		{
 			//EnhancedInputComponent->BindAction(StrafeAction, ETriggerEvent::Canceled, this, &APlayerCharacter::ToggleRotationMode);
 			//EnhancedInputComponent->BindAction(StrafeAction, ETriggerEvent::Completed, this, &APlayerCharacter::ToggleAimMode);
+		}
+
+		if (LockTargetAction)
+		{
+			EnhancedInputComponent->BindAction(LockTargetAction, ETriggerEvent::Triggered, this, &APlayerCharacter::MouseWheelAxis);
 		}
 	}
 }
@@ -159,6 +180,7 @@ void APlayerCharacter::Move(const FInputActionValue& Value)
 	InputAxis = Value.Get<FVector2D>();
 	LocomotionComponent->Move(InputAxis);
 
+	//UE_LOG(LogTemp, Log, TEXT("InputAxis => %s"), *InputAxis.ToString());
 }
 
 void APlayerCharacter::Look(const FInputActionValue& Value)
@@ -175,22 +197,48 @@ void APlayerCharacter::Look(const FInputActionValue& Value)
 
 void APlayerCharacter::TurnAtRate(float Rate)
 {
+	if (IsInputKeyDisable())
+	{
+		return;
+	}
+
 	if (IsTargetLock())
 	{
-		WvCameraFollowComponent->TargetActorWithAxisInput(Rate);
-		return;
+		//WvCameraFollowComponent->TargetActorWithAxisInput(Rate);
+		//return;
 	}
 	AddControllerYawInput(Rate * BaseTurnRate * GetWorld()->GetDeltaSeconds());
 }
 
 void APlayerCharacter::LookUpAtRate(float Rate)
 {
-	if (IsTargetLock())
+	if (IsInputKeyDisable())
 	{
-		WvCameraFollowComponent->TargetComponentWithAxisInput(Rate);
 		return;
 	}
+
+	if (IsTargetLock())
+	{
+		//WvCameraFollowComponent->TargetComponentWithAxisInput(Rate);
+		//return;
+	}
 	AddControllerPitchInput(Rate * BaseLookUpRate * GetWorld()->GetDeltaSeconds());
+}
+
+void APlayerCharacter::MouseWheelAxis(const FInputActionValue& Value)
+{
+	if (IsInputKeyDisable())
+	{
+		return;
+	}
+
+	if (IsTargetLock())
+	{
+		const FVector2D WheelAxis = Value.Get<FVector2D>();
+		WvCameraFollowComponent->TargetActorWithAxisInput(FMath::Abs(WheelAxis.X));
+	}
+
+	//UE_LOG(LogTemp, Log, TEXT("WheelAxis => %s"), *WheelAxis.ToString());
 }
 
 void APlayerCharacter::GameplayTagTrigger_Callback(const FGameplayTag Tag, const bool bIsPress)
@@ -289,33 +337,39 @@ void APlayerCharacter::HandleSprinting(const bool bIsPress)
 {
 	if (bIsPress)
 	{
-		const auto LocomotionEssencialVariables = LocomotionComponent->GetLocomotionEssencialVariables();
-		const ELSMovementMode LSMovementMode = LocomotionEssencialVariables.LSMovementMode;
-		switch (LSMovementMode)
+		const auto CMC = GetWvCharacterMovementComponent();
+
+		switch (CMC->MovementMode)
 		{
-			case ELSMovementMode::Grounded:
-			{
-				Super::DoSprinting();
-			}
+		case EMovementMode::MOVE_None:
+		case EMovementMode::MOVE_Walking:
+		case EMovementMode::MOVE_NavWalking:
+			Super::DoSprinting();
 			break;
-			case ELSMovementMode::WallClimbing:
-			{
-				auto CMC = GetWvCharacterMovementComponent();
-				CMC->AbortClimbing();
-			}
+		case EMovementMode::MOVE_Swimming:
 			break;
-			case ELSMovementMode::Climbing:
-			{
-				UClimbingComponent* ClimbingComponent = Cast<UClimbingComponent>(GetComponentByClass(UClimbingComponent::StaticClass()));
+		case EMovementMode::MOVE_Falling:
+		case EMovementMode::MOVE_Flying:
+			break;
 
-				if (IsValid(ClimbingComponent) && ClimbingComponent->IsClimbingState())
-				{
-					ClimbingComponent->ApplyStopClimbingInput(0.3f, false);
-				}
-			}
+		case EMovementMode::MOVE_Custom:
+		{
+			const ECustomMovementMode CustomMovementMode = (ECustomMovementMode)CMC->CustomMovementMode;
+			switch (CustomMovementMode)
+			{
+			case ECustomMovementMode::CUSTOM_MOVE_Climbing:
+			case ECustomMovementMode::CUSTOM_MOVE_WallClimbing:
+				Super::AbortClimbing();
 			break;
+			case ECustomMovementMode::CUSTOM_MOVE_Mantling:
+			break;
+			case ECustomMovementMode::CUSTOM_MOVE_Ladder:
+				Super::AbortLaddering();
+			break;
+			}
 		}
-
+		break;
+		}
 	}
 	else
 	{
@@ -327,6 +381,14 @@ void APlayerCharacter::HandleMeleeAction(const bool bIsPress)
 {
 	if (bIsPress)
 	{
+		auto Inventory = GetInventoryComponent();
+		if (Super::IsMeleePlaying() && !Inventory->CanAimingWeapon())
+		{
+			//const auto Tag = TAG_Character_StateMelee.GetTag().GetTagName();
+			//UE_LOG(LogTemp, Warning, TEXT("Returns nothing as tags are added. %s => [%s]"), *Tag.ToString(), *FString(__FUNCTION__));
+			return;
+		}
+
 		Super::DoAttack();
 	}
 }
@@ -409,8 +471,8 @@ void APlayerCharacter::HandleTargetLock()
 
 	if (!IsTargetLock())
 	{
-		WvCameraFollowComponent->TargetActor();
-		WvAbilitySystemComponent->AddGameplayTag(TAG_Character_TargetLocking, 1);
+		WvCameraFollowComponent->TargetLockOn();
+		Super::DoTargetLockOn();
 
 		if (IsValid(ItemInventoryComponent))
 		{
@@ -428,7 +490,7 @@ void APlayerCharacter::HandleTargetLock()
 	else
 	{
 		WvCameraFollowComponent->TargetLockOff();
-		WvAbilitySystemComponent->RemoveGameplayTag(TAG_Character_TargetLocking, 1);
+		Super::DoTargetLockOff();
 	}
 }
 

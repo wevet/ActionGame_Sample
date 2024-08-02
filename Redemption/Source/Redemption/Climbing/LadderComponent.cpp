@@ -9,6 +9,7 @@
 #include "Component/WvCharacterMovementComponent.h"
 #include "Character/BaseCharacter.h"
 #include "Ability/WvAbilitySystemComponent.h"
+#include "Game/WvGameInstance.h"
 
 #include "Components/SkeletalMeshComponent.h"
 #include "Components/CapsuleComponent.h"
@@ -23,7 +24,8 @@
 static TAutoConsoleVariable<int32> CVarDebugLadderSystem(TEXT("wv.LadderSystem.Debug"), 0, TEXT("LadderSystem Debug .\n") TEXT("<=0: off\n") TEXT("  1: on\n"), ECVF_Default);
 #endif
 
-//#include UE_INLINE_GENERATED_CPP_BY_NAME(INNLadderSystemComponent)
+// convert BP to c++ 
+//#include UE_INLINE_GENERATED_CPP_BY_NAME(LadderComponent)
 
 ULadderComponent::ULadderComponent(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
@@ -55,10 +57,9 @@ void ULadderComponent::BeginPlay()
 		DefaultCapsuleSize.X = Radius;
 		DefaultCapsuleSize.Y = HalfHeight;
 
-		// @NOTE
-		// I'll disable tick once the load seems too high.
 		bOwnerPlayerController = bool(Cast<APlayerController>(Character->GetController()));
 		Super::SetComponentTickEnabled(bOwnerPlayerController);
+
 	}
 	else
 	{
@@ -77,6 +78,8 @@ void ULadderComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 			TimerManager.ClearTimer(WaitAxisTimer);
 		}
 	}
+
+	AnimationDAInstance = nullptr;
 	Super::EndPlay(EndPlayReason);
 }
 
@@ -135,26 +138,24 @@ FVector2D ULadderComponent::GetCharacterAxis() const
 
 void ULadderComponent::OnLadderBegin()
 {
-	if (!CharacterMovementComponent)
-		return;
-
 	SetLadderMovementEnable(true);
 
-	// @todo
 	if (CharacterMovementComponent)
 	{
-		//CharacterMovementComponent->SetMovementMode(MOVE_Custom, ECustomMovementMode::CUSTOM_MOVE_Ladder);
+		CharacterMovementComponent->SetMovementMode(MOVE_Custom, ECustomMovementMode::CUSTOM_MOVE_Ladder);
 	}
 }
 
 void ULadderComponent::OnLadderEnd()
 {
-	if (!CharacterMovementComponent || !LocomotionComponent)
+	if (!CharacterMovementComponent)
 		return;
 
 	bIsNotPlayingSequence = true;
 	bIsMoving = false;
 	SetLadderMovementEnable(false);
+
+	LadderSetNewAction(ELadderMovementActionType::None);
 
 	const FVector Location = Character->GetActorLocation();
 	FFindFloorResult FloorResult;
@@ -172,7 +173,7 @@ void ULadderComponent::OnLadderEnd()
 
 void ULadderComponent::OnLadderEndFromClimbing(const bool WithOutModeUpdate)
 {
-	if (!CharacterMovementComponent || !LocomotionComponent)
+	if (!CharacterMovementComponent)
 		return;
 
 	if (WithOutModeUpdate)
@@ -257,19 +258,19 @@ FLadderPrepareAnimation ULadderComponent::ChooseBasePrepareAnimation() const
 
 		if (Distance < 2.0f)
 		{
-			Result.AnimationConfig = AnimationDataAsset->BeginAnimArray[3];
+			Result.AnimationConfig = AnimationDAInstance->BeginAnimArray[3];
 			Result.EndAlpha = FVector2D(0.78f, 0.8f);
 			Result.bIsStopWhenAlphaAtEnd = true;
 			return Result;
 		}
 		else if (Distance < 190.0f)
 		{
-			Result.AnimationConfig = AnimationDataAsset->BeginAnimArray[1];
+			Result.AnimationConfig = AnimationDAInstance->BeginAnimArray[1];
 			Result.EndAlpha = FVector2D(0.78f, 0.8f);
 			Result.bIsStopWhenAlphaAtEnd = true;
 			return Result;
 		}
-		Result.AnimationConfig = AnimationDataAsset->BeginAnimArray[2];
+		Result.AnimationConfig = AnimationDAInstance->BeginAnimArray[2];
 		Result.EndAlpha = FVector2D(0.72f, 0.8f);
 		Result.bIsStopWhenAlphaAtEnd = true;
 		return Result;
@@ -279,13 +280,13 @@ FLadderPrepareAnimation ULadderComponent::ChooseBasePrepareAnimation() const
 	const bool bResult = (Vel.Size2D() < 80.0f) ? Vel.Size() > 400.0f : Vel.Size() > 700.0f;
 	if (bResult)
 	{
-		Result.AnimationConfig = AnimationDataAsset->BeginAnimArray[4];
+		Result.AnimationConfig = AnimationDAInstance->BeginAnimArray[4];
 		Result.EndAlpha = FVector2D(0.7f, 0.9f);
 		Result.bIsStopWhenAlphaAtEnd = false;
 		return Result;
 	}
 
-	Result.AnimationConfig = AnimationDataAsset->BeginAnimArray[0];
+	Result.AnimationConfig = AnimationDAInstance->BeginAnimArray[0];
 	Result.EndAlpha = FVector2D(0.68f, 0.67f);
 	Result.bIsStopWhenAlphaAtEnd = true;
 	return Result;
@@ -415,19 +416,11 @@ FTwoVectors ULadderComponent::GetForwardRightVectorNormalized() const
 
 bool ULadderComponent::IsLadderState() const
 {
-	// Changed after refactoring
-	if (LocomotionComponent)
+	if (CharacterMovementComponent)
 	{
-		const FLocomotionEssencialVariables LocomotionEssencialVariables = LocomotionComponent->GetLocomotionEssencialVariables();
-		const ELSMovementMode MovementMode = LocomotionEssencialVariables.LSMovementMode;
-		return MovementMode == ELSMovementMode::Ladder && bStartLadderMovement;
+		return CharacterMovementComponent->IsLaddering() && bStartLadderMovement;
 	}
-
-	//if (CharacterMovementComponent)
-	//{
-	//	return CharacterMovementComponent->IsLaddering() && bStartLadderMovement;
-	//}
-	return false;
+	return bStartLadderMovement;
 }
 
 bool ULadderComponent::IsCharacterClimbing() const
@@ -472,10 +465,15 @@ TArray<AActor*> ULadderComponent::MakeIgnoreActors(const FVector Location, AActo
 
 bool ULadderComponent::FindingLadderCondition(const bool bIsOnlyInAir) const
 {
+	if (!IsValid(CharacterMovementComponent) || !IsValid(Character))
+	{
+		return false;
+	}
+
 	const bool bResult = bIsOnlyInAir ? CharacterMovementComponent->IsFalling() : true;
 	if (bResult)
 	{
-		return !IsCharacterClimbing();
+		return !IsCharacterClimbing() && Character->HasAccelerating();
 	}
 	return false;
 }
@@ -1300,9 +1298,9 @@ const bool ULadderComponent::CheckCanBalanceMovement(FVector& OutPreviewCenterBe
 
 bool ULadderComponent::HasDetectLadderActor(const FHitResult& HitResult) const
 {
-	if (IsValid(HitResult.GetActor()))
+	if (IsValid(HitResult.GetActor()) && IsValid(HitResult.GetActor()->GetClass()))
 	{
-		return HitResult.GetActor()->IsA(ALadderObject::StaticClass());
+		return HitResult.GetActor()->GetClass()->IsChildOf(ALadderObject::StaticClass());
 	}
 	return false;
 }
@@ -1496,4 +1494,33 @@ void ULadderComponent::DrawDebugShapesFunction()
 	}
 }
 #pragma endregion
+
+void ULadderComponent::RequestAsyncLoad()
+{
+	FStreamableManager& StreamableManager = UWvGameInstance::GetStreamableManager();
+
+	if (!AnimationDA.IsNull())
+	{
+		const FSoftObjectPath ObjectPath = AnimationDA.ToSoftObjectPath();
+		AnimationStreamableHandle = StreamableManager.RequestAsyncLoad(ObjectPath, FStreamableDelegate::CreateUObject(this, &ThisClass::OnAnimAssetLoadComplete));
+	}
+}
+
+void ULadderComponent::OnAnimAssetLoadComplete()
+{
+	OnLoadAnimationDA();
+	AnimationStreamableHandle.Reset();
+}
+
+void ULadderComponent::OnLoadAnimationDA()
+{
+	bool bIsResult = false;
+	do
+	{
+		AnimationDAInstance = AnimationDA.LoadSynchronous();
+		bIsResult = (IsValid(AnimationDAInstance));
+
+	} while (!bIsResult);
+	UE_LOG(LogTemp, Log, TEXT("Complete %s => [%s]"), *GetNameSafe(AnimationDAInstance), *FString(__FUNCTION__));
+}
 

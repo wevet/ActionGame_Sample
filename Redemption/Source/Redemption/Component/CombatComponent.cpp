@@ -227,7 +227,7 @@ void UCombatComponent::HitResultEnemyFilter(TArray<FHitResult>& Hits, TArray<FWv
 			}
 			else
 			{
-				UE_LOG(LogTemp, Warning, TEXT("not enemy ?? => %s, function => %s"), *GetNameSafe(HitActor), *FString(__FUNCTION__));
+				//UE_LOG(LogTemp, Warning, TEXT("not enemy ?? => %s, function => %s"), *GetNameSafe(HitActor), *FString(__FUNCTION__));
 			}
 		}
 
@@ -636,7 +636,7 @@ void UCombatComponent::StartHitReact(FGameplayEffectContextHandle& Context, cons
 
 			if (SkeletalMeshBoneShakeExecuteData->BoneShakeDatas.Num() > 0)
 			{
-				GetWorld()->GetTimerManager().SetTimer(TickBoneShakeTimerHandle, this, &UCombatComponent::TickUpdateUpdateBoneShake, GetWorld()->DeltaTimeSeconds, true);
+				GetWorld()->GetTimerManager().SetTimer(TickBoneShakeTimerHandle, this, &ThisClass::TickUpdateUpdateBoneShake, GetWorld()->GetDeltaSeconds(), true);
 			}
 		}
 		else

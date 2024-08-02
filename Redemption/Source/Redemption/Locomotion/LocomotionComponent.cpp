@@ -1418,6 +1418,8 @@ ELSMovementMode ULocomotionComponent::GetPawnMovementModeChanged(const EMovement
 				return ELSMovementMode::WallClimbing;
 				case ECustomMovementMode::CUSTOM_MOVE_Mantling:
 				return ELSMovementMode::Mantling;
+				case ECustomMovementMode::CUSTOM_MOVE_Ladder:
+				return ELSMovementMode::Ladder;
 			}
 		}
 		break;

@@ -95,6 +95,10 @@ public:
 	UFUNCTION(BlueprintCallable, Category = AI)
 	void SetBlackboardPatrolLocation(const FVector NewLocation);
 
+	// catch the target prediction location
+	UFUNCTION(BlueprintCallable, Category = AI)
+	void SetBlackboardPredictionLocation(const FVector NewLocation);
+
 	UFUNCTION(BlueprintCallable, Category = AI)
 	void UpdateFollowPoint();
 
@@ -173,7 +177,6 @@ public:
 	void CloseCombatActionEnd();
 
 	void CloseCombatAbort();
-	void ModifyCombatAnimationIndex();
 	int32 GetComboTypeIndex() const;
 
 #pragma endregion

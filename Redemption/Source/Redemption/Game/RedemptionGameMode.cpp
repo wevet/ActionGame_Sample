@@ -34,6 +34,9 @@ void ARedemptionGameMode::StartPlay()
 	if (IsValid(PC))
 	{
 		PC->ConsoleCommand("r.LensFlareMethod 1");
+		PC->ConsoleCommand("r.LensFlare.RenderFlare 1");
+		PC->ConsoleCommand("r.LensFlare.RenderGlare 0");
+		PC->ConsoleCommand("r.LensFlare.RenderBloom 1");
 	}
 }
 

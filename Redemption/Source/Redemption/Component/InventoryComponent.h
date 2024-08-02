@@ -7,6 +7,8 @@
 #include "Item/ItemBaseActor.h"
 #include "Engine/DataAsset.h"
 #include "Locomotion/LocomotionSystemTypes.h"
+#include "AsyncComponentInterface.h"
+#include "Engine/StreamableManager.h"
 #include "InventoryComponent.generated.h"
 
 class ABaseCharacter;
@@ -43,7 +45,7 @@ public:
 
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
-class REDEMPTION_API UInventoryComponent : public UActorComponent
+class REDEMPTION_API UInventoryComponent : public UActorComponent, public IAsyncComponentInterface
 {
 	GENERATED_BODY()
 
@@ -55,6 +57,9 @@ public:
 protected:
 	virtual void BeginPlay() override;
 		
+public:
+	virtual void RequestAsyncLoad() override;
+
 public:
 	void AddInventory(class AItemBaseActor* NewItem);
 	void RemoveInventory(class AItemBaseActor* InItem);
@@ -76,10 +81,10 @@ public:
 	bool CanAimingWeapon() const;
 
 protected:
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Config")
-	UItemInventoryDataAsset* InitInventoryDA;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Config")
+	TSoftObjectPtr<UItemInventoryDataAsset> InventoryDA;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Config")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Config")
 	EAttackWeaponState InitAttackWeaponState;
 
 private:
@@ -89,10 +94,15 @@ private:
 	UPROPERTY()
 	TWeakObjectPtr<class ABaseCharacter> Character;
 
-	TMap<EAttackWeaponState, TArray<AWeaponBaseActor*>> WeaponActorMap;
-
 	UPROPERTY()
 	TWeakObjectPtr<AWeaponBaseActor> CurrentWeaponActor;
+
+	UPROPERTY()
+	TObjectPtr<UItemInventoryDataAsset> InventoryDAInstance;
+
+	TMap<EAttackWeaponState, TArray<AWeaponBaseActor*>> WeaponActorMap;
+
+	TSharedPtr<FStreamableHandle>  InventoryStreamableHandle;
 
 	TArray<AWeaponBaseActor*> FindOverlayWeaponArray(const ELSOverlayState InLSOverlayState) const;
 
@@ -100,4 +110,11 @@ private:
 	void UnEquipWeapon_Internal();
 
 	static void ConvertPriorityWeapons(TArray<AWeaponBaseActor*>& OutAvailableWeapons);
+
+	void CreateWeaponInstances();
+
+	
+	void OnDataAssetLoadComplete();
+	void OnLoadInventoryDA();
 };
+

@@ -65,6 +65,9 @@ protected:
 	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	class UInputAction* StrafeAction;
 
+	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	class UInputAction* LockTargetAction;
+
 	/** Base turn rate, in deg/sec. Other scaling may affect final turn rate. */
 	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = Camera)
 	float BaseTurnRate;
@@ -75,12 +78,12 @@ protected:
 
 protected:
 	void Move(const FInputActionValue& Value);
+	void MouseWheelAxis(const FInputActionValue& Value);
 
 private:
 	void TurnAtRate(float Rate);
 	void LookUpAtRate(float Rate);
 	void Look(const FInputActionValue& Value);
-
 
 	void HandleStanceMode();
 	void HandleTargetLock();

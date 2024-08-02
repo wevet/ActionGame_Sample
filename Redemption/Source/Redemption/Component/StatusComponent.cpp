@@ -102,6 +102,10 @@ float UStatusComponent::GetKillDamage() const
 	return 0.f;
 }
 
+/// <summary>
+/// Œx‰ú’l
+/// </summary>
+/// <returns></returns>
 float UStatusComponent::GetVigilance() const
 {
 	const auto Attribute = GetInheritanceAttributeSet();

@@ -3,11 +3,14 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Components/ActorComponent.h"
 #include "Locomotion/LocomotionSystemTypes.h"
+#include "Component/AsyncComponentInterface.h"
+
+#include "Components/ActorComponent.h"
 #include "Math/TwoVectors.h"
 #include "Curves/CurveVector.h"
 #include "GameFramework/Character.h"
+#include "Engine/StreamableManager.h"
 #include "LadderComponent.generated.h"
 
 class ABaseCharacter;
@@ -83,6 +86,15 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	TArray<FAnimMontageAndConfig> BeginAnimArray;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Curve")
+	UCurveVector* MovementDownCurve;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Curve")
+	UCurveVector* MovementUpCurve;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Curve")
+	UCurveVector* LadderMovementExit;
 };
 
 USTRUCT(BlueprintType)
@@ -102,37 +114,6 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FVector LadderLeftFootIK;
-};
-
-USTRUCT(BlueprintType)
-struct REDEMPTION_API FJumpProjection
-{
-	GENERATED_BODY()
-
-public:
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	bool bIsValid = false;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	FLSComponentAndTransform StartPositionLS;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	FLSComponentAndTransform LandPostionLS;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	class UPrimitiveComponent* Component;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	FLSComponentAndTransform StartPositionWS;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	FLSComponentAndTransform LandPositionWS;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	FClimbingIKData StartIKGroundType;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	FClimbingIKData LandIKGroundType;
 };
 
 USTRUCT(BlueprintType)
@@ -217,7 +198,7 @@ struct REDEMPTION_API FMatchedMontageTwoPoints
 
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	ACharacter* Character;
+	ABaseCharacter* Character;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	UAnimInstance* AnimInstance;
@@ -284,18 +265,20 @@ public:
 };
 
 UCLASS(Blueprintable, ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
-class REDEMPTION_API ULadderComponent : public UActorComponent
+class REDEMPTION_API ULadderComponent : public UActorComponent, public IAsyncComponentInterface
 {
 	GENERATED_BODY()
 
 public:
 	ULadderComponent(const FObjectInitializer& ObjectInitializer);
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
-	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason);
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 protected:
 	virtual void BeginPlay() override;
 
+public:
+	virtual void RequestAsyncLoad() override;
 		
 public:
 	UFUNCTION(BlueprintCallable, Category = "LadderSystem")
@@ -410,7 +393,7 @@ protected:
 	void LadderRotatateCharacter180Deg();
 
 	//UFUNCTION(BlueprintCallable, Category = "LadderSystem|Ladder Movement")
-	//const bool ConvertRungToCapsulePosition(const bool ReturnInLocal, AINNLadderObject* LadderActor, UPrimitiveComponent* RungComponent, const FTwoVectors TraceHit, const bool UseTraceHitAsBaseNormal, FLSComponentAndTransform &LSCapsulePosition, FLSComponentAndTransform& LSRungStart, FLSComponentAndTransform& LSRungEnd);
+	//const bool ConvertRungToCapsulePosition(const bool ReturnInLocal, ALadderObject* LadderActor, UPrimitiveComponent* RungComponent, const FTwoVectors TraceHit, const bool UseTraceHitAsBaseNormal, FLSComponentAndTransform &LSCapsulePosition, FLSComponentAndTransform& LSRungStart, FLSComponentAndTransform& LSRungEnd);
 
 	UFUNCTION(BlueprintCallable, Category = "LadderSystem|Ladder Movement")
 	FVector ConvertRungToOriginPoint(UPrimitiveComponent* RungComponent, const FTwoVectors TraceHit, const FTwoVectors Normals, const FTwoVectors RungStartPoint, const FTwoVectors RungEndPoint) const;
@@ -489,22 +472,22 @@ protected:
 
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "References")
-	class ABaseCharacter* Character;
+	TObjectPtr<class ABaseCharacter> Character;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "References", meta = (AllowPrivateAccess = "true"))
-	class UWvCharacterMovementComponent* CharacterMovementComponent;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "References")
+	TObjectPtr<class UWvAnimInstance> BaseAnimInstance;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "References", meta = (AllowPrivateAccess = "true"))
-	class USkeletalMeshComponent* SkeletalMeshComponent;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Component, meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<class UWvCharacterMovementComponent> CharacterMovementComponent;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "References", meta = (AllowPrivateAccess = "true"))
-	class ULocomotionComponent* LocomotionComponent;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Component, meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<class USkeletalMeshComponent> SkeletalMeshComponent;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "References", meta = (AllowPrivateAccess = "true"))
-	class UCapsuleComponent* CapsuleComponent;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Component, meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<class ULocomotionComponent> LocomotionComponent;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "References", meta = (AllowPrivateAccess = "true"))
-	class UWvAnimInstance* BaseAnimInstance;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Component, meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<class UCapsuleComponent> CapsuleComponent;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Inputs")
 	bool bJumpInputPressed = false;
@@ -523,15 +506,6 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Config")
 	float K_Const_CapsuleForwardOffset = 3.0f;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "LadderMovement|Curve")
-	UCurveVector* K_MovementDownCurve;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "LadderMovement|Curve")
-	UCurveVector* K_MovementUpCurve;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "LadderMovement|Curve")
-	UCurveVector* LadderMovementExit;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "LadderMovement")
 	class ALadderObject* LadderGeneratorActor;
@@ -623,10 +597,11 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "BalanceMovement")
 	FTwoVectors LeftEdgeVectors;
 
-	// @TODO
-	// Should switch to asynchronous load
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "DataAsset")
-	ULadderAnimationDataAsset* AnimationDataAsset;
+	TSoftObjectPtr<ULadderAnimationDataAsset> AnimationDA;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "DataAsset")
+	TObjectPtr<ULadderAnimationDataAsset> AnimationDAInstance;
 
 public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "LadderMovement")
@@ -635,6 +610,11 @@ public:
 private:
 	FTimerHandle WaitAxisTimer;
 	bool bOwnerPlayerController;
+
+	TSharedPtr<FStreamableHandle> AnimationStreamableHandle;
+
+	void OnAnimAssetLoadComplete();
+	void OnLoadAnimationDA();
 };
 
 

@@ -1219,6 +1219,7 @@ public:
 	FCloseCombatAnimation GetChooseCombatAnimation(const int32 Index) const;
 
 	void ModifyCombatAnimationIndex(int32 &OutIndex);
+	int32 CloseCombatMaxComboCount(const int32 Index) const;
 
 	UAnimMontage* GetAnimMontage(const int32 Index, const FGameplayTag Tag) const;
 };

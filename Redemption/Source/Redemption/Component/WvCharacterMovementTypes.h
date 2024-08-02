@@ -166,33 +166,40 @@ struct REDEMPTION_API FMantleAsset
 	GENERATED_BODY()
 
 public:
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Variable")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	UAnimMontage* AnimMontage;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Variable")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UCurveVector* Position;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FVector StartingOffset;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float LowHeight;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Variable")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float LowPlayRate;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Variable")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float LowStartPosition;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Variable")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float HighHeight;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Variable")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float HighPlayRate;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Variable")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float HighStartPosition;
 
 public:
 	FMantleAsset()
 	{
 		AnimMontage = nullptr;
+		StartingOffset = FVector::ZeroVector;
 		LowHeight = 0.0f;
-		LowPlayRate = 0.0f;
+		LowPlayRate = 1.0f;
 		LowStartPosition = 0.0f;
 		HighHeight = 0.0f;
 		HighPlayRate = 0.0f;
@@ -277,10 +284,13 @@ public:
 	FMantleTraceSettings GroundedTraceSettings;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	FMantleAsset DefaultLowMantleAsset;
+	FMantleAsset LowMantleAsset;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	FMantleAsset DefaultHighMantleAsset;
+	FMantleAsset HighMantleAsset;
+
+	//UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	//FMantleAsset FallingMantleAsset;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FVector LandingLocationOffset = FVector::ZeroVector;
@@ -290,19 +300,29 @@ public:
 
 	UMantleAnimationDataAsset()
 	{
-		DefaultHighMantleAsset.LowHeight = 50.0f;
-		DefaultHighMantleAsset.LowPlayRate = 1.0f;
-		DefaultHighMantleAsset.LowStartPosition = 0.5f;
-		DefaultHighMantleAsset.HighHeight = 100.0f;
-		DefaultHighMantleAsset.HighPlayRate = 1.0f;
-		DefaultHighMantleAsset.HighStartPosition = 0.0f;
+		HighMantleAsset.StartingOffset = FVector(0.f, 65.0f, 100.0f);
+		HighMantleAsset.LowHeight = 50.0f;
+		HighMantleAsset.LowPlayRate = 1.0f;
+		HighMantleAsset.LowStartPosition = 0.5f;
+		HighMantleAsset.HighHeight = 100.0f;
+		HighMantleAsset.HighPlayRate = 1.0f;
+		HighMantleAsset.HighStartPosition = 0.0f;
 
-		DefaultLowMantleAsset.LowHeight = 125.0f;
-		DefaultLowMantleAsset.LowPlayRate = 1.2f;
-		DefaultLowMantleAsset.LowStartPosition = 0.6f;
-		DefaultLowMantleAsset.HighHeight = 200.0f;
-		DefaultLowMantleAsset.HighPlayRate = 1.2f;
-		DefaultLowMantleAsset.HighStartPosition = 0.0f;
+		LowMantleAsset.StartingOffset = FVector(0.f, 65.0f, 200.0f);
+		LowMantleAsset.LowHeight = 125.0f;
+		LowMantleAsset.LowPlayRate = 1.2f;
+		LowMantleAsset.LowStartPosition = 0.6f;
+		LowMantleAsset.HighHeight = 200.0f;
+		LowMantleAsset.HighPlayRate = 1.2f;
+		LowMantleAsset.HighStartPosition = 0.0f;
+
+		//FallingMantleAsset.StartingOffset = FVector(0.f, 65.0f, 200.0f);
+		//FallingMantleAsset.LowHeight = 125.0f;
+		//FallingMantleAsset.LowPlayRate = 1.2f;
+		//FallingMantleAsset.LowStartPosition = 0.6f;
+		//FallingMantleAsset.HighHeight = 200.0f;
+		//FallingMantleAsset.HighPlayRate = 1.2f;
+		//FallingMantleAsset.HighStartPosition = 0.0f;
 
 		// FallingMantle
 		FallingTraceSettings.MaxLedgeHeight = 150.f;

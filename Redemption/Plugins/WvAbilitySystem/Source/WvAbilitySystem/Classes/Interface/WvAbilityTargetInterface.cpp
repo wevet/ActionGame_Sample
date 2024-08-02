@@ -98,6 +98,11 @@ bool IWvAbilityTargetInterface::IsInBattled() const
 	return false;
 }
 
+bool IWvAbilityTargetInterface::IsFreezing() const
+{
+	return false;
+}
+
 const bool IWvAbilityTargetInterface::CanAttack()
 {
 	return true;

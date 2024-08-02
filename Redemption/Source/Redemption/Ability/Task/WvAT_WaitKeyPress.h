@@ -32,6 +32,7 @@ public:
 	void PluralInputOnCallback(FGameplayTag GameplayTag, bool IsPressed);
 
 	virtual void Activate() override;
+	virtual void BeginDestroy() override;
 
 protected:
 

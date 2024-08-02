@@ -10,6 +10,8 @@
 #include "Character/BaseCharacter.h"
 #include "Ability/WvAbilitySystemComponent.h"
 #include "Component/WvCharacterMovementComponent.h"
+#include "Game/WvGameInstance.h"
+#include "Misc/WvCommonUtils.h"
 
 #include "Components/SkeletalMeshComponent.h"
 #include "Components/CapsuleComponent.h"
@@ -100,8 +102,6 @@ void UClimbingComponent::BeginPlay()
 		}
 	}
 
-	// @NOTE
-	// I'll disable tick once the load seems too high.
 	bOwnerPlayerController = bool(Cast<APlayerController>(Character->GetController()));
 	Super::SetComponentTickEnabled(bOwnerPlayerController);
 
@@ -122,6 +122,8 @@ void UClimbingComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	QTEWidgetComponent.Reset();
 	LadderComponent.Reset();
 	TargetActorPoint = nullptr;
+
+	ClimbingCurveDAInstance = nullptr;
 	Super::EndPlay(EndPlayReason);
 }
 
@@ -3273,15 +3275,15 @@ FTransform UClimbingComponent::SelectTransformInterpolationCurve(const float Alp
 		return UKismetMathLibrary::TEase(A, B, Alpha, EEasingFunc::EaseInOut, 2.0f);
 	}
 
-	if (!IsValid(ClimbingCurveDataAsset))
+	if (!IsValid(ClimbingCurveDAInstance))
 		return FTransform::Identity;
 
 	const bool bInMantling = CharacterMovementComponent->IsMantling();
 	if (bStartMantle)
 	{
-		if (IsValid(ClimbingCurveDataAsset->MantleCurve))
+		if (IsValid(ClimbingCurveDAInstance->MantleCurve))
 		{
-			const FVector CurveVal = ClimbingCurveDataAsset->MantleCurve->GetVectorValue(Alpha);
+			const FVector CurveVal = ClimbingCurveDAInstance->MantleCurve->GetVectorValue(Alpha);
 			const float Value = bCachedFreeHang ? CurveVal.Z : CurveVal.X;
 			return ExtractedTransformInterpolation(A, B, Value, Value, Value, Value, Value, true, false, -90.0f);
 		}
@@ -3303,9 +3305,9 @@ FTransform UClimbingComponent::SelectTransformInterpolationCurve(const float Alp
 	break;
 	case EClimbActionType::ShortMove:
 	{
-		if (IsValid(ClimbingCurveDataAsset->ShortMoveInterpCurve))
+		if (IsValid(ClimbingCurveDAInstance->ShortMoveInterpCurve))
 		{
-			const FVector CurveVal = ClimbingCurveDataAsset->ShortMoveInterpCurve->GetVectorValue(Alpha);
+			const FVector CurveVal = ClimbingCurveDAInstance->ShortMoveInterpCurve->GetVectorValue(Alpha);
 			return ExtractedTransformInterpolation(A, B, CurveVal.X, CurveVal.Y, CurveVal.Z, Alpha, Alpha, true, false, -90.0f);
 		}
 	}
@@ -3314,18 +3316,18 @@ FTransform UClimbingComponent::SelectTransformInterpolationCurve(const float Alp
 	{
 		if (bFreeHang)
 		{
-			if (IsValid(ClimbingCurveDataAsset->CornerOuterFH_Curve))
+			if (IsValid(ClimbingCurveDAInstance->CornerOuterFH_Curve))
 			{
-				const FVector CurveVal = ClimbingCurveDataAsset->CornerOuterFH_Curve->GetVectorValue(Alpha);
+				const FVector CurveVal = ClimbingCurveDAInstance->CornerOuterFH_Curve->GetVectorValue(Alpha);
 				return ExtractedTransformInterpolation(A, B, CurveVal.Y, CurveVal.X, CurveVal.Z, CurveVal.X, Alpha, true, false, -90.0f);
 			}
 		}
 		else
 		{
-			if (IsValid(ClimbingCurveDataAsset->CornerOuterCurve) && IsValid(ClimbingCurveDataAsset->RotationCurves))
+			if (IsValid(ClimbingCurveDAInstance->CornerOuterCurve) && IsValid(ClimbingCurveDAInstance->RotationCurves))
 			{
-				const FVector CurveVal = ClimbingCurveDataAsset->CornerOuterCurve->GetVectorValue(Alpha);
-				const FVector RotationVal = ClimbingCurveDataAsset->RotationCurves->GetVectorValue(Alpha);
+				const FVector CurveVal = ClimbingCurveDAInstance->CornerOuterCurve->GetVectorValue(Alpha);
+				const FVector RotationVal = ClimbingCurveDAInstance->RotationCurves->GetVectorValue(Alpha);
 				return ExtractedTransformInterpolation(A, B, CurveVal.X, CurveVal.Y, CurveVal.Z, RotationVal.X, Alpha, true, false, -90.0f);
 			}
 		}
@@ -3333,10 +3335,10 @@ FTransform UClimbingComponent::SelectTransformInterpolationCurve(const float Alp
 	break;
 	case EClimbActionType::CornerInner:
 	{
-		if (IsValid(ClimbingCurveDataAsset->CornerInnerCurve) && IsValid(ClimbingCurveDataAsset->RotationCurves))
+		if (IsValid(ClimbingCurveDAInstance->CornerInnerCurve) && IsValid(ClimbingCurveDAInstance->RotationCurves))
 		{
-			const FVector CurveVal = ClimbingCurveDataAsset->CornerInnerCurve->GetVectorValue(Alpha);
-			const FVector RotationVal = ClimbingCurveDataAsset->RotationCurves->GetVectorValue(Alpha);
+			const FVector CurveVal = ClimbingCurveDAInstance->CornerInnerCurve->GetVectorValue(Alpha);
+			const FVector RotationVal = ClimbingCurveDAInstance->RotationCurves->GetVectorValue(Alpha);
 			return ExtractedTransformInterpolation(A, B, CurveVal.Y, CurveVal.X, CurveVal.Z, RotationVal.Y, Alpha, true, false, -90.0f);
 		}
 	}
@@ -3345,7 +3347,7 @@ FTransform UClimbingComponent::SelectTransformInterpolationCurve(const float Alp
 	{
 		if (bCachedFreeHang)
 		{
-			if (IsValid(ClimbingCurveDataAsset->RotationCurves))
+			if (IsValid(ClimbingCurveDAInstance->RotationCurves))
 			{
 				const FClimbingCurveData X = FindClimbingCurve(Extract_Root_Loc_X);
 				const FClimbingCurveData Y = FindClimbingCurve(Extract_Root_Loc_Y);
@@ -3359,7 +3361,7 @@ FTransform UClimbingComponent::SelectTransformInterpolationCurve(const float Alp
 				const FRotator FromRot = FRotator(A.GetRotation());
 				const FRotator ToRot{ FromRot.Pitch, FromRot.Yaw - YawValue, FromRot.Roll };
 
-				const FVector RotationCurve = ClimbingCurveDataAsset->RotationCurves->GetVectorValue(Alpha);
+				const FVector RotationCurve = ClimbingCurveDAInstance->RotationCurves->GetVectorValue(Alpha);
 				const FRotator InterpRot = UKismetMathLibrary::RLerp(ToRot, FRotator(B.GetRotation()), RotationCurve.Z, true);
 				const FTransform Result{ InterpRot, CalcTransform.GetLocation(), FVector::OneVector };
 				return Result;
@@ -3367,13 +3369,13 @@ FTransform UClimbingComponent::SelectTransformInterpolationCurve(const float Alp
 		}
 		else
 		{
-			if (IsValid(ClimbingCurveDataAsset->Turn180TransitionCurve))
+			if (IsValid(ClimbingCurveDAInstance->Turn180TransitionCurve))
 			{
 				const float CalcAlphaA = Alpha >= 0.6f ? UKismetMathLibrary::MapRangeClamped(Alpha, 0.6f, 1.0f, 0.0f, 1.0f) : 0.0f;
 				const float CalcAlphaB = Alpha >= 0.5f ? UKismetMathLibrary::MapRangeClamped(Alpha, 0.5f, 1.0f, 0.0f, 1.0f) : 0.0f;
 				const float Z = FMath::Clamp(CalcAlphaA * 1.25f, 0.0f, 1.0f);
 				const FTransform CalcTransform = ExtractedTransformInterpolation(A, B, CalcAlphaB, CalcAlphaB, Z, CalcAlphaB, CalcAlphaB, true, false, -90.0f);
-				const FVector RotationCurve = ClimbingCurveDataAsset->Turn180TransitionCurve->GetVectorValue(Alpha);
+				const FVector RotationCurve = ClimbingCurveDAInstance->Turn180TransitionCurve->GetVectorValue(Alpha);
 				return ExtractedTransformInterpolation(A, CalcTransform, RotationCurve.X, RotationCurve.Y, RotationCurve.Z, Alpha, Alpha, true, false, -90.0f);
 			}
 
@@ -3407,9 +3409,9 @@ FTransform UClimbingComponent::SelectTransformInterpolationCurve(const float Alp
 	break;
 	case EClimbActionType::ForwardMove:
 	{
-		if (IsValid(ClimbingCurveDataAsset->ForwardMoveCurve))
+		if (IsValid(ClimbingCurveDAInstance->ForwardMoveCurve))
 		{
-			const FVector CurveVal = ClimbingCurveDataAsset->ForwardMoveCurve->GetVectorValue(Alpha);
+			const FVector CurveVal = ClimbingCurveDAInstance->ForwardMoveCurve->GetVectorValue(Alpha);
 			return ExtractedTransformInterpolation(A, B, CurveVal.Y, CurveVal.X, CurveVal.Z, CurveVal.Z, CurveVal.Z, true, false, -90.0f);
 		}
 	}
@@ -5526,6 +5528,35 @@ void UClimbingComponent::ClimbingActionTimer_Callback()
 	}
 #endif
 
+}
+
+void UClimbingComponent::RequestAsyncLoad()
+{
+	if (!ClimbingCurveDA.IsNull())
+	{
+		FStreamableManager& StreamableManager = UWvGameInstance::GetStreamableManager();
+		const FSoftObjectPath ObjectPath = ClimbingCurveDA.ToSoftObjectPath();
+		ClimbingStreamableHandle = StreamableManager.RequestAsyncLoad(ObjectPath, FStreamableDelegate::CreateUObject(this, &ThisClass::OnDataAssetLoadComplete));
+	}
+}
+
+void UClimbingComponent::OnDataAssetLoadComplete()
+{
+	OnLoadDA();
+	ClimbingStreamableHandle.Reset();
+	//UE_LOG(LogTemp, Log, TEXT("[%s]"), *FString(__FUNCTION__));
+}
+
+void UClimbingComponent::OnLoadDA()
+{
+	bool bIsResult = false;
+	do
+	{
+		ClimbingCurveDAInstance = ClimbingCurveDA.LoadSynchronous();
+		bIsResult = (IsValid(ClimbingCurveDAInstance));
+
+	} while (!bIsResult);
+	UE_LOG(LogTemp, Log, TEXT("Complete %s => [%s]"), *GetNameSafe(ClimbingCurveDAInstance), *FString(__FUNCTION__));
 }
 
 

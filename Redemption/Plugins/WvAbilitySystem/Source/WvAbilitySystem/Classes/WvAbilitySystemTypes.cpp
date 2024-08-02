@@ -582,6 +582,7 @@ FFinisherAnimationContainer UFinisherDataAsset::FindContainer(const FGameplayTag
 }
 
 
+#pragma region CloseCombat
 UAnimMontage* FCloseCombatAnimation::GetComboMatchMontage(const FGameplayTag ComboTag) const
 {
 	if (!ComboTag.IsValid())
@@ -609,8 +610,11 @@ FCloseCombatAnimation UCloseCombatAnimationDataAsset::GetChooseCombatAnimation(c
 	{
 		return ComboAnimations[Index];
 	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("not valid index => %d, returned default ComboAnimationData"), Index);
+	}
 
-	UE_LOG(LogTemp, Warning, TEXT("not valid index => %d, returned default ComboAnimationData"), Index);
 	return ComboAnimations[0];
 }
 
@@ -619,9 +623,16 @@ void UCloseCombatAnimationDataAsset::ModifyCombatAnimationIndex(int32& OutIndex)
 	OutIndex = FMath::RandRange(0, ComboAnimations.Num() - 1);
 }
 
+int32 UCloseCombatAnimationDataAsset::CloseCombatMaxComboCount(const int32 Index) const
+{
+	const FCloseCombatAnimation AnimData = GetChooseCombatAnimation(Index);
+	return AnimData.TagToComboMontageMap.Num();
+}
+
 UAnimMontage* UCloseCombatAnimationDataAsset::GetAnimMontage(const int32 Index, const FGameplayTag Tag) const
 {
 	const FCloseCombatAnimation AnimData = GetChooseCombatAnimation(Index);
 	return AnimData.GetComboMatchMontage(Tag);
 }
+#pragma endregion
 

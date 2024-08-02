@@ -152,5 +152,8 @@ REDEMPTION_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Vehicle_State_Drive); // curre
 */
 #define K_PLAYER_SLOT_NAME TEXT("PlayerID")
 
+#define FPS_60 1.0/60
+
+#define K_LOCK_ON_WIDGET_TAG FName("TargetSystem.LockOnWidget")
 
 

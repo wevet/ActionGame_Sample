@@ -22,6 +22,7 @@
 #include "GameExtension.h"
 #include "Climbing/ClimbingComponent.h"
 #include "Climbing/LadderComponent.h"
+#include "Component/AsyncComponentInterface.h"
 
 #include "Components/CapsuleComponent.h"
 #include "Components/InputComponent.h"
@@ -163,6 +164,10 @@ ABaseCharacter::ABaseCharacter(const FObjectInitializer& ObjectInitializer)
 	PawnNoiseEmitterComponent = ObjectInitializer.CreateDefaultSubobject<UPawnNoiseEmitterComponent>(this, TEXT("PawnNoiseEmitterComponent"));
 	PawnNoiseEmitterComponent->bAutoActivate = 1;
 
+	// custom climbing
+	ClimbingComponent = ObjectInitializer.CreateDefaultSubobject<UClimbingComponent>(this, TEXT("ClimbingComponent"));
+	ClimbingComponent->bAutoActivate = 1;
+
 	// item attach helper
 	HeldObjectRoot = ObjectInitializer.CreateDefaultSubobject<USceneComponent>(this, TEXT("HeldObjectRoot"));
 	HeldObjectRoot->bAutoActivate = 1;
@@ -171,10 +176,14 @@ ABaseCharacter::ABaseCharacter(const FObjectInitializer& ObjectInitializer)
 	MyTeamID = FGenericTeamId(0);
 	CharacterTag = FGameplayTag::RequestGameplayTag(TAG_Character_Default.GetTag().GetTagName());
 
+	GetCapsuleComponent()->SetCollisionResponseToChannel(ECollisionChannel::ECC_Camera, ECollisionResponse::ECR_Block);
+	GetCapsuleComponent()->SetCollisionResponseToChannel(ECollisionChannel::ECC_Visibility, ECollisionResponse::ECR_Block);
 	GetCapsuleComponent()->SetCollisionResponseToChannel(ECollisionChannel::ECC_GameTraceChannel1, ECollisionResponse::ECR_Ignore);
 	GetCapsuleComponent()->SetCollisionResponseToChannel(ECollisionChannel::ECC_GameTraceChannel2, ECollisionResponse::ECR_Ignore);
 	GetCapsuleComponent()->SetCollisionResponseToChannel(ECollisionChannel::ECC_GameTraceChannel3, ECollisionResponse::ECR_Ignore);
 
+	WvMeshComp->SetCollisionResponseToChannel(ECollisionChannel::ECC_Camera, ECollisionResponse::ECR_Block);
+	WvMeshComp->SetCollisionResponseToChannel(ECollisionChannel::ECC_Visibility, ECollisionResponse::ECR_Block);
 	WvMeshComp->SetCollisionResponseToChannel(ECollisionChannel::ECC_GameTraceChannel1, ECollisionResponse::ECR_Ignore);
 	WvMeshComp->SetCollisionResponseToChannel(ECollisionChannel::ECC_GameTraceChannel2, ECollisionResponse::ECR_Ignore);
 	// sets Damage
@@ -192,15 +201,24 @@ void ABaseCharacter::BeginPlay()
 	AnimInstance = Cast<UWvAnimInstance>(GetMesh()->GetAnimInstance());
 
 	USkeletalMeshComponent* SkelMesh = GetMesh();
-	//SkelMesh->PrimaryComponentTick.AddPrerequisite(this, this->PrimaryActorTick);
+	SkelMesh->AddTickPrerequisiteActor(this);
 
 	CombatComponent->AddTickPrerequisiteActor(this);
 	PawnNoiseEmitterComponent->AddTickPrerequisiteActor(this);
+	ItemInventoryComponent->AddTickPrerequisiteActor(this);
+	ClimbingComponent->AddTickPrerequisiteActor(this);
+	PredictionFootIKComponent->AddTickPrerequisiteActor(this);
+	HeldObjectRoot->AddTickPrerequisiteActor(this);
+	WeaknessComponent->AddTickPrerequisiteActor(this);
+	StatusComponent->AddTickPrerequisiteActor(this);
+	MotionWarpingComponent->AddTickPrerequisiteActor(this);
+	CharacterTrajectoryComponent->AddTickPrerequisiteActor(this);
 
+	// @TODO
+	// async function
 	UWvCharacterMovementComponent* CMC = GetWvCharacterMovementComponent();
-	CMC->OnWallClimbingBeginDelegate.AddDynamic(this, &ABaseCharacter::OnWallClimbingBegin_Callback);
-	CMC->OnWallClimbingEndDelegate.AddDynamic(this, &ABaseCharacter::OnWallClimbingEnd_Callback);
-	//CMC->AddTickPrerequisiteActor(this);
+	CMC->OnWallClimbingBeginDelegate.AddDynamic(this, &ThisClass::OnWallClimbingBegin_Callback);
+	CMC->OnWallClimbingEndDelegate.AddDynamic(this, &ThisClass::OnWallClimbingEnd_Callback);
 
 	LocomotionComponent->OnRotationModeChangeDelegate.AddDynamic(this, &ThisClass::OnRoationChange_Callback);
 	LocomotionComponent->OnGaitChangeDelegate.AddDynamic(this, &ThisClass::OnGaitChange_Callback);
@@ -210,6 +228,10 @@ void ABaseCharacter::BeginPlay()
 	{
 		AIC->GetMissionComponent()->SetSendMissionData(SendMissionData);
 	}
+
+	CMC->MaxStepHeight = GetDistanceFromToeToKnee();
+	CMC->SetWalkableFloorAngle(50.0f);
+
 	RequestAsyncLoad();
 
 }
@@ -303,8 +325,8 @@ void ABaseCharacter::Tick(float DeltaTime)
 	{
 		LocomotionComponent->DoWhileRagdolling();
 	}
-	//LocomotionComponent->DoTick(DeltaTime);
 }
+
 
 void ABaseCharacter::OnStartCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust)
 {
@@ -570,9 +592,14 @@ bool ABaseCharacter::IsTargetable() const
 
 bool ABaseCharacter::IsInBattled() const
 {
-	if (IWvAbilityTargetInterface* Interface = Cast<IWvAbilityTargetInterface>(GetController()))
+	//if (IWvAbilityTargetInterface* Interface = Cast<IWvAbilityTargetInterface>(GetController()))
+	//{
+	//	Interface->IsInBattled();
+	//}
+
+	if (WvAbilitySystemComponent)
 	{
-		Interface->IsInBattled();
+		return WvAbilitySystemComponent->HasMatchingGameplayTag(TAG_Character_TargetLocking);
 	}
 	return false;
 }
@@ -611,6 +638,25 @@ void ABaseCharacter::UnFreeze()
 	WvAbilitySystemComponent->RemoveGameplayTag(TAG_Character_ActionDash_Forbid, 1);
 	WvAbilitySystemComponent->RemoveGameplayTag(TAG_Character_ActionCrouch_Forbid, 1);
 	WvAbilitySystemComponent->RemoveGameplayTag(TAG_Character_TargetLock_Forbid, 1);
+}
+
+bool ABaseCharacter::IsFreezing() const
+{
+	if (WvAbilitySystemComponent)
+	{
+		FGameplayTagContainer Container;
+		Container.AddTag(TAG_Locomotion_ForbidMovement);
+		Container.AddTag(TAG_Locomotion_ForbidClimbing);
+		Container.AddTag(TAG_Locomotion_ForbidMantling);
+		Container.AddTag(TAG_Locomotion_ForbidJump);
+		Container.AddTag(TAG_Character_ActionMelee_Forbid);
+		Container.AddTag(TAG_Character_ActionJump_Forbid);
+		Container.AddTag(TAG_Character_ActionDash_Forbid);
+		Container.AddTag(TAG_Character_ActionCrouch_Forbid);
+		Container.AddTag(TAG_Character_TargetLock_Forbid);
+		return WvAbilitySystemComponent->HasAllMatchingGameplayTags(Container);
+	}
+	return false;
 }
 
 void ABaseCharacter::DoAttack()
@@ -745,6 +791,11 @@ UWeaknessComponent* ABaseCharacter::GetWeaknessComponent() const
 	return WeaknessComponent;
 }
 
+UClimbingComponent* ABaseCharacter::GetClimbingComponent() const
+{
+	return ClimbingComponent;
+}
+
 USceneComponent* ABaseCharacter::GetHeldObjectRoot() const
 {
 	return HeldObjectRoot;
@@ -802,11 +853,10 @@ void ABaseCharacter::Jump()
 				{
 					case CUSTOM_MOVE_Climbing:
 					{
-						UClimbingComponent* ClimbingComponent = Cast<UClimbingComponent>(GetComponentByClass(UClimbingComponent::StaticClass()));
-						if (ClimbingComponent)
-						{
-							ClimbingComponent->SetJumpInputPressed(true);
-						}
+						//if (ClimbingComponent)
+						//{
+						//	ClimbingComponent->SetJumpInputPressed(true);
+						//}
 					}
 					break;
 					case CUSTOM_MOVE_WallClimbing:
@@ -833,12 +883,33 @@ void ABaseCharacter::Jump()
 			}
 			break;
 		}
+
+		const auto EssencialVariables = LocomotionComponent->GetLocomotionEssencialVariables();
+		switch (EssencialVariables.LSMovementMode)
+		{
+			case ELSMovementMode::Grounded:
+			case ELSMovementMode::Falling:
+			case ELSMovementMode::Climbing:
+			{
+				ClimbingComponent->SetJumpInputPressed(true);
+			}
+			break;
+		}
 	}
 }
 
 void ABaseCharacter::StopJumping()
 {
 	Super::StopJumping();
+
+	ClimbingComponent->SetJumpInputPressed(false);
+
+
+	ULadderComponent* LadderComponent = Cast<ULadderComponent>(GetComponentByClass(ULadderComponent::StaticClass()));
+	if (LadderComponent)
+	{
+		LadderComponent->SetJumpInputPressed(false);
+	}
 }
 
 void ABaseCharacter::VelocityMovement()
@@ -880,6 +951,9 @@ void ABaseCharacter::StrafeMovement()
 void ABaseCharacter::DoSprinting()
 {
 	LocomotionComponent->SetSprintPressed(true);
+
+	//AbortClimbing();
+	//AbortLaddering();
 }
 
 void ABaseCharacter::DoStopSprinting()
@@ -939,6 +1013,16 @@ void ABaseCharacter::DoStopAiming()
 	}
 }
 
+void ABaseCharacter::DoTargetLockOn()
+{
+	WvAbilitySystemComponent->AddGameplayTag(TAG_Character_TargetLocking, 1);
+}
+
+void ABaseCharacter::DoTargetLockOff()
+{
+	WvAbilitySystemComponent->RemoveGameplayTag(TAG_Character_TargetLocking, 1);
+}
+
 void ABaseCharacter::OnWallClimbingBegin_Callback()
 {
 	UE_LOG(LogTemp, Log, TEXT("Character => %s, function => %s"), *GetName(), *FString(__FUNCTION__));
@@ -992,6 +1076,37 @@ const bool ABaseCharacter::HandleAttackPawnPrepare()
 		return Weapon->HandleAttackPrepare();
 	}
 	return false;
+}
+
+void ABaseCharacter::AbortClimbing()
+{
+	auto CMC = GetWvCharacterMovementComponent();
+	if (CMC)
+	{
+		if (CMC->IsClimbing())
+		{
+			ClimbingComponent->ApplyStopClimbingInput(0.3f, false);
+		}
+		else if (CMC->IsWallClimbing())
+		{
+			CMC->AbortClimbing();
+		}
+	}
+}
+
+void ABaseCharacter::AbortLaddering()
+{
+	auto CMC = GetWvCharacterMovementComponent();
+	if (CMC && CMC->IsLaddering())
+	{
+
+	}
+
+	ULadderComponent* LadderComponent = Cast<ULadderComponent>(GetComponentByClass(ULadderComponent::StaticClass()));
+	if (LadderComponent && LadderComponent->IsLadderState())
+	{
+		LadderComponent->ExitLadderApply();
+	}
 }
 #pragma endregion
 
@@ -1406,6 +1521,11 @@ bool ABaseCharacter::IsHealthHalf() const
 	return StatusComponent->IsHealthHalf();
 }
 
+bool ABaseCharacter::IsMeleePlaying() const
+{
+	return WvAbilitySystemComponent->HasMatchingGameplayTag(TAG_Character_StateMelee);
+}
+
 #pragma region NearlestAction
 /// <summary>
 /// call to melee ability
@@ -1574,7 +1694,7 @@ void ABaseCharacter::BuildFinisherAbility(const FGameplayTag RequireTag)
 		return;
 	}
 
-	auto Target = FindNearlestTarget(FinisherConfig.NearlestDistance, FinisherConfig.AngleThreshold);
+	auto Target = FindNearlestTarget(FinisherConfig.NearlestDistance, FinisherConfig.AngleThreshold, false);
 	if (!Target)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("not found FindNearlestTarget => %s"), *FString(__FUNCTION__));
@@ -1719,20 +1839,32 @@ FRequestAbilityAnimationData ABaseCharacter::GetFinisherAnimationData() const
 #pragma endregion
 
 #pragma region AsyncLoad
-/// <summary>
-/// Finisher Assets & ABP Asyncload
-/// </summary>
 void ABaseCharacter::RequestAsyncLoad()
 {
 	FStreamableManager& StreamableManager = UWvGameInstance::GetStreamableManager();
 
-	if (OverlayAnimInstanceDA.IsValid())
+	auto Components = Game::ComponentExtension::GetComponentsArray<UActorComponent>(this);
+	TArray<IAsyncComponentInterface*> Interfaces;
+	for (UActorComponent* ActComp : Components)
+	{
+		if (IAsyncComponentInterface* Interface = Cast<IAsyncComponentInterface>(ActComp))
+		{
+			Interfaces.Add(Interface);
+		}
+	}
+
+	for (IAsyncComponentInterface* Interface : Interfaces)
+	{
+		Interface->RequestAsyncLoad();
+	}
+
+	if (!OverlayAnimInstanceDA.IsNull())
 	{
 		const FSoftObjectPath ObjectPath = OverlayAnimInstanceDA.ToSoftObjectPath();
 		ABPStreamableHandle = StreamableManager.RequestAsyncLoad(ObjectPath, FStreamableDelegate::CreateUObject(this, &ThisClass::OnABPAnimAssetLoadComplete));
 	}
 
-	if (CloseCombatAnimationDA.IsValid())
+	if (!CloseCombatAnimationDA.IsNull())
 	{
 		const FSoftObjectPath ObjectPath = CloseCombatAnimationDA.ToSoftObjectPath();
 		CCStreamableHandle = StreamableManager.RequestAsyncLoad(ObjectPath, FStreamableDelegate::CreateUObject(this, &ThisClass::OnCloseCombatAnimAssetLoadComplete));
@@ -1766,7 +1898,7 @@ void ABaseCharacter::OnLoadOverlayABP()
 		bIsResult = (IsValid(OverlayAnimDAInstance));
 
 	} while (!bIsResult);
-	UE_LOG(LogTemp, Log, TEXT("Complete OverlayAnimDAInstance => [%s]"), *FString(__FUNCTION__));
+	UE_LOG(LogTemp, Log, TEXT("Complete %s => [%s]"), *GetNameSafe(OverlayAnimDAInstance), *FString(__FUNCTION__));
 }
 
 void ABaseCharacter::OnFinisherAnimAssetLoadComplete()
@@ -1788,7 +1920,7 @@ void ABaseCharacter::OnLoadFinisherAssets()
 				bIsResult = (IsValid(FinisherSender));
 
 			} while (!bIsResult);
-			UE_LOG(LogTemp, Log, TEXT("Complete FinisherSender => [%s]"), *FString(__FUNCTION__));
+			UE_LOG(LogTemp, Log, TEXT("Complete %s => [%s]"), *GetNameSafe(FinisherSender), *FString(__FUNCTION__));
 		}
 	}
 
@@ -1803,7 +1935,7 @@ void ABaseCharacter::OnLoadFinisherAssets()
 				bIsResult = (IsValid(FinisherReceiner));
 
 			} while (!bIsResult);
-			UE_LOG(LogTemp, Log, TEXT("Complete FinisherReceiner => [%s]"), *FString(__FUNCTION__));
+			UE_LOG(LogTemp, Log, TEXT("Complete %s => [%s]"), *GetNameSafe(FinisherReceiner), *FString(__FUNCTION__));
 		}
 	}
 
@@ -1824,7 +1956,7 @@ void ABaseCharacter::OnLoadCloseCombatAssets()
 		bIsResult = (IsValid(CloseCombatAnimationDAInstance));
 
 	} while (!bIsResult);
-	UE_LOG(LogTemp, Log, TEXT("Complete CloseCombatAnimationDAInstance => [%s]"), *FString(__FUNCTION__));
+	UE_LOG(LogTemp, Log, TEXT("Complete %s => [%s]"), *GetNameSafe(CloseCombatAnimationDAInstance), *FString(__FUNCTION__));
 }
 #pragma endregion
 
@@ -1926,13 +2058,24 @@ void ABaseCharacter::EndCinematic()
 
 void ABaseCharacter::ModifyCombatAnimationIndex(int32& OutIndex)
 {
+	if (!IsValid(CloseCombatAnimationDAInstance))
+	{
+		OnLoadCloseCombatAssets();
+	}
+
 	if (IsValid(CloseCombatAnimationDAInstance))
 	{
 		CloseCombatAnimationDAInstance->ModifyCombatAnimationIndex(OutIndex);
-		return;
 	}
+}
 
-	UE_LOG(LogTemp, Error, TEXT("not valid CloseCombatAnimationDAInstance => %s"), *FString(__FUNCTION__));
+int32 ABaseCharacter::CloseCombatMaxComboCount(const int32 Index) const
+{
+	if (IsValid(CloseCombatAnimationDAInstance))
+	{
+		return CloseCombatAnimationDAInstance->CloseCombatMaxComboCount(Index);
+	}
+	return INDEX_NONE;
 }
 
 UAnimMontage* ABaseCharacter::GetCloseCombatAnimMontage(const int32 Index, const FGameplayTag Tag) const
@@ -1944,5 +2087,23 @@ UAnimMontage* ABaseCharacter::GetCloseCombatAnimMontage(const int32 Index, const
 	return nullptr;
 }
 
+void ABaseCharacter::UpdateMontageMatching(const float InPosition)
+{
+	//UE_LOG(LogTemp, Log, TEXT("Ladder Position => %.3f : [%s]"), InPosition, *FString(__FUNCTION__));
+}
+
+void ABaseCharacter::FinishMontageMatching()
+{
+	auto CMC = GetWvCharacterMovementComponent();
+	if (CMC)
+	{
+		CMC->MantleEnd();
+	}
+}
+
+bool ABaseCharacter::HasAccelerating() const
+{
+	return bHasMovementInput;
+}
 
 

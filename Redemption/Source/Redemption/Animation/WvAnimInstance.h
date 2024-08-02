@@ -113,9 +113,17 @@ public:
 	void WakeUpPoseSnapShot();
 
 	// ladder
+	UFUNCTION(BlueprintCallable, Category = "BaseAnimInstance")
 	void UpdateLadderIKData(UPrimitiveComponent* Component, const FClimbingIKData LeftIKHand, const FClimbingIKData RightIKHand, const FClimbingIKData LeftIKFoot, const FClimbingIKData RightIKFoot);
+
+	UFUNCTION(BlueprintCallable, Category = "BaseAnimInstance")
 	void SetBalanceMode(const bool InBalanceMode);
+
+	UFUNCTION(BlueprintCallable, Category = "BaseAnimInstance")
 	void SetBalanceBlendParameter(const float InBlendOverlay, const float InBlendWeight);
+
+	UFUNCTION(BlueprintCallable, Category = "BaseAnimInstance")
+	void ApplyJumpSequence(const bool bIsStartSeq, const float NormalizeTime, const FJumpProjection JumpProjection, const FJumpProjection JumpSeqAnimsValues);
 
 protected:
 	UPROPERTY()
@@ -195,6 +203,9 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
 	bool bWasTargetLock = false;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
+	bool bIsInjured = false;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
 	bool bWasBulletWeaponEquip = false;

@@ -49,6 +49,9 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FName IsCloseCombat = FName(TEXT("IsCloseCombat"));
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FName PredictionKeyName = FName(TEXT("Prediction"));
 };
 
 USTRUCT(BlueprintType)
@@ -110,6 +113,7 @@ struct REDEMPTION_API FAICloseCombatData
 public:
 	FAICloseCombatData();
 	void Initialize();
+
 	void Deinitialize();
 	bool CanAttack() const;
 
@@ -121,6 +125,7 @@ public:
 
 	bool IsPlaying() const { return bIsPlaying; }
 
+	void SetAttackComboCount(const int32 MaxComboCount);
 	void SetComboTypeIndex(const int32 InComboTypeIndex);
 	int32 GetComboTypeIndex() const { return ComboTypeIndex; }
 

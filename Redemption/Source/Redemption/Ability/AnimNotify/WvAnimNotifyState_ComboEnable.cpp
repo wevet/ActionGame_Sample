@@ -41,6 +41,11 @@ void UWvAnimNotifyState_ComboEnable::AbilityNotifyBegin(USkeletalMeshComponent* 
 	CurTime = 0.f;
 	TriggerTag = GetInputCombo(AbilityData);
 
+	if (Ability && Ability->HasComboTrigger())
+	{
+		UE_LOG(LogTemp, Log, TEXT("playing combo melee Tag => %s, [%s]"), *Ability->GetComboTriggerTag().GetTagName().ToString(), *FString(__FUNCTION__));
+	}
+
 	TArray<FGameplayTag> TagArray;
 	OtherComboDA.GenerateKeyArray(TagArray);
 	TagArray.Add(TriggerTag);
@@ -59,7 +64,7 @@ void UWvAnimNotifyState_ComboEnable::AbilityNotifyBegin(USkeletalMeshComponent* 
 	const FGameplayTagContainer EventTagContainer = FGameplayTagContainer::CreateFromArray(TagArray);
 	IsImmediatelyExecute = (ExecuteTime <= 0.f);
 	WaitReleaseTask = UWvAT_WaitKeyPress::WaitKeyPress(Ability, FName(TEXT("WaitKeyInput_ComboEnable")), EventTagContainer);
-	WaitReleaseTask->OnActive.__Internal_AddDynamic(this, &UWvAnimNotifyState_ComboEnable::OnPressed, FName(TEXT("OnPressed")));
+	WaitReleaseTask->OnActive.__Internal_AddDynamic(this, &ThisClass::OnPressed, FName(TEXT("OnPressed")));
 	WaitReleaseTask->ReadyForActivation();
 
 
@@ -149,8 +154,6 @@ void UWvAnimNotifyState_ComboEnable::PressedToCombo()
 	bool Result = false;
 	UWvAbilityDataAsset* NextDA = nullptr;
 
-	UE_LOG(LogTemp, Log, TEXT("LastPressedTag => %s, TriggerTag => %s"), *LastPressedTag.GetTagName().ToString(), *TriggerTag.GetTagName().ToString());
-
 	if (LastPressedTag == TriggerTag)
 	{
 		NextDA = NextAbilityDA;
@@ -158,13 +161,20 @@ void UWvAnimNotifyState_ComboEnable::PressedToCombo()
 	}
 	else
 	{
+		UE_LOG(LogTemp, Log, TEXT("diffrece Tag : [LastPressedTag => %s, TriggerTag => %s]"), 
+			*LastPressedTag.GetTagName().ToString(), *TriggerTag.GetTagName().ToString());
+
 		auto FindRef = OtherComboDA.FindRef(LastPressedTag);
 		if (FindRef)
 		{
 			NextDA = FindRef;
 			Result = AbilitySystemComponent->TryActivateAbilityByDataAsset(FindRef);
 		}
+
+		//UE_LOG(LogTemp, Log, TEXT("FindRef => %s"), *GetNameSafe(FindRef));
 	}
+
+	const auto TagName = LastPressedTag.GetTagName().ToString();
 
 	if (Result)
 	{
@@ -172,16 +182,31 @@ void UWvAnimNotifyState_ComboEnable::PressedToCombo()
 		if (CurrentAbility)
 		{
 			CurrentAbility->SetComboTriggerTag(LastPressedTag);
-			UE_LOG(LogTemp, Log, TEXT("LastPressedTag => %s, function => %s"), *LastPressedTag.GetTagName().ToString(), *FString(__FUNCTION__));
+			UE_LOG(LogTemp, Log, TEXT("%s : [LastPressedTag => %s, function => %s]"), *GetNameSafe(CurrentAbility), *TagName, *FString(__FUNCTION__));
 		}
 		else
 		{
-			UE_LOG(LogTemp, Warning, TEXT("LastPressedTag => %s, function => %s"), *LastPressedTag.GetTagName().ToString(), *FString(__FUNCTION__));
+			UE_LOG(LogTemp, Warning, TEXT("nullptr CurrentAbility : [LastPressedTag => %s, function => %s]"), *TagName, *FString(__FUNCTION__));
 		}
 	}
 	else
 	{
-		UE_LOG(LogTemp, Error, TEXT("LastPressedTag => %s, function => %s"), *LastPressedTag.GetTagName().ToString(), *FString(__FUNCTION__));
+		UE_LOG(LogTemp, Error, TEXT("AbilityCall Failer : [LastPressedTag => %s, function => %s]"), *TagName, *FString(__FUNCTION__));
+	}
+}
+
+
+/// <summary>
+/// for ai
+/// </summary>
+void UWvAnimNotifyState_ComboEnable::HandleAIRemoveDelegate()
+{
+	if (AWvAIController* AIC = Cast<AWvAIController>(AbilitySystemComponent->GetAvatarController()))
+	{
+		//if (AIC->OnInputEventGameplayTagTrigger.IsBound())
+		//{
+		//	AIC->OnInputEventGameplayTagTrigger.RemoveDynamic(this, &ThisClass::OnPressed);
+		//}
 	}
 }
 

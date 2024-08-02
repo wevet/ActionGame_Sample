@@ -76,6 +76,7 @@ class UInventoryComponent;
 class UCombatComponent;
 class UStatusComponent;
 class UWeaknessComponent;
+class UClimbingComponent;
 class UWvAnimInstance;
 
 
@@ -146,6 +147,7 @@ public:
 
 	virtual void Freeze() override;
 	virtual void UnFreeze() override;
+	virtual bool IsFreezing() const override;
 
 	virtual void DoAttack() override;
 	virtual void DoResumeAttack() override;
@@ -204,6 +206,9 @@ public:
 	class UWeaknessComponent* GetWeaknessComponent() const;
 
 	UFUNCTION(BlueprintCallable, Category = Components)
+	class UClimbingComponent* GetClimbingComponent() const;
+
+	UFUNCTION(BlueprintCallable, Category = Components)
 	USceneComponent* GetHeldObjectRoot() const;
 
 	UFUNCTION(BlueprintCallable, Category = Movement)
@@ -234,6 +239,9 @@ public:
 
 	void DoStartAiming();
 	void DoStopAiming();
+
+	void AbortClimbing();
+	void AbortLaddering();
 
 	UFUNCTION(BlueprintCallable, Category = Action)
 	void HandleCrouchAction(const bool bCanCrouch);
@@ -279,9 +287,6 @@ public:
 
 	FVector GetPredictionStopLocation(const FVector CurrentLocation) const;
 
-	/// <summary>
-	/// Async Assets load
-	/// </summary>
 	void RequestAsyncLoad();
 
 	// leader setting
@@ -304,9 +309,13 @@ public:
 	void StartRVOAvoidance();
 	void StopRVOAvoidance();
 
+	void DoTargetLockOn();
+	void DoTargetLockOff();
+
 	void BeginCinematic();
 	void EndCinematic();
 
+	bool IsMeleePlaying() const;
 
 	float GetHealthToWidget() const;
 	bool IsHealthHalf() const;
@@ -318,7 +327,18 @@ public:
 	virtual void RegisterMission_Callback(const int32 MissionIndex) {};
 
 	void ModifyCombatAnimationIndex(int32& OutIndex);
+	int32 CloseCombatMaxComboCount(const int32 Index) const;
 	UAnimMontage* GetCloseCombatAnimMontage(const int32 Index, const FGameplayTag Tag) const;
+
+	// call to BP_Matched_Montage
+	UFUNCTION(BlueprintCallable, Category = MontageMatching)
+	void UpdateMontageMatching(const float InPosition);
+
+	// call to BP_Matched_Montage
+	UFUNCTION(BlueprintCallable, Category = MontageMatching)
+	void FinishMontageMatching();
+
+	bool HasAccelerating() const;
 
 #pragma region NearlestAction
 	void CalcurateNearlestTarget(const float SyncPointWeight);
@@ -370,6 +390,9 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Component, meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<class UPawnNoiseEmitterComponent> PawnNoiseEmitterComponent;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Component, meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<class UClimbingComponent> ClimbingComponent;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Component, meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<class USceneComponent> HeldObjectRoot;

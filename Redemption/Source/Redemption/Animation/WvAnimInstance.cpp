@@ -6,6 +6,7 @@
 #include "Component/WvCharacterMovementComponent.h"
 #include "Component/InventoryComponent.h"
 #include "WvAbilitySystemTypes.h"
+#include "Misc/WvCommonUtils.h"
 
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemGlobals.h"
@@ -142,9 +143,10 @@ void UWvAnimInstance::NativeThreadSafeUpdateAnimation(float DeltaSeconds)
 			bWasBulletWeaponEquip = Character->GetInventoryComponent()->CanAimingWeapon();
 		}
 
-		// @NOTE
-		// not melee attack & not gun equiped & target lock on
-		bWasTargetLock = Character->IsTargetLock() && !bIsStateMelee && !bWasBulletWeaponEquip;
+		bIsInjured = Character->IsHealthHalf();
+
+		// @NOTE not melee attack & not gun equiped & target lock on
+		bWasTargetLock = bIsInjured ? false : Character->IsTargetLock() && !bWasBulletWeaponEquip;//!bIsStateMelee && 
 	}
 
 	if (IsValid(CharacterMovementComponent))
@@ -252,13 +254,12 @@ void UWvAnimInstance::CalculateGaitValue()
 
 void UWvAnimInstance::CalculateAimOffset()
 {
-	const float DeltaSeconds = GetWorld()->GetDeltaSeconds();
-	constexpr float DefaultInterpSpeed = 4.0f;
-
 	switch (LSRotationMode)
 	{
 		case ELSRotationMode::VelocityDirection:
 		{
+			const float DeltaSeconds = GetWorld()->GetDeltaSeconds();
+			constexpr float DefaultInterpSpeed = 4.0f;
 			AimOffset = UKismetMathLibrary::Vector2DInterpTo(AimOffset, FVector2D::ZeroVector, DeltaSeconds, DefaultInterpSpeed);
 		}
 		break;
@@ -541,6 +542,11 @@ void UWvAnimInstance::SetBalanceMode(const bool InBalanceMode)
 }
 
 void UWvAnimInstance::SetBalanceBlendParameter(const float InBlendOverlay, const float InBlendWeight)
+{
+
+}
+
+void UWvAnimInstance::ApplyJumpSequence(const bool bIsStartSeq, const float NormalizeTime, const FJumpProjection JumpProjection, const FJumpProjection JumpSeqAnimsValues)
 {
 
 }

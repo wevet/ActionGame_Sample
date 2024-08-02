@@ -39,7 +39,7 @@ void UWvAbility_Finisher::ActivateAbility(const FGameplayAbilitySpecHandle Handl
 		return;
 	}
 
-	FRequestAbilityAnimationData AnimationData = Character->GetFinisherAnimationData();
+	const FRequestAbilityAnimationData AnimationData = Character->GetFinisherAnimationData();
 
 	if (!IsValid(AnimationData.AnimMontage))
 	{
@@ -79,8 +79,7 @@ void UWvAbility_Finisher::ActivateAbility(const FGameplayAbilitySpecHandle Handl
 		AnimationData.PlayRate,
 		AnimationData.TimeToStartMontageAt,
 		FName("Default"),
-		true,
-		1.0f);
+		true, 1.0f);
 
 	MontageTask->OnCancelled.AddDynamic(this, &UWvAbility_Finisher::OnPlayMontageCompleted_Event);
 	MontageTask->OnInterrupted.AddDynamic(this, &UWvAbility_Finisher::OnPlayMontageCompleted_Event);

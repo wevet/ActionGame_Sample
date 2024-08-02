@@ -241,7 +241,13 @@ void FAICloseCombatData::Initialize()
 	}
 
 	UE_LOG(LogWvAI, Warning, TEXT("[%s]"), *FString(__FUNCTION__));
-	UE_LOG(LogWvAI, Verbose, TEXT("CurAttackComboCount => %d, AttackComboCount => %d"), CurAttackComboCount, AttackComboCount);
+}
+
+void FAICloseCombatData::SetAttackComboCount(const int32 MaxComboCount)
+{
+	AttackComboCount = FMath::RandRange(0, MaxComboCount - 1);
+
+	UE_LOG(LogWvAI, Log, TEXT("[%s] => %d/%d"), *FString(__FUNCTION__), CurAttackComboCount, AttackComboCount);
 }
 
 void FAICloseCombatData::Deinitialize()
@@ -303,7 +309,8 @@ void FAICloseCombatData::Internal_Update()
 	}
 
 	//CurAttackComboCount = FMath::Clamp(CurAttackComboCount, 0, AttackComboCount);
-	UE_LOG(LogWvAI, Verbose, TEXT("CurAttackComboCount => %d, AttackComboCount => %d"), CurAttackComboCount, AttackComboCount);
+	//UE_LOG(LogWvAI, Verbose, TEXT("CurAttackComboCount => %d, AttackComboCount => %d"), CurAttackComboCount, AttackComboCount);
+	UE_LOG(LogWvAI, Log, TEXT("[%s] => %d/%d"), *FString(__FUNCTION__), CurAttackComboCount, AttackComboCount);
 
 	CurInterval = 0.f;
 }

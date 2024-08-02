@@ -6,6 +6,7 @@
 #include "Locomotion/LocomotionComponent.h"
 #include "Redemption.h"
 #include "Component/CombatComponent.h"
+#include "Component/InventoryComponent.h"
 
 #include "Components/CapsuleComponent.h"
 #include "Ability/WvAbilitySystemComponent.h"
@@ -289,8 +290,16 @@ void AWvAIController::OnSendKillTarget(AActor* Actor, const float Damage)
 
 bool AWvAIController::IsInBattled() const
 {
+	//auto OutTarget = GetBlackboardTarget();
+	//return IsValid(OutTarget) && IsSightTaskRunning();
+
 	auto OutTarget = GetBlackboardTarget();
-	return IsValid(OutTarget) && IsSightTaskRunning();
+	//return IsValid(OutTarget);
+	if (const IWvAbilityTargetInterface* TeamAgent = Cast<IWvAbilityTargetInterface>(GetPawn()))
+	{
+		return TeamAgent->IsInBattled();
+	}
+	return false;
 }
 
 void AWvAIController::Freeze()
@@ -366,10 +375,17 @@ void AWvAIController::SetBlackboardTarget(AActor* NewTarget)
 		}
 	}
 
-	BlackboardComponent->SetValueAsObject(BlackboardKeyConfig.TargetKeyName, NewTarget);
-
 	const bool bHasValidAttack = IsValid(NewTarget);// && IsAttackAllowed()
+	if (bHasValidAttack)
+	{
+		BaseCharacter->DoTargetLockOn();
+	}
+	else
+	{
+		BaseCharacter->DoTargetLockOff();
+	}
 
+	BlackboardComponent->SetValueAsObject(BlackboardKeyConfig.TargetKeyName, NewTarget);
 	if (ULocomotionComponent* Locomotion = GetPawn()->FindComponentByClass<ULocomotionComponent>())
 	{
 		Locomotion->SetLookAimTarget(bHasValidAttack, NewTarget, nullptr);
@@ -379,7 +395,6 @@ void AWvAIController::SetBlackboardTarget(AActor* NewTarget)
 	{
 		const bool bIsCloseCombat = Combat->IsCloseCombatWeapon();
 		SetBlackboardCloseCombat(bIsCloseCombat);
-
 	}
 
 	SetAIActionState(bHasValidAttack ? EAIActionState::Combat : EAIActionState::Patrol);
@@ -410,6 +425,11 @@ void AWvAIController::SetBlackboardFriend(AActor* NewTarget)
 void AWvAIController::SetBlackboardPatrolLocation(const FVector NewLocation)
 {
 	BlackboardComponent->SetValueAsVector(BlackboardKeyConfig.PatrolLocationKeyName, NewLocation);
+}
+
+void AWvAIController::SetBlackboardPredictionLocation(const FVector NewLocation)
+{
+	BlackboardComponent->SetValueAsVector(BlackboardKeyConfig.PredictionKeyName, NewLocation);
 }
 
 void AWvAIController::SetBlackboardFollowLocation(const FVector NewLocation)
@@ -674,10 +694,12 @@ void AWvAIController::Notify_UnFollow(bool bIsInImpact/* = false */)
 
 void AWvAIController::Execute_DoAttack()
 {
-	if (IWvAbilityTargetInterface* TeamAgent = Cast<IWvAbilityTargetInterface>(GetPawn()))
+	if (BaseCharacter->IsMeleePlaying())
 	{
-		TeamAgent->DoAttack();
+		return;
 	}
+
+	BaseCharacter->DoAttack();
 }
 
 void AWvAIController::HandleSprint(const bool bEnable)
@@ -1052,9 +1074,17 @@ void AWvAIController::HandleRemoveAIPerception()
 #pragma region CloseCombat
 void AWvAIController::CloseCombatActionBegin()
 {
-	AICloseCombatData.Initialize();
-	ModifyCombatAnimationIndex();
+	if (BaseCharacter.IsValid())
+	{
+		AICloseCombatData.Initialize();
 
+		int32 Result;
+		BaseCharacter->ModifyCombatAnimationIndex(Result);
+		AICloseCombatData.SetComboTypeIndex(Result);
+
+		const int32 ComboCountMax = BaseCharacter->CloseCombatMaxComboCount(Result);
+		AICloseCombatData.SetAttackComboCount(ComboCountMax);
+	}
 
 }
 
@@ -1067,7 +1097,13 @@ void AWvAIController::NotifyCloseCombatBegin()
 {
 	AICloseCombatData.ComboSeedBegin([this]
 	{
-		this->Execute_DoAttack();
+		const auto Weapon = BaseCharacter->GetInventoryComponent()->GetEquipWeapon();
+		if (Weapon && Weapon->IsAvailable())
+		{
+			OnInputEventGameplayTagTrigger.Broadcast(Weapon->GetPluralInputTriggerTag(), true);
+			//UE_LOG(LogWvAI, Warning, TEXT("[%s]"), *FString(__FUNCTION__));
+		}
+		//this->Execute_DoAttack();
 	});
 }
 
@@ -1095,16 +1131,6 @@ bool AWvAIController::IsCloseCombatPlaying() const
 void AWvAIController::CloseCombatAbort()
 {
 	AICloseCombatData.ComboAbort();
-}
-
-void AWvAIController::ModifyCombatAnimationIndex()
-{
-	if (BaseCharacter.IsValid())
-	{
-		int32 Result;
-		BaseCharacter->ModifyCombatAnimationIndex(Result);
-		AICloseCombatData.SetComboTypeIndex(Result);
-	}
 }
 
 int32 AWvAIController::GetComboTypeIndex() const

@@ -2,13 +2,15 @@
 
 
 #include "InventoryComponent.h"
+#include "Redemption.h"
 #include "Character/BaseCharacter.h"
 #include "Item/WeaponBaseActor.h"
 #include "Item/BulletHoldWeaponActor.h"
+#include "Game/WvGameInstance.h"
 #include "Misc/WvCommonUtils.h"
-#include "Redemption.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(InventoryComponent)
+#define OUTPUT_LOG 0
 
 UInventoryComponent::UInventoryComponent(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
@@ -23,76 +25,8 @@ void UInventoryComponent::BeginPlay()
 	Super::SetComponentTickEnabled(false);
 
 	Character = Cast<ABaseCharacter>(GetOwner());
-
-	if (InitInventoryDA)
-	{
-		for (auto SpawnInfo : InitInventoryDA->ActorsToSpawn)
-		{
-			if (SpawnInfo.ActorToSpawn)
-			{
-				FActorSpawnParameters SpawnParams;
-				SpawnParams.Owner = Character.Get();
-				SpawnParams.Instigator = nullptr;
-				AItemBaseActor* ItemPtr = GetWorld()->SpawnActorDeferred<AItemBaseActor>(SpawnInfo.ActorToSpawn, FTransform::Identity, Character.Get());
-				ItemPtr->FinishSpawning(FTransform::Identity, /*bIsDefaultTransform=*/ true);
-				ItemPtr->SetActorRelativeTransform(SpawnInfo.AttachTransform);
-				ItemPtr->AttachToComponent(Character->GetMesh(), FAttachmentTransformRules::KeepRelativeTransform, SpawnInfo.AttachSocket);
-
-				ItemPtr->SetActorHiddenInGame(true);
-				AddInventory(ItemPtr);
-			}
-		}
-	}
-
-	ItemArray.RemoveAll([](AItemBaseActor* Item)
-	{
-		return Item == nullptr;
-	});
-
-	for (TPair<EAttackWeaponState, TArray<AWeaponBaseActor*>>Pair : WeaponActorMap)
-	{
-		Pair.Value.RemoveAll([](AWeaponBaseActor* Weapon)
-		{
-			return Weapon == nullptr;
-		});
-
-		Pair.Value.Sort([&](const AWeaponBaseActor& A, const AWeaponBaseActor& B)
-		{
-			int32 PriorityA = A.GetPriority();
-			int32 PriorityB = B.GetPriority();
-			return PriorityA > PriorityB;
-		});
-	}
-
-	const bool bIsValid = (WeaponActorMap.Num() > 0 && WeaponActorMap.Contains(InitAttackWeaponState));
-	if (bIsValid)
-	{
-		AWeaponBaseActor* InitWeaponPtr = nullptr;
-		TArray<AWeaponBaseActor*>& WeaponArray = WeaponActorMap[InitAttackWeaponState];
-		for (auto Weapon : WeaponArray)
-		{
-			if (Weapon)
-			{
-				InitWeaponPtr = Weapon;
-				break;
-			}
-		}
-
-		EquipWeapon_Internal(InitWeaponPtr);
-	}
-
-	// output log
-#if false
-	for (TPair<EAttackWeaponState, TArray<AWeaponBaseActor*>>Pair : WeaponActorMap)
-	{
-		const FString CategoryName = *FString::Format(TEXT("Category => {0}"), { *GETENUMSTRING("/Script/Redemption.EAttackWeaponState", Pair.Key) });
-		for (auto Weapon : Pair.Value)
-		{
-			UE_LOG(LogTemp, Log, TEXT("%s, WeaponName => %s"), *CategoryName, *Weapon->GetName());
-		}
-	}
-#endif
-
+	
+	//RequestAsyncLoad();
 }
 
 void UInventoryComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -133,18 +67,23 @@ const EAttackWeaponState UInventoryComponent::ConvertWeaponState(const ELSOverla
 
 const bool UInventoryComponent::ChangeAttackWeapon(const EAttackWeaponState InAttackWeaponState, int32 Index/* = 0 */)
 {
-	// Empty WeaponActorMap
-	if (WeaponActorMap.Num() <= 0 || !WeaponActorMap.Contains(InAttackWeaponState))
+	if (WeaponActorMap.Num() <= 0)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Empty WeaponActorMap => %s"), *FString(__FUNCTION__));
+		UE_LOG(LogTemp, Warning, TEXT("WeaponActorMap Is Empty => %s"), *FString(__FUNCTION__));
 		return false;
 	}
 
-	// Empty WeaponArray
+	if (!WeaponActorMap.Contains(InAttackWeaponState))
+	{
+		const FString CategoryName = *FString::Format(TEXT("Category => {0}"), { *GETENUMSTRING("/Script/Redemption.EAttackWeaponState", InAttackWeaponState) });
+		UE_LOG(LogTemp, Warning, TEXT("Weapon %s Isn't Not Contains => %s"), *CategoryName, *FString(__FUNCTION__));
+		return false;
+	}
+
 	TArray<AWeaponBaseActor*>& WeaponArray = WeaponActorMap[InAttackWeaponState];
 	if (WeaponArray.Num() <= 0)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Empty WeaponArray => %s"), *FString(__FUNCTION__));
+		UE_LOG(LogTemp, Warning, TEXT("WeaponArray Is Empty => %s"), *FString(__FUNCTION__));
 		return false;
 	}
 
@@ -338,7 +277,7 @@ AWeaponBaseActor* UInventoryComponent::GetAvailableWeapon() const
 	// 2. priority high sort
 	ConvertPriorityWeapons(AvailableWeapons);
 
-#if false
+#if OUTPUT_LOG
 	for (auto AvailableWeapon : AvailableWeapons)
 	{
 		UE_LOG(LogTemp, Log, TEXT(" AvailableWeapon => %s"), *GetNameSafe(AvailableWeapon));
@@ -408,4 +347,108 @@ void UInventoryComponent::UnEquipWeapon_Internal()
 		CurrentWeaponActor.Reset();
 	}
 }
+
+void UInventoryComponent::CreateWeaponInstances()
+{
+	if (InventoryDAInstance)
+	{
+		for (auto SpawnInfo : InventoryDAInstance->ActorsToSpawn)
+		{
+			if (SpawnInfo.ActorToSpawn)
+			{
+				FActorSpawnParameters SpawnParams;
+				SpawnParams.Owner = Character.Get();
+				SpawnParams.Instigator = nullptr;
+				AItemBaseActor* ItemPtr = GetWorld()->SpawnActorDeferred<AItemBaseActor>(SpawnInfo.ActorToSpawn, FTransform::Identity, Character.Get());
+				ItemPtr->FinishSpawning(FTransform::Identity, /*bIsDefaultTransform=*/ true);
+				ItemPtr->SetActorRelativeTransform(SpawnInfo.AttachTransform);
+				ItemPtr->AttachToComponent(Character->GetMesh(), FAttachmentTransformRules::KeepRelativeTransform, SpawnInfo.AttachSocket);
+
+				ItemPtr->SetActorHiddenInGame(true);
+				AddInventory(ItemPtr);
+			}
+		}
+	}
+
+	ItemArray.RemoveAll([](AItemBaseActor* Item)
+	{
+		return Item == nullptr;
+	});
+
+	for (TPair<EAttackWeaponState, TArray<AWeaponBaseActor*>>Pair : WeaponActorMap)
+	{
+		Pair.Value.RemoveAll([](AWeaponBaseActor* Weapon)
+		{
+			return Weapon == nullptr;
+		});
+
+		Pair.Value.Sort([&](const AWeaponBaseActor& A, const AWeaponBaseActor& B)
+		{
+			int32 PriorityA = A.GetPriority();
+			int32 PriorityB = B.GetPriority();
+			return PriorityA > PriorityB;
+		});
+	}
+
+	const bool bIsValid = (WeaponActorMap.Num() > 0 && WeaponActorMap.Contains(InitAttackWeaponState));
+	if (bIsValid)
+	{
+		AWeaponBaseActor* InitWeaponPtr = nullptr;
+		TArray<AWeaponBaseActor*>& WeaponArray = WeaponActorMap[InitAttackWeaponState];
+		for (auto Weapon : WeaponArray)
+		{
+			if (Weapon)
+			{
+				InitWeaponPtr = Weapon;
+				break;
+			}
+		}
+
+		EquipWeapon_Internal(InitWeaponPtr);
+	}
+
+	// output log
+#if OUTPUT_LOG
+	for (TPair<EAttackWeaponState, TArray<AWeaponBaseActor*>>Pair : WeaponActorMap)
+	{
+		const FString CategoryName = *FString::Format(TEXT("Category => {0}"), { *GETENUMSTRING("/Script/Redemption.EAttackWeaponState", Pair.Key) });
+		for (auto Weapon : Pair.Value)
+		{
+			UE_LOG(LogTemp, Log, TEXT("%s, WeaponName => %s"), *CategoryName, *Weapon->GetName());
+		}
+	}
+#endif
+}
+
+void UInventoryComponent::RequestAsyncLoad()
+{
+	if (!InventoryDA.IsNull())
+	{
+		FStreamableManager& StreamableManager = UWvGameInstance::GetStreamableManager();
+		const FSoftObjectPath ObjectPath = InventoryDA.ToSoftObjectPath();
+		InventoryStreamableHandle = StreamableManager.RequestAsyncLoad(ObjectPath, FStreamableDelegate::CreateUObject(this, &ThisClass::OnDataAssetLoadComplete));
+	}
+}
+
+void UInventoryComponent::OnDataAssetLoadComplete()
+{
+	OnLoadInventoryDA();
+	InventoryStreamableHandle.Reset();
+	//UE_LOG(LogTemp, Log, TEXT("[%s]"), *FString(__FUNCTION__));
+}
+
+void UInventoryComponent::OnLoadInventoryDA()
+{
+	bool bIsResult = false;
+	do
+	{
+		InventoryDAInstance = InventoryDA.LoadSynchronous();
+		bIsResult = (IsValid(InventoryDAInstance));
+
+	} while (!bIsResult);
+
+	CreateWeaponInstances();
+	UE_LOG(LogTemp, Log, TEXT("Complete %s => [%s]"), *GetNameSafe(InventoryDAInstance), *FString(__FUNCTION__));
+}
+
 

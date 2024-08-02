@@ -68,6 +68,7 @@ public:
 
 	virtual void Freeze() {};
 	virtual void UnFreeze() {};
+	virtual bool IsFreezing() const;
 
 	virtual void DoAttack() {};
 	virtual void DoResumeAttack() {};

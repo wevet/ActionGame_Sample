@@ -93,7 +93,7 @@ void UAbilityInteraction_ClimbUpLedge::EndAbility(const FGameplayAbilitySpecHand
 		}
 	}
 
-	MovementComponent->TryLedgeEndAction();
+	MovementComponent->MantleEnd();
 
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
 }

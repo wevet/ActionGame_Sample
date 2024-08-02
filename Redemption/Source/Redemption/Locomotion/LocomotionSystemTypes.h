@@ -61,7 +61,7 @@ UENUM(BlueprintType)
 enum class ELSOverlayState : uint8
 {
 	None UMETA(DisplayName = "None"),
-	Injured UMETA(DisplayName = "Injured"),
+	Injured UMETA(DisplayName = "Injured"), // not use
 	Rifle UMETA(DisplayName = "Rifle"),
 	Pistol UMETA(DisplayName = "Pistol"),
 	Torch UMETA(DisplayName = "Torch"),
@@ -864,6 +864,59 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FClimbingLedge InLedge;
+};
+
+USTRUCT(BlueprintType)
+struct REDEMPTION_API FDynamicMontageParams
+{
+	GENERATED_BODY()
+
+public:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UAnimSequenceBase* Animation;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float BlendInTime;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float BlendOutTime;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float PlayRate = 1.0f;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float StartTime;
+};
+
+USTRUCT(BlueprintType)
+struct REDEMPTION_API FJumpProjection
+{
+	GENERATED_BODY()
+
+public:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	bool bIsValid = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FLSComponentAndTransform StartPositionLS;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FLSComponentAndTransform LandPostionLS;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	class UPrimitiveComponent* Component;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FLSComponentAndTransform StartPositionWS;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FLSComponentAndTransform LandPositionWS;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FClimbingIKData StartIKGroundType;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FClimbingIKData LandIKGroundType;
 };
 #pragma endregion
 

@@ -6,8 +6,9 @@
 #include "Components/ActorComponent.h"
 #include "Locomotion/LocomotionSystemTypes.h"
 #include "Component/WvCharacterMovementTypes.h"
+#include "Component/AsyncComponentInterface.h"
 #include "Math/TwoVectors.h"
-#include "Curves/CurveVector.h"
+#include "Engine/StreamableManager.h"
 #include "ClimbingComponent.generated.h"
 
 class ABaseCharacter;
@@ -133,7 +134,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FClimbingQTEEndDelegate, bool, InSuc
 
 
 UCLASS(Blueprintable, ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
-class REDEMPTION_API UClimbingComponent : public UActorComponent
+class REDEMPTION_API UClimbingComponent : public UActorComponent, public IAsyncComponentInterface
 {
 	GENERATED_BODY()
 
@@ -145,6 +146,8 @@ public:
 protected:
 	virtual void BeginPlay() override;
 
+public:
+	virtual void RequestAsyncLoad() override;
 
 public:
 	UPROPERTY(BlueprintAssignable, Category = "ClimbSystem")
@@ -638,16 +641,16 @@ protected:
 
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "References")
-	class ABaseCharacter* Character;
+	TObjectPtr<class ABaseCharacter> Character;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "References", meta = (AllowPrivateAccess = "true"))
-	class UWvCharacterMovementComponent* CharacterMovementComponent;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Component, meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<class UWvCharacterMovementComponent> CharacterMovementComponent;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "References", meta = (AllowPrivateAccess = "true"))
-	class USkeletalMeshComponent* SkeletalMeshComponent;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Component, meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<class USkeletalMeshComponent> SkeletalMeshComponent;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "References", meta = (AllowPrivateAccess = "true"))
-	class ULocomotionComponent* LocomotionComponent;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Component, meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<class ULocomotionComponent> LocomotionComponent;
 
 	UPROPERTY()
 	class UAnimInstance* BaseAnimInstance;
@@ -847,10 +850,8 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Transforms")
 	FClimbingLedge CachedLedgeWS;
 
-	// @TODO
-	// Should switch to asynchronous load
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "DataAsset")
-	UClimbingCurveDataAsset* ClimbingCurveDataAsset;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Config")
+	TSoftObjectPtr<UClimbingCurveDataAsset> ClimbingCurveDA;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Config")
 	bool bSetHigherPriorityForFarLedges = true;
@@ -940,6 +941,11 @@ private:
 	bool bWasFinished = false;
 	int32 PrepareToClimbIndex = INDEX_NONE;
 
+	UPROPERTY()
+	TObjectPtr<UClimbingCurveDataAsset> ClimbingCurveDAInstance;
+
+	TSharedPtr<FStreamableHandle>  ClimbingStreamableHandle;
+
 	void ClimbingBegin_Internal();
 	void ClimbingEnd_Internal();
 
@@ -951,7 +957,8 @@ private:
 	void ClearClimbingActionTimer();
 	void ClimbingActionTimer_Callback();
 
-
-		
+	
+	void OnDataAssetLoadComplete();
+	void OnLoadDA();
 };
 

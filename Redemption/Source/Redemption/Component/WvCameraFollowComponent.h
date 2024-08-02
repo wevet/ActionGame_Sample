@@ -12,6 +12,8 @@
 #include "Engine/EngineTypes.h"
 #endif
 #include "Async/TaskGraphInterfaces.h"
+#include "AsyncComponentInterface.h"
+#include "Engine/StreamableManager.h"
 #include "Engine/DataAsset.h"
 #include "WvCameraFollowComponent.generated.h"
 
@@ -47,12 +49,35 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	class UCurveFloat* AimCamreaCurve;
 
+	// The Widget Class to use when locked on Target. If not defined, will fallback to a Text-rendered
+	// widget with a single O character.
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Target System|Widget")
+	TSubclassOf<UUserWidget> LockedOnWidgetClass;
+
+	// Whether or not the Target LockOn Widget indicator should be drawn and attached automatically.
+	// When set to false, this allow you to manually draw the widget for further control on where you'd like it to appear.
+	// OnTargetLockedOn and OnTargetLockedOff events can be used for this.
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Target System|Widget")
+	bool bShouldDrawLockedOnWidget = true;
+
+	// The Widget Draw Size for the Widget class to use when locked on Target.
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Target System|Widget")
+	float LockedOnWidgetDrawSize = 32.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Target System|Widget")
+	FName LockedOnWidgetParentSocket = FName("spine_05");
+
+	// The Relative Location to apply on Target LockedOn Widget when attached to a target.
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Target System|Widget")
+	FVector LockedOnWidgetRelativeLocation = FVector(0.0f, 0.0f, 0.0f);
+
+
 public:
 	UCameraTargetDataAsset() {}
 };
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
-class REDEMPTION_API UWvCameraFollowComponent : public UActorComponent
+class REDEMPTION_API UWvCameraFollowComponent : public UActorComponent, public IAsyncComponentInterface
 {
 	GENERATED_BODY()
 
@@ -64,48 +89,20 @@ public:
 protected:
 	virtual void BeginPlay() override;
 
+public:
+	virtual void RequestAsyncLoad() override; 
 
 protected:
 	UPROPERTY(BlueprintReadOnly)
-	class UWvSpringArmComponent* SpringArmComponent;
+	TObjectPtr<class UWvSpringArmComponent> SpringArmComponent;
 
 	UPROPERTY(BlueprintReadOnly)
-	class UCameraComponent* CameraComponent;
+	TObjectPtr<class UCameraComponent> CameraComponent;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion")
-	class UCameraTargetDataAsset* CameraTargetSettingsDA;
-
-
-protected:
-	struct FCameraLerpInfo
-	{
-		class UCurveFloat* LerpCurve;
-		FCameraSettings CurCameraSettings;
-		bool IsBattle;
-	};
-
-	FCameraLerpInfo  CameraLerpTimerLerpInfo;
-
-public:
-	void OnCameraChange();
-
-	UFUNCTION(BlueprintCallable)
-	void UpdateCamera(class UCurveFloat* LerpCurve);
-
-protected:
-	UFUNCTION()
-	void LerpUpdateCameraTimerCallback();
-	bool LerpCameraSettings(float LerpAlpha);
-	bool ChooseCameraSettings(FCameraSettings& CameraSettings);
-
-	UFUNCTION()
-	void LocomotionMoveStateChangeCallback();
-
-	UFUNCTION()
-	void LocomotionAimChangeCallback();
-
-public:
 #pragma region TargetParameter
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Target System")
+	TSoftObjectPtr<UCameraTargetDataAsset> CameraTargetDA;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Target System")
 	float MinimumDistanceToEnable = 1200.0f;
 
@@ -130,28 +127,6 @@ public:
 	// The amount of time to break line of sight when actor gets behind an Object.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Target System")
 	float BreakLineOfSightDelay = 2.0f;
-
-	// Whether or not the Target LockOn Widget indicator should be drawn and attached automatically.
-	// When set to false, this allow you to manually draw the widget for further control on where you'd like it to appear.
-	// OnTargetLockedOn and OnTargetLockedOff events can be used for this.
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Target System|Widget")
-	bool bShouldDrawLockedOnWidget = true;
-
-	// The Widget Class to use when locked on Target. If not defined, will fallback to a Text-rendered
-	// widget with a single O character.
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Target System|Widget")
-	TSubclassOf<UUserWidget> LockedOnWidgetClass;
-
-	// The Widget Draw Size for the Widget class to use when locked on Target.
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Target System|Widget")
-	float LockedOnWidgetDrawSize = 32.0f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Target System|Widget")
-	FName LockedOnWidgetParentSocket = FName("spine_03");
-
-	// The Relative Location to apply on Target LockedOn Widget when attached to a target.
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Target System|Widget")
-	FVector LockedOnWidgetRelativeLocation = FVector(0.0f, 0.0f, 0.0f);
 
 	// Setting this to true will tell the Target System to adjust the Pitch Offset (the Y axis) when locked on,
 	// depending on the distance to the target actor.
@@ -191,9 +166,7 @@ public:
 	// Only used when Sticky Target is enabled.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Target System|Sticky Feeling on Target Switch", meta = (EditCondition = "bEnableStickyTarget"))
 	float StickyRotationThreshold = 30.0f;
-#pragma endregion
 
-#pragma region SwitchComponent
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Target System|Sticky Feeling on Component Switch")
 	float StartRotatingComponentThreshold = 0.5f;
 
@@ -204,11 +177,13 @@ public:
 	float StickyRotationComponentThreshold = 20.0f;
 #pragma endregion
 
+	void OnCameraChange();
+
 public:
 	/*
 	* Function to call to target a new actor.
 	*/
-	void TargetActor();
+	void TargetLockOn();
 
 	/*
 	* Function to call to manually untarget.
@@ -237,6 +212,8 @@ public:
 	*/
 	bool IsLocked() const;
 
+	void DoTick();
+
 	UPROPERTY(BlueprintAssignable, Category = "Target System")
 	FComponentOnTargetLockedOnOff OnTargetLockedOff;
 
@@ -249,8 +226,9 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Target System")
 	FComponentSetRotation OnTargetSetRotation;
 
+	UFUNCTION(BlueprintCallable)
+	void UpdateCamera(class UCurveFloat* LerpCurve);
 
-	void DoTick();
 
 private:
 	UPROPERTY()
@@ -297,6 +275,33 @@ private:
 	int32 FocusIndex = 0;
 	int32 FocusLastIndex = 0;
 
+	struct FCameraLerpInfo
+	{
+		class UCurveFloat* LerpCurve;
+		FCameraSettings CurCameraSettings;
+		bool IsBattle;
+	} CameraLerpTimerLerpInfo;
+
+	UPROPERTY()
+	TObjectPtr<UCameraTargetDataAsset> CameraTargetDAInstance;
+
+	TSharedPtr<FStreamableHandle>  CameraTargetStreamableHandle;
+
+	
+
+	void OnDataAssetLoadComplete();
+	void OnLoadCameraTargetSettingsDA();
+
+	UFUNCTION()
+	void LerpUpdateCameraTimerCallback();
+	bool LerpCameraSettings(float LerpAlpha);
+	bool ChooseCameraSettings(FCameraSettings& CameraSettings);
+
+	UFUNCTION()
+	void LocomotionMoveStateChangeCallback();
+
+	UFUNCTION()
+	void LocomotionAimChangeCallback();
 
 	//~ Actors search / trace
 	void DoTick(const float DeltaTime);

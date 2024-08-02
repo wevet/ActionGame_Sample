@@ -30,6 +30,8 @@ void UWvSpringArmComponent::UpdateDesiredArmLocation(bool bDoTrace, bool bDoLoca
 
 FVector UWvSpringArmComponent::BlendLocations(const FVector& DesiredArmLocation, const FVector& TraceHitLocation, bool bHitSomething, float DeltaTime)
 {
+	//return Super::BlendLocations(DesiredArmLocation, TraceHitLocation, bHitSomething, DeltaTime);
+
 	if (bHitSomething)
 	{
 		// Reset CurrentHitReturnInterpTime to HitReturnInterpTime because of collision with wall
@@ -51,5 +53,6 @@ FVector UWvSpringArmComponent::BlendLocations(const FVector& DesiredArmLocation,
 	// Arm should be in full extension since it did not enter the above condition
 	PrevHitInterpLoc = DesiredArmLocation;
 	return DesiredArmLocation;
+
 }
 

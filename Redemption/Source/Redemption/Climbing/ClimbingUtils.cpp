@@ -10,6 +10,8 @@
 #include "Components/CapsuleComponent.h"
 #include "Math/TwoVectors.h"
 
+#include UE_INLINE_GENERATED_CPP_BY_NAME(ClimbingUtils)
+
 /*
 *	S * R * T = W
 *	Now, take W and find its inverse W^-1 somehow. The inverse of a matrix is that matrix which does just the opposite. The product of the matrix with its inverse is always the identity matrix.
