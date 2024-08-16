@@ -64,6 +64,10 @@ public:
 	void OnVehilcePossess(APawn* InPawn);
 	void OnVehicleUnPossess();
 
+	void BeginQTEWithSetParameters(const float InTimer, const float InCount);
+	void BeginQTE();
+	void EndQTE();
+
 	FVector GetCameraForwardVector() const;
 
 	FORCEINLINE TObjectPtr<class UMissionComponent> GetMissionComponent() const { return MissionComponent; }

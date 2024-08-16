@@ -20,4 +20,11 @@ public:
 
 protected:
 	virtual void BeginPlay() override;
+
+public:
+	void SetViewPitchRange(const FVector2D InViewPitchRange);
+	void InitViewPitchRange();
+
+private:
+	FVector2D InitViewPitch = FVector2D::ZeroVector;
 };

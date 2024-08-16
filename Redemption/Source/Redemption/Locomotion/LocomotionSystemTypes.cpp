@@ -68,31 +68,60 @@ void FPawnAttackParam::Replenishment()
 
 
 #pragma region QTE
-void FCilmbingQTEData::Begin()
+FQTEData::FQTEData()
+{
+	bSystemEnable = false;
+	RequirePressCount = 10.0f;
+	CurPressCount, CurTimer = 0.0f;
+	Timer = 5.0f;
+}
+
+void FQTEData::SetParameters(const float InTimer, const float InCount)
+{
+	Timer = InTimer;
+	RequirePressCount = InCount;
+}
+
+/// <summary>
+/// Change the duration of QTE based on health
+/// </summary>
+/// <param name="Min"></param>
+/// <param name="Current"></param>
+/// <param name="Max"></param>
+void FQTEData::ModifyTimer(const float Min, const float Current, const float Max)
+{
+	if (bIsGameControlTimer)
+	{
+		auto LocalTimer = Timer;
+		Timer = UKismetMathLibrary::MapRangeClamped(Current, Min, Max, 0.f, LocalTimer);
+	}
+}
+
+void FQTEData::Begin()
 {
 	CurPressCount = 0;
 	CurTimer = 0.0f;
 	bSystemEnable = true;
 }
 
-void FCilmbingQTEData::Reset()
+void FQTEData::Reset()
 {
 	//CurPressCount = 0;
 	//CurTimer = 0.0f;
 	bSystemEnable = false;
 }
 
-float FCilmbingQTEData::GetTimerProgress() const
+float FQTEData::GetTimerProgress() const
 {
 	return ((Timer - CurTimer) / Timer);
 }
 
-float FCilmbingQTEData::GetPressCountProgress() const
+float FQTEData::GetPressCountProgress() const
 {
 	return (CurPressCount / RequirePressCount);
 }
 
-void FCilmbingQTEData::UpdateTimer(const float DeltaTime)
+void FQTEData::UpdateTimer(const float DeltaTime)
 {
 	if (CurTimer <= Timer)
 	{
@@ -100,12 +129,12 @@ void FCilmbingQTEData::UpdateTimer(const float DeltaTime)
 	}
 }
 
-bool FCilmbingQTEData::IsTimeOver() const
+bool FQTEData::IsTimeOver() const
 {
 	return (CurTimer >= Timer);
 }
 
-void FCilmbingQTEData::IncrementPress()
+void FQTEData::IncrementPress()
 {
 	//auto Value = FMath::RandRange(RangeMin, RangeMax);
 	CurPressCount += 1.0f;
@@ -113,7 +142,7 @@ void FCilmbingQTEData::IncrementPress()
 
 // @NOTE
 // Once you press more than a certain number of times in time, make it a success.
-bool FCilmbingQTEData::IsSuccess() const
+bool FQTEData::IsSuccess() const
 {
 	if (CurTimer < Timer && CurPressCount >= RequirePressCount)
 	{

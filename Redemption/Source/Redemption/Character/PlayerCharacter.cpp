@@ -8,6 +8,7 @@
 #include "Component/InventoryComponent.h"
 #include "Component/HitTargetComponent.h"
 #include "Component/WvCharacterMovementComponent.h"
+#include "Component/QTEActionComponent.h"
 #include "Locomotion/LocomotionComponent.h"
 #include "Climbing/ClimbingComponent.h"
 #include "Animation/WvAnimInstance.h"
@@ -47,13 +48,18 @@ APlayerCharacter::APlayerCharacter(const FObjectInitializer& ObjectInitializer) 
 
 	WvCameraFollowComponent = CreateDefaultSubobject<UWvCameraFollowComponent>(TEXT("WvCameraFollowComponent"));
 	WvCameraFollowComponent->bAutoActivate = 1;
+
+	QTEActionComponent = CreateDefaultSubobject<UQTEActionComponent>(TEXT("QTEActionComponent"));
+	QTEActionComponent->bAutoActivate = 1;
 }
 
 void APlayerCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
-	WvCameraFollowComponent->PrimaryComponentTick.AddPrerequisite(this, this->PrimaryActorTick);
+	CameraBoom->AddTickPrerequisiteActor(this);
+	WvCameraFollowComponent->AddTickPrerequisiteActor(this);
+	QTEActionComponent->AddTickPrerequisiteActor(this);
 
 	P_Controller = Cast<AWvPlayerController>(Controller);
 
@@ -70,15 +76,10 @@ void APlayerCharacter::BeginPlay()
 	WvCameraFollowComponent->OnTargetLockedOff.AddDynamic(this, &ThisClass::OnTargetLockedOff_Callback);
 	LocomotionComponent->OnOverlayChangeDelegate.AddDynamic(this, &ThisClass::OverlayStateChange_Callback);
 
-	// init unarmed ABP
-	//if (IsValid(OverlayAnimDAInstance))
-	//{
-	//	auto AnimInstanceClass = OverlayAnimDAInstance->FindAnimInstance(ELSOverlayState::None);
-	//	if (AnimInstanceClass)
-	//	{
-	//		AnimInstance->LinkAnimClassLayers(AnimInstanceClass);
-	//	}
-	//}
+	QTEActionComponent->QTEBeginDelegate.AddDynamic(this, &ThisClass::OnQTEBegin_Callback);
+	QTEActionComponent->QTEEndDelegate.AddDynamic(this, &ThisClass::OnQTEEnd_Callback);
+
+
 }
 
 void APlayerCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -96,6 +97,9 @@ void APlayerCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	WvCameraFollowComponent->OnTargetLockedOn.RemoveDynamic(this, &ThisClass::OnTargetLockedOn_Callback);
 	WvCameraFollowComponent->OnTargetLockedOff.RemoveDynamic(this, &ThisClass::OnTargetLockedOff_Callback);
 	LocomotionComponent->OnOverlayChangeDelegate.RemoveDynamic(this, &ThisClass::OverlayStateChange_Callback);
+
+	QTEActionComponent->QTEBeginDelegate.RemoveDynamic(this, &ThisClass::OnQTEBegin_Callback);
+	QTEActionComponent->QTEEndDelegate.RemoveDynamic(this, &ThisClass::OnQTEEnd_Callback);
 
 	Super::EndPlay(EndPlayReason);
 }
@@ -126,13 +130,6 @@ void APlayerCharacter::UnPossessed()
 	}
 
 	Super::UnPossessed();
-}
-
-void APlayerCharacter::OnReceiveKillTarget(AActor* Actor, const float Damage)
-{
-	Super::OnReceiveKillTarget(Actor, Damage);
-
-	LocomotionComponent->SetLookAimTarget(false, nullptr, nullptr);
 }
 
 void APlayerCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent)
@@ -168,6 +165,34 @@ void APlayerCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerIn
 		}
 	}
 }
+
+#pragma region IWvAbilityTargetInterface
+void APlayerCharacter::OnReceiveKillTarget(AActor* Actor, const float Damage)
+{
+	Super::OnReceiveKillTarget(Actor, Damage);
+	LocomotionComponent->SetLookAimTarget(false, nullptr, nullptr);
+}
+
+void APlayerCharacter::Freeze()
+{
+	if (P_Controller.IsValid())
+	{
+		P_Controller->Freeze();
+	}
+
+	SetKeyInputDisable();
+}
+
+void APlayerCharacter::UnFreeze()
+{
+	if (P_Controller.IsValid())
+	{
+		P_Controller->UnFreeze();
+	}
+
+	SetKeyInputEnable();
+}
+#pragma endregion
 
 void APlayerCharacter::Move(const FInputActionValue& Value)
 {
@@ -289,11 +314,14 @@ void APlayerCharacter::OnPluralInputEventTrigger_Callback(const FGameplayTag Tag
 	{
 		HandleRotationMode();
 	}
+	else if (Tag == TAG_Character_Action_QTE_Pressed)
+	{
+		HandleQTEAction(bIsPress);
+	}
 	else if (HasFinisherAction(Tag) && !Super::IsVehicleDriving())
 	{
 		HandleFinisherAction(Tag, bIsPress);
 	}
-
 	//UE_LOG(LogTemp, Log, TEXT("Tag => %s, Pressed => %s"), *Tag.ToString(), bIsPress ? TEXT("true") : TEXT("false"));
 }
 
@@ -415,6 +443,19 @@ void APlayerCharacter::HandleHoldAimAction(const bool bIsPress)
 	{
 		HandleAimMode();
 	}
+}
+
+void APlayerCharacter::HandleQTEAction(const bool bIsPress)
+{
+	if (IsQTEActionPlaying())
+	{
+		if (bIsPress)
+		{
+			QTEActionComponent->InputPress();
+		}
+
+	}
+
 }
 
 void APlayerCharacter::HandleFinisherAction(const FGameplayTag Tag, const bool bIsPress)
@@ -547,6 +588,12 @@ bool APlayerCharacter::IsTargetLock() const
 	return bHasTag && LocomotionEssencial.LookAtTarget.IsValid();
 }
 
+bool APlayerCharacter::IsQTEActionPlaying() const
+{
+	return WvAbilitySystemComponent->HasMatchingGameplayTag(TAG_Character_Action_QTE);
+}
+
+
 FVector APlayerCharacter::GetFollowCameraLocation() const
 {
 	return FollowCamera->GetForwardVector();
@@ -575,15 +622,56 @@ void APlayerCharacter::OverlayStateChange_Callback(const ELSOverlayState PrevOve
 void APlayerCharacter::OnTargetLockedOn_Callback(AActor* LookOnTarget, UHitTargetComponent* TargetComponent)
 {
 	LocomotionComponent->SetLookAimTarget(true, LookOnTarget, TargetComponent);
+
+	// aim assist ?
+	Super::StrafeMovement();
 }
 
 void APlayerCharacter::OnTargetLockedOff_Callback(AActor* LookOnTarget, UHitTargetComponent* TargetComponent)
 {
 	LocomotionComponent->SetLookAimTarget(false, nullptr, nullptr);
+
+	Super::VelocityMovement();
 }
 
 void APlayerCharacter::RegisterMission_Callback(const int32 MissionIndex)
 {
+
+}
+
+void APlayerCharacter::OnQTEBegin_Callback()
+{
+#if QTE_SYSTEM_RECEIVE
+	auto CMC = GetWvCharacterMovementComponent();
+
+	if (CMC)
+	{
+		if (CMC->IsClimbing())
+		{
+			ClimbingComponent->OnQTEBegin_Callback();
+		}
+	}
+
+	WvAbilitySystemComponent->AddGameplayTag(TAG_Character_Action_QTE, 1);
+#endif
+}
+
+void APlayerCharacter::OnQTEEnd_Callback(const bool bIsSuccess)
+{
+
+#if QTE_SYSTEM_RECEIVE
+	auto CMC = GetWvCharacterMovementComponent();
+
+	if (CMC)
+	{
+		if (CMC->IsClimbing())
+		{
+			ClimbingComponent->OnQTEEnd_Callback(bIsSuccess);
+		}
+	}
+
+	WvAbilitySystemComponent->RemoveGameplayTag(TAG_Character_Action_QTE, 1);
+#endif
 
 }
 

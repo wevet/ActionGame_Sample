@@ -43,6 +43,9 @@ public:
 
 	TArray<ABaseCharacter*> GetLeaderAgent() const;
 
+	void FocusNPCCharacter(ABaseCharacter* InCharacter);
+	void UnFocusNPCCharacter(ABaseCharacter* InCharacter);
+
 private:
 	UPROPERTY()
 	TArray<ABaseCharacter*> Characters;

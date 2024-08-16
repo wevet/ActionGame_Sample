@@ -10,6 +10,7 @@
 class UWvSpringArmComponent;
 class UWvCameraFollowComponent;
 class UHitTargetComponent;
+class UQTEActionComponent;
 class AWvPlayerController;
 
 /**
@@ -31,17 +32,22 @@ protected:
 	virtual void UnPossessed() override;
 
 public:
-	bool IsInputKeyDisable() const;
 	virtual bool IsTargetLock() const override;
+	virtual void RegisterMission_Callback(const int32 MissionIndex) override;
+	virtual bool IsQTEActionPlaying() const override;
 
+#pragma region IWvAbilityTargetInterface
 	virtual void OnReceiveKillTarget(AActor* Actor, const float Damage) override;
+	virtual void Freeze() override;
+	virtual void UnFreeze() override;
+#pragma endregion
 
+	bool IsInputKeyDisable() const;
 	void SetKeyInputDisable();
 	void SetKeyInputEnable();
 
 	FVector GetFollowCameraLocation() const;
 
-	virtual void RegisterMission_Callback(const int32 MissionIndex) override;
 
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
@@ -52,6 +58,9 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<class UWvCameraFollowComponent> WvCameraFollowComponent;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<class UQTEActionComponent> QTEActionComponent;
 
 	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	class UInputMappingContext* DefaultMappingContext;
@@ -99,6 +108,7 @@ private:
 	void HandleFinisherAction(const FGameplayTag Tag, const bool bIsPress);
 	bool HasFinisherAction(const FGameplayTag Tag) const;
 
+	void HandleQTEAction(const bool bIsPress);
 
 	UFUNCTION()
 	void GameplayTagTrigger_Callback(const FGameplayTag Tag, const bool bIsPress);
@@ -121,10 +131,18 @@ private:
 	UFUNCTION()
 	void OnTargetLockedOff_Callback(AActor* LookOnTarget, UHitTargetComponent* TargetComponent);
 
+	UFUNCTION()
+	void OnQTEBegin_Callback();
+
+	UFUNCTION()
+	void OnQTEEnd_Callback(const bool bIsSuccess);
+
 	UPROPERTY()
 	TWeakObjectPtr<AWvPlayerController> P_Controller;
 
 public:
 	FORCEINLINE class UWvSpringArmComponent* GetCameraBoom() const { return CameraBoom; }
 	FORCEINLINE class UCameraComponent* GetFollowCamera() const { return FollowCamera; }
+
+	FORCEINLINE class UQTEActionComponent* GetQTEActionComponent() const { return QTEActionComponent; }
 };

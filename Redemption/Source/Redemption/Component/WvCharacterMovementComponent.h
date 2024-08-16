@@ -115,6 +115,8 @@ public:
 	// Apply UAbilityInteraction_ClimbUpLedge
 	UAnimMontage* GetClimbUpLedgeMontage() const;
 
+	UAnimMontage* GetClimbUpLedgeMontage(const bool bIsFreeHang) const;
+
 protected:
 	virtual void InitializeComponent() override;
 
@@ -125,7 +127,8 @@ protected:
 protected:
 	FWvCharacterGroundInfo CachedGroundInfo;
 
-	UPROPERTY(Transient, DuplicateTransient)
+	//UPROPERTY(Transient, DuplicateTransient)
+	UPROPERTY()
 	TObjectPtr<class ABaseCharacter> BaseCharacter;
 
 	UPROPERTY(Transient)

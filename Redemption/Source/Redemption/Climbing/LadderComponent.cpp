@@ -995,6 +995,21 @@ FLSComponentAndTransform ULadderComponent::ExitLadder_GetStartPosition() const
 	return UClimbingUtils::ComponentWorldToLocalMatrix(WLS);
 }
 
+void ULadderComponent::LadderEndPrapareSequence_Callback()
+{
+	bIsNotPlayingSequence = true;
+	bPrepareEnd = true;
+	LadderSetNewAction(ELadderMovementActionType::None);
+}
+
+void ULadderComponent::LadderMovementEnd_Callback()
+{
+	LadderSetNewAction(ELadderMovementActionType::None);
+	bIsMoving = false;
+	bIsNotPlayingSequence = true;
+	bPrepareEnd = true;
+}
+
 #pragma region BalanceMovement
 void ULadderComponent::BalanceStart()
 {

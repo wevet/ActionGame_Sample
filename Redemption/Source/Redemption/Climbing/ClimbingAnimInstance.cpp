@@ -12,7 +12,7 @@
 #include "Kismet/KismetSystemLibrary.h"
 
 
-#include UE_INLINE_GENERATED_CPP_BY_NAME(ClimbingAnimInstance)
+//#include UE_INLINE_GENERATED_CPP_BY_NAME(ClimbingAnimInstance)
 
 
 UClimbingAnimInstance::UClimbingAnimInstance(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
@@ -21,6 +21,11 @@ UClimbingAnimInstance::UClimbingAnimInstance(const FObjectInitializer& ObjectIni
 	PrepareAnimTypeIndex = 0;
 	CMCIdleCurveName = FName(TEXT("CMC-IdleType"));
 	CMCSnapShotPose = FName(TEXT("CMC_Pose"));
+	CMCCornerCurveName = FName(TEXT("CMC-CornerAlpha"));
+
+	FootIKL_CurveName = FName(TEXT("Enable_FootIK_L"));
+	FootIKR_CurveName = FName(TEXT("Enable_FootIK_R"));
+
 	bIsClimbing = false;
 	bIsFreeHang = false;
 	bIsLaddering = false;
@@ -31,6 +36,9 @@ UClimbingAnimInstance::UClimbingAnimInstance(const FObjectInitializer& ObjectIni
 
 	bIsWallClimbing = false;
 	bIsWallClimbingJumping = false;
+
+	HandsIKOffset.v1 = FVector(7.0f, -8.0f, 0.f);
+	HandsIKOffset.v2 = FVector(10.0f, -4.0f, 0.f);
 }
 
 void UClimbingAnimInstance::NativeInitializeAnimation()
@@ -79,6 +87,12 @@ void UClimbingAnimInstance::NativeThreadSafeUpdateAnimation(float DeltaTimeX)
 	if (IsValid(LadderComponent))
 	{
 		bIsLaddering = LadderComponent->IsLadderState();
+	}
+
+	const bool bIsNotAnyClimbing = !(bIsClimbing || bIsWallClimbing);
+	if (bIsNotAnyClimbing)
+	{
+		FixRootOfsetOnMantleMontage();
 	}
 }
 
@@ -129,6 +143,8 @@ void UClimbingAnimInstance::NotifyJumpBackEvent()
 void UClimbingAnimInstance::NotifyQTEActivate(const bool bWasQTEActivate)
 {
 	bIsQTEActivate = bWasQTEActivate;
+
+	UE_LOG(LogTemp, Log, TEXT("%s"), *FString(__FUNCTION__));
 }
 
 void UClimbingAnimInstance::NotifyEndMantling()
@@ -139,33 +155,33 @@ void UClimbingAnimInstance::NotifyEndMantling()
 	//	ILocomotionInterface::Execute_SetLSMovementMode(LocomotionComponent, ELSMovementMode::Grounded);
 	//}
 
-#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
-	if (bDebugTrace)
-	{
-		UE_LOG(LogTemp, Log, TEXT("Finish Mantling => %s"), *FString(__FUNCTION__));
-	}
-#endif
+	UE_LOG(LogTemp, Log, TEXT("%s"), *FString(__FUNCTION__));
 
 }
 
 void UClimbingAnimInstance::NotifyStartFreeHangMoveForward(const FClimbingLedge InClimbingLedge)
 {
 	PrepareToForwardMove(InClimbingLedge);
+	UE_LOG(LogTemp, Log, TEXT("%s"), *FString(__FUNCTION__));
 }
 
 void UClimbingAnimInstance::NotifyStartCornerOuterEvent(const FClimbingLedge InClimbingLedge)
 {
 	CachedClimbingLedge = InClimbingLedge;
+	UE_LOG(LogTemp, Log, TEXT("%s"), *FString(__FUNCTION__));
 }
 
 void UClimbingAnimInstance::NotifyFreeHangStateEvent(const bool bDetectedIK)
 {
 	const bool bConditionTrue = FreeHangStateEvent_Internal(bDetectedIK);
 	if (!bConditionTrue)
+	{
 		return;
+	}
+
+	UE_LOG(LogTemp, Log, TEXT("%s"), *FString(__FUNCTION__));
 
 	bIsLockUpdatingHangingMode = true;
-
 	const float Interval = 0.6f;
 	FTimerManager& TimerManager = Character->GetWorldTimerManager();
 	if (TimerManager.IsTimerActive(WaitAxisTimer))
@@ -187,6 +203,8 @@ void UClimbingAnimInstance::NotifyFreeHangStateEvent(const bool bDetectedIK)
 
 void UClimbingAnimInstance::NotifyStartJumpEvent(const FClimbingJumpInfo JumpInfo)
 {
+	UE_LOG(LogTemp, Log, TEXT("%s"), *FString(__FUNCTION__));
+
 	CachedClimbingLedge = JumpInfo.InLedge;
 	SavePoseSnapshot(CMCSnapShotPose);
 	bIsMoveToNextLedgeMode = JumpInfo.bIsJumpMode;
@@ -234,10 +252,83 @@ const bool UClimbingAnimInstance::FreeHangStateEvent_Internal(const bool bDetect
 
 void UClimbingAnimInstance::PrepareToForwardMove(const FClimbingLedge CachedLedgeLS)
 {
+	UE_LOG(LogTemp, Log, TEXT("%s"), *FString(__FUNCTION__));
+
 	CachedClimbingLedge = CachedLedgeLS;
 	MovementDirectionType = (MovementDirectionType == EClimbMovementDirectionType::Right) ?
 		EClimbMovementDirectionType::Left : EClimbMovementDirectionType::Right;
 }
 
+/// <summary>
+/// call to ABP_Climbing AnimNotity
+/// </summary>
+void UClimbingAnimInstance::EnableFullBlendedNormalLocomotion()
+{
+	bFullBlendedNormalLocomotion = true;
+}
+
+void UClimbingAnimInstance::FixRootOfsetOnMantleMontage()
+{
+	bFullBlendedNormalLocomotion = false;
+
+	if (bIsStartMantling)
+	{
+		float Value = 0.f;
+		if (GetCurveValue(FName(TEXT("BasePose_CMC_Climbing")), Value))
+		{
+			AdditiveTransitionStrength = Value;
+		}
+	}
+	else
+	{
+		AdditiveTransitionStrength = 0.f;
+	}
+}
+
+void UClimbingAnimInstance::TransitionDynamicMontage()
+{
+	if (IsValid(ClimbAdditiveFreeHangTransition))
+	{
+		const auto PlayRate = FMath::FRandRange(0.9f, 1.15f);
+		const FName SlotName = FName(TEXT("BaseLayer-LowerPriority"));
+		PlaySlotAnimationAsDynamicMontage(ClimbAdditiveFreeHangTransition, SlotName, 0.25f, 0.4f, PlayRate, 1, -1.0f, 0.2f);
+	}
+}
+
+FTransform UClimbingAnimInstance::ConvertLedgeTransformToHandIK(
+	const FTransform Input, 
+	const float UpOffset, 
+	const float ForwardOffset, 
+	const float RightOffsetVER) const
+{
+	auto BasePos = Input.GetLocation();
+	auto Pos = FVector(0.f, 0.f, 1.0f);
+	const float Value = RootOffset.Z + UpOffset;
+	Pos *= Value;
+	BasePos -= Pos;
+
+	const float RightOffset = bIsVerticalClimbing ? RightOffsetVER : 0.f;
+	const FVector Forward = UKismetMathLibrary::GetForwardVector(FRotator(Input.GetRotation())) * ForwardOffset;
+	const FVector Right = UKismetMathLibrary::GetRightVector(FRotator(Input.GetRotation())) * RightOffset;
+
+	FTransform Result {Input.GetRotation(), (BasePos + Forward + Right), FVector::OneVector};
+	return Result;
+}
+
+FTransform UClimbingAnimInstance::ConvertWorldToComponentMeshSpace(const FTransform Input) const
+{
+	return UKismetMathLibrary::MakeRelativeTransform(Input, GetOwningComponent()->GetComponentToWorld());
+}
+
+FVector2D UClimbingAnimInstance::ReturnHandsIKOffset() const
+{
+	const auto Position = UKismetMathLibrary::VLerp(HandsIKOffset.v1, HandsIKOffset.v2, SmoothFreeHang);
+	return FVector2D(Position.X, Position.Y);
+}
+
+void UClimbingAnimInstance::SaveDiffrenceBetweenTime(const float InTime)
+{
+	NormalizedTimeDiffrence = FMath::Abs(InTime - NormalizedAnimPlayTime);
+}
 
 

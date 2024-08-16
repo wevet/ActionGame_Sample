@@ -71,6 +71,11 @@ public:
 	float GetReactFootIKUpTraceHeight() const { return ReactFootIKUpTraceHeight; }
 	float GetReactFootIKDownTraceHeight() const { return ReactFootIKDownTraceHeight; }
 
+	UFUNCTION(BlueprintCallable, Category = "PredictionIK")
+	float GetMinFeetDistance() const { return MinFeetDistance; }
+
+	UFUNCTION(BlueprintCallable, Category = "PredictionIK")
+	float GetMaxFeetDistance() const { return MaxFeetDistance; }
 
 protected:
 	UPROPERTY(EditAnywhere, Category = "Debug")
@@ -174,6 +179,12 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Config")
 	TEnumAsByte<ETraceTypeQuery> TraceChannel = ETraceTypeQuery::TraceTypeQuery1;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Config")
+	float MinFeetDistance = 80.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Config")
+	float MaxFeetDistance = 180.0f;
 #pragma endregion
 
 

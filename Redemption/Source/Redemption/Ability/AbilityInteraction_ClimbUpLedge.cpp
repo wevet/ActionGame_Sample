@@ -4,8 +4,11 @@
 #include "Ability/AbilityInteraction_ClimbUpLedge.h"
 #include "Character/BaseCharacter.h"
 #include "Climbing/ClimbingComponent.h"
+#include "Redemption.h"
+
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(AbilityInteraction_ClimbUpLedge)
+
 
 UAbilityInteraction_ClimbUpLedge::UAbilityInteraction_ClimbUpLedge(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
@@ -37,7 +40,18 @@ void UAbilityInteraction_ClimbUpLedge::ActivateAbility(const FGameplayAbilitySpe
 		return;
 	}
 
+
 	UAnimMontage* Montage = MovementComponent->GetClimbUpLedgeMontage();
+	if (TriggerEventData)
+	{
+		auto ClimbingData = Cast<UClimbingData>(TriggerEventData->OptionalObject);
+		if (ClimbingData)
+		{
+			Montage = MovementComponent->GetClimbUpLedgeMontage(ClimbingData->bIsFreeHang);
+		}
+	}
+
+
 	if (!IsValid(Montage))
 	{
 		UE_LOG(LogTemp, Warning, TEXT("[%s fail : Montage is null.]"), *FString(__FUNCTION__));
@@ -45,15 +59,18 @@ void UAbilityInteraction_ClimbUpLedge::ActivateAbility(const FGameplayAbilitySpe
 		return;
 	}
 
-	Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
-
 #if WITH_EDITOR
 	if (TriggerEventData)
 	{
+
 		FString Msg = TriggerEventData->EventTag.ToString();
 		UE_LOG(LogTemp, Log, TEXT("TagName => %s, funcName => %s"), *Msg, *FString(__FUNCTION__));
+		UE_LOG(LogTemp, Log, TEXT("Montage => %s"), *GetNameSafe(Montage));
 	}
 #endif
+
+	Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
+
 
 	if (MontageTask)
 	{
@@ -69,11 +86,8 @@ void UAbilityInteraction_ClimbUpLedge::ActivateAbility(const FGameplayAbilitySpe
 		FName("ClimbUpLedge"),
 		Montage,
 		FGameplayTagContainer(),
-		PlayRate,
-		0.f, 
-		FName("Default"),
-		true,
-		1.0f);
+		PlayRate, 0.f, FName("Default"), true, 1.0f);
+
 
 	MontageTask->OnCancelled.AddDynamic(this, &UAbilityInteraction_ClimbUpLedge::OnPlayMontageCompleted_Event);
 	MontageTask->OnInterrupted.AddDynamic(this, &UAbilityInteraction_ClimbUpLedge::OnPlayMontageCompleted_Event);
@@ -84,16 +98,43 @@ void UAbilityInteraction_ClimbUpLedge::ActivateAbility(const FGameplayAbilitySpe
 void UAbilityInteraction_ClimbUpLedge::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled)
 {
 	ABaseCharacter* Character = GetBaseCharacter();
-	if (Character)
+
+	const EMovementMode MovementMode = MovementComponent->MovementMode;
+	switch (MovementMode)
 	{
-		UClimbingComponent* ClimbingComponent = Cast<UClimbingComponent>(Character->GetComponentByClass(UClimbingComponent::StaticClass()));
-		if (ClimbingComponent)
+	case MOVE_None:
+	case MOVE_Walking:
+	case MOVE_NavWalking:
+	case MOVE_Falling:
+	case MOVE_Flying:
+	case MOVE_Swimming:
+		break;
+	case MOVE_Custom:
+	{
+		const ECustomMovementMode CustomMovementMode = (ECustomMovementMode)MovementComponent->CustomMovementMode;
+		switch (CustomMovementMode)
 		{
+		case CUSTOM_MOVE_Climbing:
+		{
+			auto ClimbingComponent = Character->GetClimbingComponent();
 			ClimbingComponent->Notify_StopMantling();
 		}
+		break;
+		case CUSTOM_MOVE_WallClimbing:
+		{
+			MovementComponent->MantleEnd();
+		}
+		break;
+		case CUSTOM_MOVE_Mantling:
+		break;
+		case CUSTOM_MOVE_Ladder:
+		break;
+		}
+	}
+	break;
 	}
 
-	MovementComponent->MantleEnd();
+	
 
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
 }
@@ -102,5 +143,6 @@ void UAbilityInteraction_ClimbUpLedge::OnPlayMontageCompleted_Event(FGameplayTag
 {
 	K2_EndAbility();
 }
+
 
 

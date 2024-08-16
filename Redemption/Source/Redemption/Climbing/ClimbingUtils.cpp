@@ -154,14 +154,16 @@ FTwoVectors UClimbingUtils::ConvertTransformToTwoVectors(const FTransform Transf
 bool UClimbingUtils::ClimbingDetectFootIKTrace(const ACharacter* Character, const FVector Center, const FVector Direction, const FVector2D TraceHeight, const float SphereRadius, const bool bDebug, const float RightOffset, FVector& OutTargetImpact, FVector& OutTargetNormal)
 {
 	if (!IsValid(Character))
+	{
 		return false;
+	}
 
 	const float C_HalfHeight = Character->GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
 	const float C_Radius = Character->GetCapsuleComponent()->GetScaledCapsuleRadius();
 	FTwoVectors LineStartAndEnd = FTwoVectors();
 
-	LineStartAndEnd.v1 = Center + (Direction * C_Radius / 2.0f);
-	LineStartAndEnd.v2 = Center + (Direction * C_HalfHeight);
+	LineStartAndEnd.v1 = Center + (Direction * FMath::Max(C_Radius / 2.0f, 15.0f));
+	LineStartAndEnd.v2 = Center + (Direction * FMath::Max(C_HalfHeight, 45.0f));
 
 	TArray<AActor*> IgnoreActors;
 	IgnoreActors.Add(const_cast<ACharacter*>(Character));
@@ -171,10 +173,15 @@ bool UClimbingUtils::ClimbingDetectFootIKTrace(const ACharacter* Character, cons
 
 	FHitResult HitResult(ForceInit);
 	const bool bHitResult = UKismetSystemLibrary::SphereTraceSingle(Character->GetWorld(), LineStartAndEnd.v1, LineStartAndEnd.v2,
-		SphereRadius, Query, false, IgnoreActors, DebugTrace, HitResult, true, FLinearColor::Red, FLinearColor::Green, 0.4f);
+		SphereRadius, Query, false, IgnoreActors, DebugTrace, HitResult, true, 
+		FLinearColor(0.18f, 0.f, 0.57f, 1.0f), 
+		FLinearColor(0.f, 0.17f, 1.0f, 1.0f), 0.4f);
 
 	if (!bHitResult)
+	{
+		UE_LOG(LogTemp, Log, TEXT("not hit SphereTraceSingle => [%s]"), *FString(__FUNCTION__));
 		return false;
+	}
 
 	const FVector LineOrigin = LineStartAndEnd.v1;
 	const FVector LineDirection = UKismetMathLibrary::FindLookAtRotation(LineStartAndEnd.v1, LineStartAndEnd.v2).Vector();
@@ -205,13 +212,18 @@ bool UClimbingUtils::ClimbingDetectFootIKTrace(const ACharacter* Character, cons
 			HitResult.Reset();
 
 			const bool bChildHit = UKismetSystemLibrary::LineTraceSingle(Character->GetWorld(), TraceStart, TraceEnd, Query, false,
-				TArray<AActor*>({}), DebugTrace, HitResult, true, FLinearColor::Red, FLinearColor::Green, 0.2f);
+				TArray<AActor*>({}), DebugTrace, HitResult, true, FLinearColor::Red, FLinearColor::Blue, 0.2f);
 
 			if (!bChildHit)
 			{
 				continue;
 			}
 
+			OutTargetImpact = HitResult.ImpactPoint;
+			OutTargetNormal = HitResult.ImpactNormal;
+			return true;
+
+#if false
 			if (!HitResult.bStartPenetrating)
 			{
 				const FVector F_Normal = FRotationMatrix::MakeFromX(HitResult.ImpactNormal).Rotator().Vector();
@@ -224,7 +236,12 @@ bool UClimbingUtils::ClimbingDetectFootIKTrace(const ACharacter* Character, cons
 					return true;
 				}
 			}
+#endif
 		}
+	}
+	else
+	{
+		UE_LOG(LogTemp, Log, TEXT("not condition Dist2Point => [%s]"), *FString(__FUNCTION__));
 	}
 	return false;
 }

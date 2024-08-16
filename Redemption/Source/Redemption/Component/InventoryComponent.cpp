@@ -25,8 +25,6 @@ void UInventoryComponent::BeginPlay()
 	Super::SetComponentTickEnabled(false);
 
 	Character = Cast<ABaseCharacter>(GetOwner());
-	
-	//RequestAsyncLoad();
 }
 
 void UInventoryComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)

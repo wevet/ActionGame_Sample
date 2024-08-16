@@ -152,6 +152,10 @@ public:
 	virtual void DoAttack() override;
 	virtual void DoResumeAttack() override;
 	virtual void DoStopAttack() override;
+
+	virtual void DoStartCinematic() override;
+	virtual void DoStopCinematic() override;
+	virtual bool IsCinematic() const override;
 #pragma endregion
 
 #pragma region IWvAIActionStateInterface
@@ -319,6 +323,7 @@ public:
 
 	float GetHealthToWidget() const;
 	bool IsHealthHalf() const;
+	void GetCharacterHealth(FVector& OutHealth);
 
 	void DoForceKill();
 
@@ -339,6 +344,8 @@ public:
 	void FinishMontageMatching();
 
 	bool HasAccelerating() const;
+	bool IsStrafeMovementMode() const;
+	virtual bool IsQTEActionPlaying() const;
 
 #pragma region NearlestAction
 	void CalcurateNearlestTarget(const float SyncPointWeight);
@@ -359,6 +366,8 @@ public:
 	void BeginVehicleAction();
 	void EndVehicleAction();
 #pragma endregion
+
+	void DrawDebug();
 
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Component, meta = (AllowPrivateAccess = "true"))

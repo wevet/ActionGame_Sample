@@ -2663,15 +2663,8 @@ void UWvCharacterMovementComponent::StopClimbing(const float DeltaTime, int32 It
 
 void UWvCharacterMovementComponent::StopClimbing_Action()
 {
-	if (OnWallClimbingEndDelegate.IsBound())
-	{
-		OnWallClimbingEndDelegate.Broadcast();
-	}
-
-	if (LocomotionComponent.IsValid())
-	{
-		LocomotionComponent->SetLockUpdatingRotation(false);
-	}
+	OnWallClimbingEndDelegate.Broadcast();
+	LocomotionComponent->SetLockUpdatingRotation(false);
 
 	if (bPrepareStrafeMovement)
 	{
@@ -2943,10 +2936,7 @@ void UWvCharacterMovementComponent::TryClimbing()
 {
 	if (CanStartClimbing() && IsPlayerStickInputUp())
 	{
-		if (LocomotionComponent.IsValid())
-		{
-			LocomotionComponent->SetLockUpdatingRotation(true);
-		}
+		LocomotionComponent->SetLockUpdatingRotation(true);
 
 		const auto LocomotionEssencialVariables = LocomotionComponent->GetLocomotionEssencialVariables();
 		const ELSRotationMode LSRotationMode = LocomotionEssencialVariables.LSRotationMode;
@@ -2955,11 +2945,7 @@ void UWvCharacterMovementComponent::TryClimbing()
 		bOrientRotationToMovement = false;
 
 		SetMovementMode(MOVE_Custom, CUSTOM_MOVE_WallClimbing);
-
-		if (OnWallClimbingBeginDelegate.IsBound())
-		{
-			OnWallClimbingBeginDelegate.Broadcast();
-		}
+		OnWallClimbingBeginDelegate.Broadcast();
 	}
 }
 
@@ -3097,7 +3083,17 @@ UAnimMontage* UWvCharacterMovementComponent::GetClimbUpLedgeMontage() const
 	}
 	return nullptr;
 }
+
+UAnimMontage* UWvCharacterMovementComponent::GetClimbUpLedgeMontage(const bool bIsFreeHang) const
+{
+	if (IsValid(WallClimbingDAInstance))
+	{
+		return bIsFreeHang ? WallClimbingDAInstance->ClimbToStandingFreeHangMontage : WallClimbingDAInstance->ClimbToStandingMontage;
+	}
+	return nullptr;
+}
 #pragma endregion
+
 
 /// <summary>
 /// apply to ClimbingComponent

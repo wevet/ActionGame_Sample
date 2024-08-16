@@ -16,6 +16,7 @@
 class UAbilitySystemComponent;
 class ULocomotionComponent;
 class UWvCharacterMovementComponent;
+class UPredictionAnimInstance;
 
 USTRUCT(BlueprintType)
 struct REDEMPTION_API FCharacterOverlayInfo
@@ -111,6 +112,9 @@ public:
 
 public:
 	void WakeUpPoseSnapShot();
+
+	UFUNCTION(BlueprintCallable, Category = "BaseAnimInstance")
+	UPredictionAnimInstance* GetPredictionAnimInstance() const;
 
 	// ladder
 	UFUNCTION(BlueprintCallable, Category = "BaseAnimInstance")

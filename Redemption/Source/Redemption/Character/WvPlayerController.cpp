@@ -4,6 +4,8 @@
 #include "PlayerCharacter.h"
 #include "Vehicle/WvWheeledVehiclePawn.h"
 #include "Vehicle/VehicleUIController.h"
+#include "Component/WvCharacterMovementComponent.h"
+#include "Component/QTEActionComponent.h"
 #include "UI/UMGManager.h"
 
 
@@ -223,6 +225,31 @@ void AWvPlayerController::RegisterMission_Callback(const int32 MissionIndex)
 	if (IsValid(PC))
 	{
 		PC->RegisterMission_Callback(MissionIndex);
+	}
+}
+
+void AWvPlayerController::BeginQTEWithSetParameters(const float InTimer, const float InCount)
+{
+	if (IsValid(PC))
+	{
+		PC->GetQTEActionComponent()->SetParameters(InTimer, InCount);
+		PC->GetQTEActionComponent()->Begin(EQTEType::Scenario);
+	}
+}
+
+void AWvPlayerController::BeginQTE()
+{
+	if (IsValid(PC))
+	{
+		PC->GetQTEActionComponent()->Begin(EQTEType::Scenario);
+	}
+}
+
+void AWvPlayerController::EndQTE()
+{
+	if (IsValid(PC))
+	{
+		PC->GetQTEActionComponent()->End();
 	}
 }
 

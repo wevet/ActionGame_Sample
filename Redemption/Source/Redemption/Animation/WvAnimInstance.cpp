@@ -7,6 +7,7 @@
 #include "Component/InventoryComponent.h"
 #include "WvAbilitySystemTypes.h"
 #include "Misc/WvCommonUtils.h"
+#include "PredictionAnimInstance.h"
 
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemGlobals.h"
@@ -530,25 +531,35 @@ void UWvAnimInstance::WakeUpPoseSnapShot()
 	SavePoseSnapshot(RagdollPoseSnapshot);
 }
 
+UPredictionAnimInstance* UWvAnimInstance::GetPredictionAnimInstance() const
+{
+	static FName TagName = FName(TEXT("FootIK"));
+	return Cast<UPredictionAnimInstance>(this->GetLinkedAnimGraphInstanceByTag(TagName));
+}
+
 #pragma region LadderOrBalance
 void UWvAnimInstance::UpdateLadderIKData(UPrimitiveComponent* Component, const FClimbingIKData LeftIKHand, const FClimbingIKData RightIKHand, const FClimbingIKData LeftIKFoot, const FClimbingIKData RightIKFoot)
 {
-
+	UE_LOG(LogTemp, Log, TEXT("%s"), *FString(__FUNCTION__));
 }
 
 void UWvAnimInstance::SetBalanceMode(const bool InBalanceMode)
 {
+	if (InBalanceMode)
+	{
+		//UE_LOG(LogTemp, Log, TEXT("%s"), *FString(__FUNCTION__));
+	}
 
 }
 
 void UWvAnimInstance::SetBalanceBlendParameter(const float InBlendOverlay, const float InBlendWeight)
 {
-
+	UE_LOG(LogTemp, Log, TEXT("%s"), *FString(__FUNCTION__));
 }
 
 void UWvAnimInstance::ApplyJumpSequence(const bool bIsStartSeq, const float NormalizeTime, const FJumpProjection JumpProjection, const FJumpProjection JumpSeqAnimsValues)
 {
-
+	UE_LOG(LogTemp, Log, TEXT("%s"), *FString(__FUNCTION__));
 }
 #pragma endregion
 

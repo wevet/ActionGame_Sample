@@ -34,6 +34,8 @@ public:
 	void DoAlive();
 	void DoKill();
 
+	void GetCharacterHealth(FVector &OutHealth);
+
 protected:
 	virtual void BeginPlay() override;
 

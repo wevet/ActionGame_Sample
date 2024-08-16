@@ -325,6 +325,9 @@ void ABaseCharacter::Tick(float DeltaTime)
 	{
 		LocomotionComponent->DoWhileRagdolling();
 	}
+
+	DrawDebug();
+
 }
 
 
@@ -513,12 +516,12 @@ void ABaseCharacter::SetGenericTeamId(const FGenericTeamId& NewTeamID)
 		}
 		else
 		{
-			UE_LOG(LogTemp, Error, TEXT("You can't set the team ID on a character (%s) except on the authority"), *GetPathNameSafe(this));
+			UE_LOG(LogTemp, Error, TEXT("You can't set the team ID on a character (%s) except on the authority"), *GetNameSafe(this));
 		}
 	}
 	else
 	{
-		UE_LOG(LogTemp, Error, TEXT("You can't set the team ID on a possessed character (%s); it's driven by the associated controller"), *GetPathNameSafe(this));
+		UE_LOG(LogTemp, Error, TEXT("You can't set the team ID on a possessed character (%s); it's driven by the associated controller"), *GetNameSafe(this));
 	}
 }
 
@@ -552,7 +555,7 @@ void ABaseCharacter::OnSendKillTarget(AActor* Actor, const float Damage)
 	{
 		Interface->OnSendKillTarget(Actor, Damage);
 	}
-	//UE_LOG(LogTemp, Log, TEXT("Owner => %s, Actor => %s, function => %s"), *GetPathNameSafe(this), *GetPathNameSafe(Actor), *FString(__FUNCTION__));
+	//UE_LOG(LogTemp, Log, TEXT("Owner => %s, Actor => %s, function => %s"), *GetNameSafe(this), *GetNameSafe(Actor), *FString(__FUNCTION__));
 }
 
 void ABaseCharacter::OnReceiveWeaknessAttack(AActor* Actor, const FName WeaknessName, const float Damage)
@@ -691,6 +694,37 @@ void ABaseCharacter::DoStopAttack()
 bool ABaseCharacter::IsAttackAllowed() const
 {
 	return !WvAbilitySystemComponent->HasMatchingGameplayTag(TAG_Character_AI_NotAllowed_Attack);
+}
+
+void ABaseCharacter::DoStartCinematic()
+{
+	Freeze();
+
+	auto CMC = GetWvCharacterMovementComponent();
+	if (CMC)
+	{
+		CMC->SetMovementMode(EMovementMode::MOVE_None);
+	}
+
+	WvAbilitySystemComponent->AddGameplayTag(TAG_Character_Action_Cinematic, 1);
+}
+
+void ABaseCharacter::DoStopCinematic()
+{
+	UnFreeze();
+
+	auto CMC = GetWvCharacterMovementComponent();
+	if (CMC)
+	{
+		CMC->SetMovementMode(EMovementMode::MOVE_Walking);
+	}
+
+	WvAbilitySystemComponent->RemoveGameplayTag(TAG_Character_Action_Cinematic, 1);
+}
+
+bool ABaseCharacter::IsCinematic() const
+{
+	return WvAbilitySystemComponent->HasMatchingGameplayTag(TAG_Character_Action_Cinematic);
 }
 #pragma endregion
 
@@ -1279,7 +1313,6 @@ void ABaseCharacter::OverlayStateChange(const ELSOverlayState CurrentOverlay)
 		OnLoadOverlayABP();
 	}
 
-
 	if (IsValid(OverlayAnimDAInstance))
 	{
 		auto AnimInstanceClass = OverlayAnimDAInstance->FindAnimInstance(CurrentOverlay);
@@ -1520,6 +1553,19 @@ bool ABaseCharacter::IsHealthHalf() const
 {
 	return StatusComponent->IsHealthHalf();
 }
+
+/// <summary>
+/// get currenthealth
+/// x => min
+/// y => current
+/// z => max
+/// </summary>
+/// <param name="OutHealth"></param>
+void ABaseCharacter::GetCharacterHealth(FVector& OutHealth)
+{
+	StatusComponent->GetCharacterHealth(OutHealth);
+}
+
 
 bool ABaseCharacter::IsMeleePlaying() const
 {
@@ -2056,6 +2102,7 @@ void ABaseCharacter::EndCinematic()
 	}
 }
 
+#pragma region CloseCombat
 void ABaseCharacter::ModifyCombatAnimationIndex(int32& OutIndex)
 {
 	if (!IsValid(CloseCombatAnimationDAInstance))
@@ -2086,6 +2133,7 @@ UAnimMontage* ABaseCharacter::GetCloseCombatAnimMontage(const int32 Index, const
 	}
 	return nullptr;
 }
+#pragma endregion
 
 void ABaseCharacter::UpdateMontageMatching(const float InPosition)
 {
@@ -2106,4 +2154,21 @@ bool ABaseCharacter::HasAccelerating() const
 	return bHasMovementInput;
 }
 
+bool ABaseCharacter::IsStrafeMovementMode() const
+{
+	const FGameplayTag LookingDirectionTag = FGameplayTag::RequestGameplayTag(TEXT("Character.Locomotion.RotationMode.LookingDirection"));
+	return WvAbilitySystemComponent->HasMatchingGameplayTag(LookingDirectionTag);
+}
+
+bool ABaseCharacter::IsQTEActionPlaying() const
+{
+	return false;
+}
+
+void ABaseCharacter::DrawDebug()
+{
+#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
+	LocomotionComponent->DrawLocomotionDebug();
+#endif
+}
 

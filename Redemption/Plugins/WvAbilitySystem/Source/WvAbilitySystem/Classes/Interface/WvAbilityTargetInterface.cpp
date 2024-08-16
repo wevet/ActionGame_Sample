@@ -103,6 +103,11 @@ bool IWvAbilityTargetInterface::IsFreezing() const
 	return false;
 }
 
+bool IWvAbilityTargetInterface::IsCinematic() const
+{
+	return false;
+}
+
 const bool IWvAbilityTargetInterface::CanAttack()
 {
 	return true;

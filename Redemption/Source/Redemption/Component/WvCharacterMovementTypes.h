@@ -157,6 +157,12 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	UAnimMontage* LedgeClimbMontage;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UAnimMontage* ClimbToStandingMontage;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UAnimMontage* ClimbToStandingFreeHangMontage;
+
 	UClimbingDataAsset() {}
 };
 
@@ -339,4 +345,17 @@ public:
 		GroundedTraceSettings.DownwardTraceRadius = 30.f;
 	}
 };
+
+/// <summary>
+/// ref. CMC
+/// </summary>
+UCLASS()
+class REDEMPTION_API UClimbingData : public UObject
+{
+	GENERATED_BODY()
+
+public:
+	bool bIsFreeHang = false;
+};
+
 

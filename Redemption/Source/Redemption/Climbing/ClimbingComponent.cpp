@@ -10,24 +10,27 @@
 #include "Character/BaseCharacter.h"
 #include "Ability/WvAbilitySystemComponent.h"
 #include "Component/WvCharacterMovementComponent.h"
+#include "Component/QTEActionComponent.h"
 #include "Game/WvGameInstance.h"
 #include "Misc/WvCommonUtils.h"
+#include "Redemption.h"
 
+// built in
 #include "Components/SkeletalMeshComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Kismet/GameplayStatics.h"
 #include "AbilitySystemBlueprintLibrary.h"
-#include "Components/WidgetComponent.h"
 #include "Components/ChildActorComponent.h"
 #include "MotionWarpingComponent.h"
 
-#include UE_INLINE_GENERATED_CPP_BY_NAME(ClimbingComponent)
+//#include UE_INLINE_GENERATED_CPP_BY_NAME(ClimbingComponent)
 
-#define QTE_TRIGGER_ENABLE 0
 #define STOP_CLIMBING_INPUT_TIME 0.3f
 #define VERTICAL_DETECT_NUM 2
+
+#define CLIMBING_DEV 1
 
 #if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
 static TAutoConsoleVariable<int32> CVarDebugClimbingSystem(TEXT("wv.ClimbingSystem.Debug"), 0, TEXT("ClimbingSystem Debug .\n") TEXT("<=0: off\n") TEXT("  1: on\n"), ECVF_Default);
@@ -36,8 +39,6 @@ static TAutoConsoleVariable<int32> CVarDebugClimbingSystem(TEXT("wv.ClimbingSyst
 UClimbingComponent::UClimbingComponent(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
 	PrimaryComponentTick.bCanEverTick = true;
-	bQTEEndCallbackResult = false;
-	bQTEActivated = false;
 
 	TargetActorPoint = nullptr;
 	bOwnerPlayerController = false;
@@ -76,35 +77,26 @@ void UClimbingComponent::BeginPlay()
 
 	Character = Cast<ABaseCharacter>(GetOwner());
 
-	if (!IsValid(Character))
+	if (IsValid(Character))
+	{
+		CharacterMovementComponent = Character->GetWvCharacterMovementComponent();
+		SkeletalMeshComponent = Character->GetMesh();
+		BaseAnimInstance = Character->GetMesh()->GetAnimInstance();
+
+		LocomotionComponent = Character->GetLocomotionComponent();
+		LocomotionComponent->OnRotationModeChangeDelegate.AddDynamic(this, &ThisClass::ChangeRotationMode_Callback);
+		
+		LadderComponent = Cast<ULadderComponent>(Character->GetComponentByClass(ULadderComponent::StaticClass()));
+		QTEActionComponent = Cast<UQTEActionComponent>(Character->GetComponentByClass(UQTEActionComponent::StaticClass()));
+
+		bOwnerPlayerController = bool(Cast<APlayerController>(Character->GetController()));
+		Super::SetComponentTickEnabled(bOwnerPlayerController);
+	}
+	else
 	{
 		UE_LOG(LogTemp, Error, TEXT("Cast Failed Owner => %s"), *FString(__FUNCTION__));
 		Super::SetComponentTickEnabled(false);
-		return;
 	}
-
-	CharacterMovementComponent = Character->GetWvCharacterMovementComponent();
-	SkeletalMeshComponent = Character->GetMesh();
-	LocomotionComponent = Character->GetLocomotionComponent();
-	BaseAnimInstance = Character->GetMesh()->GetAnimInstance();
-
-	LadderComponent = Cast<ULadderComponent>(Character->GetComponentByClass(ULadderComponent::StaticClass()));
-
-	// setup qte widget
-	{
-		TArray<UActorComponent*> Components = Character->GetComponentsByTag(UWidgetComponent::StaticClass(), FName(TEXT("QTE")));
-		for (UActorComponent* Component : Components)
-		{
-			if (!QTEWidgetComponent.IsValid())
-			{
-				QTEWidgetComponent = Cast<UWidgetComponent>(Component);
-			}
-		}
-	}
-
-	bOwnerPlayerController = bool(Cast<APlayerController>(Character->GetController()));
-	Super::SetComponentTickEnabled(bOwnerPlayerController);
-
 }
 
 void UClimbingComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -119,8 +111,11 @@ void UClimbingComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 			TimerManager.ClearTimer(ClimbingActionTimer);
 	}
 
-	QTEWidgetComponent.Reset();
+	LocomotionComponent->OnRotationModeChangeDelegate.RemoveDynamic(this, &ThisClass::ChangeRotationMode_Callback);
+
 	LadderComponent.Reset();
+	QTEActionComponent.Reset();
+
 	TargetActorPoint = nullptr;
 
 	ClimbingCurveDAInstance = nullptr;
@@ -163,11 +158,6 @@ void UClimbingComponent::TickComponent(float DeltaTime, ELevelTick TickType, FAc
 			}
 		}
 	}
-
-	if (IsQTEPlaying())
-	{
-		UpdateQTE(DeltaTime);
-	}
 }
 
 ACharacter* UClimbingComponent::GetCharacterOwner() const
@@ -176,24 +166,32 @@ ACharacter* UClimbingComponent::GetCharacterOwner() const
 }
 
 /// <summary>
-/// Apply to INNCharacterMovementComponent
+/// Apply to WvCharacterMovementComponent
 /// </summary>
 void UClimbingComponent::OnWallClimbingBegin()
 {
-	ClimbingBegin_Internal();
+	ClimbingBeginDelegate.Broadcast();
 }
 
 /// <summary>
-/// Apply to INNCharacterMovementComponent
+/// Apply to WvCharacterMovementComponent
 /// </summary>
 void UClimbingComponent::OnWallClimbingEnd()
 {
-	ClimbingEnd_Internal();
+	ClimbingEndDelegate.Broadcast();
 }
 
 void UClimbingComponent::OnClimbingBegin()
 {
-	ClimbingBegin_Internal();
+	CharacterMovementComponent->SetMovementMode(MOVE_Custom, ECustomMovementMode::CUSTOM_MOVE_Climbing);
+	ClimbingBeginDelegate.Broadcast();
+
+	// strafe’†‚Ìê‡‚Ívelocity mode‚ÉØ‚è‘Ö‚¦‚éAinterface‚ÍŒÄ‚Ño‚³‚È‚¢
+	if (bIsStrafingMode)
+	{
+		CharacterMovementComponent->bUseControllerDesiredRotation = false;
+		CharacterMovementComponent->bOrientRotationToMovement = true;
+	}
 
 	bIsClimbing = true;
 	AxisScale = 0.0f;
@@ -201,55 +199,28 @@ void UClimbingComponent::OnClimbingBegin()
 
 void UClimbingComponent::OnClimbingEnd()
 {
-	ClimbingEnd_Internal();
+	// climbing‘O‚Éstrafe’†‚¾‚Á‚½ê‡‚Ístrafe‚É–ß‚·
+	if (bIsStrafingMode)
+	{
+		CharacterMovementComponent->bUseControllerDesiredRotation = true;
+		CharacterMovementComponent->bOrientRotationToMovement = false;
+	}
+	ClimbingEndDelegate.Broadcast();
 }
 
-void UClimbingComponent::ClimbingBegin_Internal()
+void UClimbingComponent::ChangeRotationMode_Callback()
 {
-	if (CharacterMovementComponent)
+	if (Character)
 	{
-		CharacterMovementComponent->SetMovementMode(MOVE_Custom, ECustomMovementMode::CUSTOM_MOVE_Climbing);
+		bIsStrafingMode = Character->IsStrafeMovementMode();
 	}
 
-	if (ClimbingBeginDelegate.IsBound())
-	{
-		ClimbingBeginDelegate.Broadcast();
-	}
-
-	if (LocomotionComponent)
-	{
-		LocomotionComponent->SetLockUpdatingRotation(true);
-	}
-}
-
-void UClimbingComponent::ClimbingEnd_Internal()
-{
-	if (ClimbingEndDelegate.IsBound())
-	{
-		ClimbingEndDelegate.Broadcast();
-	}
 }
 
 void UClimbingComponent::OnClimbingEndMovementMode()
 {
-	if (CharacterMovementComponent)
-	{
-		CharacterMovementComponent->SetMovementMode(EMovementMode::MOVE_None);
-	}
-
-	if (LocomotionComponent)
-	{
-		LocomotionComponent->SetLockUpdatingRotation(false);
-	}
-}
-
-bool UClimbingComponent::WasClimbing() const
-{
-	if (CharacterMovementComponent && CharacterMovementComponent->IsWallClimbing())
-	{
-		return false;
-	}
-	return bIsClimbing;
+	CharacterMovementComponent->SetMovementMode(EMovementMode::MOVE_None);
+	LocomotionComponent->SetLockUpdatingRotation(false);
 }
 
 void UClimbingComponent::SetJumpInputPressed(const bool NewJumpInputPressed)
@@ -260,12 +231,6 @@ void UClimbingComponent::SetJumpInputPressed(const bool NewJumpInputPressed)
 bool UClimbingComponent::GetJumpInputPressed() const
 {
 	return bJumpInputPressed;
-}
-
-bool UClimbingComponent::ShouldMoving() const
-{
-	const float Length = UKismetMathLibrary::VSize(Velocity);
-	return Length > 0.1f;
 }
 
 bool UClimbingComponent::HasCharacterInputPressed() const
@@ -298,130 +263,40 @@ bool UClimbingComponent::GetCachedFreeHang() const
 	return bCachedFreeHang;
 }
 
-void UClimbingComponent::StartClimbToStanding()
-{
-	if (CharacterMovementComponent)
-	{
-		const bool bIsClimbUpLedge = CharacterMovementComponent->TryClimbUpLedge();
-
-		if (bIsClimbUpLedge)
-		{
-			if (LocomotionComponent)
-			{
-				//LocomotionComponent->StartClimbToStanding();
-				LocomotionComponent->SetLockUpdatingRotation(false);
-			}
-			UpdateClimbingObject(nullptr);
-		}
-		else
-		{
-			UE_LOG(LogTemp, Warning, TEXT("Failed ClimbUpLedge => %s"), *FString(__FUNCTION__));
-		}
-	}
-
-}
-
 #pragma region QTE
-bool UClimbingComponent::IsQTEPlaying() const
+void UClimbingComponent::OnQTEBegin_Callback()
 {
-	return QTEData.bSystemEnable && bOwnerPlayerController;
+
+#if QTE_SYSTEM_RECEIVE
+	auto AB = GetClimbingAnimInstanceToCast();
+	if (AB)
+	{
+		AB->NotifyQTEActivate(true);
+	}
+#endif
+
+	UE_LOG(LogTemp, Log, TEXT("[%s]"), *FString(__FUNCTION__));
 }
 
-void UClimbingComponent::BeginQTE()
+void UClimbingComponent::OnQTEEnd_Callback(const bool bIsSuccess)
 {
-	if (!bQTEActivated)
-		return;
 
-	QTEData.Begin();
-	if (QTEBeginDelegate.IsBound())
+#if QTE_SYSTEM_RECEIVE
+	if (bIsSuccess)
 	{
-		QTEBeginDelegate.Broadcast();
-	}
-	ShowQTEWidgetComponent(true);
-}
-
-void UClimbingComponent::UpdateQTE(const float DeltaTime)
-{
-	if (!QTEData.IsTimeOver())
-	{
-		QTEData.UpdateTimer(DeltaTime);
-	}
-	else
-	{
-		EndQTEInternal();
-	}
-}
-
-void UClimbingComponent::EndQTEInternal()
-{
-	if (!bQTEEndCallbackResult)
-	{
-		bQTEEndCallbackResult = true;
-		EndQTE();
-	}
-}
-
-void UClimbingComponent::EndQTE()
-{
-	const bool bWasSuccess = QTEData.IsSuccess();
-	if (QTEEndDelegate.IsBound())
-	{
-		QTEEndDelegate.Broadcast(bWasSuccess);
-	}
-	if (bWasSuccess)
-	{
-		SuccessQTEAction();
+		auto AB = GetClimbingAnimInstanceToCast();
+		if (AB)
+		{
+			AB->NotifyQTEActivate(false);
+		}
 	}
 	else
 	{
 		ApplyStopClimbingInput(STOP_CLIMBING_INPUT_TIME, false);
 	}
-	QTEData.Reset();
-	bQTEEndCallbackResult = false;
-	bQTEActivated = false;
-	ShowQTEWidgetComponent(false);
-}
+#endif
 
-void UClimbingComponent::SuccessQTEAction()
-{
-	if (GetClimbingAnimInstanceToCast())
-	{
-		GetClimbingAnimInstanceToCast()->NotifyQTEActivate(false);
-	}
-}
-
-float UClimbingComponent::GetTimerProgress() const
-{
-	return FMath::Clamp<float>(QTEData.GetTimerProgress(), 0.0f, 1.0f);
-}
-
-float UClimbingComponent::GetPressCountProgress() const
-{
-	return FMath::Clamp<float>(QTEData.GetPressCountProgress(), 0.0f, 1.0f);
-}
-
-void UClimbingComponent::QTEInputPress()
-{
-	if (IsQTEPlaying())
-	{
-		const bool bWasSuccess = QTEData.IsSuccess();
-		if (bWasSuccess)
-		{
-			EndQTEInternal();
-		}
-		else
-		{
-			QTEData.IncrementPress();
-		}
-	}
-}
-
-void UClimbingComponent::ShowQTEWidgetComponent(const bool NewVisibility)
-{
-	if (QTEWidgetComponent.IsValid())
-	{
-		QTEWidgetComponent->SetVisibility(NewVisibility);
-	}
+	UE_LOG(LogTemp, Log, TEXT("[%s]"), *FString(__FUNCTION__));
 }
 #pragma endregion
 
@@ -502,9 +377,6 @@ bool UClimbingComponent::CanClimbingObject(AActor* HitActor) const
 
 bool UClimbingComponent::IsHorizontalClimbingObject(AActor* HitActor) const
 {
-	if (!HitActor)
-		return false;
-
 	if (AClimbingObject* ClimbingObject = Cast<AClimbingObject>(HitActor))
 	{
 		if (!ClimbingObject->IsVerticalClimbing() && ClimbingObject->CanClimbing())
@@ -517,9 +389,6 @@ bool UClimbingComponent::IsHorizontalClimbingObject(AActor* HitActor) const
 
 bool UClimbingComponent::IsVerticalClimbingObject(AActor* HitActor) const
 {
-	if (!HitActor)
-		return false;
-
 	if (AClimbingObject* ClimbingObject = Cast<AClimbingObject>(HitActor))
 	{
 		if (ClimbingObject->IsVerticalClimbing() && ClimbingObject->CanClimbing())
@@ -626,7 +495,6 @@ void UClimbingComponent::StopClimbingInternal(const bool bUseTimelineCondition)
 	const float RemainingTimer = GetClimbingActionRemainingTime();
 	//const bool bCanReset = bUseTimelineCondition ? (RemainingTimer == -1.0f || RemainingTimer < 0.2f) : true;
 
-
 	bool bCanReset = false;
 	if (bUseTimelineCondition)
 	{
@@ -645,23 +513,16 @@ void UClimbingComponent::StopClimbingInternal(const bool bUseTimelineCondition)
 		bTheVerticalObjectIsCurrentValid = false;
 		bOnVerticalObject = false;
 		ClimbActionType = EClimbActionType::None;
-		if (CharacterMovementComponent)
-			CharacterMovementComponent->SetMovementMode(EMovementMode::MOVE_Falling);
-
-		if (LocomotionComponent)
-			LocomotionComponent->SetLockUpdatingRotation(false);
+		CharacterMovementComponent->SetMovementMode(EMovementMode::MOVE_Falling);
+		LocomotionComponent->SetLockUpdatingRotation(false);
 
 		ClearClimbingActionTimer();
 		UpdateClimbingObject(nullptr);
 
-		if (Character)
-		{
-			const FVector ClampVector = UKismetMathLibrary::ClampVectorSize(Velocity * 100.0f, -700.0f, 700.0f);
-			Character->LaunchCharacter(ClampVector, false, false);
-			Velocity = FVector::ZeroVector;
-		}
+		const FVector ClampVector = UKismetMathLibrary::ClampVectorSize(Velocity * 100.0f, -700.0f, 700.0f);
+		Character->LaunchCharacter(ClampVector, false, false);
+		Velocity = FVector::ZeroVector;
 
-		bQTEActivated = false;
 		OnClimbingEnd();
 	}
 }
@@ -785,7 +646,7 @@ void UClimbingComponent::GetHandIKConfig(bool& OutValidHand_L, bool& OutValidHan
 FClimbingEssentialVariable UClimbingComponent::GetClimbingEssentialVariable() const
 {
 	FClimbingEssentialVariable Dest;
-	Dest.bIsMoving = ShouldMoving();
+	Dest.bIsMoving = IsValid(Character) ? Character->HasAccelerating() : false;
 	Dest.MovingDirection = ClimbMovementDirection;
 	Dest.MoveDirectionWithStride = MovementDirectionWithStride;
 	Dest.JumpDirection = JumpDirection;
@@ -834,7 +695,8 @@ FTransform UClimbingComponent::SelectBaseLedgeTransform(const bool UseCachedAsDe
 #endif
 		return ClimbLedge.Origin;
 	}
-	return ShouldMoving() ? WorldTransform.Transform : ClimbLedge.Origin;
+	const bool bIsMoving = IsValid(Character) ? Character->HasAccelerating() : false;
+	return bIsMoving ? WorldTransform.Transform : ClimbLedge.Origin;
 }
 
 FTransform UClimbingComponent::SelectBaseVerticalLedgeTransform() const
@@ -1053,8 +915,8 @@ void UClimbingComponent::CharacterSmoothInterpTransform(const FTransform NewTran
 {
 	if (Character)
 	{
-		Character->SetActorLocation(NewTransform.GetLocation());
-		//Character->SetActorLocationAndRotation(NewTransform.GetLocation(), FRotator(NewTransform.GetRotation()));
+		//Character->SetActorLocation(NewTransform.GetLocation());
+		Character->SetActorLocationAndRotation(NewTransform.GetLocation(), FRotator(NewTransform.GetRotation()));
 	}
 
 	UpdateTargetRotation(FRotator(NewTransform.GetRotation()));
@@ -1071,14 +933,18 @@ void UClimbingComponent::ModifyFirstClimbingContact(const float Alpha, const flo
 void UClimbingComponent::PrepareToHoldingLedge()
 {
 	if (bLockCanStartClimbing)
+	{
 		return;
+	}
 
 	if (TargetActorPoint->IsVerticalClimbing())
+	{
 		return;
+	}
 
 	// hardlang for Sprinting
 	check(Character);
-	const FGameplayTag SprintTag = FGameplayTag::RequestGameplayTag(TEXT("Locomotion.Gait.Sprinting"));
+	const FGameplayTag SprintTag = FGameplayTag::RequestGameplayTag(TEXT("Character.Locomotion.Gait.Sprinting"));
 	const UAbilitySystemComponent* ASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(Character);
 
 	const bool bWasSprinted = IsValid(ASC) ? ASC->HasMatchingGameplayTag(SprintTag) : false;
@@ -1124,16 +990,15 @@ void UClimbingComponent::PrepareToHoldingLedge()
 	// PrepareIndex is updated and AnimationBlueprint gets it with threadsafe, which can cause problems with gamethread.
 	SetPrepareToClimbEvent(Index);
 
-#if QTE_TRIGGER_ENABLE
 	TArray<int32> QTEArray({ 3, });
-	bQTEActivated = QTEArray.Contains(Index);
-#endif
+	const bool bQTEActivated = QTEArray.Contains(Index);
 
 	// Activate Timeline Event
 	float Result = bLocalFreeHang ?
 		(bWasSprinted ? PrepareToClimbingTimeDuration.Z * (bWallHit ? 1.4f : 1.0f) : PrepareToClimbingTimeDuration.X) :
 		(bWasSprinted ? PrepareToClimbingTimeDuration.Y : PrepareToClimbingTimeDuration.X);
 	Result *= AllSequencesTimeMultiply;
+
 	if (bStartFromLadder)
 	{
 		const float LadderIntervalMul = 1.5f;
@@ -1157,7 +1022,17 @@ void UClimbingComponent::PrepareToHoldingLedge()
 	}
 #endif
 
-	BeginQTE();
+#if QTE_SYSTEM_RECEIVE
+	// QTE is enabled when Character is in Sprint state.
+	if (bQTEActivated && QTEActionComponent.IsValid())
+	{
+		FVector OutHealth{0.f, 0.f, 0.f};
+		Character->GetCharacterHealth(OutHealth);
+
+		QTEActionComponent->ModifyTimer(OutHealth);
+		QTEActionComponent->Begin(EQTEType::Climbing);
+	}
+#endif
 }
 
 const bool UClimbingComponent::PrepareMoreValueWhenIsOnOtherClimbingMode()
@@ -1188,9 +1063,10 @@ void UClimbingComponent::Notify_StopMantling()
 {
 	MantleStop();
 
-	if (GetClimbingAnimInstanceToCast())
+	auto AB = GetClimbingAnimInstanceToCast();
+	if (AB)
 	{
-		GetClimbingAnimInstanceToCast()->NotifyEndMantling();
+		AB->NotifyEndMantling();
 	}
 }
 
@@ -1200,12 +1076,13 @@ void UClimbingComponent::MantleStop()
 	bIsClimbing, bCanShortMoveLR, bUseOnlyVerticalMovementFunctions = false;
 	bTheVerticalObjectIsCurrentValid, bUseOnlyVerticalMovementFunctions, bOnVerticalObject = false;
 	ClimbActionType = EClimbActionType::None;
-	// @todo
-	//CharacterMovementComponent->StopMantling();
+
 	CharacterMovementComponent->MantleEnd();
 	LocomotionComponent->SetLockUpdatingRotation(false);
 	OnClimbingEnd();
 	ClearClimbingActionTimer();
+
+	UpdateClimbingObject(nullptr);
 }
 
 /// <summary>
@@ -1375,6 +1252,9 @@ const bool UClimbingComponent::MantleCheck()
 	return true;
 }
 
+/// <summary>
+/// ability apply mantle event
+/// </summary>
 void UClimbingComponent::MantleStart()
 {
 	// Save Character Current Transform and Convert Target Climbing Point To Local
@@ -1391,6 +1271,7 @@ void UClimbingComponent::MantleStart()
 
 	// Update Character
 	OnClimbingEndMovementMode();
+
 	AxisScale = 0.0f;
 	bStartMantle = true;
 	TimelineDuration = 2.0f;
@@ -1417,15 +1298,23 @@ void UClimbingComponent::MantleStart()
 #if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
 	if (bDrawDebugTrace)
 	{
-		UKismetSystemLibrary::DrawDebugSphere(GetWorld(), CapsuleTargetTransformWS.Transform.GetLocation(), 10.0f, 12, FLinearColor::Green, 4.0f, 1.0f);
+
 	}
+	UKismetSystemLibrary::DrawDebugSphere(GetWorld(), CapsuleTargetTransformWS.Transform.GetLocation(), 10.0f, 12, FLinearColor::Green, 4.0f, 1.0f);
 #endif
 
+#if CLIMBING_DEV
+	UClimbingData* Instance = NewObject<UClimbingData>();
+	Instance->bIsFreeHang = bFreeHang;
+	FGameplayEventData EventData;
+	EventData.OptionalObject = Instance;
 
+	UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(Character, TAG_Locomotion_ClimbingLedgeEnd, EventData);
 	CharacterMovementComponent->SetMovementMode(MOVE_Custom, ECustomMovementMode::CUSTOM_MOVE_Mantling);
+#endif
+
 	TimelineDuration = 2.0f;
 	GetOwner()->GetWorldTimerManager().SetTimer(ClimbingActionTimer, this, &UClimbingComponent::ClimbingActionTimer_Callback, TimelineDuration, false);
-	StartClimbToStanding();
 }
 #pragma endregion
 
@@ -1713,13 +1602,10 @@ FClimbingLedge UClimbingComponent::ConvertLedgeToWorld(const FClimbingLedge Loca
 void UClimbingComponent::SelectMovementFunctionType(bool& OutNormal)
 {
 	OutNormal = true;
-	if (IsValid(TargetActorPoint))
+	if (IsVerticalClimbingObject(TargetActorPoint))
 	{
-		if (TargetActorPoint->IsVerticalClimbing())
-		{
-			if (bUseOnlyVerticalMovementFunctions)
-				OutNormal = false;
-		}
+		if (bUseOnlyVerticalMovementFunctions)
+			OutNormal = false;
 	}
 }
 
@@ -1752,7 +1638,9 @@ void UClimbingComponent::UpdateWhenOnVerticalObject()
 const bool UClimbingComponent::StartMoveRightOrLeft(const bool bCanMove)
 {
 	if (!bCanMove)
+	{
 		return false;
+	}
 
 	// Activate Timeline Event
 	{
@@ -1995,8 +1883,10 @@ void UClimbingComponent::CreateLedgePointForHandsIK_Internal(const FTwoVectors L
 
 const bool UClimbingComponent::CreateLedgePointWhenClimbing()
 {
-	if (bQTEActivated)
+	if (Character->IsQTEActionPlaying())
+	{
 		return false;
+	}
 
 	const FVector2D Axis = GetCharacterInputAxis(false);
 	if (!(FMath::Abs(Axis.X) + FMath::Abs(Axis.Y) > 0.0f))
@@ -2014,7 +1904,9 @@ const bool UClimbingComponent::CreateLedgePointWhenClimbing()
 	const bool bLedgeHit = NormalizeCapsuleTransformToLedge(bHitInValid, LP, RP, 0.7f, nullptr);
 
 	if (!bLedgeHit)
+	{
 		return false;
+	}
 
 	LedgeSlopeAboutTheZaxis = ((LP.v1.Z - RP.v1.Z) * Axis.X * -1.0f);
 
@@ -2332,7 +2224,8 @@ const bool UClimbingComponent::StartForwardMoveWhenFreeHang(
 	// Update Character
 	OnClimbingEndMovementMode();
 
-	if (GetClimbingAnimInstanceToCast())
+	auto AB = GetClimbingAnimInstanceToCast();
+	if (AB)
 	{
 		FLSComponentAndTransform LeftLS;
 		LeftLS.Transform = LPT;
@@ -2345,7 +2238,7 @@ const bool UClimbingComponent::StartForwardMoveWhenFreeHang(
 		LedgeInstance.LeftPoint = UClimbingUtils::ComponentWorldToLocalMatrix(LeftLS).Transform;
 		LedgeInstance.RightPoint = UClimbingUtils::ComponentWorldToLocalMatrix(RightLS).Transform;
 		LedgeInstance.Component = CapsuleTargetTransformLS.Component;
-		GetClimbingAnimInstanceToCast()->NotifyStartFreeHangMoveForward(LedgeInstance);
+		AB->NotifyStartFreeHangMoveForward(LedgeInstance);
 
 		ClimbActionType = EClimbActionType::ForwardMove;
 		OnClimbingBegin();
@@ -2480,18 +2373,34 @@ const bool UClimbingComponent::ConvertToTransformAndCheckRoom(const FHitResult H
 const bool UClimbingComponent::CheckLedgeDown()
 {
 	if (!ShouldAxisPressed())
+	{
 		return false;
+	}
 
+#if false
 	if (!ConditionToStartFindingActor(true))
+	{
 		return false;
+	}
 
 	const bool bIsCurCrouching = CharacterMovementComponent->IsCrouching();
 	if (bIsCurCrouching)
+	{
 		return false;
+	}
 
 	const bool bIsLadderOrMantling = (LadderComponent.IsValid() && LadderComponent->IsLadderState() || bStartMantle);
 	if (bIsLadderOrMantling)
+	{
 		return false;
+	}
+#endif
+
+	// if not grounded disable ledge down
+	if (!CharacterMovementComponent->IsMovingOnGround())
+	{
+		return false;
+	}
 
 	const float CapsuleHeight = Character->GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight();
 	float OutHeight = 0.0f;
@@ -2536,8 +2445,11 @@ const bool UClimbingComponent::CheckLedgeDown()
 				const bool bNormalLedge = NormalizeCapsuleTransformToLedge(true, OutLeftPoint, OutRightPoint, 0.9f, nullptr);
 				if (bNormalLedge)
 				{
-					if (CharacterMovementComponent->IsFalling() && bJumpInputPressed)
+					//if (CharacterMovementComponent->IsFalling() && bJumpInputPressed)
+					if (bJumpInputPressed)
+					{
 						return true;
+					}
 				}
 				else
 				{
@@ -2574,8 +2486,10 @@ const bool UClimbingComponent::CheckLedgeDown()
 
 void UClimbingComponent::DropToHoldingLedge()
 {
-	if (IsValid(TargetActorPoint) && TargetActorPoint->IsVerticalClimbing())
+	if (IsVerticalClimbingObject(TargetActorPoint))
+	{
 		return;
+	}
 
 	// hardlang for Sprinting
 	check(Character);
@@ -2661,7 +2575,8 @@ void UClimbingComponent::StartCornerSequence(const bool bCanCorner)
 #endif
 
 	// Setup Hands IK
-	if (GetClimbingAnimInstanceToCast())
+	auto AB = GetClimbingAnimInstanceToCast();
+	if (AB)
 	{
 		const FTransform LedgeL = CornerCachedLedge.LeftPoint;
 		const FTransform LedgeR = CornerCachedLedge.RightPoint;
@@ -2676,7 +2591,7 @@ void UClimbingComponent::StartCornerSequence(const bool bCanCorner)
 		ClimbingLedge.LeftPoint = UClimbingUtils::ComponentWorldToLocal(LLS).Transform;
 		ClimbingLedge.RightPoint = UClimbingUtils::ComponentWorldToLocal(RLS).Transform;
 		ClimbingLedge.Component = CapsuleTargetTransformLS.Component;
-		GetClimbingAnimInstanceToCast()->NotifyStartCornerOuterEvent(ClimbingLedge);
+		AB->NotifyStartCornerOuterEvent(ClimbingLedge);
 	}
 }
 
@@ -2929,9 +2844,11 @@ void UClimbingComponent::StartJumpBack(UPrimitiveComponent* Component)
 
 	const int32 AnimTypeIndex = bFreeHang ? bNextObjectFreeHang ? 3 : 2 : bNextObjectFreeHang ? 1 : 0;
 	SetPrepareToClimbEvent(AnimTypeIndex);
-	if (GetClimbingAnimInstanceToCast())
+
+	auto AB = GetClimbingAnimInstanceToCast();
+	if (AB)
 	{
-		GetClimbingAnimInstanceToCast()->NotifyJumpBackEvent();
+		AB->NotifyJumpBackEvent();
 	}
 
 	ClimbMovementDirection = (AnimTypeIndex >= 2) ? EClimbMovementDirectionType::Right : EClimbMovementDirectionType::Left;
@@ -3041,7 +2958,8 @@ void UClimbingComponent::StartJumpToNextLedge(
 
 		OnClimbingEndMovementMode();
 
-		if (GetClimbingAnimInstanceToCast())
+		auto AB = GetClimbingAnimInstanceToCast();
+		if (AB)
 		{
 			const FTransform LPTrans = UClimbingUtils::ConvertTwoVectorsToTransform(LP);
 			const FTransform RPTrans = UClimbingUtils::ConvertTwoVectorsToTransform(RP);
@@ -3066,7 +2984,7 @@ void UClimbingComponent::StartJumpToNextLedge(
 			ClimbingJumpInfo.bIsJumpMode = bJumpType;
 			ClimbingJumpInfo.bNextIsFreeHang = bNextIsFreeHang;
 			ClimbingJumpInfo.InLedge = ClimbingLedge;
-			GetClimbingAnimInstanceToCast()->NotifyStartJumpEvent(ClimbingJumpInfo);
+			AB->NotifyStartJumpEvent(ClimbingJumpInfo);
 		}
 
 		ClimbActionType = EClimbActionType::JumpNextLedge;
@@ -3152,7 +3070,8 @@ void UClimbingComponent::JumpToVerticalObject(
 		OnClimbingEndMovementMode();
 		bTheVerticalObjectIsCurrentValid = true;
 
-		if (GetClimbingAnimInstanceToCast())
+		auto AB = GetClimbingAnimInstanceToCast();
+		if (AB)
 		{
 			const FTransform LPTrans = UClimbingUtils::ConvertTwoVectorsToTransform(LP);
 			const FTransform RPTrans = UClimbingUtils::ConvertTwoVectorsToTransform(RP);
@@ -3177,7 +3096,7 @@ void UClimbingComponent::JumpToVerticalObject(
 			ClimbingJumpInfo.bIsJumpMode = bJumpType;
 			ClimbingJumpInfo.bNextIsFreeHang = false;
 			ClimbingJumpInfo.InLedge = ClimbingLedge;
-			GetClimbingAnimInstanceToCast()->NotifyStartJumpEvent(ClimbingJumpInfo);
+			AB->NotifyStartJumpEvent(ClimbingJumpInfo);
 		}
 
 		ClimbActionType = EClimbActionType::JumpNextLedge;
@@ -3535,7 +3454,7 @@ const bool UClimbingComponent::CheckCorner(const FClimbingLedge InClimbingLedge,
 			}
 
 			// @TODO
-			if (!TargetActorPoint || !TargetActorPoint->CanStartCornerSequence())
+			if (!TargetActorPoint)
 				return false;
 
 			// If you don't return, it moves into the wall.
@@ -5467,12 +5386,10 @@ void UClimbingComponent::DoWhileNotClimbHandleEvent()
 	else
 	{
 
-#if false
 		if (CheckLedgeDown())
 		{
-			DropToHoldingLedge();
+			//DropToHoldingLedge();
 		}
-#endif
 
 	}
 }
@@ -5544,7 +5461,6 @@ void UClimbingComponent::OnDataAssetLoadComplete()
 {
 	OnLoadDA();
 	ClimbingStreamableHandle.Reset();
-	//UE_LOG(LogTemp, Log, TEXT("[%s]"), *FString(__FUNCTION__));
 }
 
 void UClimbingComponent::OnLoadDA()

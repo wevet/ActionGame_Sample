@@ -218,10 +218,6 @@ void ULocomotionComponent::DoTick(const float DeltaTime)
 
 	SprintCheck();
 	ManageCharacterRotation();
-
-#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
-	DrawDebugDirectionArrow();
-#endif
 }
 
 #pragma region LS_Interface
@@ -1518,11 +1514,13 @@ void ULocomotionComponent::ToggleRightShoulder()
 {
 }
 
-void ULocomotionComponent::DrawDebugDirectionArrow()
+void ULocomotionComponent::DrawLocomotionDebug()
 {
 #if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
 	if (!Character.IsValid())
+	{
 		return;
+	}
 
 	if (bDebugTrace)
 	{

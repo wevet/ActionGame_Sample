@@ -29,9 +29,6 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ClimbingObject")
 	bool bIsClimbingEnable;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ClimbingObject", meta = (EditCondition = "!bIsWallClimbing"))
-	bool bIsStartCornerSequence;
-
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "ClimbingObject|References", meta = (AllowPrivateAccess = "true"))
 	class UStaticMeshComponent* StaticMeshComponent;
@@ -44,8 +41,6 @@ public:
 	UStaticMeshComponent* GetStaticMeshComponent();
 
 	bool IsWallClimbing() const;
-
-	UFUNCTION(BlueprintCallable, Category = "ClimbingObject")
 	bool CanClimbing() const;
 
 	UFUNCTION(BlueprintCallable, Category = "ClimbingObject")
@@ -56,9 +51,6 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "ClimbingObject")
 	bool CanFracture() const;
-
-	UFUNCTION(BlueprintCallable, Category = "ClimbingObject")
-	bool CanStartCornerSequence() const;
 
 	const float CalcurateBoundingBox();
 

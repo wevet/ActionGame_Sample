@@ -137,4 +137,19 @@ void UStatusComponent::DoKill()
 	UWvAbilitySystemBlueprintFunctionLibrary::KillMySelf(Character.Get());
 }
 
+/// <summary>
+/// get currenthealth
+/// x => min
+/// y => current
+/// z => max
+/// </summary>
+/// <param name="OutHealth"></param>
+void UStatusComponent::GetCharacterHealth(FVector& OutHealth)
+{
+	if (AAS.IsValid())
+	{
+		OutHealth = FVector(0.f, AAS->GetHP(), AAS->GetHPMax());
+	}
+}
+
 

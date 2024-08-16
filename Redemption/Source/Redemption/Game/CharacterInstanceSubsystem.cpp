@@ -173,3 +173,20 @@ void UCharacterInstanceSubsystem::UpdateCharacterInWorld()
 	});
 }
 
+void UCharacterInstanceSubsystem::FocusNPCCharacter(ABaseCharacter* InCharacter)
+{
+	if (IsValid(InCharacter))
+	{
+		InCharacter->DoStartCinematic();
+	}
+}
+
+void UCharacterInstanceSubsystem::UnFocusNPCCharacter(ABaseCharacter* InCharacter)
+{
+	if (IsValid(InCharacter))
+	{
+		InCharacter->DoStopCinematic();
+	}
+}
+
+

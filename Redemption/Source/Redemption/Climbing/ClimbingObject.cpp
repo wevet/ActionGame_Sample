@@ -10,7 +10,6 @@ AClimbingObject::AClimbingObject()
 	PrimaryActorTick.bCanEverTick = true;
 	bIsVerticalClimbingObject = false;
 	bIsClimbingEnable = true;
-	bIsStartCornerSequence = false;
 }
 
 void AClimbingObject::BeginPlay()
@@ -57,11 +56,6 @@ bool AClimbingObject::IsWallClimbing() const
 bool AClimbingObject::CanClimbing() const
 {
 	return bIsClimbingEnable && !bIsWallClimbing;
-}
-
-bool AClimbingObject::CanStartCornerSequence() const
-{
-	return bIsStartCornerSequence && !bIsWallClimbing;
 }
 
 void AClimbingObject::SetEnableClimbingObject(const bool NewClimbingEnable)

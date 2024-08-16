@@ -264,6 +264,77 @@ public:
 	int32 CustomRotationInterpType = 0;
 };
 
+USTRUCT(BlueprintType)
+struct REDEMPTION_API FMatchedMontageThirdPoints
+{
+	GENERATED_BODY()
+
+public:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	ABaseCharacter* Character;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UAnimInstance* AnimInstance;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UAnimMontage* AnimMontage;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	bool NormalizeTimeToAnimLength = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float TimelineLength = 1.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float PlayRate = 1.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float StartMontageAt = 0.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	bool StopAllMontages = true;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	bool ConvertTransformsToWorld = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FLSComponentAndTransform StartTransform;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FLSComponentAndTransform EndTransform;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FLSComponentAndTransform MiddleTransform;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	bool UseMotionCurvesFromAnimation = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UCurveVector* CustomCurve;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UCurveFloat* RotationCurve;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	bool RemapCurves = true;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FVector2D TimeIntervalBetweenT1_T2{0.0f, 0.5f};
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	bool ApplyTimelineAlphaAtEnd = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FVector2D TimelineAlphaEndConfig = FVector2D(0.8f, 1.0f);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	bool AutoDestroyWhenFinished = true;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	bool FinishWhenAlphaAtEnd = false;
+};
+
+
 UCLASS(Blueprintable, ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
 class REDEMPTION_API ULadderComponent : public UActorComponent, public IAsyncComponentInterface
 {
@@ -412,6 +483,12 @@ protected:
 
 	UFUNCTION(BlueprintCallable, Category = "LadderSystem|Ladder Movement|Macros")
 	FLSComponentAndTransform ExitLadder_GetStartPosition() const;
+
+	UFUNCTION(BlueprintCallable, Category = "LadderSystem|Ladder Movement")
+	void LadderEndPrapareSequence_Callback();
+
+	UFUNCTION(BlueprintCallable, Category = "LadderSystem|Ladder Movement")
+	void LadderMovementEnd_Callback();
 
 #if false
 	void UpdatePerFrameWhenHoldingLadder();

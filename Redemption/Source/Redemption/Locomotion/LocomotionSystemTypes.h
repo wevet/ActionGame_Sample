@@ -161,6 +161,14 @@ enum class EPickingObjectType : uint8
 	ReachUp UMETA(DisplayName = "ReachUp"),
 };
 
+UENUM(BlueprintType)
+enum class EQTEType : uint8
+{
+	None UMETA(DisplayName = "None"),
+	Climbing UMETA(DisplayName = "Climbing"),
+	Scenario UMETA(DisplayName = "Scenario"),
+};
+
 USTRUCT(BlueprintType)
 struct REDEMPTION_API FLSComponentAndTransform
 {
@@ -684,11 +692,11 @@ public:
 
 #pragma region Climbing
 USTRUCT(BlueprintType)
-struct REDEMPTION_API FCilmbingQTEData
+struct REDEMPTION_API FQTEData
 {
 	GENERATED_BODY()
 
-public:
+protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float Timer;
 
@@ -696,11 +704,9 @@ public:
 	float RequirePressCount;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	float RangeMin;
+	bool bIsGameControlTimer = false;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	float RangeMax;
-
+public:
 	void UpdateTimer(const float DeltaTime);
 	bool IsSuccess() const;
 	float GetTimerProgress() const;
@@ -709,23 +715,18 @@ public:
 
 	void Begin();
 	void Reset();
-	bool bSystemEnable;
-
 	bool IsTimeOver() const;
+	FQTEData();
+
+	void SetParameters(const float InTimer, const float InCount);
+	void ModifyTimer(const float Min, const float Current, const float Max);
+
 
 private:
 	float CurPressCount;
 	float CurTimer;
-public:
-	FCilmbingQTEData()
-	{
-		bSystemEnable = false;
-		RequirePressCount = 10.0f;
-		CurPressCount, CurTimer = 0.0f;
-		Timer = 5.0f;
-		RangeMin = 0.3f;
-		RangeMax = 1.0f;
-	}
+	bool bSystemEnable;
+
 };
 
 USTRUCT(BlueprintType)
@@ -917,6 +918,19 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FClimbingIKData LandIKGroundType;
+};
+
+USTRUCT(BlueprintType)
+struct REDEMPTION_API FClimbingCurveData
+{
+	GENERATED_USTRUCT_BODY()
+
+public:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	bool bValid = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float Value = 0.0f;
 };
 #pragma endregion
 

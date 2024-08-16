@@ -17,23 +17,10 @@ class ULocomotionComponent;
 class USkeletalMeshComponent;
 class UAnimInstance;
 class AClimbingObject;
-class UWidgetComponent;
 class UWvAnimInstance;
 class UClimbingAnimInstance;
 class ULadderComponent;
-
-USTRUCT(BlueprintType)
-struct REDEMPTION_API FClimbingCurveData
-{
-	GENERATED_USTRUCT_BODY()
-
-public:
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	bool bValid = false;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	float Value = 0.0f;
-};
+class UQTEActionComponent;
 
 USTRUCT(BlueprintType)
 struct REDEMPTION_API FClimbingDetectPoints
@@ -130,7 +117,6 @@ public:
 
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FClimbingBaseDelegate);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FClimbingQTEEndDelegate, bool, InSuccess);
 
 
 UCLASS(Blueprintable, ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
@@ -156,56 +142,30 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "ClimbSystem")
 	FClimbingBaseDelegate ClimbingEndDelegate;
 
-	UPROPERTY(BlueprintAssignable, Category = "ClimbSystem")
-	FClimbingBaseDelegate QTEBeginDelegate;
-
-	UPROPERTY(BlueprintAssignable, Category = "ClimbSystem")
-	FClimbingQTEEndDelegate QTEEndDelegate;
-
 	UFUNCTION(BlueprintCallable, Category = "ClimbSystem")
 	ACharacter* GetCharacterOwner() const;
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem")
 	void OnClimbingBegin();
-
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem")
 	void OnClimbingEnd();
-
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem")
 	void OnClimbingEndMovementMode();
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem")
-	bool WasClimbing() const;
-
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem")
 	void SetJumpInputPressed(const bool NewJumpInputPressed);
-
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem")
 	bool GetJumpInputPressed() const;
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem")
-	bool ShouldMoving() const;
-
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem")
 	bool HasCharacterInputPressed() const;
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem")
-	void StartClimbToStanding();
-
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem")
-	void ShowQTEWidgetComponent(const bool NewVisibility);
-
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem")
 	void ApplyStopClimbingInput(const float Delay, const bool bUseTimelineCondition);
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem")
 	bool GetLadderMovementEnable() const;
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem")
 	void Notify_StopMantling();
 
 	void OnWallClimbingBegin();
 	void OnWallClimbingEnd();
+
+	void OnQTEBegin_Callback();
+	void OnQTEEnd_Callback(const bool bIsSuccess);
+
 
 #pragma region Bridge_ABP
 	UFUNCTION(BlueprintCallable, Category = "ClimbSystem")
@@ -230,10 +190,7 @@ public:
 #pragma endregion
 
 protected:
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem")
 	UAnimInstance* GetClimbingAnimInstance() const;
-
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem")
 	UClimbingAnimInstance* GetClimbingAnimInstanceToCast() const;
 
 	UFUNCTION(BlueprintCallable, Category = "ClimbSystem")
@@ -618,30 +575,13 @@ protected:
 	UFUNCTION(BlueprintCallable, Category = "ClimbSystem|Functions")
 	void DoWhileNotClimbHandleEvent();
 
-public:
-	UFUNCTION(BlueprintCallable, Category = "QTE")
-	float GetTimerProgress() const;
-
-	UFUNCTION(BlueprintCallable, Category = "QTE")
-	float GetPressCountProgress() const;
-
-	UFUNCTION(BlueprintCallable, Category = "QTE")
-	void QTEInputPress();
-
-	UFUNCTION(BlueprintCallable, Category = "QTE")
-	bool IsQTEPlaying() const;
-
-	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "ClimbSystem")
-	void DoClimbing();
-
-protected:
-	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "ClimbSystem")
-	void DoNotClimbing();
-
 
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "References")
 	TObjectPtr<class ABaseCharacter> Character;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "References")
+	TObjectPtr<class UAnimInstance> BaseAnimInstance;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Component, meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<class UWvCharacterMovementComponent> CharacterMovementComponent;
@@ -653,22 +593,13 @@ protected:
 	TObjectPtr<class ULocomotionComponent> LocomotionComponent;
 
 	UPROPERTY()
-	class UAnimInstance* BaseAnimInstance;
-
-	UPROPERTY()
-	TWeakObjectPtr<class UWidgetComponent> QTEWidgetComponent;
-
-	UPROPERTY()
 	TWeakObjectPtr<class ULadderComponent> LadderComponent;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "References")
-	AClimbingObject* TargetActorPoint;
+	UPROPERTY()
+	TWeakObjectPtr<class UQTEActionComponent> QTEActionComponent;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "QTE")
-	FCilmbingQTEData QTEData;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "QTE")
-	bool bQTEActivated;
+	UPROPERTY()
+	TObjectPtr<class AClimbingObject> TargetActorPoint;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Debug")
 	bool bDrawDebugTrace = false;
@@ -924,30 +855,22 @@ public:
 
 
 private:
-	void BeginQTE();
-	void UpdateQTE(const float DeltaTime);
-	void EndQTE();
-	void EndQTEInternal();
-	void SuccessQTEAction();
 	void CreateLedgePointForHandsIK_Internal(const FTwoVectors LP, const FTwoVectors RP);
 	const bool ConvertToTransformAndCheckRoom(const FHitResult HitResult, FTransform& OutTransform);
 
 	FTimerHandle WaitAxisTimer;
 	FTimerHandle ClimbingActionTimer;
-	bool bQTEEndCallbackResult;
 	bool bOwnerPlayerController;
 	float CharacterRotateInterpSpeed = 8.0f;
 	bool bHasCalcVelocity = false;
 	bool bWasFinished = false;
+	bool bIsStrafingMode = false;
 	int32 PrepareToClimbIndex = INDEX_NONE;
 
 	UPROPERTY()
 	TObjectPtr<UClimbingCurveDataAsset> ClimbingCurveDAInstance;
 
 	TSharedPtr<FStreamableHandle>  ClimbingStreamableHandle;
-
-	void ClimbingBegin_Internal();
-	void ClimbingEnd_Internal();
 
 	void HandleTickWhileEvent(const bool bIsFinished);
 	void DoWhileTrueChangeClimbingEvent();
@@ -960,5 +883,8 @@ private:
 	
 	void OnDataAssetLoadComplete();
 	void OnLoadDA();
+
+	UFUNCTION()
+	void ChangeRotationMode_Callback();
 };
 

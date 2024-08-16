@@ -12,6 +12,10 @@ UE_DEFINE_GAMEPLAY_TAG(TAG_Character_Player_Melee, "Character.Player.Melee");
 // Is AI allowed to attack Player?
 UE_DEFINE_GAMEPLAY_TAG(TAG_Character_AI_NotAllowed_Attack, "Character.AI.NotAllowed.Attack");
 
+// QTE Command Enable
+UE_DEFINE_GAMEPLAY_TAG(TAG_Character_Action_QTE, "Character.Action.QTE");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Character_Action_QTE_Pressed, "Character.Action.QTE.Pressed");
+
 // Combo frag tag
 UE_DEFINE_GAMEPLAY_TAG(TAG_Character_ActionMelee_ComboRequire, "Character.Action.Melee.ComboRequire");
 
@@ -59,6 +63,9 @@ UE_DEFINE_GAMEPLAY_TAG(TAG_Character_ActionAimChange, "Character.Action.AimChang
 UE_DEFINE_GAMEPLAY_TAG(TAG_Character_TargetLock, "Character.Action.TargetLock");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Character_TargetLocking, "Character.Action.TargetLocking");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Character_TargetLock_Forbid, "Character.Action.TargetLock.Forbid");
+
+// cinematic
+UE_DEFINE_GAMEPLAY_TAG(TAG_Character_Action_Cinematic, "Character.Action.Cinematic");
 
 // Climbing 
 UE_DEFINE_GAMEPLAY_TAG(TAG_Locomotion_ClimbingJump, "Locomotion.Climbing.Jump");

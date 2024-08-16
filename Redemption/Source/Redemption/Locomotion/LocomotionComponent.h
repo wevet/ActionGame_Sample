@@ -307,6 +307,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category = Ragdoll)
 	bool IsRagdollingGetUpFront() const;
 
+	void DrawLocomotionDebug();
+
 private:
 
 	void OnMovementModeChange();
@@ -351,8 +353,6 @@ private:
 	const FRotator LookingDirectionWithOffset(const float OffsetInterpSpeed, const float NEAngle, const float NWAngle, const float SEAngle, const float SWAngle, const float Buffer);
 	bool CardinalDirectionAngles(const float Value, const float Min, const float Max, const float Buffer, const ELSCardinalDirection Direction) const;
 	void CustomAcceleration();
-
-	void DrawDebugDirectionArrow();
 
 	FVector ChooseTargetPosition() const;
 

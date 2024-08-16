@@ -17,6 +17,9 @@ class REDEMPTION_API AMassCharacter : public ABaseCharacter
 public:
 	AMassCharacter(const FObjectInitializer& ObjectInitializer);
 
+	virtual void DoStartCinematic() override;
+	virtual void DoStopCinematic() override;
+
 protected:
 	virtual void BeginPlay() override;
 };
