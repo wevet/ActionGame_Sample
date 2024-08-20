@@ -618,9 +618,9 @@ FCloseCombatAnimation UCloseCombatAnimationDataAsset::GetChooseCombatAnimation(c
 	return ComboAnimations[0];
 }
 
-void UCloseCombatAnimationDataAsset::ModifyCombatAnimationIndex(int32& OutIndex)
+int32 UCloseCombatAnimationDataAsset::GetCombatAnimationIndex() const
 {
-	OutIndex = FMath::RandRange(0, ComboAnimations.Num() - 1);
+	return FMath::RandRange(0, ComboAnimations.Num() - 1);
 }
 
 int32 UCloseCombatAnimationDataAsset::CloseCombatMaxComboCount(const int32 Index) const

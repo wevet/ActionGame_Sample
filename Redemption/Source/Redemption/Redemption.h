@@ -87,6 +87,7 @@ REDEMPTION_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Locomotion_ForbidClimbing);
 REDEMPTION_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Locomotion_ForbidMantling);
 REDEMPTION_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Locomotion_ForbidMovement);
 REDEMPTION_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Locomotion_ForbidJump);
+REDEMPTION_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Locomotion_ForbidRagdoll);
 
 // weapon type
 REDEMPTION_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Weapon_Melee_Default);
@@ -120,10 +121,14 @@ REDEMPTION_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Vehicle_Drive); // drive actio
 REDEMPTION_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Vehicle_UnDrive); // drive actoin end
 REDEMPTION_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Vehicle_State_Drive); // current is driving
 
-/*
-* ABaseCharacter Destroy Interval
-*/
-#define DEFAULT_LIFESPAN 30.0f
+// smart object difinition
+REDEMPTION_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Character_State_SmartObject_Using);
+
+// state tree difinition
+//REDEMPTION_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Character_Difinition_State_Sit_Begin);
+//REDEMPTION_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Character_Difinition_State_Sit_Loop);
+//REDEMPTION_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Character_Difinition_State_Sit_End);
+
 
 /*
 * AIPerception Sight CancelEvent Interval
@@ -155,6 +160,11 @@ REDEMPTION_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Vehicle_State_Drive); // curre
 #define K_CHARACTER_COLLISION_PRESET FName(TEXT("BaseCharacter"))
 
 /*
+* actor and component add tagname
+*/
+#define K_QTE_COMPONENT_TAG FName(TEXT("QTE"))
+
+/*
 * save game
 */
 #define K_PLAYER_SLOT_NAME TEXT("PlayerID")
@@ -164,4 +174,9 @@ REDEMPTION_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Vehicle_State_Drive); // curre
 #define K_LOCK_ON_WIDGET_TAG FName("TargetSystem.LockOnWidget")
 
 #define QTE_SYSTEM_RECEIVE 1
+
+#define K_MOVING_THRESHOLD 3.0f
+
+#define K_WALKABLE_FLOOR_ANGLE 50.0f
+
 

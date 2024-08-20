@@ -78,6 +78,7 @@ class UStatusComponent;
 class UWeaknessComponent;
 class UClimbingComponent;
 class UWvAnimInstance;
+class UStaticMeshComponent;
 
 
 UCLASS(Abstract)
@@ -215,6 +216,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = Components)
 	USceneComponent* GetHeldObjectRoot() const;
 
+	UFUNCTION(BlueprintCallable, Category = Components)
+	UStaticMeshComponent* GetAccessoryObjectRoot() const;
+
 	UFUNCTION(BlueprintCallable, Category = Movement)
 	float GetDistanceFromToeToKnee(FName KneeL = TEXT("calf_l"), FName BallL = TEXT("ball_l"), FName KneeR = TEXT("calf_r"), FName BallR = TEXT("ball_r")) const;
 
@@ -291,7 +295,7 @@ public:
 
 	FVector GetPredictionStopLocation(const FVector CurrentLocation) const;
 
-	void RequestAsyncLoad();
+	virtual void RequestAsyncLoad();
 
 	// leader setting
 	bool IsLeader() const;
@@ -331,7 +335,7 @@ public:
 
 	virtual void RegisterMission_Callback(const int32 MissionIndex) {};
 
-	void ModifyCombatAnimationIndex(int32& OutIndex);
+	int32 GetCombatAnimationIndex() const;
 	int32 CloseCombatMaxComboCount(const int32 Index) const;
 	UAnimMontage* GetCloseCombatAnimMontage(const int32 Index, const FGameplayTag Tag) const;
 
@@ -347,6 +351,9 @@ public:
 	bool IsStrafeMovementMode() const;
 	virtual bool IsQTEActionPlaying() const;
 
+	void BuildLODMesh(USkeletalMeshComponent* SkelMesh);
+	void HandleMeshUpdateRateOptimizations(const bool IsInEnableURO, USkeletalMeshComponent* SkelMesh);
+
 #pragma region NearlestAction
 	void CalcurateNearlestTarget(const float SyncPointWeight);
 	void ResetNearlestTarget();
@@ -355,7 +362,7 @@ public:
 	void FindNearlestTarget(const FAttackMotionWarpingData AttackMotionWarpingData);
 	void BuildFinisherAbility(const FGameplayTag RequireTag);
 	void BuildFinisherAnimationSender(const FGameplayTag RequireTag, FFinisherAnimation& OutFinisherAnimation, int32 &OutIndex);
-	void BuildFinisherAnimationReceiver(const FGameplayTag RequireTag, const int32 Index, FFinisherAnimation &OutFinisherAnimation);
+	const bool BuildFinisherAnimationReceiver(const FGameplayTag RequireTag, const int32 Index, FFinisherAnimation &OutFinisherAnimation);
 	void BuildFinisherAnimationData(UAnimMontage* InMontage, const bool IsTurnAround, AActor* TurnActor, float PlayRate = 1.0f);
 	void ResetFinisherAnimationData();
 	FRequestAbilityAnimationData GetFinisherAnimationData() const;
@@ -406,7 +413,10 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Component, meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<class USceneComponent> HeldObjectRoot;
 
-	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = "BaseCharacter|Config")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Component, meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<class UStaticMeshComponent> AccessoryObjectRoot;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "BaseCharacter|Config")
 	FCustomWvAbilitySystemAvatarData AbilitySystemData;
 
 #pragma region DA
@@ -423,14 +433,17 @@ protected:
 	TSoftObjectPtr<UCloseCombatAnimationDataAsset> CloseCombatAnimationDA;
 #pragma endregion
 
-	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = "BaseCharacter|Config")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "BaseCharacter|Config")
 	FFinisherConfig FinisherConfig;
 
-	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = "BaseCharacter|Config")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "BaseCharacter|Config")
 	FGameplayTag CharacterTag;
 
-	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = "BaseCharacter|Config")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "BaseCharacter|Config")
 	class UBehaviorTree* BehaviorTree;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "BaseCharacter|Config")
+	TSubclassOf<UAnimInstance> UnArmedAnimInstance;
 
 	UPROPERTY(Transient, ReplicatedUsing = OnRep_ReplicatedAcceleration)
 	FWvReplicatedAcceleration ReplicatedAcceleration;

@@ -6,6 +6,7 @@
 #include "Component/WvCharacterMovementComponent.h"
 #include "Component/HitTargetComponent.h"
 #include "Redemption.h"
+#include "Misc/WvCommonUtils.h"
 
 #include "Components/CapsuleComponent.h"
 #include "AbilitySystemInterface.h"
@@ -25,7 +26,14 @@
 #define SPRINT_SPEED 600.f
 
 #if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
-static TAutoConsoleVariable<int32> CVarDebugLocomotionSystem(TEXT("wv.LocomotionSystem.Debug"), 0, TEXT("LocomotionSystem Debug .\n") TEXT("<=0: off\n") TEXT("  1: on\n"), ECVF_Default);
+static TAutoConsoleVariable<int32> CVarDebugLocomotionSystem(
+	TEXT("wv.LocomotionSystem.Debug"),
+	0, 
+	TEXT("LocomotionSystem Debug .\n") 
+	TEXT("<=0: off\n") 
+	TEXT("  1: on\n")
+	TEXT("  2: player ignore\n"),
+	ECVF_Default);
 #endif
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(LocomotionComponent)
@@ -143,6 +151,7 @@ void ULocomotionComponent::BeginPlay()
 
 	OnLSRotationModeChange();
 	OnLSStanceChange();
+	//OnLSGaitChange();
 
 	if (FindAbilitySystemComponent() && LocomotionStateDataAsset)
 	{
@@ -200,8 +209,10 @@ void ULocomotionComponent::DoTick(const float DeltaTime)
 
 #if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
 	bDebugTrace = (CVarDebugLocomotionSystem.GetValueOnAnyThread() > 0);
+	bDebugIndex = CVarDebugLocomotionSystem.GetValueOnAnyThread();
 #else
 	bDebugTrace = false;
+	bDebugIndex = 0;
 #endif
 
 	CalculateEssentialVariables(DeltaTime);
@@ -717,6 +728,25 @@ void ULocomotionComponent::StartRagdollAction()
 
 }
 
+void ULocomotionComponent::StartRagdollActionOnlyMovementState()
+{
+	Character->SetReplicateMovement(false);
+
+	// Step 1: Clear the Character Movement Mode and set teh Movement State to Ragdoll
+	CharacterMovementComponent->SetMovementMode(EMovementMode::MOVE_None);
+	ILocomotionInterface::Execute_SetLSMovementMode(this, ELSMovementMode::Ragdoll);
+
+	// Step 2: Disable capsule collision and enable mesh physics simulation starting from the pelvis.
+	CapsuleComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+	if (!Character->IsBotCharacter())
+	{
+		//SkeletalMeshComponent->SetCollisionObjectType(ECollisionChannel::ECC_PhysicsBody);
+	}
+	SkeletalMeshComponent->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+	//SkeletalMeshComponent->SetAllBodiesBelowSimulatePhysics(PelvisBoneName, true, true);
+}
+
 void ULocomotionComponent::StopRagdollAction()
 {
 	Character->SetReplicateMovement(true);
@@ -1210,7 +1240,20 @@ void ULocomotionComponent::CalculateEssentialVariables(const float DeltaSeconds)
 		LocomotionEssencialVariables.WorldAcceleration2D = CharacterMovementComponent->GetCurrentAcceleration() * FVector(1.0f, 1.0f, 0.0f);
 		LocomotionEssencialVariables.LocalAcceleration2D = UKismetMathLibrary::Quat_UnrotateVector(Character->GetActorRotation().Quaternion(), LocomotionEssencialVariables.WorldAcceleration2D);
 		const float SizeXY = UKismetMathLibrary::VSizeXYSquared(LocomotionEssencialVariables.LocalAcceleration2D);
+
+		if (!UWvCommonUtils::IsBotPawn(Character.Get()))
+		{
+			const float Acc = Vel.Length();
+			const float MaxAcc = CharacterMovementComponent->GetMaxSpeed();
+			const float MovementAmount = Acc / MaxAcc;
+			//UE_LOG(LogTemp, Log, TEXT("MovementAmount => %.3f"), MovementAmount);
+		}
+
 		LocomotionEssencialVariables.HasAcceleration = !FMath::IsNearlyEqual(SizeXY, 0.0f, 0.000001);
+		if (LocomotionEssencialVariables.bIsMassAgent)
+		{
+			LocomotionEssencialVariables.HasAcceleration = (Vel.Length() > K_MOVING_THRESHOLD);
+		}
 		LocomotionEssencialVariables.LocalVelocity2D = UKismetMathLibrary::Quat_UnrotateVector(Character->GetActorRotation().Quaternion(), LocomotionEssencialVariables.Velocity * FVector(1.0f, 1.0f, 0.0f));
 	}
 
@@ -1514,6 +1557,11 @@ void ULocomotionComponent::ToggleRightShoulder()
 {
 }
 
+void ULocomotionComponent::EnableMassAgentMoving(const bool bIsEnable)
+{
+	LocomotionEssencialVariables.bIsMassAgent = bIsEnable;
+}
+
 void ULocomotionComponent::DrawLocomotionDebug()
 {
 #if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
@@ -1524,6 +1572,11 @@ void ULocomotionComponent::DrawLocomotionDebug()
 
 	if (bDebugTrace)
 	{
+		if (bIsOwnerPlayerController && bDebugIndex >= 2)
+		{
+			return;
+		}
+
 		const UWorld* World = GetWorld();
 		const FVector BaseLocation = Character->GetActorLocation();
 

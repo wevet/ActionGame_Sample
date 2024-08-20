@@ -183,6 +183,8 @@ public:
 
 	FORCEINLINE TObjectPtr<class UAIMissionComponent> GetMissionComponent() const { return MissionComponent; }
 
+	void HandleRemoveAIPerceptionDelegate();
+
 protected:
 	// Called when the player state is set or cleared
 	virtual void OnPlayerStateChanged();
@@ -211,13 +213,13 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	class UAISenseConfig_Prediction* PredictionConfig;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "AI|Config")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "AI|Config")
 	FBlackboardKeyConfig BlackboardKeyConfig;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "AI|Config")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "AI|Config")
 	TSubclassOf<class ABaseInvestigationGenerator> NodeGeneratorClasses;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "AI|Config")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "AI|Config")
 	int32 OverrideSquadID = 1;
 
 private:
@@ -251,9 +253,7 @@ private:
 	void OnPredictionPerceptionUpdatedRecieve(AActor* Actor);
 
 	void AbortTasks(bool bIsForce = false);
-
-	void HandleRemoveAIPerception();
-
+	
 	UPROPERTY()
 	struct FAIStimulus CurrentStimulus;
 

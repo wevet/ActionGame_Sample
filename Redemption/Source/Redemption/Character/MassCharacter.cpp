@@ -2,19 +2,34 @@
 
 
 #include "Character/MassCharacter.h"
+#include "Character/WvAIController.h"
 #include "Redemption.h"
 #include "Misc/WvCommonUtils.h"
 #include "Locomotion/LocomotionComponent.h"
+#include "GameExtension.h"
+#include "Component/WvCharacterMovementComponent.h"
+#include "Component/WvSkeletalMeshComponent.h"
+#include "Game/WvGameInstance.h"
 
 
 #include "Components/PawnNoiseEmitterComponent.h"
 #include "Components/SceneComponent.h"
+#include "MotionWarpingComponent.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(MassCharacter)
 
 AMassCharacter::AMassCharacter(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
+	MassAgentComponent = ObjectInitializer.CreateDefaultSubobject<UMassAgentComponent>(this, TEXT("MassAgentComponent"));
+	MassAgentComponent->bAutoActivate = 1;
 
+	UWvSkeletalMeshComponent* WvMeshComp = CastChecked<UWvSkeletalMeshComponent>(GetMesh());
+	check(WvMeshComp);
+
+	// sets Damage
+	//WvMeshComp->SetCollisionResponseToChannel(ECollisionChannel::ECC_GameTraceChannel3, ECollisionResponse::ECR_Block);
+
+	SetReplicateMovement(false);
 }
 
 void AMassCharacter::BeginPlay()
@@ -23,76 +38,97 @@ void AMassCharacter::BeginPlay()
 
 	// @NOTE
 	// disable ticking components
-	// 1. UCharacterTrajectoryComponent
-	// 2. ULocomotionComponent
-	// 3. UPawnNoiseEmitterComponent
-	// 4. USceneComponent() HeldObjectRoot
 	CharacterTrajectoryComponent->SetComponentTickEnabled(false);
-	//LocomotionComponent->SetComponentTickEnabled(false);
 	PawnNoiseEmitterComponent->SetComponentTickEnabled(false);
-	HeldObjectRoot->SetComponentTickEnabled(false);
 
-
-	// disable climbing mantling
+	// disable climbing mantling ragdolling
 	WvAbilitySystemComponent->AddGameplayTag(TAG_Locomotion_ForbidClimbing, 1);
 	WvAbilitySystemComponent->AddGameplayTag(TAG_Locomotion_ForbidMantling, 1);
 
-}
+	auto Components = Game::ComponentExtension::GetComponentsArray<USkeletalMeshComponent>(this);
 
-void AMassCharacter::DoStartCinematic()
-{
-	if (USkeletalMeshComponent* SkeletalMesh = GetMesh())
+	for (USkeletalMeshComponent* SkelMesh : Components)
 	{
-		// Check for valid optimization parameters
-		if (FAnimUpdateRateParameters* AnimUpdateRateParams = SkeletalMesh->AnimUpdateRateParams)
-		{
-			SkeletalMesh->bEnableUpdateRateOptimizations = false;
-		}
+		Super::HandleMeshUpdateRateOptimizations(true, SkelMesh);
+		Super::BuildLODMesh(SkelMesh);
 	}
 
-	Super::DoStartCinematic();
+	LocomotionComponent->EnableMassAgentMoving(true);
+
+	// temp remove delegate
+	if (AWvAIController* AIC = Cast<AWvAIController>(GetController()))
+	{
+		AIC->HandleRemoveAIPerceptionDelegate();
+	}
 }
 
-void AMassCharacter::DoStopCinematic()
+class UMassAgentComponent* AMassCharacter::GetMassAgentComponent() const
 {
-	// Check for valid sk mesh
-	if (USkeletalMeshComponent* SkeletalMesh = GetMesh())
+	return MassAgentComponent;
+}
+
+void AMassCharacter::OnReceiveKillTarget(AActor* Actor, const float Damage)
+{
+	Super::OnReceiveKillTarget(Actor, Damage);
+
+	MassAgentComponent->KillEntity(false);
+}
+
+void AMassCharacter::Freeze()
+{
+	Super::Freeze();
+
+	MassAgentComponent->PausePuppet(true);
+	//MassAgentComponent->Disable();
+}
+
+void AMassCharacter::UnFreeze()
+{
+	Super::UnFreeze();
+
+	MassAgentComponent->PausePuppet(false);
+	//MassAgentComponent->Enable();
+}
+
+
+
+void AMassCharacter::RequestAsyncLoad()
+{
+
+	FStreamableManager& StreamableManager = UWvGameInstance::GetStreamableManager();
+
+	if (!OverlayAnimInstanceDA.IsNull())
 	{
-		// Check for valid optimization parameters
-		if (FAnimUpdateRateParameters* AnimUpdateRateParams = SkeletalMesh->AnimUpdateRateParams)
+		const FSoftObjectPath ObjectPath = OverlayAnimInstanceDA.ToSoftObjectPath();
+		ABPStreamableHandle = StreamableManager.RequestAsyncLoad(ObjectPath, [this] 
 		{
-			// Enable URO for sk mesh
-			SkeletalMesh->bEnableUpdateRateOptimizations = true;
-
-			// Create threshold table for MaxDistanceFactor
-			static const float ThresholdTable[] = { 0.5f, 0.5f, 0.3f, 0.1f, 0.1f, 0.1f };
-			static const int32 TableNum = UE_ARRAY_COUNT(ThresholdTable);
-
-			// Set threshold tables as optimization parameters for skeletal mesh
-			TArray<float>& Thresholds = AnimUpdateRateParams->BaseVisibleDistanceFactorThesholds;
-			Thresholds.Empty(TableNum);
-			for (int32 Index = 0; Index < TableNum; ++Index)
-			{
-				Thresholds.Add(ThresholdTable[Index]);
-			}
-
-			// copy rendering threshold
-			AnimUpdateRateParams->BaseVisibleDistanceFactorThesholds.Empty();
-			for (const float Threshold : Thresholds)
-			{
-				AnimUpdateRateParams->BaseVisibleDistanceFactorThesholds.Add(Threshold);
-			}
-
-			// Number of frame skips where interpolation is applied
-			AnimUpdateRateParams->MaxEvalRateForInterpolation = 4;
-
-			// Specify the number of off-screen skipped frames
-			// Specify 6 to process 1 frame and skip 5 frames
-			AnimUpdateRateParams->BaseNonRenderedUpdateRate = 6;
-		}
+			Super::OnABPAnimAssetLoadComplete();
+		});
 	}
 
-	Super::DoStopCinematic();
-}
+	if (!CloseCombatAnimationDA.IsNull())
+	{
+		const FSoftObjectPath ObjectPath = CloseCombatAnimationDA.ToSoftObjectPath();
+		CCStreamableHandle = StreamableManager.RequestAsyncLoad(ObjectPath, [this] 
+		{
+			Super::OnCloseCombatAnimAssetLoadComplete();
+		});
+	}
 
+	TArray<FSoftObjectPath> Paths;
+	for (TPair<FGameplayTag, TSoftObjectPtr<UFinisherDataAsset>>Pair : FinisherDAList)
+	{
+		if (Pair.Value.IsNull())
+		{
+			continue;
+		}
+		Paths.Add(Pair.Value.ToSoftObjectPath());
+	}
+	FinisherStreamableHandle = StreamableManager.RequestAsyncLoad(Paths, [this] 
+	{
+		Super::OnFinisherAnimAssetLoadComplete();
+	});
+
+	//Super::RequestAsyncLoad();
+}
 

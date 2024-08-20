@@ -112,7 +112,7 @@ struct REDEMPTION_API FAICloseCombatData
 
 public:
 	FAICloseCombatData();
-	void Initialize();
+	void Initialize(const int32 InComboTypeIndex, const int32 MaxComboCount);
 
 	void Deinitialize();
 	bool CanAttack() const;
@@ -124,9 +124,6 @@ public:
 	void ComboAbort();
 
 	bool IsPlaying() const { return bIsPlaying; }
-
-	void SetAttackComboCount(const int32 MaxComboCount);
-	void SetComboTypeIndex(const int32 InComboTypeIndex);
 	int32 GetComboTypeIndex() const { return ComboTypeIndex; }
 
 private:

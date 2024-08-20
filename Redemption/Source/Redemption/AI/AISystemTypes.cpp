@@ -220,11 +220,12 @@ FAICloseCombatData::FAICloseCombatData()
 	CurSeeds = 0.f;
 }
 
-void FAICloseCombatData::Initialize()
+void FAICloseCombatData::Initialize(const int32 InComboTypeIndex, const int32 MaxComboCount)
 {
 	bIsPlaying = true;
 	CurAttackComboCount = 0;
-	AttackComboCount = FMath::RandRange(0, MAX_COMBO_CNT);
+	AttackComboCount = FMath::RandRange(0, MaxComboCount - 1);
+	ComboTypeIndex = InComboTypeIndex;
 
 	for (const float Seed : BaseRandomSeeds)
 	{
@@ -241,13 +242,6 @@ void FAICloseCombatData::Initialize()
 	}
 
 	UE_LOG(LogWvAI, Warning, TEXT("[%s]"), *FString(__FUNCTION__));
-}
-
-void FAICloseCombatData::SetAttackComboCount(const int32 MaxComboCount)
-{
-	AttackComboCount = FMath::RandRange(0, MaxComboCount - 1);
-
-	UE_LOG(LogWvAI, Log, TEXT("[%s] => %d/%d"), *FString(__FUNCTION__), CurAttackComboCount, AttackComboCount);
 }
 
 void FAICloseCombatData::Deinitialize()
@@ -330,10 +324,6 @@ void FAICloseCombatData::ComboAbort()
 	Deinitialize();
 }
 
-void FAICloseCombatData::SetComboTypeIndex(const int32 InComboTypeIndex)
-{
-	ComboTypeIndex = InComboTypeIndex;
-}
 #pragma endregion
 
 

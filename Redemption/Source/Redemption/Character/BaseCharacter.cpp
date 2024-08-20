@@ -26,6 +26,7 @@
 
 #include "Components/CapsuleComponent.h"
 #include "Components/InputComponent.h"
+#include "Components/StaticMeshComponent.h"
 #include "Components/PawnNoiseEmitterComponent.h"
 #include "MotionWarpingComponent.h"
 #include "AI/Navigation/NavigationTypes.h"
@@ -173,6 +174,10 @@ ABaseCharacter::ABaseCharacter(const FObjectInitializer& ObjectInitializer)
 	HeldObjectRoot->bAutoActivate = 1;
 	HeldObjectRoot->SetupAttachment(WvMeshComp);
 
+	AccessoryObjectRoot = ObjectInitializer.CreateDefaultSubobject<UStaticMeshComponent>(this, TEXT("AccessoryObjectRoot"));
+	AccessoryObjectRoot->bAutoActivate = 1;
+	AccessoryObjectRoot->SetupAttachment(WvMeshComp);
+
 	MyTeamID = FGenericTeamId(0);
 	CharacterTag = FGameplayTag::RequestGameplayTag(TAG_Character_Default.GetTag().GetTagName());
 
@@ -230,7 +235,12 @@ void ABaseCharacter::BeginPlay()
 	}
 
 	CMC->MaxStepHeight = GetDistanceFromToeToKnee();
-	CMC->SetWalkableFloorAngle(50.0f);
+	CMC->SetWalkableFloorAngle(K_WALKABLE_FLOOR_ANGLE);
+
+	if (UnArmedAnimInstance)
+	{
+		SkelMesh->LinkAnimClassLayers(UnArmedAnimInstance);
+	}
 
 	RequestAsyncLoad();
 
@@ -696,6 +706,10 @@ bool ABaseCharacter::IsAttackAllowed() const
 	return !WvAbilitySystemComponent->HasMatchingGameplayTag(TAG_Character_AI_NotAllowed_Attack);
 }
 
+/// <summary>
+/// @TODO
+/// must change to child mesh component URO disable
+/// </summary>
 void ABaseCharacter::DoStartCinematic()
 {
 	Freeze();
@@ -706,9 +720,15 @@ void ABaseCharacter::DoStartCinematic()
 		CMC->SetMovementMode(EMovementMode::MOVE_None);
 	}
 
+	HandleMeshUpdateRateOptimizations(false, GetMesh());
+
 	WvAbilitySystemComponent->AddGameplayTag(TAG_Character_Action_Cinematic, 1);
 }
 
+/// <summary>
+/// @TODO
+/// must change to child mesh component URO enable
+/// </summary>
 void ABaseCharacter::DoStopCinematic()
 {
 	UnFreeze();
@@ -716,8 +736,10 @@ void ABaseCharacter::DoStopCinematic()
 	auto CMC = GetWvCharacterMovementComponent();
 	if (CMC)
 	{
-		CMC->SetMovementMode(EMovementMode::MOVE_Walking);
+		CMC->SetMovementMode(IsBotCharacter() ? EMovementMode::MOVE_NavWalking : EMovementMode::MOVE_Walking);
 	}
+
+	HandleMeshUpdateRateOptimizations(true, GetMesh());
 
 	WvAbilitySystemComponent->RemoveGameplayTag(TAG_Character_Action_Cinematic, 1);
 }
@@ -833,6 +855,11 @@ UClimbingComponent* ABaseCharacter::GetClimbingComponent() const
 USceneComponent* ABaseCharacter::GetHeldObjectRoot() const
 {
 	return HeldObjectRoot;
+}
+
+UStaticMeshComponent* ABaseCharacter::GetAccessoryObjectRoot() const
+{
+	return AccessoryObjectRoot;
 }
 #pragma endregion
 
@@ -1049,12 +1076,18 @@ void ABaseCharacter::DoStopAiming()
 
 void ABaseCharacter::DoTargetLockOn()
 {
-	WvAbilitySystemComponent->AddGameplayTag(TAG_Character_TargetLocking, 1);
+	if (IsValid(WvAbilitySystemComponent))
+	{
+		WvAbilitySystemComponent->AddGameplayTag(TAG_Character_TargetLocking, 1);
+	}
 }
 
 void ABaseCharacter::DoTargetLockOff()
 {
-	WvAbilitySystemComponent->RemoveGameplayTag(TAG_Character_TargetLocking, 1);
+	if (IsValid(WvAbilitySystemComponent))
+	{
+		WvAbilitySystemComponent->RemoveGameplayTag(TAG_Character_TargetLocking, 1);
+	}
 }
 
 void ABaseCharacter::OnWallClimbingBegin_Callback()
@@ -1255,11 +1288,14 @@ void ABaseCharacter::EndDeathAction(const float Interval)
 
 void ABaseCharacter::EndDeathAction_Callback()
 {
-	if (IsBotCharacter())
+	if (WvAbilitySystemComponent->HasMatchingGameplayTag(TAG_Locomotion_ForbidRagdoll))
 	{
-
+		LocomotionComponent->StartRagdollActionOnlyMovementState();
 	}
-	LocomotionComponent->StartRagdollAction();
+	else
+	{
+		LocomotionComponent->StartRagdollAction();
+	}
 }
 
 void ABaseCharacter::BeginAliveAction()
@@ -1789,22 +1825,32 @@ void ABaseCharacter::BuildFinisherAbility(const FGameplayTag RequireTag)
 
 	BuildFinisherAnimationData(Sender.Montage, false, nullptr);
 	FFinisherAnimation Receiver;
-	TargetCharacter->BuildFinisherAnimationReceiver(RequireTag, OutIndex, Receiver);
+	const bool bIsResult = TargetCharacter->BuildFinisherAnimationReceiver(RequireTag, OutIndex, Receiver);
+
+	if (!bIsResult)
+	{
+		UE_LOG(LogTemp, Error, TEXT("invalid BuildFinisherAnimationReceiver => %s"), *FString(__FUNCTION__));
+		return;
+	}
+
 	TargetCharacter->BuildFinisherAnimationData(Receiver.Montage, Receiver.IsTurnAround, this);
 	UE_LOG(LogTemp, Log, TEXT("Finisher Sender => %s, Receiver => %s, Acos => %.3f, Dot => %.3f"), *GetPathName(Sender.Montage), *GetPathName(Receiver.Montage), Acos, Dot);
 
-	// setup warping
-	MotionWarpingComponent->RemoveWarpTarget(FINISHER_TARGET_SYNC_POINT);
-	const FRotator TargetLookAt = UKismetMathLibrary::FindLookAtRotation(GetActorLocation(), TargetCharacter->GetActorLocation());
-	const float CurDistance = (GetActorLocation() - TargetCharacter->GetActorLocation()).Size2D();
-	FVector Forward = GetActorForwardVector() * FMath::Min(Sender.PushDistance, CurDistance);
-	Forward += GetActorLocation();
+	// sender only
+	{
+		// setup warping
+		MotionWarpingComponent->RemoveWarpTarget(FINISHER_TARGET_SYNC_POINT);
+		const FRotator TargetLookAt = UKismetMathLibrary::FindLookAtRotation(GetActorLocation(), TargetCharacter->GetActorLocation());
+		const float CurDistance = (GetActorLocation() - TargetCharacter->GetActorLocation()).Size2D();
+		FVector Forward = GetActorForwardVector() * FMath::Min(Sender.PushDistance, CurDistance);
+		Forward += GetActorLocation();
 
-	FMotionWarpingTarget WarpingTarget;
-	WarpingTarget.Name = FINISHER_TARGET_SYNC_POINT;
-	WarpingTarget.Location = Forward;
-	WarpingTarget.Rotation = FRotator(0.f, TargetLookAt.Yaw, 0.f);
-	MotionWarpingComponent->AddOrUpdateWarpTarget(WarpingTarget);
+		FMotionWarpingTarget WarpingTarget;
+		WarpingTarget.Name = FINISHER_TARGET_SYNC_POINT;
+		WarpingTarget.Location = Forward;
+		WarpingTarget.Rotation = FRotator(0.f, TargetLookAt.Yaw, 0.f);
+		MotionWarpingComponent->AddOrUpdateWarpTarget(WarpingTarget);
+	}
 
 	if (RequireTag == TAG_Weapon_Finisher)
 	{
@@ -1846,20 +1892,21 @@ void ABaseCharacter::BuildFinisherAnimationSender(const FGameplayTag RequireTag,
 	}
 }
 
-void ABaseCharacter::BuildFinisherAnimationReceiver(const FGameplayTag RequireTag, const int32 Index, FFinisherAnimation& OutFinisherAnimation)
+const bool ABaseCharacter::BuildFinisherAnimationReceiver(const FGameplayTag RequireTag, const int32 Index, FFinisherAnimation& OutFinisherAnimation)
 {
 	if (!IsValid(FinisherReceiner))
 	{
 		UE_LOG(LogTemp, Warning, TEXT("not valid FinisherReceiner"));
-		return;
+		return false;
 	}
 
 	FFinisherAnimationContainer AnimationContainer = FinisherReceiner->FindContainer(RequireTag);
 	if (AnimationContainer.Montages.Num() <= 0)
 	{
-		return;
+		return false;
 	}
 	OutFinisherAnimation = AnimationContainer.Montages[Index];
+	return true;
 }
 
 void ABaseCharacter::BuildFinisherAnimationData(UAnimMontage* InMontage, const bool IsTurnAround, AActor* TurnActor, float PlayRate/* = 1.0f*/)
@@ -1887,23 +1934,17 @@ FRequestAbilityAnimationData ABaseCharacter::GetFinisherAnimationData() const
 #pragma region AsyncLoad
 void ABaseCharacter::RequestAsyncLoad()
 {
-	FStreamableManager& StreamableManager = UWvGameInstance::GetStreamableManager();
-
 	auto Components = Game::ComponentExtension::GetComponentsArray<UActorComponent>(this);
-	TArray<IAsyncComponentInterface*> Interfaces;
 	for (UActorComponent* ActComp : Components)
 	{
 		if (IAsyncComponentInterface* Interface = Cast<IAsyncComponentInterface>(ActComp))
 		{
-			Interfaces.Add(Interface);
+			Interface->RequestAsyncLoad();
 		}
 	}
 
-	for (IAsyncComponentInterface* Interface : Interfaces)
-	{
-		Interface->RequestAsyncLoad();
-	}
 
+	FStreamableManager& StreamableManager = UWvGameInstance::GetStreamableManager();
 	if (!OverlayAnimInstanceDA.IsNull())
 	{
 		const FSoftObjectPath ObjectPath = OverlayAnimInstanceDA.ToSoftObjectPath();
@@ -2103,17 +2144,13 @@ void ABaseCharacter::EndCinematic()
 }
 
 #pragma region CloseCombat
-void ABaseCharacter::ModifyCombatAnimationIndex(int32& OutIndex)
+int32 ABaseCharacter::GetCombatAnimationIndex() const
 {
-	if (!IsValid(CloseCombatAnimationDAInstance))
-	{
-		OnLoadCloseCombatAssets();
-	}
-
 	if (IsValid(CloseCombatAnimationDAInstance))
 	{
-		CloseCombatAnimationDAInstance->ModifyCombatAnimationIndex(OutIndex);
+		return CloseCombatAnimationDAInstance->GetCombatAnimationIndex();
 	}
+	return INDEX_NONE;
 }
 
 int32 ABaseCharacter::CloseCombatMaxComboCount(const int32 Index) const
@@ -2171,4 +2208,61 @@ void ABaseCharacter::DrawDebug()
 	LocomotionComponent->DrawLocomotionDebug();
 #endif
 }
+
+void ABaseCharacter::BuildLODMesh(USkeletalMeshComponent* SkelMesh)
+{
+	if (IsValid(SkelMesh))
+	{
+		// Check for valid optimization parameters
+		if (FAnimUpdateRateParameters* AnimUpdateRateParams = SkelMesh->AnimUpdateRateParams)
+		{
+			// Create threshold table for MaxDistanceFactor
+			static const float ThresholdTable[] = { 0.5f, 0.5f, 0.3f, 0.1f, 0.1f, 0.1f };
+			static const int32 TableNum = UE_ARRAY_COUNT(ThresholdTable);
+
+			// Set threshold tables as optimization parameters for skeletal mesh
+			TArray<float>& Thresholds = AnimUpdateRateParams->BaseVisibleDistanceFactorThesholds;
+			Thresholds.Empty(TableNum);
+			for (int32 Index = 0; Index < TableNum; ++Index)
+			{
+				Thresholds.Add(ThresholdTable[Index]);
+			}
+
+			// copy rendering threshold
+			AnimUpdateRateParams->BaseVisibleDistanceFactorThesholds.Empty();
+
+			for (const float Threshold : Thresholds)
+			{
+				AnimUpdateRateParams->BaseVisibleDistanceFactorThesholds.Add(Threshold);
+			}
+
+			// Number of frame skips where interpolation is applied
+			AnimUpdateRateParams->MaxEvalRateForInterpolation = 4;
+
+			// Specify the number of off-screen skipped frames
+			// Specify 6 to process 1 frame and skip 5 frames
+			AnimUpdateRateParams->BaseNonRenderedUpdateRate = 6;
+		}
+	}
+
+}
+
+void ABaseCharacter::HandleMeshUpdateRateOptimizations(const bool IsInEnableURO, USkeletalMeshComponent* SkelMesh)
+{
+	if (IsValid(SkelMesh))
+	{
+		if (IsInEnableURO)
+		{
+			// Enable URO for sk mesh
+			SkelMesh->bEnableUpdateRateOptimizations = true;
+			SkelMesh->VisibilityBasedAnimTickOption = EVisibilityBasedAnimTickOption::OnlyTickPoseWhenRendered;
+		}
+		else
+		{
+			SkelMesh->bEnableUpdateRateOptimizations = false;
+			SkelMesh->VisibilityBasedAnimTickOption = EVisibilityBasedAnimTickOption::AlwaysTickPose;
+		}
+	}
+}
+
 

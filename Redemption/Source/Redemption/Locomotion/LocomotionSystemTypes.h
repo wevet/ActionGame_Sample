@@ -408,6 +408,8 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
 	bool HasAcceleration = false;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
+	bool bIsMassAgent = false;
 
 	ELSMovementMode LSPrevMovementMode;
 

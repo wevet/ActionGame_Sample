@@ -80,6 +80,7 @@ UE_DEFINE_GAMEPLAY_TAG(TAG_Locomotion_ForbidClimbing, "Locomotion.Forbid.Climbin
 UE_DEFINE_GAMEPLAY_TAG(TAG_Locomotion_ForbidMantling, "Locomotion.Forbid.Mantling");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Locomotion_ForbidMovement, "Locomotion.Forbid.Movement");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Locomotion_ForbidJump, "Locomotion.Forbid.Jump");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Locomotion_ForbidRagdoll, "Locomotion.Forbid.Ragdoll");
 
 // weapon type
 UE_DEFINE_GAMEPLAY_TAG(TAG_Weapon_Melee_Default, "Weapon.Melee.Default");
@@ -111,6 +112,14 @@ UE_DEFINE_GAMEPLAY_TAG(TAG_AI_Character_Ignore, "AI.Character.Ignore");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Vehicle_Drive, "Vehicle.Drive");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Vehicle_UnDrive, "Vehicle.UnDrive");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Vehicle_State_Drive, "Vehicle.State.Drive");
+
+// smart object difinition
+UE_DEFINE_GAMEPLAY_TAG(TAG_Character_State_SmartObject_Using, "Character.State.SmartObject.Using");
+
+// state tree difinition
+//UE_DEFINE_GAMEPLAY_TAG(TAG_Character_Difinition_State_Sit_Begin, "Character.Difinition.State.Sit.Start");
+//UE_DEFINE_GAMEPLAY_TAG(TAG_Character_Difinition_State_Sit_Loop, "Character.Difinition.State.Sit.Loop");
+//UE_DEFINE_GAMEPLAY_TAG(TAG_Character_Difinition_State_Sit_End, "Character.Difinition.State.Sit.End");
 
 
 IMPLEMENT_PRIMARY_GAME_MODULE( FDefaultGameModuleImpl, Redemption, "Redemption" );

@@ -301,11 +301,16 @@ public:
 	UFUNCTION(BlueprintCallable, Category = Ragdoll)
 	void StartRagdollAction();
 
+	void StartRagdollActionOnlyMovementState();
+
 	UFUNCTION(BlueprintCallable, Category = Ragdoll)
 	void StopRagdollAction();
 
 	UFUNCTION(BlueprintCallable, Category = Ragdoll)
 	bool IsRagdollingGetUpFront() const;
+
+	// apply to MassCharacter
+	void EnableMassAgentMoving(const bool bIsEnable);
 
 	void DrawLocomotionDebug();
 
@@ -374,12 +379,14 @@ private:
 	FVector LandingLocation = FVector::ZeroVector;
 	bool bDoSprint;
 	bool bDoRunning;
-	bool bDebugTrace;
 	bool bShouldSprint;
 	bool bLockUpdatingRotation;
 	bool bIsOwnerPlayerController = false;
 	float ForwardAxisValue;
 	float RightAxisValue;
+
+	bool bDebugTrace;
+	int32 bDebugIndex = 0;
 
 	FTimerHandle Landing_CallbackHandle;
 	FGraphEventRef AsyncWork;

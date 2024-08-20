@@ -203,7 +203,7 @@ void UQTEActionComponent::FindWidgetComponent()
 {
 	if (!QTEWidgetComponent.IsValid())
 	{
-		TArray<UActorComponent*> Components = GetOwner()->GetComponentsByTag(UWidgetComponent::StaticClass(), FName(TEXT("QTE")));
+		TArray<UActorComponent*> Components = GetOwner()->GetComponentsByTag(UWidgetComponent::StaticClass(), K_QTE_COMPONENT_TAG);
 		for (UActorComponent* Component : Components)
 		{
 			if (!QTEWidgetComponent.IsValid())

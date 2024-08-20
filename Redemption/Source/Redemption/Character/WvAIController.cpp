@@ -89,8 +89,11 @@ void AWvAIController::Tick(float DeltaTime)
 #if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
 	if (CVarDebugCharacterBehaviorTree.GetValueOnGameThread() > 0)
 	{
-		BaseCharacter->DrawActionState();
-	}
+		if (BaseCharacter.IsValid())
+		{
+			BaseCharacter->DrawActionState();
+		}
+}
 #endif
 }
 
@@ -145,7 +148,7 @@ void AWvAIController::OnUnPossess()
 
 void AWvAIController::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-	HandleRemoveAIPerception();
+	HandleRemoveAIPerceptionDelegate();
 
 	MissionComponent->RegisterMissionDelegate.RemoveDynamic(this, &ThisClass::RegisterMission_Callback);
 	Super::EndPlay(EndPlayReason);
@@ -269,7 +272,7 @@ ETeamAttitude::Type AWvAIController::GetTeamAttitudeTowards(const AActor& Other)
 
 void AWvAIController::OnReceiveKillTarget(AActor* Actor, const float Damage)
 {
-	HandleRemoveAIPerception();
+	HandleRemoveAIPerceptionDelegate();
 
 	AbortTasks();
 	StopTree();
@@ -846,6 +849,12 @@ void AWvAIController::OnActorsPerceptionUpdatedRecieve(const TArray<AActor*>& Up
 
 void AWvAIController::OnTargetPerceptionUpdatedRecieve(AActor* Actor, FAIStimulus Stimulus)
 {
+	if (!BaseCharacter.IsValid())
+	{
+		//UE_LOG(LogWvAI, Warning, TEXT("Not Valid Stimulus or Not Valid Actor or Contains IgnoreTargets => %s"), *FString(__FUNCTION__));
+		return;
+	}
+
 	if (!Stimulus.IsValid() || !IsValid(Actor) || IgnoreTargets.Contains(Actor))
 	{
 		//UE_LOG(LogWvAI, Warning, TEXT("Not Valid Stimulus or Not Valid Actor or Contains IgnoreTargets => %s"), *FString(__FUNCTION__));
@@ -1058,7 +1067,7 @@ void AWvAIController::RegisterMission_Callback(const int32 MissionIndex)
 	UE_LOG(LogTemp, Log, TEXT("Send Order => %d, function => %s"), MissionIndex, *FString(__FUNCTION__));
 }
 
-void AWvAIController::HandleRemoveAIPerception()
+void AWvAIController::HandleRemoveAIPerceptionDelegate()
 {
 	if (AIPerceptionComponent->OnTargetPerceptionUpdated.IsBound())
 	{
@@ -1076,14 +1085,12 @@ void AWvAIController::CloseCombatActionBegin()
 {
 	if (BaseCharacter.IsValid())
 	{
-		AICloseCombatData.Initialize();
+		
 
-		int32 Result;
-		BaseCharacter->ModifyCombatAnimationIndex(Result);
-		AICloseCombatData.SetComboTypeIndex(Result);
+		const int32 ComboType = BaseCharacter->GetCombatAnimationIndex();
+		const int32 ComboCountMax = BaseCharacter->CloseCombatMaxComboCount(ComboType);
 
-		const int32 ComboCountMax = BaseCharacter->CloseCombatMaxComboCount(Result);
-		AICloseCombatData.SetAttackComboCount(ComboCountMax);
+		AICloseCombatData.Initialize(ComboType, ComboCountMax);
 	}
 
 }

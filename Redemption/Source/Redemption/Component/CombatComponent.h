@@ -30,13 +30,13 @@ protected:
 
 
 protected:
-	UPROPERTY(EditDefaultsOnly, Category = "Combat|Config")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Combat|Config")
 	float DrawTime = 0.5f;
 
-	UPROPERTY(EditDefaultsOnly, Category = "Combat|Config")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Combat|Config")
 	class UHitReactBoneShakeDataAsset* HitReactBoneShakeDA;
 
-	UPROPERTY(EditDefaultsOnly, Category = "Combat|AI")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Combat|AI")
 	EAttackWeaponState AttackWeaponState = EAttackWeaponState::EmptyWeapon;
 
 public:

@@ -80,7 +80,7 @@ bool UWvCommonUtils::IsBot(const AController* Controller)
 {
 	if (!IsValid(Controller))
 	{
-		UE_LOG(LogTemp, Error, TEXT("UWvCommonUtils::IsBot -> Controller is nullptr"));
+		//UE_LOG(LogTemp, Error, TEXT("UWvCommonUtils::IsBot -> Controller is nullptr"));
 		return false;
 	}
 

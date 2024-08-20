@@ -39,6 +39,8 @@ public class Redemption : ModuleRules
 				"MotionTrajectory",
 				"ChaosVehiclesCore",
 				"StateTreeModule",
+				//"MassGameplay",
+				"MassActors",
 				"StructUtils",
 				"HairStrandsCore",
 				"ContextualAnimation",

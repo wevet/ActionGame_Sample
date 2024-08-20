@@ -176,6 +176,9 @@ protected:
 	bool bHasVelocity;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
+	bool bHasAcceleration;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
 	bool bWasAiming;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
@@ -213,6 +216,9 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
 	bool bWasBulletWeaponEquip = false;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
+	bool bIsForbidRagdoll = false;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion")
 	UCurveFloat* LandAlphaCurve;

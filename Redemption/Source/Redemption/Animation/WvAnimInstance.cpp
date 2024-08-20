@@ -8,6 +8,7 @@
 #include "WvAbilitySystemTypes.h"
 #include "Misc/WvCommonUtils.h"
 #include "PredictionAnimInstance.h"
+#include "Redemption.h"
 
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemGlobals.h"
@@ -23,7 +24,6 @@
 #include "Animation/AnimInstanceProxy.h"
 #include "Animation/AnimNode_LinkedAnimLayer.h"
 #include "Animation/BlendSpace.h"
-
 
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(WvAnimInstance)
@@ -79,6 +79,9 @@ UWvAnimInstance::UWvAnimInstance(const FObjectInitializer& ObjectInitializer) : 
 	OverlayState = ELSOverlayState::None;
 	LSMovementMode = ELSMovementMode::None;
 
+	bHasAcceleration = false;
+	bHasVelocity = false;
+
 	bIsClimbing = false;
 
 	bIsWallClimbing = false;
@@ -117,7 +120,7 @@ void UWvAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 #if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
 	static const IConsoleVariable* RelevantCVar = IConsoleManager::Get().FindConsoleVariable(TEXT("wv.LocomotionSystem.Debug"));
 	const int32 RelevantConsoleValue = RelevantCVar->GetInt();
-	if (RelevantConsoleValue > 0)
+	if (RelevantConsoleValue > 0 && RelevantConsoleValue < 2)
 	{
 		if (Character.IsValid())
 		{
@@ -148,6 +151,12 @@ void UWvAnimInstance::NativeThreadSafeUpdateAnimation(float DeltaSeconds)
 
 		// @NOTE not melee attack & not gun equiped & target lock on
 		bWasTargetLock = bIsInjured ? false : Character->IsTargetLock() && !bWasBulletWeaponEquip;//!bIsStateMelee && 
+
+
+		if (UAbilitySystemComponent* ASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(Character.Get()))
+		{
+			bIsForbidRagdoll = ASC->HasMatchingGameplayTag(TAG_Locomotion_ForbidRagdoll);
+		}
 	}
 
 	if (IsValid(CharacterMovementComponent))
@@ -162,6 +171,10 @@ void UWvAnimInstance::NativeThreadSafeUpdateAnimation(float DeltaSeconds)
 		CharacterOverlayInfo.ChooseStanceMode(LocomotionEssencialVariables.LSStance == ELSStance::Standing);
 		CharacterOverlayInfo.ModifyAnimCurveValue(this);
 		Speed = LocomotionEssencialVariables.Velocity.Size();
+
+		// @NOTE
+		// Thresholds need to be set due to NPC MassAI system
+		bHasAcceleration = LocomotionEssencialVariables.HasAcceleration;
 
 		bHasVelocity = LocomotionEssencialVariables.bWasMoving;
 		OverlayState = LocomotionEssencialVariables.OverlayState;
@@ -197,6 +210,8 @@ void UWvAnimInstance::NativeThreadSafeUpdateAnimation(float DeltaSeconds)
 		break;
 	}
 
+	CalculateAimOffset();
+	CalculateGroundedLeaningValues();
 }
 
 void UWvAnimInstance::NativePostEvaluateAnimation()
@@ -238,8 +253,6 @@ EDataValidationResult UWvAnimInstance::IsDataValid(class FDataValidationContext&
 void UWvAnimInstance::DoWhileGrounded()
 {
 	CalculateGaitValue();
-	CalculateAimOffset();
-	CalculateGroundedLeaningValues();
 }
 
 void UWvAnimInstance::CalculateGaitValue()
@@ -524,17 +537,18 @@ void UWvAnimInstance::RenderAnimTickRecords(const TArray<FAnimTickRecord>& Recor
 
 	}
 }
-#pragma endregion
-
-void UWvAnimInstance::WakeUpPoseSnapShot()
-{
-	SavePoseSnapshot(RagdollPoseSnapshot);
-}
 
 UPredictionAnimInstance* UWvAnimInstance::GetPredictionAnimInstance() const
 {
 	static FName TagName = FName(TEXT("FootIK"));
 	return Cast<UPredictionAnimInstance>(this->GetLinkedAnimGraphInstanceByTag(TagName));
+}
+#pragma endregion
+
+
+void UWvAnimInstance::WakeUpPoseSnapShot()
+{
+	SavePoseSnapshot(RagdollPoseSnapshot);
 }
 
 #pragma region LadderOrBalance
