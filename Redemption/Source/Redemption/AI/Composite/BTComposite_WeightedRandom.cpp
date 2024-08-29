@@ -1,6 +1,7 @@
 // Copyright 2022 wevet works All Rights Reserved.
 
 #include "AI/Composite/BTComposite_WeightedRandom.h"
+//#include "Runtime/Launch/Resources/Version.h"
 
 
 UBTComposite_WeightedRandom::UBTComposite_WeightedRandom(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer),
@@ -8,6 +9,22 @@ UBTComposite_WeightedRandom::UBTComposite_WeightedRandom(const FObjectInitialize
 {
 	NodeName = "Weighted Random";
 	//OnNextChild.BindUObject(this, &UBTComposite_WeightedRandom::GetNextChildHandler);
+}
+
+
+uint16 UBTComposite_WeightedRandom::GetInstanceMemorySize() const
+{
+	return sizeof(FBTCompositeMemory);
+}
+
+void UBTComposite_WeightedRandom::InitializeMemory(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory, EBTMemoryInit::Type InitType) const
+{
+	InitializeNodeMemory<FBTCompositeMemory>(NodeMemory, InitType);
+}
+
+void UBTComposite_WeightedRandom::CleanupMemory(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory, EBTMemoryClear::Type CleanupType) const
+{
+	CleanupNodeMemory<FBTCompositeMemory>(NodeMemory, CleanupType);
 }
 
 /*

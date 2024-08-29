@@ -42,8 +42,9 @@ void UWvAbility_VehicleDrive::ActivateAbility(const FGameplayAbilitySpecHandle H
 	}
 
 
-	Instigator = Cast<APawn>(TriggerEventData->Instigator);
-	Target = Cast<APawn>(TriggerEventData->Target);
+	Instigator = const_cast<APawn*>(Cast<APawn>(TriggerEventData->Instigator));
+	Target = const_cast<APawn*>(Cast<APawn>(TriggerEventData->Target));
+
 	if (!Instigator.IsValid() || !Target.IsValid())
 	{
 		UE_LOG(LogTemp, Warning, TEXT("[%s : not valid Instigator or Target]"), *FString(__FUNCTION__));

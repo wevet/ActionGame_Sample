@@ -1246,7 +1246,7 @@ void URC22::Build_RC()
 
 			if (OffsetBuildingSpline == true)
 			{
-				BuildingSpline_PR_RC->AddWorldOffset(FVector(0, 0, 25), false, false, ETeleportType::TeleportPhysics);
+				BuildingSpline_PR_RC->AddWorldOffset(FVector(0, 0, 25), false, nullptr, ETeleportType::TeleportPhysics);
 			}
 
 			////////////////////////////////////////////////////////////////Make DataTracker
@@ -1545,7 +1545,7 @@ void URC22::Build_RC()
 				const FName SphereCollIniName = CreateUniqueName(FString("CollisionSphere"), ArrayCount);
 				SphereColl_PR_RC = NewObject<USphereComponent>(this, USphereComponent::StaticClass(), SphereCollIniName);
 				CreateSphereCollision(SphereColl_PR_RC, GetWorld(), BuildingSpline_PR_RC);
-				SphereCollisionConfig(true, PhysicsEnabled, SphereColl_PR_RC, (SetAngularDamping_RC * RigidityScaleMultiplier), 999999999999999, PositionSolverIterationCount_RC22, VelocitySolverIterationCount_RC22, StabilizationThresholdMultiplier_RC22, 0.1, (InertiaTensorScale_RC * RigidityScaleMultiplier), CollUnitScale_RC.GetComponentForAxis(EAxis::X), 1, (SetMassScale_RC * RigidityScaleMultiplier));
+				SphereCollisionConfig(true, PhysicsEnabled, SphereColl_PR_RC, (SetAngularDamping_RC * RigidityScaleMultiplier), 999999999999999.0f, PositionSolverIterationCount_RC22, VelocitySolverIterationCount_RC22, StabilizationThresholdMultiplier_RC22, 0.1f, (InertiaTensorScale_RC * RigidityScaleMultiplier), CollUnitScale_RC.GetComponentForAxis(EAxis::X), 1, (SetMassScale_RC * RigidityScaleMultiplier));
 
 				const FVector SphCollLoc = BuildingSpline_PR_RC->GetLocationAtSplinePoint(ArrayCount, ESplineCoordinateSpace::World);
 				SphereColl_PR_RC->SetWorldLocation(SphCollLoc);
@@ -2000,7 +2000,7 @@ void URC22::RuntimeUpdate()
 						if (DistanceBetweenCollisionObjects > UnitLength_RC)
 						{
 							
-							CurrentCollisionObject->SetWorldLocation((DistanceLockPrimaryCollisionLocation + (DirectionUnitVectorCollision* UnitLength_RC)), false, false, ETeleportType::TeleportPhysics);
+							CurrentCollisionObject->SetWorldLocation((DistanceLockPrimaryCollisionLocation + (DirectionUnitVectorCollision* UnitLength_RC)), false, nullptr, ETeleportType::TeleportPhysics);
 
 						}
 
@@ -3234,7 +3234,7 @@ void URC22::AttachRopeStart_RC(UPrimitiveComponent * MeshToAttach, FName SocketN
 			{
 				CollisionSphereArray_PR_RC[0]->SetSimulatePhysics(false);
 
-				CollisionSphereArray_PR_RC[0]->SetWorldLocation(MeshToAttach->GetSocketLocation(SocketName), false, false, ETeleportType::TeleportPhysics);
+				CollisionSphereArray_PR_RC[0]->SetWorldLocation(MeshToAttach->GetSocketLocation(SocketName), false, nullptr, ETeleportType::TeleportPhysics);
 
 				StartAnchorPhyConstr_PR_RC->AttachToComponent(CollisionSphereArray_PR_RC[0], FAttachmentTransformRules::SnapToTargetIncludingScale);
 
@@ -3254,7 +3254,7 @@ void URC22::AttachRopeStart_RC(UPrimitiveComponent * MeshToAttach, FName SocketN
 			{
 				CollisionSphereArray_PR_RC[0]->SetSimulatePhysics(false);
 
-				CollisionSphereArray_PR_RC[0]->SetWorldLocation(MeshToAttach->GetSocketLocation(SocketName), false, false, ETeleportType::TeleportPhysics);
+				CollisionSphereArray_PR_RC[0]->SetWorldLocation(MeshToAttach->GetSocketLocation(SocketName), false, nullptr, ETeleportType::TeleportPhysics);
 
 				StartAnchorPhyConstr_PR_RC->AttachToComponent(CollisionSphereArray_PR_RC[0], FAttachmentTransformRules::SnapToTargetIncludingScale);
 
@@ -3331,7 +3331,7 @@ void URC22::AttachRopeEnd_RC(UPrimitiveComponent * MeshToAttach, FName SocketNam
 			{
 				GetLastCollisionSphere_RC()->SetSimulatePhysics(false);
 
-				GetLastCollisionSphere_RC()->SetWorldLocation(MeshToAttach->GetSocketLocation(SocketName), false, false, ETeleportType::TeleportPhysics);
+				GetLastCollisionSphere_RC()->SetWorldLocation(MeshToAttach->GetSocketLocation(SocketName), false, nullptr, ETeleportType::TeleportPhysics);
 				
 				EndAnchorPhyConstr_PR_RC->AttachToComponent(GetLastCollisionSphere_RC(), FAttachmentTransformRules::SnapToTargetIncludingScale);
 
@@ -3353,7 +3353,7 @@ void URC22::AttachRopeEnd_RC(UPrimitiveComponent * MeshToAttach, FName SocketNam
 			{
 			GetLastCollisionSphere_RC()->SetSimulatePhysics(false);
 
-				GetLastCollisionSphere_RC()->SetWorldLocation(MeshToAttach->GetSocketLocation(SocketName), false, false, ETeleportType::TeleportPhysics);
+				GetLastCollisionSphere_RC()->SetWorldLocation(MeshToAttach->GetSocketLocation(SocketName), false, nullptr, ETeleportType::TeleportPhysics);
 
 				EndAnchorPhyConstr_PR_RC->AttachToComponent(GetLastCollisionSphere_RC(), FAttachmentTransformRules::SnapToTargetIncludingScale);
 
@@ -3480,7 +3480,7 @@ void URC22::MoveEndOfRope_RC(FVector MoveToLocation, float DurationOfMove, bool 
 						FirstUnitPinMesh_PR_RC->RegisterComponentWithWorld(GetWorld());
 						FirstUnitPinMesh_PR_RC->AttachToComponent(this, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
 						FirstUnitPinMesh_PR_RC->SetStaticMesh(RopeMeshModel);
-						FirstUnitPinMesh_PR_RC->SetWorldLocation(FirstUnitOrigin_Loc_EMov_CC, false, false, ETeleportType::TeleportPhysics);
+						FirstUnitPinMesh_PR_RC->SetWorldLocation(FirstUnitOrigin_Loc_EMov_CC, false, nullptr, ETeleportType::TeleportPhysics);
 						FirstUnitPinMesh_PR_RC->SetSimulatePhysics(false);
 						FirstUnitPinMesh_PR_RC->SetVisibility(false, false);
 						FirstUnitPinMesh_PR_RC->SetHiddenInGame(true, false);
@@ -3516,8 +3516,8 @@ void URC22::MoveEndOfRope_RC(FVector MoveToLocation, float DurationOfMove, bool 
 			if (LerpValue_EMov_CC <= 1)
 			{
 				LerpValue_EMov_CC = LerpValue_EMov_CC + 0.01;
-				CollisionSphereArray_PR_RC.Last()->SetWorldLocation(FMath::Lerp(LastUnitOrigin_Loc_EMov_CC, LastUnitTarget_Loc_EMov_CC, LerpValue_EMov_CC), false, false, ETeleportType::TeleportPhysics);
-				CollisionSphereArray_PR_RC.Last()->SetWorldRotation(FMath::Lerp(LastUnitOrigin_Rot_EMov_CC, LastUnitTarget_Rot_EMov_CC, LerpValue_EMov_CC), false, false, ETeleportType::TeleportPhysics);
+				CollisionSphereArray_PR_RC.Last()->SetWorldLocation(FMath::Lerp(LastUnitOrigin_Loc_EMov_CC, LastUnitTarget_Loc_EMov_CC, LerpValue_EMov_CC), false, nullptr, ETeleportType::TeleportPhysics);
+				CollisionSphereArray_PR_RC.Last()->SetWorldRotation(FMath::Lerp(LastUnitOrigin_Rot_EMov_CC, LastUnitTarget_Rot_EMov_CC, LerpValue_EMov_CC), false, nullptr, ETeleportType::TeleportPhysics);
 
 				if (AllowStartRotationAttached == true)
 				{
@@ -3525,7 +3525,7 @@ void URC22::MoveEndOfRope_RC(FVector MoveToLocation, float DurationOfMove, bool 
 					{
 						if (StartAnchorPhyConstr_PR_RC != nullptr)
 						{
-							CollisionSphereArray_PR_RC[0]->SetWorldRotation(FMath::Lerp(FirstUnitOrigin_Rot_EMov_CC, LastUnitTarget_Rot_EMov_CC, LerpValue_EMov_CC), false, false, ETeleportType::TeleportPhysics);
+							CollisionSphereArray_PR_RC[0]->SetWorldRotation(FMath::Lerp(FirstUnitOrigin_Rot_EMov_CC, LastUnitTarget_Rot_EMov_CC, LerpValue_EMov_CC), false, nullptr, ETeleportType::TeleportPhysics);
 						}
 					}
 				}
@@ -3648,7 +3648,7 @@ void URC22::MoveStartOfRope_RC(FVector MoveToLocation, float DurationOfMove, boo
 						LastUnitPinMesh_PR_RC->RegisterComponentWithWorld(GetWorld());
 						LastUnitPinMesh_PR_RC->AttachToComponent(this, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
 						LastUnitPinMesh_PR_RC->SetStaticMesh(RopeMeshModel);
-						LastUnitPinMesh_PR_RC->SetWorldLocation(LastUnitOrigin_Loc_SMov_CC, false, false, ETeleportType::TeleportPhysics);
+						LastUnitPinMesh_PR_RC->SetWorldLocation(LastUnitOrigin_Loc_SMov_CC, false, nullptr, ETeleportType::TeleportPhysics);
 						LastUnitPinMesh_PR_RC->SetSimulatePhysics(false);
 						LastUnitPinMesh_PR_RC->SetVisibility(false, false);
 						LastUnitPinMesh_PR_RC->SetHiddenInGame(true, false);
@@ -3681,8 +3681,8 @@ void URC22::MoveStartOfRope_RC(FVector MoveToLocation, float DurationOfMove, boo
 			if (LerpValue_SMov_CC <= 1)
 			{
 				LerpValue_SMov_CC = LerpValue_SMov_CC + 0.01;
-				CollisionSphereArray_PR_RC[0]->SetWorldLocation(FMath::Lerp(FirstUnitOrigin_Loc_SMov_CC, FirstUnitTarget_Loc_SMov_CC, LerpValue_SMov_CC), false, false, ETeleportType::TeleportPhysics);
-				CollisionSphereArray_PR_RC[0]->SetWorldRotation(FMath::Lerp(FirstUnitOrigin_Rot_SMov_CC, FirstUnitTarget_RotInvert_SMov_CC, LerpValue_SMov_CC), false, false, ETeleportType::TeleportPhysics);
+				CollisionSphereArray_PR_RC[0]->SetWorldLocation(FMath::Lerp(FirstUnitOrigin_Loc_SMov_CC, FirstUnitTarget_Loc_SMov_CC, LerpValue_SMov_CC), false, nullptr, ETeleportType::TeleportPhysics);
+				CollisionSphereArray_PR_RC[0]->SetWorldRotation(FMath::Lerp(FirstUnitOrigin_Rot_SMov_CC, FirstUnitTarget_RotInvert_SMov_CC, LerpValue_SMov_CC), false, nullptr, ETeleportType::TeleportPhysics);
 
 				if (AllowFirstUnitRotate_Att_SMov_CC == true)
 				{
@@ -3690,7 +3690,7 @@ void URC22::MoveStartOfRope_RC(FVector MoveToLocation, float DurationOfMove, boo
 					{
 						if (EndAnchorPhyConstr_PR_RC != nullptr)
 						{
-							CollisionSphereArray_PR_RC.Last()->SetWorldRotation(FMath::Lerp(LastUnitOrigin_Rot_SMov_CC, FirstUnitTarget_RotInvert_SMov_CC, LerpValue_SMov_CC), false, false, ETeleportType::TeleportPhysics);
+							CollisionSphereArray_PR_RC.Last()->SetWorldRotation(FMath::Lerp(LastUnitOrigin_Rot_SMov_CC, FirstUnitTarget_RotInvert_SMov_CC, LerpValue_SMov_CC), false, nullptr, ETeleportType::TeleportPhysics);
 						}
 					}
 				}
@@ -3870,9 +3870,9 @@ void URC22::GrowRope_RC(float RateOfAddition)
 				GrowTargetLocationSphere->SetHiddenInGame(true, false);
 
 				CreateSphereCollision(GrowTargetLocationSphere, GetWorld(), FirstTracker_PR_RC->SplineComponent_RC22T);
-				GrowTargetLocationSphere->SetWorldRotation(FirstTracker_PR_RC->CollisionArray_RC22T[0]->GetComponentRotation(), false, false, ETeleportType::TeleportPhysics);
-				GrowTargetLocationSphere->SetWorldLocation(GrowStartLocation_RC, false, false, ETeleportType::TeleportPhysics);
-				GrowTargetLocationSphere->AddLocalOffset(FVector(UnitLength_RC, 0, 0), false, false, ETeleportType::TeleportPhysics);
+				GrowTargetLocationSphere->SetWorldRotation(FirstTracker_PR_RC->CollisionArray_RC22T[0]->GetComponentRotation(), false, nullptr, ETeleportType::TeleportPhysics);
+				GrowTargetLocationSphere->SetWorldLocation(GrowStartLocation_RC, false, nullptr, ETeleportType::TeleportPhysics);
+				GrowTargetLocationSphere->AddLocalOffset(FVector(UnitLength_RC, 0, 0), false, nullptr, ETeleportType::TeleportPhysics);
 
 
 				GrowTargetLocation_RC = GrowTargetLocationSphere->GetComponentLocation();
@@ -3950,8 +3950,8 @@ void URC22::GrowShiftRopeAlong_RC()
 				{
 					//Move the collision sphere using a lerp
 					GrowRopeMoveLerpValue_RC = GrowRopeMoveLerpValue_RC + 0.05;
-					CollisionSphereArray_PR_RC[0]->SetWorldLocation(FMath::Lerp(GrowStartLocation_RC, GrowTargetLocation_RC, GrowRopeMoveLerpValue_RC), false, false, ETeleportType::TeleportPhysics);
-					//CollisionSphereArray_PR_RC[0]->SetWorldRotation(FMath::Lerp(FirstUnitOrigin_Rot_SMov_CC, FirstUnitTarget_RotInvert_SMov_CC, LerpValue_SMov_CC), false, false, ETeleportType::TeleportPhysics);
+					CollisionSphereArray_PR_RC[0]->SetWorldLocation(FMath::Lerp(GrowStartLocation_RC, GrowTargetLocation_RC, GrowRopeMoveLerpValue_RC), false, nullptr, ETeleportType::TeleportPhysics);
+					//CollisionSphereArray_PR_RC[0]->SetWorldRotation(FMath::Lerp(FirstUnitOrigin_Rot_SMov_CC, FirstUnitTarget_RotInvert_SMov_CC, LerpValue_SMov_CC), false, nullptr, ETeleportType::TeleportPhysics);
 					
 					//repeat loop to continue moving rope
 					onMoveGrowRopeTimer();
@@ -4280,7 +4280,7 @@ void URC22::GrowRopeMainFunction_RC()
 			GrowPhyConstraint_PR_RC = NewObject<UPhysicsConstraintComponent>(this, UPhysicsConstraintComponent::StaticClass(), GrowPhyConstrFname);
 			//set constraint location/rotation to new col
 			MakePhysConstr(GrowPhyConstraint_PR_RC, GetWorld(), GrowCollision_PR_RC->GetComponentLocation(), GrowCollision_PR_RC);
-			GrowPhyConstraint_PR_RC->SetWorldRotation(GrowCollision_PR_RC->GetComponentRotation(), false, false, ETeleportType::TeleportPhysics);
+			GrowPhyConstraint_PR_RC->SetWorldRotation(GrowCollision_PR_RC->GetComponentRotation(), false, nullptr, ETeleportType::TeleportPhysics);
 
 			PhyConstrConfig(GrowPhyConstraint_PR_RC, 1, 1, 1, 999, 999, 0, 999);
 
@@ -4388,8 +4388,8 @@ void URC22::GrowRopeMainFunction_RC()
 
 
 			//Ensure start of rope matches original transform
-			FirstTracker_PR_RC->CollisionArray_RC22T[0]->SetWorldLocation(GrowStartLocation_RC, false, false, ETeleportType::TeleportPhysics);
-			FirstTracker_PR_RC->CollisionArray_RC22T[0]->SetWorldRotation(GrowStartRotation_RC, false, false, ETeleportType::TeleportPhysics);	
+			FirstTracker_PR_RC->CollisionArray_RC22T[0]->SetWorldLocation(GrowStartLocation_RC, false, nullptr, ETeleportType::TeleportPhysics);
+			FirstTracker_PR_RC->CollisionArray_RC22T[0]->SetWorldRotation(GrowStartRotation_RC, false, nullptr, ETeleportType::TeleportPhysics);
 			FirstTracker_PR_RC->CollisionArray_RC22T[0]->SetPhysicsLinearVelocity(FVector(0, 0, 0));
 
 			
@@ -4759,7 +4759,7 @@ void URC22::ShrinkRopeMainFunction_RC()
 				//set start collision sphere as mobile or immobile using
 				FirstTracker_PR_RC->CollisionArray_RC22T[0]->SetPhysicsLinearVelocity(FVector(0, 0, 0));
 				ShrinkCollLinearDampeningValue_RC = FirstTracker_PR_RC->CollisionArray_RC22T[0]->GetLinearDamping();
-				FirstTracker_PR_RC->CollisionArray_RC22T[0]->SetLinearDamping(999999999999);
+				FirstTracker_PR_RC->CollisionArray_RC22T[0]->SetLinearDamping(999999999999.0f);
 				FirstTracker_PR_RC->CollisionArray_RC22T[0]->SetCollisionEnabled(ECollisionEnabled::Type::QueryAndPhysics);
 				FirstTracker_PR_RC->CollisionArray_RC22T[0]->SetCollisionObjectType(ECollisionChannel::ECC_Destructible);
 				FirstTracker_PR_RC->CollisionArray_RC22T[0]->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Ignore);
@@ -4820,8 +4820,8 @@ void URC22::MoveShrinkRope_RC()
 				{
 					//Move the collision sphere using a lerp
 					ShrinkRopeLerpValue = ShrinkRopeLerpValue + 0.05;
-					CollisionSphereArray_PR_RC[0]->SetWorldLocation(FMath::Lerp(ShrinkOriginLocation_RC, ShrinkTargetLocation_RC, ShrinkRopeLerpValue), false, false, ETeleportType::TeleportPhysics);
-					CollisionSphereArray_PR_RC[0]->SetWorldRotation(FMath::Lerp(ShrinkOriginRotation_RC, ShrinkTargetRotation_RC, ShrinkRopeLerpValue), false, false, ETeleportType::TeleportPhysics);
+					CollisionSphereArray_PR_RC[0]->SetWorldLocation(FMath::Lerp(ShrinkOriginLocation_RC, ShrinkTargetLocation_RC, ShrinkRopeLerpValue), false, nullptr, ETeleportType::TeleportPhysics);
+					CollisionSphereArray_PR_RC[0]->SetWorldRotation(FMath::Lerp(ShrinkOriginRotation_RC, ShrinkTargetRotation_RC, ShrinkRopeLerpValue), false, nullptr, ETeleportType::TeleportPhysics);
 
 					//repeat loop to continue moving rope
 					onMoveShrinkTimer();

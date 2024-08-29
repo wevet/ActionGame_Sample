@@ -33,7 +33,7 @@ UCC22::UCC22()
 	ChainTrackerPR_CC = nullptr;
 	ChainRattleSoundSpawn_CC = nullptr;
 
-	
+
 	//default static mesh model for chain link 	
 	static ConstructorHelpers::FObjectFinder<UStaticMesh>MainChainMeshAsset(*FString("StaticMesh'/RopeCutting/CCRC/Mesh/S_ChainLink.S_ChainLink'"));
 	ChainModel = MainChainMeshAsset.Object;
@@ -323,7 +323,7 @@ void UCC22::EnsureProperReset_CC()
 		DataSplineDestroyPR_CC->DestroyComponent();
 		DataSplineDestroyPR_CC = nullptr;
 	}
-	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 	//do not destroy - only de-reference - as destroying it will affect the separate user spline in the actor blueprint
 	DataSplinePR_CC = nullptr;
 	//do not destroy - only de-reference - as destroying array elements will affect the separate user spline in the actor blueprint
@@ -335,7 +335,6 @@ void UCC22::EnsureProperReset_CC()
 		}
 	}
 	SplineLookupArray_CC.Empty();
-	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 	if (BuildingSplinePR_CC != nullptr)
 	{
@@ -453,13 +452,13 @@ void UCC22::BeginConstruction_CC()
 			}
 			if (SetSplineEndLocation == true)
 			{
-				DataSplinePR_CC->SetLocationAtSplinePoint((DataSplinePR_CC->GetNumberOfSplinePoints()-1), SplineEndLocation, ESplineCoordinateSpace::World, true);
-			}			
+				DataSplinePR_CC->SetLocationAtSplinePoint((DataSplinePR_CC->GetNumberOfSplinePoints() - 1), SplineEndLocation, ESplineCoordinateSpace::World, true);
+			}
 
 			bool StartSocketFound = false;
 			bool EndSocketFound = false;
-			////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-			////////////////////////////////////////////////////////////////////Attach Start Mesh - Phase 01
+			
+			//Attach Start Mesh - Phase 01
 			if (AttachStartMesh == true)
 			{
 				//Get Spline Component by name	
@@ -507,8 +506,8 @@ void UCC22::BeginConstruction_CC()
 					}
 				}
 			}
-			////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-			////////////////////////////////////////////////////////////////////Attach End Mesh - Phase 01
+
+			//Attach End Mesh - Phase 01
 			if (AttachEndMesh == true)
 			{
 				//Get Spline Component by name	
@@ -578,8 +577,6 @@ void UCC22::BeginConstruction_CC()
 				}
 			}
 
-			////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-			////////////////////////////////////////////////////////////////////Create Building Spline
 			//Used to make a straight chain - prevents inaccurate twisting during gameplay - constraints want to return to their original local location/rotation - this makes the start position/rotation straight
 			BuildingSplinePR_CC = NewObject<USplineComponent>(this, USplineComponent::StaticClass(), CreateUniqueName_CC(FString("UserSpline"), 1));
 			BuildingSplinePR_CC->CreationMethod = EComponentCreationMethod::UserConstructionScript;
@@ -588,7 +585,7 @@ void UCC22::BeginConstruction_CC()
 			BuildingSplinePR_CC->AttachToComponent(this, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
 			BuildingSplinePR_CC->SetHiddenInGame(true, false);
 			BuildingSplinePR_CC->SetVisibility(false, false);
-			BuildingSplinePR_CC->AddWorldOffset(FVector(0, 0, -9999), false, false, ETeleportType::TeleportPhysics);
+			BuildingSplinePR_CC->AddWorldOffset(FVector(0, 0, -9999), false, nullptr, ETeleportType::TeleportPhysics);
 
 			//set building spline length
 			BuildingSplinePR_CC->SetLocationAtSplinePoint(1, FVector(DataSplinePR_CC->GetSplineLength(), 0, 0), ESplineCoordinateSpace::Local, true);
@@ -597,8 +594,6 @@ void UCC22::BeginConstruction_CC()
 			if (SplineLength_CC < MaxChainLength)
 			{
 
-				////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-				////////////////////////////////////////////////////////////////////Derive size of unit						
 				ChainMeshPR_CC = NewObject<UStaticMeshComponent>(this, UStaticMeshComponent::StaticClass(), CreateUniqueName_CC(FString("TemplateMesh"), 1));
 				ChainMeshPR_CC->CreationMethod = EComponentCreationMethod::UserConstructionScript;
 				ChainMeshPR_CC->RegisterComponentWithWorld(GetWorld());
@@ -618,8 +613,7 @@ void UCC22::BeginConstruction_CC()
 				}
 
 
-				////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-				////////////////////////////////////////////////////////////////////Add False Chain Meshes
+				//Add False Chain Meshes
 				//Create false chain - present in editor for visualisation - deleted on event begin - no collision - no constraints			
 				int FalseMeshLoopCounterCC = 0;
 				int FSMMigrateDataSplineCount = -1;
@@ -639,13 +633,13 @@ void UCC22::BeginConstruction_CC()
 
 					//Position Meshes - data can be from default spline or separate spline
 					FSMMigrateDataSplineCount = FSMMigrateDataSplineCount + 1;
-					FalseChainMeshPR_CC->SetWorldLocation(DataSplinePR_CC->GetLocationAtDistanceAlongSpline(MeshBoundsSize*FSMMigrateDataSplineCount, ESplineCoordinateSpace::World));
-					FalseChainMeshPR_CC->SetWorldRotation(DataSplinePR_CC->GetRotationAtDistanceAlongSpline(MeshBoundsSize*FSMMigrateDataSplineCount, ESplineCoordinateSpace::World));
+					FalseChainMeshPR_CC->SetWorldLocation(DataSplinePR_CC->GetLocationAtDistanceAlongSpline(MeshBoundsSize * FSMMigrateDataSplineCount, ESplineCoordinateSpace::World));
+					FalseChainMeshPR_CC->SetWorldRotation(DataSplinePR_CC->GetRotationAtDistanceAlongSpline(MeshBoundsSize * FSMMigrateDataSplineCount, ESplineCoordinateSpace::World));
 
 					//flip alternating chain inks				
 					if (FalseMeshLoopCounterCC > 0)
 					{
-						FalseChainMeshPR_CC->AddLocalRotation(FRotator(0, 0, 90), false, false, ETeleportType::None);
+						FalseChainMeshPR_CC->AddLocalRotation(FRotator(0, 0, 90), false, nullptr, ETeleportType::None);
 						FalseMeshLoopCounterCC = 0;
 					}
 					else
@@ -661,9 +655,7 @@ void UCC22::BeginConstruction_CC()
 				}
 
 
-
-				////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-				////////////////////////////////////////////////////////////////////Add Chain Meshes
+				//Add Chain Meshes
 				RigidityScaleMultiplier = 1;
 				int MeshLoopCounterCC = 0;
 				for (int i = 0; i < NumberOfUnits_CC; i++)
@@ -726,19 +718,19 @@ void UCC22::BeginConstruction_CC()
 					//Determined by StiffnessScale
 					ChainMeshPR_CC->SetLinearDamping(9999999999999999999.0);
 					ChainMeshPR_CC->SetAngularDamping(SetAngularDamping_CC * RigidityScaleMultiplier);
-					ChainMeshPR_CC->SetMassScale(FName("None"), SetMassScale_CC  * RigidityScaleMultiplier);
-					ChainMeshPR_CC->GetBodyInstance()->InertiaTensorScale = FVector(InertiaTensorScale_CC  * RigidityScaleMultiplier, InertiaTensorScale_CC * RigidityScaleMultiplier, InertiaTensorScale_CC * RigidityScaleMultiplier);
+					ChainMeshPR_CC->SetMassScale(FName("None"), SetMassScale_CC * RigidityScaleMultiplier);
+					ChainMeshPR_CC->GetBodyInstance()->InertiaTensorScale = FVector(InertiaTensorScale_CC * RigidityScaleMultiplier, InertiaTensorScale_CC * RigidityScaleMultiplier, InertiaTensorScale_CC * RigidityScaleMultiplier);
 
 
 					//Position Meshes - data can be from default spline or separate spline
-					ChainMeshPR_CC->SetWorldLocation(BuildingSplinePR_CC->GetLocationAtDistanceAlongSpline(MeshBoundsSize*i, ESplineCoordinateSpace::World));
-					ChainMeshPR_CC->SetWorldRotation(BuildingSplinePR_CC->GetRotationAtDistanceAlongSpline(MeshBoundsSize*i, ESplineCoordinateSpace::World));
+					ChainMeshPR_CC->SetWorldLocation(BuildingSplinePR_CC->GetLocationAtDistanceAlongSpline(MeshBoundsSize * i, ESplineCoordinateSpace::World));
+					ChainMeshPR_CC->SetWorldRotation(BuildingSplinePR_CC->GetRotationAtDistanceAlongSpline(MeshBoundsSize * i, ESplineCoordinateSpace::World));
 
 
 					//flip alternating chain inks				
 					if (MeshLoopCounterCC > 0)
 					{
-						ChainMeshPR_CC->AddLocalRotation(FRotator(0, 0, 90), false, false, ETeleportType::None);
+						ChainMeshPR_CC->AddLocalRotation(FRotator(0, 0, 90), false, nullptr, ETeleportType::None);
 						MeshLoopCounterCC = 0;
 					}
 					else
@@ -765,8 +757,7 @@ void UCC22::BeginConstruction_CC()
 				}
 
 
-				////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-				////////////////////////////////////////////////////////////////////Add Physics Constraints
+				//Add Physics Constraints
 				int PhyLoopCounterCC = 0;
 				for (int i = 0; i < (NumberOfUnits_CC - 1); i++)
 				{
@@ -858,7 +849,6 @@ void UCC22::BeginConstruction_CC()
 
 				if (AllowVelocityChecks_CC == true)
 				{
-					//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 					//Create first CC22Tracker
 					const FName CC22TrackerIniName = CreateUniqueName_CC(FString("CC22Tracker"), 1);
 					ChainTrackerPR_CC = NewObject<UCC22Tracker>(this, UCC22Tracker::StaticClass(), CC22TrackerIniName);
@@ -968,7 +958,7 @@ void UCC22::BeginPlay()
 		ScalePhysicsParameters_CC();
 	}
 	else
-	{		
+	{
 		GameBegun_CC();
 	}
 
@@ -987,8 +977,8 @@ void UCC22::GameBegun_CC()
 	{
 		SMMigrateDataSplineCount = SMMigrateDataSplineCount + 1;
 		//Position Meshes - data can be from default spline or separate spline
-		MeshObject->SetWorldLocation(DataSplinePR_CC->GetLocationAtDistanceAlongSpline(MeshBoundsSize*SMMigrateDataSplineCount, ESplineCoordinateSpace::World));
-		MeshObject->SetWorldRotation(DataSplinePR_CC->GetRotationAtDistanceAlongSpline(MeshBoundsSize*SMMigrateDataSplineCount, ESplineCoordinateSpace::World));
+		MeshObject->SetWorldLocation(DataSplinePR_CC->GetLocationAtDistanceAlongSpline(MeshBoundsSize * SMMigrateDataSplineCount, ESplineCoordinateSpace::World));
+		MeshObject->SetWorldRotation(DataSplinePR_CC->GetRotationAtDistanceAlongSpline(MeshBoundsSize * SMMigrateDataSplineCount, ESplineCoordinateSpace::World));
 
 		MeshObject->SetVisibility(true, false);
 		MeshObject->SetHiddenInGame(false, false);
@@ -998,7 +988,7 @@ void UCC22::GameBegun_CC()
 		//flip alternating chain inks				
 		if (MeshMoveLoopCounterCC > 0)
 		{
-			MeshObject->AddLocalRotation(FRotator(0, 0, 90), false, false, ETeleportType::TeleportPhysics);
+			MeshObject->AddLocalRotation(FRotator(0, 0, 90), false, nullptr, ETeleportType::TeleportPhysics);
 			MeshMoveLoopCounterCC = 0;
 		}
 		else
@@ -1154,7 +1144,7 @@ void UCC22::EventBeginDelayedFunction_CC()
 		}
 		MeshObject->SetPhysicsLinearVelocity(FVector(0, 0, 0), false, MeshObject->GetFName());
 		MeshObject->SetLinearDamping(SetLinearDamping_CC * (1 + (RigidityScaleMultiplier / 10)));
-		
+
 
 		EBMoveChainCount = EBMoveChainCount + 1;
 		if (EBMoveChainCount == 0)
@@ -1231,7 +1221,7 @@ void UCC22::MobiliseLastChainLink_CC()
 		LastChainMeshPR_CC->SetSimulatePhysics(true);
 	}
 }
-UStaticMeshComponent * UCC22::GetFirstChainMesh_CC()
+UStaticMeshComponent* UCC22::GetFirstChainMesh_CC()
 {
 	UStaticMeshComponent* ReturnMeshComponent = nullptr;
 	if (First_ChainMeshPR_CC != nullptr)
@@ -1240,7 +1230,7 @@ UStaticMeshComponent * UCC22::GetFirstChainMesh_CC()
 	}
 	return ReturnMeshComponent;
 }
-UStaticMeshComponent * UCC22::GetLastChainMesh_CC()
+UStaticMeshComponent* UCC22::GetLastChainMesh_CC()
 {
 	UStaticMeshComponent* ReturnMeshComponent = nullptr;
 	if (LastChainMeshPR_CC != nullptr)
@@ -1265,7 +1255,7 @@ void UCC22::DetachEndPrimitive_CC()
 		EndPhyConstrPR_CC->BreakConstraint();
 	}
 }
-UPhysicsConstraintComponent * UCC22::GetEndPrimitiveConstraint_CC()
+UPhysicsConstraintComponent* UCC22::GetEndPrimitiveConstraint_CC()
 {
 	UPhysicsConstraintComponent* ReturnEndPhyConstraint = nullptr;
 	if (EndPhyConstrPR_CC != nullptr)
@@ -1274,7 +1264,7 @@ UPhysicsConstraintComponent * UCC22::GetEndPrimitiveConstraint_CC()
 	}
 	return ReturnEndPhyConstraint;
 }
-void UCC22::AttachChainEnd_RC(UPrimitiveComponent * MeshToAttach, FName SocketName, FName BoneName)
+void UCC22::AttachChainEnd_RC(UPrimitiveComponent* MeshToAttach, FName SocketName, FName BoneName)
 {
 	if (AllowDelayLoops_CC == true && Begin_SMov_CC == false && Begin_EMov_CC == false)
 	{
@@ -1308,7 +1298,7 @@ void UCC22::AttachChainEnd_RC(UPrimitiveComponent * MeshToAttach, FName SocketNa
 			{
 				GetLastChainMesh_CC()->SetSimulatePhysics(false);
 
-				GetLastChainMesh_CC()->SetWorldLocation(MeshToAttach->GetSocketLocation(SocketName), false, false, ETeleportType::TeleportPhysics);
+				GetLastChainMesh_CC()->SetWorldLocation(MeshToAttach->GetSocketLocation(SocketName), false, nullptr, ETeleportType::TeleportPhysics);
 
 				EndPhyConstrPR_CC->AttachToComponent(GetLastChainMesh_CC(), FAttachmentTransformRules::SnapToTargetIncludingScale);
 
@@ -1325,7 +1315,7 @@ void UCC22::AttachChainEnd_RC(UPrimitiveComponent * MeshToAttach, FName SocketNa
 			{
 				GetLastChainMesh_CC()->SetSimulatePhysics(false);
 
-				GetLastChainMesh_CC()->SetWorldLocation(MeshToAttach->GetSocketLocation(SocketName), false, false, ETeleportType::TeleportPhysics);
+				GetLastChainMesh_CC()->SetWorldLocation(MeshToAttach->GetSocketLocation(SocketName), false, nullptr, ETeleportType::TeleportPhysics);
 
 				EndPhyConstrPR_CC->AttachToComponent(GetLastChainMesh_CC(), FAttachmentTransformRules::SnapToTargetIncludingScale);
 
@@ -1351,7 +1341,7 @@ void UCC22::DetachStartPrimitive_CC()
 		StartPhyConstrPR_CC->BreakConstraint();
 	}
 }
-UPhysicsConstraintComponent * UCC22::GetStartPrimitiveConstraint_CC()
+UPhysicsConstraintComponent* UCC22::GetStartPrimitiveConstraint_CC()
 {
 	UPhysicsConstraintComponent* ReturnStartPhyConstraint = nullptr;
 	if (StartPhyConstrPR_CC != nullptr)
@@ -1360,7 +1350,7 @@ UPhysicsConstraintComponent * UCC22::GetStartPrimitiveConstraint_CC()
 	}
 	return ReturnStartPhyConstraint;
 }
-void UCC22::AttachChainStart_CC(UPrimitiveComponent * MeshToAttach, FName SocketName, FName BoneName)
+void UCC22::AttachChainStart_CC(UPrimitiveComponent* MeshToAttach, FName SocketName, FName BoneName)
 {
 	if (AllowDelayLoops_CC == true && Begin_SMov_CC == false && Begin_EMov_CC == false)
 	{
@@ -1393,7 +1383,7 @@ void UCC22::AttachChainStart_CC(UPrimitiveComponent * MeshToAttach, FName Socket
 			{
 				ChainMeshArray_CC[0]->SetSimulatePhysics(false);
 
-				ChainMeshArray_CC[0]->SetWorldLocation(MeshToAttach->GetSocketLocation(SocketName), false, false, ETeleportType::TeleportPhysics);
+				ChainMeshArray_CC[0]->SetWorldLocation(MeshToAttach->GetSocketLocation(SocketName), false, nullptr, ETeleportType::TeleportPhysics);
 
 				StartPhyConstrPR_CC->AttachToComponent(ChainMeshArray_CC[0], FAttachmentTransformRules::SnapToTargetIncludingScale);
 
@@ -1408,7 +1398,7 @@ void UCC22::AttachChainStart_CC(UPrimitiveComponent * MeshToAttach, FName Socket
 			{
 				ChainMeshArray_CC[0]->SetSimulatePhysics(false);
 
-				ChainMeshArray_CC[0]->SetWorldLocation(MeshToAttach->GetSocketLocation(SocketName), false, false, ETeleportType::TeleportPhysics);
+				ChainMeshArray_CC[0]->SetWorldLocation(MeshToAttach->GetSocketLocation(SocketName), false, nullptr, ETeleportType::TeleportPhysics);
 
 				StartPhyConstrPR_CC->AttachToComponent(ChainMeshArray_CC[0], FAttachmentTransformRules::SnapToTargetIncludingScale);
 
@@ -1441,8 +1431,8 @@ void UCC22::SpawnChainAtRuntime_CC()
 	{
 		SMMigrateDataSplineCount = SMMigrateDataSplineCount + 1;
 		//Position Meshes - data can be from default spline or separate spline
-		MeshObject->SetWorldLocation(DataSplinePR_CC->GetLocationAtDistanceAlongSpline(MeshBoundsSize*SMMigrateDataSplineCount, ESplineCoordinateSpace::World));
-		MeshObject->SetWorldRotation(DataSplinePR_CC->GetRotationAtDistanceAlongSpline(MeshBoundsSize*SMMigrateDataSplineCount, ESplineCoordinateSpace::World));
+		MeshObject->SetWorldLocation(DataSplinePR_CC->GetLocationAtDistanceAlongSpline(MeshBoundsSize * SMMigrateDataSplineCount, ESplineCoordinateSpace::World));
+		MeshObject->SetWorldRotation(DataSplinePR_CC->GetRotationAtDistanceAlongSpline(MeshBoundsSize * SMMigrateDataSplineCount, ESplineCoordinateSpace::World));
 
 		MeshObject->SetVisibility(true, false);
 		MeshObject->SetHiddenInGame(false, false);
@@ -1452,7 +1442,7 @@ void UCC22::SpawnChainAtRuntime_CC()
 		//flip alternating chain inks				
 		if (MeshMoveLoopCounterCC > 0)
 		{
-			MeshObject->AddLocalRotation(FRotator(0, 0, 90), false, false, ETeleportType::TeleportPhysics);
+			MeshObject->AddLocalRotation(FRotator(0, 0, 90), false, nullptr, ETeleportType::TeleportPhysics);
 			MeshMoveLoopCounterCC = 0;
 		}
 		else
@@ -1461,8 +1451,7 @@ void UCC22::SpawnChainAtRuntime_CC()
 		}
 	}
 
-	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	////////////////////////////////////////////////////////////////////Destroy false chain	
+	//Destroy false chain	
 	for (UStaticMeshComponent* A : FalseChainMeshArray_CC)
 	{
 		if (A != nullptr)
@@ -1652,7 +1641,7 @@ void UCC22::MoveStartOfChain_CC(FVector MoveToLocation, float DurationOfMove, bo
 					LastUnitPinMeshPR_CC->RegisterComponentWithWorld(GetWorld());
 					LastUnitPinMeshPR_CC->AttachToComponent(this, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
 					LastUnitPinMeshPR_CC->SetStaticMesh(ChainModel);
-					LastUnitPinMeshPR_CC->SetWorldLocation(LastUnitOrigin_Loc_SMov_CC, false, false, ETeleportType::TeleportPhysics);
+					LastUnitPinMeshPR_CC->SetWorldLocation(LastUnitOrigin_Loc_SMov_CC, false, nullptr, ETeleportType::TeleportPhysics);
 					LastUnitPinMeshPR_CC->SetSimulatePhysics(false);
 					LastUnitPinMeshPR_CC->SetVisibility(false, false);
 					LastUnitPinMeshPR_CC->SetHiddenInGame(true, false);
@@ -1685,8 +1674,8 @@ void UCC22::MoveStartOfChain_CC(FVector MoveToLocation, float DurationOfMove, bo
 		if (LerpValue_SMov_CC <= 1)
 		{
 			LerpValue_SMov_CC = LerpValue_SMov_CC + 0.01;
-			First_ChainMeshPR_CC->SetWorldLocation(FMath::Lerp(FirstUnitOrigin_Loc_SMov_CC, FirstUnitTarget_Loc_SMov_CC, LerpValue_SMov_CC), false, false, ETeleportType::TeleportPhysics);
-			First_ChainMeshPR_CC->SetWorldRotation(FMath::Lerp(FirstUnitOrigin_Rot_SMov_CC, FirstUnitTarget_RotInvert_SMov_CC, LerpValue_SMov_CC), false, false, ETeleportType::TeleportPhysics);
+			First_ChainMeshPR_CC->SetWorldLocation(FMath::Lerp(FirstUnitOrigin_Loc_SMov_CC, FirstUnitTarget_Loc_SMov_CC, LerpValue_SMov_CC), false, nullptr, ETeleportType::TeleportPhysics);
+			First_ChainMeshPR_CC->SetWorldRotation(FMath::Lerp(FirstUnitOrigin_Rot_SMov_CC, FirstUnitTarget_RotInvert_SMov_CC, LerpValue_SMov_CC), false, nullptr, ETeleportType::TeleportPhysics);
 
 			if (AllowFirstUnitRotate_Att_SMov_CC == true)
 			{
@@ -1694,7 +1683,7 @@ void UCC22::MoveStartOfChain_CC(FVector MoveToLocation, float DurationOfMove, bo
 				{
 					if (EndPhyConstrPR_CC != nullptr)
 					{
-						LastChainMeshPR_CC->SetWorldRotation(FMath::Lerp(LastUnitOrigin_Rot_SMov_CC, FirstUnitTarget_RotInvert_SMov_CC, LerpValue_SMov_CC), false, false, ETeleportType::TeleportPhysics);
+						LastChainMeshPR_CC->SetWorldRotation(FMath::Lerp(LastUnitOrigin_Rot_SMov_CC, FirstUnitTarget_RotInvert_SMov_CC, LerpValue_SMov_CC), false, nullptr, ETeleportType::TeleportPhysics);
 					}
 				}
 			}
@@ -1785,7 +1774,7 @@ void UCC22::MoveEndOfChain_CC(FVector MoveToLocation, float DurationOfMove, bool
 					FirstUnitPinMeshPR_CC->RegisterComponentWithWorld(GetWorld());
 					FirstUnitPinMeshPR_CC->AttachToComponent(this, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
 					FirstUnitPinMeshPR_CC->SetStaticMesh(ChainModel);
-					FirstUnitPinMeshPR_CC->SetWorldLocation(FirstUnitOrigin_Loc_EMov_CC, false, false, ETeleportType::TeleportPhysics);
+					FirstUnitPinMeshPR_CC->SetWorldLocation(FirstUnitOrigin_Loc_EMov_CC, false, nullptr, ETeleportType::TeleportPhysics);
 					FirstUnitPinMeshPR_CC->SetSimulatePhysics(false);
 					FirstUnitPinMeshPR_CC->SetVisibility(false, false);
 					FirstUnitPinMeshPR_CC->SetHiddenInGame(true, false);
@@ -1818,8 +1807,8 @@ void UCC22::MoveEndOfChain_CC(FVector MoveToLocation, float DurationOfMove, bool
 		if (LerpValue_EMov_CC <= 1)
 		{
 			LerpValue_EMov_CC = LerpValue_EMov_CC + 0.01;
-			LastChainMeshPR_CC->SetWorldLocation(FMath::Lerp(LastUnitOrigin_Loc_EMov_CC, LastUnitTarget_Loc_EMov_CC, LerpValue_EMov_CC), false, false, ETeleportType::TeleportPhysics);
-			LastChainMeshPR_CC->SetWorldRotation(FMath::Lerp(LastUnitOrigin_Rot_EMov_CC, LastUnitTarget_Rot_EMov_CC, LerpValue_EMov_CC), false, false, ETeleportType::TeleportPhysics);
+			LastChainMeshPR_CC->SetWorldLocation(FMath::Lerp(LastUnitOrigin_Loc_EMov_CC, LastUnitTarget_Loc_EMov_CC, LerpValue_EMov_CC), false, nullptr, ETeleportType::TeleportPhysics);
+			LastChainMeshPR_CC->SetWorldRotation(FMath::Lerp(LastUnitOrigin_Rot_EMov_CC, LastUnitTarget_Rot_EMov_CC, LerpValue_EMov_CC), false, nullptr, ETeleportType::TeleportPhysics);
 
 			if (AllowStartOfChainToRotate == true)
 			{
@@ -1827,7 +1816,7 @@ void UCC22::MoveEndOfChain_CC(FVector MoveToLocation, float DurationOfMove, bool
 				{
 					if (StartPhyConstrPR_CC != nullptr)
 					{
-						First_ChainMeshPR_CC->SetWorldRotation(FMath::Lerp(FirstUnitOrigin_Rot_EMov_CC, LastUnitTarget_Rot_EMov_CC, LerpValue_EMov_CC), false, false, ETeleportType::TeleportPhysics);
+						First_ChainMeshPR_CC->SetWorldRotation(FMath::Lerp(FirstUnitOrigin_Rot_EMov_CC, LastUnitTarget_Rot_EMov_CC, LerpValue_EMov_CC), false, nullptr, ETeleportType::TeleportPhysics);
 					}
 				}
 			}
@@ -1921,7 +1910,7 @@ void UCC22::ResetChainAfterMove_CC(bool ImmobiliseStart, bool ImmobiliseEnd)
 
 
 
-void UCC22::OnCompHit(UPrimitiveComponent * HitComp, AActor * OtherActor, UPrimitiveComponent * OtherComp, FVector NormalImpulse, const FHitResult & Hit)
+void UCC22::OnCompHit(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
 {
 	if (AllowDelayLoops_CC == true)
 	{
@@ -2093,8 +2082,8 @@ void UCC22::OnCompHit(UPrimitiveComponent * HitComp, AActor * OtherActor, UPrimi
 										if (DisplayCuttingForceValue == true)
 										{
 											if (TotalForceOfImpact >= CuttingForceThreshold)
-											{												
-												
+											{
+
 											}
 											else
 											{
@@ -2120,7 +2109,7 @@ void UCC22::OnCompHit(UPrimitiveComponent * HitComp, AActor * OtherActor, UPrimi
 														HitSuccessfullyCut = true;
 
 														IsCut_CC = true;
-														
+
 
 
 														//Update Trackers
@@ -2256,7 +2245,7 @@ void UCC22::OnCompHit(UPrimitiveComponent * HitComp, AActor * OtherActor, UPrimi
 															CutChainSoundSpawn_CC->SetHiddenInGame(true, false);
 															CutChainSoundSpawn_CC->SetVisibility(true, false);
 															CutChainSoundSpawn_CC->SetSound(CutChainSound);
-															CutChainSoundSpawn_CC->Play();	
+															CutChainSoundSpawn_CC->Play();
 															RuntimeSoundArray_CC.Add(CutChainSoundSpawn_CC);
 														}
 
@@ -2631,7 +2620,7 @@ void UCC22::AllowAirWhipFunction_CC()
 
 
 
-void UCC22::BreakChain_CC(UPrimitiveComponent * ChainLinkHit)
+void UCC22::BreakChain_CC(UPrimitiveComponent* ChainLinkHit)
 {
 	if (ChainLinkHit != nullptr)
 	{
@@ -2640,7 +2629,7 @@ void UCC22::BreakChain_CC(UPrimitiveComponent * ChainLinkHit)
 			//Find constraint and break
 			if (ChainLinkHit->GetClass()->GetFName() == FName("StaticMeshComponent"))
 			{
-				UStaticMeshComponent* MeshForBreaking_CC = nullptr;			
+				UStaticMeshComponent* MeshForBreaking_CC = nullptr;
 				MeshForBreaking_CC = Cast<UStaticMeshComponent>(ChainLinkHit);
 				if (MeshForBreaking_CC != nullptr)
 				{
@@ -2667,7 +2656,7 @@ void UCC22::BreakChain_CC(UPrimitiveComponent * ChainLinkHit)
 				}
 			}
 		}
-	}	
+	}
 }
 void UCC22::BreakChainByNumber_CC(int ChainLinkHit)
 {

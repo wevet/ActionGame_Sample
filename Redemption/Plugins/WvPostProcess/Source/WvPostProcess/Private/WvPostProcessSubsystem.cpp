@@ -13,6 +13,7 @@
 
 DECLARE_GPU_STAT(LensFlaresWv)
 
+#define CUSTOM_LENSFLARE_TEX 1
 
 namespace
 {
@@ -57,7 +58,7 @@ namespace
 
 		static bool ShouldCompilePermutation(const FGlobalShaderPermutationParameters& Parameters)
 		{
-			return IsFeatureLevelSupported(Parameters.Platform, ERHIFeatureLevel::SM5);
+			return IsFeatureLevelSupported(Parameters.Platform, ERHIFeatureLevel::SM6);
 		}
 	};
 	IMPLEMENT_GLOBAL_SHADER(FLensFlareRescalePS, "/CustomShaders/Rescale.usf", "RescalePS", SF_Pixel);
@@ -80,7 +81,7 @@ namespace
 
 		static bool ShouldCompilePermutation(const FGlobalShaderPermutationParameters& Parameters)
 		{
-			return IsFeatureLevelSupported(Parameters.Platform, ERHIFeatureLevel::SM5);
+			return IsFeatureLevelSupported(Parameters.Platform, ERHIFeatureLevel::SM6);
 		}
 	};
 	IMPLEMENT_GLOBAL_SHADER(FDownsamplePS, "/CustomShaders/DownsampleThreshold.usf", "DownsampleThresholdPS", SF_Pixel);
@@ -100,7 +101,7 @@ namespace
 
 		static bool ShouldCompilePermutation(const FGlobalShaderPermutationParameters& Parameters)
 		{
-			return IsFeatureLevelSupported(Parameters.Platform, ERHIFeatureLevel::SM5);
+			return IsFeatureLevelSupported(Parameters.Platform, ERHIFeatureLevel::SM6);
 		}
 	};
 	class FKawaseBlurUpPS : public FGlobalShader
@@ -117,7 +118,7 @@ namespace
 
 		static bool ShouldCompilePermutation(const FGlobalShaderPermutationParameters& Parameters)
 		{
-			return IsFeatureLevelSupported(Parameters.Platform, ERHIFeatureLevel::SM5);
+			return IsFeatureLevelSupported(Parameters.Platform, ERHIFeatureLevel::SM6);
 		}
 	};
 	IMPLEMENT_GLOBAL_SHADER(FKawaseBlurDownPS, "/CustomShaders/DualKawaseBlur.usf", "KawaseBlurDownsamplePS", SF_Pixel);
@@ -138,7 +139,7 @@ namespace
 
 		static bool ShouldCompilePermutation(const FGlobalShaderPermutationParameters& Parameters)
 		{
-			return IsFeatureLevelSupported(Parameters.Platform, ERHIFeatureLevel::SM5);
+			return IsFeatureLevelSupported(Parameters.Platform, ERHIFeatureLevel::SM6);
 		}
 	};
 	IMPLEMENT_GLOBAL_SHADER(FLensFlareChromaPS, "/CustomShaders/Chroma.usf", "ChromaPS", SF_Pixel);
@@ -160,7 +161,7 @@ namespace
 
 		static bool ShouldCompilePermutation(const FGlobalShaderPermutationParameters& Parameters)
 		{
-			return IsFeatureLevelSupported(Parameters.Platform, ERHIFeatureLevel::SM5);
+			return IsFeatureLevelSupported(Parameters.Platform, ERHIFeatureLevel::SM6);
 		}
 	};
 	IMPLEMENT_GLOBAL_SHADER(FLensFlareGhostsPS, "/CustomShaders/Ghosts.usf", "GhostsPS", SF_Pixel);
@@ -184,7 +185,7 @@ namespace
 
 		static bool ShouldCompilePermutation(const FGlobalShaderPermutationParameters& Parameters)
 		{
-			return IsFeatureLevelSupported(Parameters.Platform, ERHIFeatureLevel::SM5);
+			return IsFeatureLevelSupported(Parameters.Platform, ERHIFeatureLevel::SM6);
 		}
 	};
 	IMPLEMENT_GLOBAL_SHADER(FLensFlareHaloPS, "/CustomShaders/Halo.usf", "HaloPS", SF_Pixel);
@@ -233,7 +234,7 @@ namespace
 
 		static bool ShouldCompilePermutation(const FGlobalShaderPermutationParameters& Parameters)
 		{
-			return IsFeatureLevelSupported(Parameters.Platform, ERHIFeatureLevel::SM5);
+			return IsFeatureLevelSupported(Parameters.Platform, ERHIFeatureLevel::SM6);
 		}
 	};
 	IMPLEMENT_GLOBAL_SHADER(FLensFlareGlareVS, "/CustomShaders/Glare.usf", "GlareVS", SF_Vertex);
@@ -264,7 +265,7 @@ namespace
 
 		static bool ShouldCompilePermutation(const FGlobalShaderPermutationParameters& Parameters)
 		{
-			return IsFeatureLevelSupported(Parameters.Platform, ERHIFeatureLevel::SM5);
+			return IsFeatureLevelSupported(Parameters.Platform, ERHIFeatureLevel::SM6);
 		}
 	};
 	IMPLEMENT_GLOBAL_SHADER(FLensFlareBloomMixPS, "/CustomShaders/Mix.usf", "MixPS", SF_Pixel);
@@ -287,24 +288,6 @@ inline void DrawShaderPass(FRDGBuilder& GraphBuilder, const FString& PassName, T
 			SetScreenPassPipelineState(RHICmdList, PipelineState);
 
 			SetShaderParameters(RHICmdList, PixelShader, PixelShader.GetPixelShader(), *PassParameters);
-
-#if false
-			DrawRectangle(
-				RHICmdList,
-				0, // XAxis
-				0, // YAxis
-				Viewport.Width(),
-				Viewport.Height(),
-				0,
-				0,
-				Viewport.Width(),
-				Viewport.Height(),
-				FIntPoint(Viewport.Width(), Viewport.Height()),
-				FSceneRenderTargets::Get(RHICmdList).GetBufferSizeXY(),
-				PipelineState.VertexShader);
-
-			RHICmdList.EndRenderPass();
-#endif
 
 			DrawRectangle(
 				RHICmdList,	// FRHICommandList
@@ -348,7 +331,7 @@ void UWvPostProcessSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 	//--------------------------------
 	// Delegate setup
 	//--------------------------------
-	FPP_LensFlares::FDelegate Delegate = FPP_LensFlares::FDelegate::CreateLambda([=](FRDGBuilder& GraphBuilder, const FViewInfo& View, const FLensFlareInputs& Inputs, FLensFlareOutputsData& Outputs)
+	FPP_LensFlares::FDelegate Delegate = FPP_LensFlares::FDelegate::CreateLambda([this](FRDGBuilder& GraphBuilder, const FViewInfo& View, const FLensFlareInputs& Inputs, FLensFlareOutputsData& Outputs)
 	{
 		RenderLensFlare(GraphBuilder, View, Inputs, Outputs);
 	});
@@ -481,7 +464,11 @@ void UWvPostProcessSubsystem::RenderLensFlare(FRDGBuilder& GraphBuilder, const F
 		FVector2D BufferSize = FVector2D(MixViewport.Width(), MixViewport.Height());
 
 		// Create buffer
-		FRDGTextureDesc Description = Inputs.Bloom.Texture->Desc;
+#if CUSTOM_LENSFLARE_TEX
+		FRDGTextureDesc Description = Inputs.Bloom.TextureSRV->GetParent()->Desc;
+#else
+		FRDGTextureDesc Description;
+#endif
 		Description.Reset();
 		Description.Extent = MixViewport.Size();
 		Description.Format = PF_FloatRGBA;
@@ -518,7 +505,11 @@ void UWvPostProcessSubsystem::RenderLensFlare(FRDGBuilder& GraphBuilder, const F
 
 		if (Inputs.bCompositeWithBloom && MixBloomPass)
 		{
-			PassParameters->BloomTexture = Inputs.Bloom.Texture;
+#if CUSTOM_LENSFLARE_TEX
+			PassParameters->BloomTexture = Inputs.Bloom.TextureSRV->GetParent();
+#else
+			PassParameters->BloomTexture = nullptr;
+#endif
 		}
 		else
 		{
@@ -911,7 +902,7 @@ FRDGTextureRef UWvPostProcessSubsystem::RenderGlare(FRDGBuilder& GraphBuilder, F
 			GraphicsPSOInit.BoundShaderState.SetGeometryShader(GeometryShader.GetGeometryShader());
 			GraphicsPSOInit.BoundShaderState.PixelShaderRHI = PixelShader.GetPixelShader();
 			GraphicsPSOInit.PrimitiveType = PT_PointList;
-			SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit);
+			SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit, 0);
 
 			SetShaderParameters(RHICmdList, VertexShader, VertexShader.GetVertexShader(), VertexParameters);
 			SetShaderParameters(RHICmdList, GeometryShader, GeometryShader.GetGeometryShader(), GeometryParameters);

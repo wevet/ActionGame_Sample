@@ -19,9 +19,11 @@ public:
 	AMassCharacter(const FObjectInitializer& ObjectInitializer);
 
 
+#pragma region IWvAbilityTargetInterface
+	virtual void OnReceiveKillTarget(AActor* Actor, const float Damage) override;
 	virtual void Freeze() override;
 	virtual void UnFreeze() override;
-	virtual void OnReceiveKillTarget(AActor* Actor, const float Damage) override;
+#pragma endregion
 
 
 	virtual void RequestAsyncLoad() override;

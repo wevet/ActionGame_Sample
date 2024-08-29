@@ -2174,7 +2174,7 @@ void UWvCharacterMovementComponent::MantleUpdate(const float BlendIn)
 	const FTransform LerpedTarget = UKismetMathLibrary::TLerp(NaltleEndTransform, Final, MantleMovementParams.MantlePlayPosition);//BlendIn
 
 	// Step 4: Set the actors location and rotation to the Lerped Target.
-	CharacterOwner->SetActorLocationAndRotation(LerpedTarget.GetLocation(), FRotator(FQuat(LerpedTarget.GetRotation())), false, false);
+	CharacterOwner->SetActorLocationAndRotation(LerpedTarget.GetLocation(), FRotator(FQuat(LerpedTarget.GetRotation())), false);
 
 	//Velocity = LerpedTarget.GetLocation();
 	//const FVector Adjusted = Velocity * BlendIn;
