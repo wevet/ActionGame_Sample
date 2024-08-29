@@ -9,6 +9,7 @@
 #include "WvPlayerCameraManager.h"
 #include "GameFramework/PlayerController.h"
 #include "Interface/WvAbilityTargetInterface.h"
+#include "Engine/StreamableManager.h"
 #include "WvPlayerController.generated.h"
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FInputEventGameplayTagDelegate, FGameplayTag, GameplayTag, bool, IsPressed);
@@ -108,10 +109,10 @@ protected:
 	int32 OverrideSquadID = 1;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PlayerController|Config")
-	TSubclassOf<class UUMGManager> UMGManagerTemplate;
+	TSoftClassPtr<class UUMGManager> UMGManagerTemplate;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PlayerController|Config")
-	TSubclassOf<class UVehicleUIController> VehicleUIControllerTemplate;
+	TSoftClassPtr<class UVehicleUIController> VehicleUIControllerTemplate;
 
 	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "Vehicle")
 	void BP_DefaultPossess(APawn* InPawn);
@@ -128,6 +129,9 @@ protected:
 private:
 	UFUNCTION()
 	void RegisterMission_Callback(const int32 MissionIndex);
+
+	void OnMainUILoadComplete(APawn* InPawn);
+	void OnVehilceUILoadComplete(APawn* InPawn);
 
 private:
 	UPROPERTY()
@@ -148,5 +152,8 @@ private:
 	UPROPERTY()
 	FOnTeamIndexChangedDelegate OnTeamChangedDelegate;
 
+
+	TSharedPtr<FStreamableHandle>  VehicleUIStreamableHandle;
+	TSharedPtr<FStreamableHandle>  MainUIStreamableHandle;
 };
 

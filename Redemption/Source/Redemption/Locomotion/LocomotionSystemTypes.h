@@ -11,6 +11,21 @@
 class UTexture2D;
 
 UENUM(BlueprintType)
+enum class EGenderType : uint8
+{
+	Male   UMETA(DisplayName = "Male"),
+	Female UMETA(DisplayName = "Female"),
+};
+
+UENUM(BlueprintType)
+enum class EWvDirectionType : uint8
+{
+	Center   UMETA(DisplayName = "Center"),
+	Left UMETA(DisplayName = "Left"),
+	Right UMETA(DisplayName = "Right"),
+};
+
+UENUM(BlueprintType)
 enum class ELSGait : uint8
 {
 	Walking   UMETA(DisplayName = "Walking"),
@@ -69,6 +84,18 @@ enum class ELSOverlayState : uint8
 	Box UMETA(DisplayName = "Box"),
 	Barrel UMETA(DisplayName = "Barrel"),
 	Knife UMETA(DisplayName = "Knife"),
+	Mass UMETA(DisplayName = "Mass"),
+};
+
+UENUM(BlueprintType)
+enum class EAccessoryType : uint8
+{
+	None UMETA(DisplayName = "None"),
+	BackPack UMETA(DisplayName = "BackPack"),
+	Cup UMETA(DisplayName = "Cup"),
+	Phone UMETA(DisplayName = "Phone"),
+	BriefCase UMETA(DisplayName = "BriefCase"),
+	Purse UMETA(DisplayName = "Purse"),
 };
 
 UENUM(BlueprintType)
@@ -458,6 +485,9 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	class UTexture2D* Texture;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FVector2D AttackRange{0.f, 300.0f};
 
 	UPROPERTY()
 	int32 NeededAmmo;
@@ -1032,4 +1062,18 @@ struct FWvReplicatedAcceleration
 	// Raw Z accel rate component, quantized to represent [-MaxAcceleration, MaxAcceleration]
 };
 
+USTRUCT(BlueprintType)
+struct REDEMPTION_API FAccessoryData
+{
+	GENERATED_BODY()
 
+public:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	EAccessoryType AccessoryType;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FName SocketName;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	EWvDirectionType DirectionType;
+};

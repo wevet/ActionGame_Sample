@@ -12,10 +12,10 @@ struct FLensFlareGhostSettings
 {
 	GENERATED_BODY()
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Exedre")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FLinearColor Color = FLinearColor::White;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Exedre")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float Scale = 1.0f;
 };
 

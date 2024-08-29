@@ -32,6 +32,13 @@ UE_DEFINE_GAMEPLAY_TAG(TAG_Character_StateHitReact, "Character.State.HitReact");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Character_StateDead, "Character.State.Dead");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Character_StateDead_Action, "Character.State.Dead.Action");
 
+// any character Action to be taken by hitting an object
+UE_DEFINE_GAMEPLAY_TAG(TAG_Character_StateBlock, "Character.State.Block");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Character_StateBlock_Action, "Character.State.Block.Action");
+
+UE_DEFINE_GAMEPLAY_TAG(TAG_Character_StateCounter, "Character.State.Counter");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Character_StateCounter_Action, "Character.State.Counter.Action");
+
 // Alive
 // ability playing added owner tag
 UE_DEFINE_GAMEPLAY_TAG(TAG_Character_StateAlive, "Character.State.Alive");
@@ -612,7 +619,7 @@ FCloseCombatAnimation UCloseCombatAnimationDataAsset::GetChooseCombatAnimation(c
 	}
 	else
 	{
-		UE_LOG(LogTemp, Warning, TEXT("not valid index => %d, returned default ComboAnimationData"), Index);
+		UE_LOG(LogTemp, Warning, TEXT("not valid index => %d, returned default ComboAnimationData => [%s]"), Index, *FString(__FUNCTION__));
 	}
 
 	return ComboAnimations[0];

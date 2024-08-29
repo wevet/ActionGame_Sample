@@ -32,6 +32,14 @@ WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Character_StateHitReact);
 WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Character_StateDead); // Add DA_Death After 
 WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Character_StateDead_Action);
 
+// any character Action to be taken by hitting an object
+WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Character_StateBlock);
+WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Character_StateBlock_Action);
+
+// melee counter action
+WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Character_StateCounter);
+WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Character_StateCounter_Action);
+
 // Alive
 // ability playing added owner tag
 WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Character_StateAlive); 
@@ -1031,6 +1039,9 @@ struct FBotConfig
 public:
 	UPROPERTY(EditDefaultsOnly)
 	float FootStepMaxVolume = 0.5f;
+
+	UPROPERTY(EditDefaultsOnly)
+	float PlayerDistThreshold = 300.0f;
 
 	UPROPERTY(EditDefaultsOnly)
 	FVector2D HearingRange {0.f, 500.0f};

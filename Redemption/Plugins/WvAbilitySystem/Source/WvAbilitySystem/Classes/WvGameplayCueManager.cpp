@@ -20,6 +20,12 @@ static FAutoConsoleVariableRef CVarGameplayCueActorRecycleDebug(TEXT("AbilitySys
 
 bool UWvGameplayCueSet::HandleGameplayCueNotify_Internal(AActor* TargetActor, int32 DataIdx, EGameplayCueEvent::Type EventType, FGameplayCueParameters& Parameters)
 {
+#if  (ENGINE_MAJOR_VERSION < 5 || ENGINE_MINOR_VERSION >= 4)
+
+	UE_LOG(LogAbilitySystem, Log, TEXT("[%s]"), *FString(__FUNCTION__));
+	return Super::HandleGameplayCueNotify_Internal(TargetActor, DataIdx, EventType, Parameters);
+
+#else
 	bool bReturnVal = false;
 
 	UWvGameplayCueManager* CueManager = Cast<UWvGameplayCueManager>(UAbilitySystemGlobals::Get().GetGameplayCueManager());
@@ -133,6 +139,8 @@ bool UWvGameplayCueSet::HandleGameplayCueNotify_Internal(AActor* TargetActor, in
 	}
 
 	return bReturnVal;
+#endif
+
 }
 
 UWvGameplayCueManager* UWvGameplayCueManager::Get()
@@ -142,7 +150,7 @@ UWvGameplayCueManager* UWvGameplayCueManager::Get()
 
 void UWvGameplayCueManager::OnCreated()
 {
-#if  (ENGINE_MAJOR_VERSION < 5 || ENGINE_MINOR_VERSION >= 3)
+#if  (ENGINE_MAJOR_VERSION < 5 || ENGINE_MINOR_VERSION >= 4)
 	FWorldDelegates::OnWorldCleanup.AddUObject(this, &UWvGameplayCueManager::OnPostWorldCleanup);
 	FWorldDelegates::OnPreWorldFinishDestroy.AddUObject(this, &UWvGameplayCueManager::OnPostWorldCleanup, true, true);
 #else
@@ -189,6 +197,12 @@ void UWvGameplayCueManager::ActInitializeRuntimeObjectLibrary()
 
 AGameplayCueNotify_Actor* UWvGameplayCueManager::GetInstancedCueActor(AActor* TargetActor, UClass* CueClass, const FGameplayCueParameters& Parameters)
 {
+#if  (ENGINE_MAJOR_VERSION < 5 || ENGINE_MINOR_VERSION >= 4)
+
+	UE_LOG(LogAbilitySystem, Log, TEXT("[%s]"), *FString(__FUNCTION__));
+	return Super::GetInstancedCueActor(TargetActor, CueClass, Parameters);
+
+#else
 	QUICK_SCOPE_CYCLE_COUNTER(STAT_WvGameplayCueManager_GetInstancedCueActor);
 
 	// First, see if this actor already have a GameplayCueNotifyActor already going for this CueClass
@@ -289,10 +303,19 @@ AGameplayCueNotify_Actor* UWvGameplayCueManager::GetInstancedCueActor(AActor* Ta
 
 	UE_CLOG((ActGameplayCueActorDebug > 0), LogAbilitySystem, Display, TEXT("GetInstancedCueActor  Returning %s (Target: %s). Using GC Actor: %s"), *GetNameSafe(CueClass), *GetNameSafe(TargetActor), *GetNameSafe(SpawnedCue));
 	return SpawnedCue;
+
+#endif
+
 }
 
 void UWvGameplayCueManager::NotifyGameplayCueActorFinished(AGameplayCueNotify_Actor* Actor)
 {
+#if  (ENGINE_MAJOR_VERSION < 5 || ENGINE_MINOR_VERSION >= 4)
+
+	UE_LOG(LogAbilitySystem, Log, TEXT("[%s]"), *FString(__FUNCTION__));
+	Super::NotifyGameplayCueActorFinished(Actor);
+
+#else
 	bool UseActorRecycling = (ActGameplayCueActorRecycle > 0);
 
 #if WITH_EDITOR	
@@ -347,6 +370,9 @@ void UWvGameplayCueManager::NotifyGameplayCueActorFinished(AGameplayCueNotify_Ac
 
 	// We didn't recycle, so just destroy
 	Actor->Destroy();
+
+#endif
+
 }
 
 

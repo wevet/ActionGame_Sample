@@ -13,6 +13,8 @@ class UWvAbilitySystemComponent;
 class UWvInheritanceAttributeSet;
 class ABaseCharacter;
 
+enum class EGenderType : uint8;
+
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class REDEMPTION_API UStatusComponent : public UActorComponent
@@ -25,16 +27,14 @@ public:
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 	float GetKillDamage() const;
-
 	float GetVigilance() const;
-
 	float GetHealthToWidget() const;
 	bool IsHealthHalf() const;
-
 	void DoAlive();
 	void DoKill();
-
 	void GetCharacterHealth(FVector &OutHealth);
+	void SetGenderType(const EGenderType InGenderType);
+	EGenderType GetGenderType() const;
 
 protected:
 	virtual void BeginPlay() override;
@@ -54,6 +54,8 @@ private:
 	void DamageChange_Callback(const FOnAttributeChangeData& Data);
 
 	UWvInheritanceAttributeSet* GetInheritanceAttributeSet() const;
+
+	EGenderType GenderType;
 };
 
 

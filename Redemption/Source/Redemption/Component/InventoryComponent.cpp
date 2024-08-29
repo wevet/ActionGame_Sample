@@ -9,6 +9,8 @@
 #include "Game/WvGameInstance.h"
 #include "Misc/WvCommonUtils.h"
 
+#include "Kismet/KismetMathLibrary.h"
+
 #include UE_INLINE_GENERATED_CPP_BY_NAME(InventoryComponent)
 #define OUTPUT_LOG 0
 
@@ -288,6 +290,41 @@ AWeaponBaseActor* UInventoryComponent::GetAvailableWeapon() const
 		return AvailableWeapon;
 	}
 	return nullptr;
+}
+
+AWeaponBaseActor* UInventoryComponent::GetAvailableWeaponToDistance(const float ThreaholdDist) const
+{
+	TArray<AWeaponBaseActor*> AvailableWeapons;
+
+	// 1. filtered available weapon
+	for (TPair<EAttackWeaponState, TArray<AWeaponBaseActor*>>Pair : WeaponActorMap)
+	{
+		for (auto& Item : Pair.Value)
+		{
+			if (Item && Item->IsAvailable())
+			{
+				AvailableWeapons.Add(Item);
+			}
+		}
+	}
+
+	// 2. priority high sort
+	ConvertPriorityWeapons(AvailableWeapons);
+
+	// 3. min attack range filtered weapon
+	AWeaponBaseActor* CurWeapon = FindWeaponItem(ELSOverlayState::None);
+	for (auto Weapon : AvailableWeapons)
+	{
+		const FVector2D AttackRange = Weapon->GetAttackRange();
+		if (UKismetMathLibrary::InRange_FloatFloat(ThreaholdDist, AttackRange.X, AttackRange.Y))
+		{
+			CurWeapon = Weapon;
+			break;
+		}
+	}
+
+	//UE_LOG(LogTemp, Log, TEXT("ThreaholdDist => %.3f, CurWeapon => %s, function => %s"), ThreaholdDist, *GetNameSafe(CurWeapon), *FString(__FUNCTION__));
+	return CurWeapon;
 }
 
 TArray<AWeaponBaseActor*> UInventoryComponent::GetAvailableWeapons() const

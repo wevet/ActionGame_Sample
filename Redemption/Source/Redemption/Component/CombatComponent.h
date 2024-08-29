@@ -92,6 +92,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "CombatComponent|BattleCommand")
 	void EquipAvailableWeapon();
 
+	UFUNCTION(BlueprintCallable, Category = "CombatComponent|BattleCommand")
+	void EquipAvailableWeaponToDistance(const float Threshold);
+
 	void AddFollower(APawn* NewPawn);
 	void RemoveFollower(APawn* RemovePawn);
 	void RemoveAllFollowers();

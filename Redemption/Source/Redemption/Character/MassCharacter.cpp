@@ -3,6 +3,7 @@
 
 #include "Character/MassCharacter.h"
 #include "Character/WvAIController.h"
+#include "Character/PlayerCharacter.h"
 #include "Redemption.h"
 #include "Misc/WvCommonUtils.h"
 #include "Locomotion/LocomotionComponent.h"
@@ -12,6 +13,8 @@
 #include "Game/WvGameInstance.h"
 
 
+#include "Components/CapsuleComponent.h"
+#include "Components/StaticMeshComponent.h"
 #include "Components/PawnNoiseEmitterComponent.h"
 #include "Components/SceneComponent.h"
 #include "MotionWarpingComponent.h"
@@ -22,6 +25,9 @@ AMassCharacter::AMassCharacter(const FObjectInitializer& ObjectInitializer) : Su
 {
 	MassAgentComponent = ObjectInitializer.CreateDefaultSubobject<UMassAgentComponent>(this, TEXT("MassAgentComponent"));
 	MassAgentComponent->bAutoActivate = 1;
+
+	StateTreeComponent = ObjectInitializer.CreateDefaultSubobject<UStateTreeComponent>(this, TEXT("StateTreeComponent"));
+	StateTreeComponent->bAutoActivate = 1;
 
 	UWvSkeletalMeshComponent* WvMeshComp = CastChecked<UWvSkeletalMeshComponent>(GetMesh());
 	check(WvMeshComp);
@@ -45,13 +51,6 @@ void AMassCharacter::BeginPlay()
 	WvAbilitySystemComponent->AddGameplayTag(TAG_Locomotion_ForbidClimbing, 1);
 	WvAbilitySystemComponent->AddGameplayTag(TAG_Locomotion_ForbidMantling, 1);
 
-	auto Components = Game::ComponentExtension::GetComponentsArray<USkeletalMeshComponent>(this);
-
-	for (USkeletalMeshComponent* SkelMesh : Components)
-	{
-		Super::HandleMeshUpdateRateOptimizations(true, SkelMesh);
-		Super::BuildLODMesh(SkelMesh);
-	}
 
 	LocomotionComponent->EnableMassAgentMoving(true);
 
@@ -62,39 +61,94 @@ void AMassCharacter::BeginPlay()
 	}
 }
 
+void AMassCharacter::MoveBlockedBy(const FHitResult& Impact)
+{
+	auto Act = Impact.GetActor();
+	if (IsValid(Act))
+	{
+		if (Act->GetClass()->IsChildOf(APlayerCharacter::StaticClass()))
+		{
+			auto BaseCharacter = Cast<APlayerCharacter>(Act);
+			if (!BaseCharacter->IsSprinting())
+			{
+				return;
+			}
+
+			const FVector HitLocation = Impact.ImpactPoint;
+			const FVector HitNormal = Impact.ImpactNormal;
+			const FVector AttackerLocation = BaseCharacter->GetOverlapBaseComponent()->GetComponentLocation();
+			const FVector AttackerDir = BaseCharacter->GetActorForwardVector();
+			const FVector HitCompLocation = Impact.GetComponent()->GetComponentLocation();
+
+			const FVector LocationVec = HitCompLocation - AttackerLocation;
+			const FVector HitVecProj = (Impact.ImpactPoint - AttackerLocation).ProjectOnTo(LocationVec);
+			const float Dist = LocationVec.Size();
+
+			const FVector DecalDir = FMath::Lerp(AttackerDir, -HitNormal, 0.3f);
+			const FRotator Rot = FRotationMatrix::MakeFromX(DecalDir.GetSafeNormal()).Rotator();
+
+			//const FTransform DecalTransform = UWvCommonUtils::GetRefPoseDecalTransform(GetMesh(), Impact.BoneName, HitLocation, Rot).Inverse();
+
+			//DrawDebugSphere(GetWorld(), HitLocation + DecalDir * 10.0f, 35.f, 8, FColor::Blue, false, 5);
+			//DrawDebugSphere(GetWorld(), HitLocation, 35.f, 8, FColor::Yellow, false, 5);
+			//DrawDebugSphere(GetWorld(), GetActorLocation() + DecalDir * 50.0f, 35.f, 8, FColor::Red, false, 5);
+
+			//DrawDebugLine(GetWorld(), AttackerDir, AttackerLocation, FColor::Yellow, false, 5.0f, 10);
+			//DrawDebugLine(GetWorld(), DecalDir, GetActorLocation(), FColor::Blue, false, 5.0f, 10);
+
+			//UE_LOG(LogTemp, Warning, TEXT("%s"), *FString(__FUNCTION__));
+		}
+	}
+}
+
 class UMassAgentComponent* AMassCharacter::GetMassAgentComponent() const
 {
 	return MassAgentComponent;
 }
 
+class UStateTreeComponent* AMassCharacter::GetStateTreeComponent() const
+{
+	return StateTreeComponent;
+}
+
+#pragma region IWvAbilityTargetInterface
 void AMassCharacter::OnReceiveKillTarget(AActor* Actor, const float Damage)
 {
 	Super::OnReceiveKillTarget(Actor, Damage);
 
 	MassAgentComponent->KillEntity(false);
+	StateTreeComponent->StopLogic(K_REASON_DEAD);
+
+	OnReceiveKillTarget_Callback();
 }
 
 void AMassCharacter::Freeze()
 {
 	Super::Freeze();
-
 	MassAgentComponent->PausePuppet(true);
-	//MassAgentComponent->Disable();
+	StateTreeComponent->StopLogic(K_REASON_FREEZE);
 }
 
 void AMassCharacter::UnFreeze()
 {
 	Super::UnFreeze();
-
 	MassAgentComponent->PausePuppet(false);
-	//MassAgentComponent->Enable();
+	StateTreeComponent->ResumeLogic(K_REASON_UNFREEZE);
 }
 
-
+void AMassCharacter::OnReceiveHitReact(FGameplayEffectContextHandle Context, const bool IsInDead, const float Damage)
+{
+	if (!bWasInitHit)
+	{
+		bWasInitHit = true;
+		OnLoadCloseCombatAsset();
+	}
+	Super::OnReceiveHitReact(Context, IsInDead, Damage);
+}
+#pragma endregion
 
 void AMassCharacter::RequestAsyncLoad()
 {
-
 	FStreamableManager& StreamableManager = UWvGameInstance::GetStreamableManager();
 
 	if (!OverlayAnimInstanceDA.IsNull())
@@ -103,15 +157,6 @@ void AMassCharacter::RequestAsyncLoad()
 		ABPStreamableHandle = StreamableManager.RequestAsyncLoad(ObjectPath, [this] 
 		{
 			Super::OnABPAnimAssetLoadComplete();
-		});
-	}
-
-	if (!CloseCombatAnimationDA.IsNull())
-	{
-		const FSoftObjectPath ObjectPath = CloseCombatAnimationDA.ToSoftObjectPath();
-		CCStreamableHandle = StreamableManager.RequestAsyncLoad(ObjectPath, [this] 
-		{
-			Super::OnCloseCombatAnimAssetLoadComplete();
 		});
 	}
 
@@ -129,6 +174,22 @@ void AMassCharacter::RequestAsyncLoad()
 		Super::OnFinisherAnimAssetLoadComplete();
 	});
 
-	//Super::RequestAsyncLoad();
+
+	Super::OnLoadHairMaterialDA();
 }
+
+void AMassCharacter::OnLoadCloseCombatAsset()
+{
+	FStreamableManager& StreamableManager = UWvGameInstance::GetStreamableManager();
+
+	if (!CloseCombatAnimationDA.IsNull())
+	{
+		const FSoftObjectPath ObjectPath = CloseCombatAnimationDA.ToSoftObjectPath();
+		CCStreamableHandle = StreamableManager.RequestAsyncLoad(ObjectPath, [this]
+		{
+			Super::OnCloseCombatAnimAssetLoadComplete();
+		});
+	}
+}
+
 

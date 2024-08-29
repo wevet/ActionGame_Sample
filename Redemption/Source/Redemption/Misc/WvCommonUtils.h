@@ -10,6 +10,7 @@
 #include "WvCommonUtils.generated.h"
 
 class USkeletalMeshComponent;
+class USkeletalMesh;
 class UFXSystemComponent;
 class UFXSystemAsset;
 class ABaseCharacter;
@@ -61,6 +62,9 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "CommonUtils")
 	static void CreateDynamicMaterialInstance(UPrimitiveComponent* PrimitiveComponent, TArray<UMaterialInstanceDynamic*>& OutMaterialArray);
+
+	UFUNCTION(BlueprintCallable, Category = "CommonUtils")
+	static void SetSkeletalMeshLoadAssetBlocking(USkeletalMeshComponent* SkeletalMeshComponent, TSoftObjectPtr<USkeletalMesh> SkeletalMesh);
 
 	static FHitReactInfoRow* FindHitReactInfoRow(ABaseCharacter* Character);
 
@@ -119,6 +123,10 @@ public:
 	static const FName GetSurfaceName(TEnumAsByte<EPhysicalSurface> SurfaceType);
 
 	static AActor* FindNearestDistanceTarget(AActor* Owner, TArray<AActor*> Actors, const float ClosestTargetDistance);
+
+	static const FTransform GetSkeletonRefPosTransform(class USkeletalMesh* InSkMesh, FName BoneName);
+	static const FTransform GetRefPoseDecalTransform(class USkeletalMeshComponent* InSkMeshComp, FName BoneName, const FVector& InHitPos, const FRotator& DecalRot);
 };
+
 
 

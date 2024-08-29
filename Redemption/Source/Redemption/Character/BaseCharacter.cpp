@@ -63,20 +63,6 @@
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(BaseCharacter)
 
-TSubclassOf<UAnimInstance> UOverlayAnimInstanceDataAsset::FindAnimInstance(const ELSOverlayState InOverlayState) const
-{
-	auto FindItemData = OverlayAnimInstances.FindByPredicate([&](FOverlayAnimInstance Item)
-	{
-		return (Item.OverlayState == InOverlayState);
-	});
-
-	if (FindItemData)
-	{
-		return FindItemData->AnimInstanceClass;
-	}
-	return UnArmedAnimInstanceClass;
-}
-
 ABaseCharacter::ABaseCharacter(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer.SetDefaultSubobjectClass<UWvCharacterMovementComponent>(ACharacter::CharacterMovementComponentName) 
 							 .SetDefaultSubobjectClass<UWvSkeletalMeshComponent>(ACharacter::MeshComponentName))
@@ -242,8 +228,8 @@ void ABaseCharacter::BeginPlay()
 		SkelMesh->LinkAnimClassLayers(UnArmedAnimInstance);
 	}
 
+	BuildOptimization();
 	RequestAsyncLoad();
-
 }
 
 void ABaseCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -264,9 +250,10 @@ void ABaseCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
 
 	OverlayAnimDAInstance = nullptr;
 	CloseCombatAnimationDAInstance = nullptr;
-
 	FinisherSender = nullptr;
 	FinisherReceiner = nullptr;
+	HairMaterialsInstance = nullptr;
+
 	Super::EndPlay(EndPlayReason);
 }
 
@@ -376,7 +363,7 @@ void ABaseCharacter::InitAbilitySystemComponent()
 		PC->PostASCInitialize(WvAbilitySystemComponent);
 	}
 
-	AbilityFailedDelegateHandle = WvAbilitySystemComponent->AbilityFailedCallbacks.AddUObject(this, &ABaseCharacter::OnAbilityFailed_Callback);
+	AbilityFailedDelegateHandle = WvAbilitySystemComponent->AbilityFailedCallbacks.AddUObject(this, &ThisClass::OnAbilityFailed_Callback);
 }
 
 void ABaseCharacter::PreInitializeComponents()
@@ -776,18 +763,7 @@ void ABaseCharacter::SetAIActionState(const EAIActionState NewAIActionState)
 		}
 	}
 
-	if (ActionStateChangeDelegate.IsBound())
-	{
-		ActionStateChangeDelegate.Broadcast(AIActionState, PrevActionState);
-	}
-
-	if (IsLeader())
-	{
-		// no change state color
-		return;
-	}
-
-	UpdateDisplayTeamColor();
+	ActionStateChangeDelegate.Broadcast(AIActionState, PrevActionState);
 }
 
 EAIActionState ABaseCharacter::GetAIActionState() const
@@ -1478,18 +1454,6 @@ void ABaseCharacter::StopRVOAvoidance()
 }
 #pragma endregion
 
-void ABaseCharacter::DrawActionState()
-{
-	if (IsDead())
-	{
-		return;
-	}
-	const FString CurStateName = *FString::Format(TEXT("{0}"), { *GETENUMSTRING("/Script/WvAbilitySystem.EAIActionState", AIActionState) });
-	auto ActorLoc = GetActorLocation();
-	ActorLoc.Z += GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight();
-	UKismetSystemLibrary::DrawDebugString(GetWorld(), ActorLoc, CurStateName, nullptr, FColor::Red, 0.f);
-
-}
 
 void ABaseCharacter::OnRoationChange_Callback()
 {
@@ -1613,31 +1577,37 @@ bool ABaseCharacter::IsMeleePlaying() const
 /// call to melee ability
 /// </summary>
 /// <param name="SyncPointWeight"></param>
-void ABaseCharacter::CalcurateNearlestTarget(const float SyncPointWeight)
+void ABaseCharacter::CalcurateNearlestTarget(const float SyncPointWeight, bool bIsPlayer/* = false*/)
 {
 	const FLocomotionEssencialVariables LocomotionEssencial = LocomotionComponent->GetLocomotionEssencialVariables();
 	if (LocomotionEssencial.LookAtTarget.IsValid())
 	{
-		FindNearlestTarget(LocomotionEssencial.LookAtTarget.Get(), SyncPointWeight);
+		FindNearlestTarget(LocomotionEssencial.LookAtTarget.Get(), SyncPointWeight, bIsPlayer);
 	}
 }
 
-void ABaseCharacter::ResetNearlestTarget()
+void ABaseCharacter::ResetNearlestTarget(bool bIsPlayer/* = false*/)
 {
-	MotionWarpingComponent->RemoveWarpTarget(NEARLEST_TARGET_SYNC_POINT);
+	MotionWarpingComponent->RemoveWarpTarget(bIsPlayer ? NEARLEST_TARGET_SYNC_POINT : AI_NEARLEST_TARGET_SYNC_POINT);
 }
 
-void ABaseCharacter::FindNearlestTarget(AActor* Target, const float SyncPointWeight)
+void ABaseCharacter::FindNearlestTarget(AActor* Target, const float SyncPointWeight, bool bIsPlayer/* = false*/)
+{
+	const FVector To = Target->GetActorLocation();
+	FindNearlestTarget(To, SyncPointWeight, bIsPlayer);
+}
+
+void ABaseCharacter::FindNearlestTarget(const FVector TargetPosition, const float SyncPointWeight, bool bIsPlayer/* = false*/)
 {
 	const FVector From = GetActorLocation();
-	const FVector To = Target->GetActorLocation();
+	const FVector To = TargetPosition;
 	const float Weight = SyncPointWeight;
-	MotionWarpingComponent->RemoveWarpTarget(NEARLEST_TARGET_SYNC_POINT);
+	ResetNearlestTarget(bIsPlayer);
 	const FRotator TargetLookAt = UKismetMathLibrary::FindLookAtRotation(From, To);
 
 	const FRotator Rotation = UKismetMathLibrary::RLerp(GetActorRotation(), TargetLookAt, Weight, true);
 	FMotionWarpingTarget WarpingTarget;
-	WarpingTarget.Name = NEARLEST_TARGET_SYNC_POINT;
+	WarpingTarget.Name = bIsPlayer ? NEARLEST_TARGET_SYNC_POINT : AI_NEARLEST_TARGET_SYNC_POINT;
 	WarpingTarget.Location = UKismetMathLibrary::VLerp(From, To, Weight);
 	WarpingTarget.Rotation = FRotator(0.f, Rotation.Yaw, 0.f);
 	MotionWarpingComponent->AddOrUpdateWarpTarget(WarpingTarget);
@@ -1753,7 +1723,7 @@ const bool ABaseCharacter::CanFiniherSender()
 {
 	if (!IsValid(FinisherSender))
 	{
-		OnLoadFinisherAssets();
+		OnLoadFinisherSenderAsset();
 		return false;
 	}
 	return true;
@@ -1763,7 +1733,7 @@ const bool ABaseCharacter::CanFiniherReceiver()
 {
 	if (!IsValid(FinisherReceiner))
 	{
-		OnLoadFinisherAssets();
+		OnLoadFinisherReceiverAsset();
 		return false;
 	}
 	return true;
@@ -1771,7 +1741,7 @@ const bool ABaseCharacter::CanFiniherReceiver()
 
 void ABaseCharacter::BuildFinisherAbility(const FGameplayTag RequireTag)
 {
-	if (!CanFiniherSender() || !CanFiniherReceiver())
+	if (!CanFiniherSender())
 	{
 		return;
 	}
@@ -1787,6 +1757,11 @@ void ABaseCharacter::BuildFinisherAbility(const FGameplayTag RequireTag)
 	if (!TargetCharacter)
 	{
 		UE_LOG(LogTemp, Error, TEXT("cast faild TargetCharacter => %s"), *FString(__FUNCTION__));
+		return;
+	}
+
+	if (!TargetCharacter->CanFiniherReceiver())
+	{
 		return;
 	}
 
@@ -1968,6 +1943,7 @@ void ABaseCharacter::RequestAsyncLoad()
 	}
 	FinisherStreamableHandle = StreamableManager.RequestAsyncLoad(Paths, FStreamableDelegate::CreateUObject(this, &ThisClass::OnFinisherAnimAssetLoadComplete));
 
+	OnLoadHairMaterialDA();
 }
 
 void ABaseCharacter::OnABPAnimAssetLoadComplete()
@@ -1990,11 +1966,11 @@ void ABaseCharacter::OnLoadOverlayABP()
 
 void ABaseCharacter::OnFinisherAnimAssetLoadComplete()
 {
-	OnLoadFinisherAssets();
+	OnLoadFinisherReceiverAsset();
 	FinisherStreamableHandle.Reset();
 }
 
-void ABaseCharacter::OnLoadFinisherAssets()
+void ABaseCharacter::OnLoadFinisherSenderAsset()
 {
 	if (!IsValid(FinisherSender))
 	{
@@ -2010,7 +1986,10 @@ void ABaseCharacter::OnLoadFinisherAssets()
 			UE_LOG(LogTemp, Log, TEXT("Complete %s => [%s]"), *GetNameSafe(FinisherSender), *FString(__FUNCTION__));
 		}
 	}
+}
 
+void ABaseCharacter::OnLoadFinisherReceiverAsset()
+{
 	if (!IsValid(FinisherReceiner))
 	{
 		if (FinisherDAList.Contains(TAG_Weapon_Finisher_Receiver))
@@ -2025,7 +2004,6 @@ void ABaseCharacter::OnLoadFinisherAssets()
 			UE_LOG(LogTemp, Log, TEXT("Complete %s => [%s]"), *GetNameSafe(FinisherReceiner), *FString(__FUNCTION__));
 		}
 	}
-
 }
 
 void ABaseCharacter::OnCloseCombatAnimAssetLoadComplete()
@@ -2044,6 +2022,37 @@ void ABaseCharacter::OnLoadCloseCombatAssets()
 
 	} while (!bIsResult);
 	UE_LOG(LogTemp, Log, TEXT("Complete %s => [%s]"), *GetNameSafe(CloseCombatAnimationDAInstance), *FString(__FUNCTION__));
+}
+
+void ABaseCharacter::OnLoadHairMaterialDA()
+{
+	FStreamableManager& StreamableManager = UWvGameInstance::GetStreamableManager();
+
+	if (!HairMaterialsDA.IsNull())
+	{
+		const FSoftObjectPath ObjectPath = HairMaterialsDA.ToSoftObjectPath();
+		MaterialStreamableHandle = StreamableManager.RequestAsyncLoad(ObjectPath, FStreamableDelegate::CreateUObject(this, &ThisClass::OnMaterialAssetLoadComplete));
+	}
+}
+
+void ABaseCharacter::OnMaterialAssetLoadComplete()
+{
+	OnLoadMaterialAsset();
+	MaterialStreamableHandle.Reset();
+}
+
+void ABaseCharacter::OnLoadMaterialAsset()
+{
+	bool bIsResult = false;
+	do
+	{
+		HairMaterialsInstance = HairMaterialsDA.LoadSynchronous();
+		bIsResult = (IsValid(HairMaterialsInstance));
+
+	} while (!bIsResult);
+	UE_LOG(LogTemp, Log, TEXT("Complete %s => [%s]"), *GetNameSafe(HairMaterialsInstance), *FString(__FUNCTION__));
+
+	MaterialLoadCompleteDelegate.Broadcast();
 }
 #pragma endregion
 
@@ -2202,11 +2211,16 @@ bool ABaseCharacter::IsQTEActionPlaying() const
 	return false;
 }
 
-void ABaseCharacter::DrawDebug()
+#pragma region URO
+void ABaseCharacter::BuildOptimization()
 {
-#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
-	LocomotionComponent->DrawLocomotionDebug();
-#endif
+	auto Components = Game::ComponentExtension::GetComponentsArray<USkeletalMeshComponent>(this);
+
+	for (USkeletalMeshComponent* SkelMesh : Components)
+	{
+		HandleMeshUpdateRateOptimizations(true, SkelMesh);
+		BuildLODMesh(SkelMesh);
+	}
 }
 
 void ABaseCharacter::BuildLODMesh(USkeletalMeshComponent* SkelMesh)
@@ -2264,5 +2278,40 @@ void ABaseCharacter::HandleMeshUpdateRateOptimizations(const bool IsInEnableURO,
 		}
 	}
 }
+#pragma endregion
+
+bool ABaseCharacter::IsSprinting() const
+{
+	//const FGameplayTag SprintTag = FGameplayTag::RequestGameplayTag(TEXT("Character.Locomotion.Gait.Sprinting"));
+	//UE_LOG(LogTemp, Log, TEXT("IsSprinting => %s"), WvAbilitySystemComponent->HasMatchingGameplayTag(SprintTag) ? TEXT("true") : TEXT("false"));
+	//return IsValid(WvAbilitySystemComponent) ? WvAbilitySystemComponent->HasMatchingGameplayTag(SprintTag) : false;
+	return LocomotionComponent->GetLSGaitMode_Implementation() == ELSGait::Sprinting;
+}
+
+void ABaseCharacter::UpdateAccessory(const FAccessoryData& InAccessoryData)
+{
+	Accessory = InAccessoryData;
+}
+
+UStaticMesh* ABaseCharacter::GetAccessoryMesh() const
+{
+	return AccessoryObjectRoot->GetStaticMesh();
+}
+
+FAccessoryData ABaseCharacter::GetAccessoryData() const
+{
+	return Accessory;
+}
+
+void ABaseCharacter::SetGenderType(const EGenderType InGenderType)
+{
+	StatusComponent->SetGenderType(InGenderType);
+}
+
+EGenderType ABaseCharacter::GetGenderType() const
+{
+	return StatusComponent->GetGenderType();
+}
+
 
 

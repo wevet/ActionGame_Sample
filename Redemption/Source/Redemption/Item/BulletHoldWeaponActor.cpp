@@ -59,16 +59,11 @@ void ABulletHoldWeaponActor::DoFire()
 
 }
 
-bool ABulletHoldWeaponActor::IsCurrentAmmoEmpty() const
-{
-	return PawnAttackParam.IsEmptyCurrentAmmo();
-}
-
 const bool ABulletHoldWeaponActor::HandleAttackPrepare()
 {
 	if (Character.IsValid())
 	{
-		if (IsCurrentAmmoEmpty())
+		if (IsCurrentAmmosEmpty())
 		{
 			if (Character->GetWvAbilitySystemComponent()->HasMatchingGameplayTag(TAG_Character_Action_GunReload))
 			{
@@ -87,7 +82,12 @@ const bool ABulletHoldWeaponActor::HandleAttackPrepare()
 			return true;
 		}
 	}
-	return false;
+	return Super::HandleAttackPrepare();
+}
+
+bool ABulletHoldWeaponActor::IsCurrentAmmosEmpty() const
+{
+	return PawnAttackParam.IsEmptyCurrentAmmo();
 }
 
 void ABulletHoldWeaponActor::Notify_AmmoEmpty()

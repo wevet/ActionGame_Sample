@@ -6,7 +6,9 @@
 #include "Character/WvAIController.h"
 #include "Component/CombatComponent.h"
 
+
 #include UE_INLINE_GENERATED_CPP_BY_NAME(BTTask_ChangeAIActionState)
+
 
 UBTTask_ChangeAIActionState::UBTTask_ChangeAIActionState() : Super()
 {
@@ -22,15 +24,10 @@ EBTNodeResult::Type UBTTask_ChangeAIActionState::ExecuteTask(UBehaviorTreeCompon
 
 		if (IWvAIActionStateInterface* ASI = Cast<IWvAIActionStateInterface>(ControlPawn))
 		{
-			if (bOverridenActionState)
-			{
-				ASI->SetAIActionState(OverrideAIActionState);
-				//AIActionState = OverrideAIActionState;
-			}
-			else
-			{
-				//AIActionState = ASI->GetAIActionState();
-			}
+			//if (bOverridenActionState)
+			//{
+			//	ASI->SetAIActionState(OverrideAIActionState);
+			//}
 
 			AIActionState = ASI->GetAIActionState();
 		}
@@ -43,7 +40,7 @@ EBTNodeResult::Type UBTTask_ChangeAIActionState::ExecuteTask(UBehaviorTreeCompon
 			{
 				case EAIActionState::Combat:
 				{
-					Character->StrafeMovement();
+					//Character->StrafeMovement();
 				}
 				break;
 				case EAIActionState::Search:
@@ -62,6 +59,31 @@ EBTNodeResult::Type UBTTask_ChangeAIActionState::ExecuteTask(UBehaviorTreeCompon
 				switch (AIActionState)
 				{
 					case EAIActionState::Combat:
+					{
+						auto Target = AIController->GetBlackboardTarget();
+						if (IsValid(Target))
+						{
+							const auto fromDist = Character->GetHorizontalDistanceTo(Target);
+							CombatComp->EquipAvailableWeaponToDistance(FMath::Abs(fromDist));
+
+							const bool bWasCloseCombat = CombatComp->IsCloseCombatWeapon();
+							AIController->SetBlackboardCloseCombat(bWasCloseCombat);
+
+							if (bWasCloseCombat)
+							{
+								Character->VelocityMovement();
+							}
+							else
+							{
+								Character->StrafeMovement();
+							}
+						}
+						else
+						{
+							CombatComp->EquipAvailableWeapon();
+						}
+					}
+					break;
 					case EAIActionState::Search:
 					case EAIActionState::Follow:
 					{
@@ -78,6 +100,7 @@ EBTNodeResult::Type UBTTask_ChangeAIActionState::ExecuteTask(UBehaviorTreeCompon
 			}
 
 		}
+
 	}
 	return EBTNodeResult::Succeeded;
 }

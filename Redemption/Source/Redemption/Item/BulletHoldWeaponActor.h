@@ -21,6 +21,8 @@ public:
 	virtual void DoFire() override;
 	virtual bool IsAvailable() const override;
 	virtual const bool HandleAttackPrepare() override;
+	virtual bool IsCurrentAmmosEmpty() const override;
+
 
 	virtual void DoReload();
 	float GetGunFireAnimationLength() const;
@@ -58,7 +60,5 @@ private:
 	const bool LineOfSightMulti(const FVector TraceStart, const FVector TraceEnd, TArray<FHitResult>& OutHitResults);
 	const FVector CalcTraceEndPosition();
 	void Notify_AmmoEmpty();
-
-	bool IsCurrentAmmoEmpty() const;
 };
 

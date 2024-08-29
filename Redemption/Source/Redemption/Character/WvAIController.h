@@ -54,7 +54,7 @@ public:
 	virtual void Tick(float DeltaTime) override;
 
 
-	//~IWvAbilityTargetInterface interface
+#pragma region IWvAbilityTargetInterface
 	virtual void SetGenericTeamId(const FGenericTeamId& NewTeamID) override;
 	virtual FGenericTeamId GetGenericTeamId() const override;
 	virtual FOnTeamIndexChangedDelegate* GetOnTeamIndexChangedDelegate() override;
@@ -64,11 +64,9 @@ public:
 	virtual bool IsInBattled() const override;
 	virtual void Freeze() override;
 	virtual void UnFreeze() override;
-
 	virtual bool IsAttackAllowed() const override;
-
 	virtual void OnReceiveAbilityAttack(AActor* Actor, const FWvBattleDamageAttackSourceInfo SourceInfo, const float Damage) override;
-	//~End of IWvAbilityTargetInterface interface
+#pragma endregion
 
 
 	UPROPERTY(BlueprintAssignable)
@@ -86,7 +84,14 @@ public:
 
 	// BT Search Enemy
 	void SetBlackboardSearchNodeHolder(AActor* NewTarget);
+
+	// target point
+	UFUNCTION(BlueprintCallable, Category = AI)
 	void SetBlackboardDestinationLocation(const FVector NewTarget);
+
+	UFUNCTION(BlueprintCallable, Category = AI)
+	void UpdateTargetPointToWriteDestinationLocation(const bool bIsPredictionPoint);
+
 	void SetBlackboardTarget(AActor* NewTarget);
 	void SetBlackboardLeader(AActor* NewTarget);
 	void SetBlackboardFriend(AActor* NewTarget);
@@ -118,13 +123,27 @@ public:
 	AActor* GetBlackboardSearchNodeHolder() const;
 
 	UFUNCTION(BlueprintCallable, Category = AI)
+	FVector GetBlackboardDestinationLocation() const;
+
+	UFUNCTION(BlueprintCallable, Category = AI)
 	const bool HandleAttackPawnPrepare();
 
 	UFUNCTION(BlueprintCallable, Category = AI)
 	void HandleTargetState();
 
+	UFUNCTION(BlueprintCallable, Category = AI)
+	bool IsTargetDead() const;
+
+	UFUNCTION(BlueprintCallable, Category = AI)
+	bool IsCurrentAmmosEmpty() const;
+
 	void ClearSearchNodeHolders();
 	void SetBlackboardDead(const bool IsDead);
+
+	/// <summary>
+	/// apply to task
+	/// </summary>
+	/// <param name="IsCloseCombat"></param>
 	void SetBlackboardCloseCombat(const bool IsCloseCombat);
 
 	UFUNCTION(BlueprintCallable, Category = AI)
@@ -161,6 +180,9 @@ public:
 	void NotifyCloseCombatUpdate();
 	void NotifyCloseCombatEnd();
 
+	UFUNCTION(BlueprintCallable, Category = AI)
+	void ModifyCloseCombatNearlestTarget();
+
 	/// <summary>
 	/// apply to black board
 	/// </summary>
@@ -168,7 +190,10 @@ public:
 	void CloseCombatActionBegin();
 
 	UFUNCTION(BlueprintCallable, Category = AI)
-	bool CanCloseCombatAttack() const;
+	void CloseCombatActionUpdate();
+
+	UFUNCTION(BlueprintCallable, Category = AI)
+	bool IsCloseCombatOverAttack() const;
 
 	UFUNCTION(BlueprintCallable, Category = AI)
 	bool IsCloseCombatPlaying() const;

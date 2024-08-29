@@ -600,7 +600,6 @@ FVector APlayerCharacter::GetFollowCameraLocation() const
 }
 
 // callback
-
 void APlayerCharacter::OverlayStateChange_Callback(const ELSOverlayState PrevOverlay, const ELSOverlayState CurrentOverlay)
 {
 	if (!IsValid(ItemInventoryComponent))
@@ -672,6 +671,17 @@ void APlayerCharacter::OnQTEEnd_Callback(const bool bIsSuccess)
 
 	WvAbilitySystemComponent->RemoveGameplayTag(TAG_Character_Action_QTE, 1);
 #endif
+
+}
+
+void APlayerCharacter::OnFinisherAnimAssetLoadComplete()
+{
+	Super::OnLoadFinisherSenderAsset();
+	Super::OnFinisherAnimAssetLoadComplete();
+}
+
+void APlayerCharacter::BuildOptimization()
+{
 
 }
 

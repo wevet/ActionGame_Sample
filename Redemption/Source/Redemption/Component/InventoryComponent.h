@@ -72,6 +72,7 @@ public:
 	EAttackWeaponState GetEquipWeaponType() const;
 
 	AWeaponBaseActor* GetAvailableWeapon() const;
+	AWeaponBaseActor* GetAvailableWeaponToDistance(const float ThreaholdDist) const;
 	TArray<AWeaponBaseActor*> GetAvailableWeapons() const;
 	const bool ChangeWeapon(AWeaponBaseActor* NewWeapon, ELSOverlayState& OutLSOverlayState);
 

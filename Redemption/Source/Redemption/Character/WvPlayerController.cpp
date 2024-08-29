@@ -7,6 +7,7 @@
 #include "Component/WvCharacterMovementComponent.h"
 #include "Component/QTEActionComponent.h"
 #include "UI/UMGManager.h"
+#include "Game/WvGameInstance.h"
 
 
 #include "Engine/World.h"
@@ -169,16 +170,43 @@ void AWvPlayerController::UnFreeze()
 #pragma endregion
 
 #pragma region Possess
+/// <summary>
+/// async main ui load
+/// </summary>
+/// <param name="InPawn"></param>
 void AWvPlayerController::OnDefaultPossess(APawn* InPawn)
 {
-	UMGManager = CreateWidget<UUMGManager>(this, UMGManagerTemplate);
-	if (UMGManager)
-	{
-		UMGManager->Initializer(PC);
-		UMGManager->AddToViewport();
-	}
+	FStreamableManager& StreamableManager = UWvGameInstance::GetStreamableManager();
 
-	BP_DefaultPossess(InPawn);
+	if (!UMGManagerTemplate.IsNull())
+	{
+		const FSoftObjectPath ObjectPath = UMGManagerTemplate.ToSoftObjectPath();
+		MainUIStreamableHandle = StreamableManager.RequestAsyncLoad(ObjectPath, [this, InPawn]
+		{
+			this->OnMainUILoadComplete(InPawn);
+		});
+	}
+}
+
+void AWvPlayerController::OnMainUILoadComplete(APawn* InPawn)
+{
+	UObject* LoadedObj = MainUIStreamableHandle.Get()->GetLoadedAsset();
+	if (LoadedObj)
+	{
+		UClass* WidgetClass = Cast<UClass>(LoadedObj);
+		if (WidgetClass)
+		{
+			UMGManager = Cast<UUMGManager>(CreateWidget<UUserWidget>(this, WidgetClass));
+			if (IsValid(UMGManager))
+			{
+				UMGManager->Initializer(PC);
+				UMGManager->AddToViewport();
+
+				BP_DefaultPossess(InPawn);
+				MainUIStreamableHandle.Reset();
+			}
+		}
+	}
 }
 
 void AWvPlayerController::OnDefaultUnPossess()
@@ -191,16 +219,44 @@ void AWvPlayerController::OnDefaultUnPossess()
 	BP_DefaultUnPossess();
 }
 
+/// <summary>
+/// async vehicle ui load
+/// </summary>
+/// <param name="InPawn"></param>
 void AWvPlayerController::OnVehilcePossess(APawn* InPawn)
 {
-	VehicleUIController = CreateWidget<UVehicleUIController>(this, VehicleUIControllerTemplate);
-	if (VehicleUIController)
+	FStreamableManager& StreamableManager = UWvGameInstance::GetStreamableManager();
+
+	if (!VehicleUIControllerTemplate.IsNull())
 	{
-		VehicleUIController->Initializer(VPC);
-		VehicleUIController->AddToViewport();
+		const FSoftObjectPath ObjectPath = VehicleUIControllerTemplate.ToSoftObjectPath();
+		VehicleUIStreamableHandle = StreamableManager.RequestAsyncLoad(ObjectPath, [this, InPawn]
+		{
+			this->OnVehilceUILoadComplete(InPawn);
+		});
 	}
 
-	BP_VehilcePossess(InPawn);
+}
+
+void AWvPlayerController::OnVehilceUILoadComplete(APawn* InPawn)
+{
+	UObject* LoadedObj = VehicleUIStreamableHandle.Get()->GetLoadedAsset();
+	if (LoadedObj)
+	{
+		UClass* WidgetClass = Cast<UClass>(LoadedObj);
+		if (WidgetClass)
+		{
+			VehicleUIController = Cast<UVehicleUIController>(CreateWidget<UUserWidget>(this, WidgetClass));
+			if (IsValid(VehicleUIController))
+			{
+				VehicleUIController->Initializer(VPC);
+				VehicleUIController->AddToViewport();
+
+				BP_VehilcePossess(InPawn);
+				VehicleUIStreamableHandle.Reset();
+			}
+		}
+	}
 }
 
 void AWvPlayerController::OnVehicleUnPossess()

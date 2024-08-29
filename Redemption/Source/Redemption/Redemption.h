@@ -124,11 +124,6 @@ REDEMPTION_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Vehicle_State_Drive); // curre
 // smart object difinition
 REDEMPTION_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Character_State_SmartObject_Using);
 
-// state tree difinition
-//REDEMPTION_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Character_Difinition_State_Sit_Begin);
-//REDEMPTION_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Character_Difinition_State_Sit_Loop);
-//REDEMPTION_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Character_Difinition_State_Sit_End);
-
 
 /*
 * AIPerception Sight CancelEvent Interval
@@ -152,6 +147,7 @@ REDEMPTION_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Character_State_SmartObject_Us
 
 
 #define NEARLEST_TARGET_SYNC_POINT FName(TEXT("NearlestTarget"))
+#define AI_NEARLEST_TARGET_SYNC_POINT FName(TEXT("AI_NearlestTarget"))
 #define FINISHER_TARGET_SYNC_POINT FName(TEXT("FinisherTarget"))
 
 /*
@@ -179,4 +175,9 @@ REDEMPTION_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Character_State_SmartObject_Us
 
 #define K_WALKABLE_FLOOR_ANGLE 50.0f
 
+// character dead reason
+#define K_REASON_DEAD TEXT("Character Dead")
+#define K_REASON_FREEZE TEXT("Character Freeze")
+#define K_REASON_UNFREEZE TEXT("Character UnFreeze")
+#define K_REASON_SYSTEM_HIDDEN TEXT("System Hidden")
 

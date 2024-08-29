@@ -220,8 +220,20 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
 	bool bIsForbidRagdoll = false;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Accessory")
+	bool bIsAccessoryOverlay = false;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Accessory")
+	EAccessoryType AccessoryType;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Accessory")
+	EWvDirectionType DirectionType;
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion")
 	UCurveFloat* LandAlphaCurve;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Accessory")
+	EGenderType GenderType;
 
 	// edit locomotion parameters
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion|AimOffset")

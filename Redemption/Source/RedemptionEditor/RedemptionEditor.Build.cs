@@ -35,6 +35,7 @@ public class RedemptionEditor : ModuleRules
 				"LevelEditor",
 				"PlacementMode",
 				"DeveloperSettings",
+				"EditorScriptingUtilities",
 			}
 		);
 

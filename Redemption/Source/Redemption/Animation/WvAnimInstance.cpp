@@ -26,7 +26,7 @@
 #include "Animation/BlendSpace.h"
 
 
-#include UE_INLINE_GENERATED_CPP_BY_NAME(WvAnimInstance)
+//#include UE_INLINE_GENERATED_CPP_BY_NAME(WvAnimInstance)
 
 #pragma region Proxy
 void FBaseAnimInstanceProxy::Initialize(UAnimInstance* InAnimInstance)
@@ -147,7 +147,13 @@ void UWvAnimInstance::NativeThreadSafeUpdateAnimation(float DeltaSeconds)
 			bWasBulletWeaponEquip = Character->GetInventoryComponent()->CanAimingWeapon();
 		}
 
-		bIsInjured = Character->IsHealthHalf();
+		GenderType = Character->GetGenderType();
+		bIsInjured = bWasBulletWeaponEquip ? false : Character->IsHealthHalf();
+
+
+		bIsAccessoryOverlay = bool(Character->GetAccessoryMesh());
+		AccessoryType = Character->GetAccessoryData().AccessoryType;
+		DirectionType = Character->GetAccessoryData().DirectionType;
 
 		// @NOTE not melee attack & not gun equiped & target lock on
 		bWasTargetLock = bIsInjured ? false : Character->IsTargetLock() && !bWasBulletWeaponEquip;//!bIsStateMelee && 

@@ -104,6 +104,9 @@ namespace
 			return IsFeatureLevelSupported(Parameters.Platform, ERHIFeatureLevel::SM6);
 		}
 	};
+	IMPLEMENT_GLOBAL_SHADER(FKawaseBlurDownPS, "/CustomShaders/DualKawaseBlur.usf", "KawaseBlurDownsamplePS", SF_Pixel);
+
+
 	class FKawaseBlurUpPS : public FGlobalShader
 	{
 	public:
@@ -121,7 +124,6 @@ namespace
 			return IsFeatureLevelSupported(Parameters.Platform, ERHIFeatureLevel::SM6);
 		}
 	};
-	IMPLEMENT_GLOBAL_SHADER(FKawaseBlurDownPS, "/CustomShaders/DualKawaseBlur.usf", "KawaseBlurDownsamplePS", SF_Pixel);
 	IMPLEMENT_GLOBAL_SHADER(FKawaseBlurUpPS, "/CustomShaders/DualKawaseBlur.usf", "KawaseBlurUpsamplePS", SF_Pixel);
 	
 
@@ -205,6 +207,9 @@ namespace
 			SHADER_PARAMETER(FVector2f, BufferSize)
 		END_SHADER_PARAMETER_STRUCT()
 	};
+	IMPLEMENT_GLOBAL_SHADER(FLensFlareGlareVS, "/CustomShaders/Glare.usf", "GlareVS", SF_Vertex);
+
+
 	class FLensFlareGlareGS : public FGlobalShader
 	{
 	public:
@@ -221,6 +226,9 @@ namespace
 			SHADER_PARAMETER_SCALAR_ARRAY(float, GlareScales, [3])
 		END_SHADER_PARAMETER_STRUCT()
 	};
+	IMPLEMENT_GLOBAL_SHADER(FLensFlareGlareGS, "/CustomShaders/Glare.usf", "GlareGS", SF_Geometry);
+
+
 	class FLensFlareGlarePS : public FGlobalShader
 	{
 	public:
@@ -237,8 +245,6 @@ namespace
 			return IsFeatureLevelSupported(Parameters.Platform, ERHIFeatureLevel::SM6);
 		}
 	};
-	IMPLEMENT_GLOBAL_SHADER(FLensFlareGlareVS, "/CustomShaders/Glare.usf", "GlareVS", SF_Vertex);
-	IMPLEMENT_GLOBAL_SHADER(FLensFlareGlareGS, "/CustomShaders/Glare.usf", "GlareGS", SF_Geometry);
 	IMPLEMENT_GLOBAL_SHADER(FLensFlareGlarePS, "/CustomShaders/Glare.usf", "GlarePS", SF_Pixel);
 
 
@@ -331,7 +337,8 @@ void UWvPostProcessSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 	//--------------------------------
 	// Delegate setup
 	//--------------------------------
-	FPP_LensFlares::FDelegate Delegate = FPP_LensFlares::FDelegate::CreateLambda([this](FRDGBuilder& GraphBuilder, const FViewInfo& View, const FLensFlareInputs& Inputs, FLensFlareOutputsData& Outputs)
+	FPP_LensFlares::FDelegate Delegate = FPP_LensFlares::FDelegate::CreateLambda(
+		[this](FRDGBuilder& GraphBuilder, const FViewInfo& View, const FLensFlareInputs& Inputs, FLensFlareOutputsData& Outputs)
 	{
 		RenderLensFlare(GraphBuilder, View, Inputs, Outputs);
 	});
@@ -341,10 +348,8 @@ void UWvPostProcessSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 		PP_LensFlares.Add(Delegate);
 	});
 
-
 	const FString Path = "PostProcessLensFlareAsset'/WvPostProcess/DA_LensFlare.DA_LensFlare'";
 	PostProcessAsset = LoadObject<UPostProcessLensFlareAsset>(nullptr, *Path);
-	//check(PostProcessAsset);
 
 	if (PostProcessAsset)
 	{
@@ -568,12 +573,12 @@ FRDGTextureRef UWvPostProcessSubsystem::RenderBlur(FRDGBuilder& GraphBuilder, FR
 	// sizes for upscale passes but heh... it works.
 	int32 Divider = 2;
 	TArray<FIntRect> Viewports;
-	for (int32 i = 0; i < ArraySize; i++)
+	for (int32 Index = 0; Index < ArraySize; Index++)
 	{
 		FIntRect NewRect = FIntRect(0, 0, Viewport.Width() / Divider, Viewport.Height() / Divider);
 		Viewports.Add(NewRect);
 
-		if (i < (BlurSteps - 1))
+		if (Index < (BlurSteps - 1))
 		{
 			Divider *= 2;
 		}
@@ -584,38 +589,34 @@ FRDGTextureRef UWvPostProcessSubsystem::RenderBlur(FRDGBuilder& GraphBuilder, FR
 	}
 
 	// Render
-	for (int32 i = 0; i < ArraySize; i++)
+	for (int32 Index = 0; Index < ArraySize; Index++)
 	{
 		// Build texture
 		FRDGTextureDesc BlurDesc = InputDescription;
 		BlurDesc.Reset();
-		BlurDesc.Extent = Viewports[i].Size();
+		BlurDesc.Extent = Viewports[Index].Size();
 		BlurDesc.Format = PF_FloatRGB;
 		BlurDesc.NumMips = 1;
 		BlurDesc.ClearValue = FClearValueBinding(FLinearColor::Transparent);
 
-		FVector2D ViewportResolution = FVector2D(
-			Viewports[i].Width(),
-			Viewports[i].Height()
-		);
+		const FVector2D ViewportResolution = FVector2D(Viewports[Index].Width(), Viewports[Index].Height());
 
-		const FString PassName =
-			FString("KawaseBlur")
-			+ FString::Printf(TEXT("_%i_"), i)
-			+ ((i < BlurSteps) ? PassDownName : PassUpName)
-			+ FString::Printf(TEXT("_%ix%i"), Viewports[i].Width(), Viewports[i].Height());
+		const FString PassName = FString("KawaseBlur")
+			+ FString::Printf(TEXT("_%i_"), Index)
+			+ ((Index < BlurSteps) ? PassDownName : PassUpName)
+			+ FString::Printf(TEXT("_%ix%i"), Viewports[Index].Width(), Viewports[Index].Height());
 
 		FRDGTextureRef Buffer = GraphBuilder.CreateTexture(BlurDesc, *PassName);
 
 		// Render shader
-		if (i < BlurSteps)
+		if (Index < BlurSteps)
 		{
 			FKawaseBlurDownPS::FParameters* PassDownParameters = GraphBuilder.AllocParameters<FKawaseBlurDownPS::FParameters>();
 			PassDownParameters->Pass.InputTexture = PreviousBuffer;
 			PassDownParameters->Pass.RenderTargets[0] = FRenderTargetBinding(Buffer, ERenderTargetLoadAction::ENoAction);
 			PassDownParameters->InputSampler = BilinearClampSampler;
 			PassDownParameters->BufferSize = FVector2f(ViewportResolution.X, ViewportResolution.Y);
-			DrawShaderPass(GraphBuilder, PassName, PassDownParameters, VertexShader, PixelShaderDown, ClearBlendState, Viewports[i]);
+			DrawShaderPass(GraphBuilder, PassName, PassDownParameters, VertexShader, PixelShaderDown, ClearBlendState, Viewports[Index]);
 		}
 		else
 		{
@@ -624,7 +625,7 @@ FRDGTextureRef UWvPostProcessSubsystem::RenderBlur(FRDGBuilder& GraphBuilder, FR
 			PassUpParameters->Pass.RenderTargets[0] = FRenderTargetBinding(Buffer, ERenderTargetLoadAction::ENoAction);
 			PassUpParameters->InputSampler = BilinearClampSampler;
 			PassUpParameters->BufferSize = FVector2f(ViewportResolution);
-			DrawShaderPass(GraphBuilder, PassName, PassUpParameters, VertexShader, PixelShaderUp, ClearBlendState, Viewports[i]);
+			DrawShaderPass(GraphBuilder, PassName, PassUpParameters, VertexShader, PixelShaderUp, ClearBlendState, Viewports[Index]);
 		}
 
 		PreviousBuffer = Buffer;

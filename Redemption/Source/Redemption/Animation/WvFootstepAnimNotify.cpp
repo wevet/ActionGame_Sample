@@ -11,6 +11,7 @@
 #include "Misc/WvCommonUtils.h"
 #include "WvAbilitySystemGlobals.h"
 #include "Component/WvCharacterMovementComponent.h"
+#include "GameExtension.h"
 
 #include "Kismet/KismetMathLibrary.h"
 #include "Perception/AISense_Hearing.h"
@@ -168,11 +169,10 @@ void UWvFootstepAnimNotify::TriggerEffect(AActor* Owner, UAnimSequenceBase* Anim
 
 			if (RowData->FootStepSound)
 			{
-				UGameplayStatics::PlaySoundAtLocation(World, RowData->FootStepSound, HitLocation, Volume, 1.0f, 0.0f, nullptr, nullptr);
-				const FVector2D NoiseRange = ASC_GLOBAL()->BotConfig.HearingRange;
-
 				if (ABaseCharacter* Character = Cast<ABaseCharacter>(Owner))
 				{
+					const FVector2D NoiseRange = ASC_GLOBAL()->BotConfig.HearingRange;
+
 					const float Speed = Character->GetCharacterMovement()->Velocity.Size();
 					const float MaxSpeed = Character->GetCharacterMovement()->MaxWalkSpeed;
 					float Radius = UKismetMathLibrary::MapRangeClamped(Speed, 0.f, MaxSpeed, NoiseRange.X, NoiseRange.Y);
@@ -182,7 +182,26 @@ void UWvFootstepAnimNotify::TriggerEffect(AActor* Owner, UAnimSequenceBase* Anim
 						constexpr float CrouchLoudness = 0.2f;
 						Radius *= CrouchLoudness;
 					}
+
+					float RealVolume = Volume;
+					const float PlayerDistThreshold = ASC_GLOBAL()->BotConfig.PlayerDistThreshold;
+					if (Character->IsBotCharacter())
+					{
+						auto PC = Game::ControllerExtension::GetPlayer(Character->GetWorld(), 0);
+						if (PC)
+						{
+							const float SoundDistance = Character->GetDistanceTo(PC->GetPawn());
+							if (SoundDistance > PlayerDistThreshold)
+							{
+								RealVolume = 0.f;
+							}
+							//UE_LOG(LogTemp, Log, TEXT("SoundDistance => %.3f"), SoundDistance);
+						}
+
+					}
+
 					Character->ReportNoiseEvent(FVector::ZeroVector, Volume, Radius);
+					UGameplayStatics::PlaySoundAtLocation(World, RowData->FootStepSound, HitLocation, RealVolume, 1.0f, 0.0f, nullptr, nullptr);
 				}
 			}
 

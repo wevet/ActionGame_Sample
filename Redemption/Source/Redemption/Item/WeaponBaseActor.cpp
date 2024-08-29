@@ -4,6 +4,7 @@
 #include "Item/WeaponBaseActor.h"
 #include "Character/BaseCharacter.h"
 #include "Ability/WvAbilitySystemComponent.h"
+#include "Locomotion/LocomotionSystemTypes.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(WeaponBaseActor)
 

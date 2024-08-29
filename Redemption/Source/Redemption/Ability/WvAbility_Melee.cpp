@@ -36,15 +36,18 @@ void UWvAbility_Melee::ActivateAbility(const FGameplayAbilitySpecHandle Handle, 
 		return;
 	}
 
-	if (Character->IsTargetLock())
+	if (!Character->IsBotCharacter())
 	{
-		// default weight
-		constexpr float Weight = 1.0f;
-		Character->CalcurateNearlestTarget(Weight);
-	}
-	else
-	{
-		Character->ResetNearlestTarget();
+		if (Character->IsTargetLock())
+		{
+			// default weight
+			constexpr float Weight = 1.0f;
+			Character->CalcurateNearlestTarget(Weight, true);
+		}
+		else
+		{
+			Character->ResetNearlestTarget(true);
+		}
 	}
 
 	const auto LocomotionEssencialVariables = Character->GetLocomotionComponent()->GetLocomotionEssencialVariables();
@@ -77,7 +80,7 @@ void UWvAbility_Melee::ActivateAbility(const FGameplayAbilitySpecHandle Handle, 
 			if (OverrideMontage)
 			{
 				CurAnimMontage = OverrideMontage;
-				UE_LOG(LogWvAI, Verbose, TEXT("Montage Override => %s"), *GetNameSafe(OverrideMontage));
+				//UE_LOG(LogWvAI, Verbose, TEXT("Montage Override => %s"), *GetNameSafe(OverrideMontage));
 			}
 		}
 	}

@@ -907,12 +907,30 @@ void UCombatComponent::EquipAvailableWeapon()
 	}
 }
 
+void UCombatComponent::EquipAvailableWeaponToDistance(const float Threshold)
+{
+	auto Inventory = Character->GetInventoryComponent();
+	if (Inventory)
+	{
+		AWeaponBaseActor* Weapon = Inventory->GetAvailableWeaponToDistance(Threshold);
+
+		if (Weapon)
+		{
+			ELSOverlayState LSOverlayState;
+			const bool bResult = Inventory->ChangeWeapon(Weapon, LSOverlayState);
+
+			if (bResult)
+			{
+				Character->OverlayStateChange(LSOverlayState);
+			}
+		}
+	}
+}
+
 bool UCombatComponent::IsCloseCombatWeapon() const
 {
 	auto Inventory = Character->GetInventoryComponent();
-
 	const EAttackWeaponState WeaponType = Inventory->GetEquipWeaponType();
-
 	return WeaponType == EAttackWeaponState::EmptyWeapon || WeaponType == EAttackWeaponState::Knife;
 }
 #pragma endregion

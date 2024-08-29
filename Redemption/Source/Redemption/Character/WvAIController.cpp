@@ -20,7 +20,7 @@
 #include "Kismet/KismetMathLibrary.h"
 #include "NavigationSystem.h"
 
-#include UE_INLINE_GENERATED_CPP_BY_NAME(WvAIController)
+//#include UE_INLINE_GENERATED_CPP_BY_NAME(WvAIController)
 
 #if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
 static TAutoConsoleVariable<int32> CVarDebugCharacterBehaviorTree(TEXT("wv.DebugCharacterBehaviorTree"), 0, TEXT("CharacterBehaviorTree debug system\n") TEXT("<=0: Debug off\n") TEXT(">=1: Debug on\n"), ECVF_Default);
@@ -114,7 +114,7 @@ void AWvAIController::OnPossess(APawn* InPawn)
 		}
 		else
 		{
-			UE_LOG(LogWvAI, Error, TEXT("NotValid BehaviorTree => %s"), *FString(__FUNCTION__));
+			//UE_LOG(LogWvAI, Error, TEXT("NotValid BehaviorTree => %s"), *FString(__FUNCTION__));
 		}
 	}
 
@@ -378,7 +378,12 @@ void AWvAIController::SetBlackboardTarget(AActor* NewTarget)
 		}
 	}
 
-	const bool bHasValidAttack = IsValid(NewTarget);// && IsAttackAllowed()
+	bool bHasValidAttack = IsValid(NewTarget);// && IsAttackAllowed();
+	if (ABaseCharacter* TargetCharacter = Cast<ABaseCharacter>(NewTarget))
+	{
+		bHasValidAttack &= (TargetCharacter->IsDead() == false);
+	}
+
 	if (bHasValidAttack)
 	{
 		BaseCharacter->DoTargetLockOn();
@@ -394,11 +399,11 @@ void AWvAIController::SetBlackboardTarget(AActor* NewTarget)
 		Locomotion->SetLookAimTarget(bHasValidAttack, NewTarget, nullptr);
 	}
 
-	if (UCombatComponent* Combat = GetPawn()->FindComponentByClass<UCombatComponent>())
-	{
-		const bool bIsCloseCombat = Combat->IsCloseCombatWeapon();
-		SetBlackboardCloseCombat(bIsCloseCombat);
-	}
+	//if (UCombatComponent* Combat = GetPawn()->FindComponentByClass<UCombatComponent>())
+	//{
+	//	const bool bIsCloseCombat = Combat->IsCloseCombatWeapon();
+	//	SetBlackboardCloseCombat(bIsCloseCombat);
+	//}
 
 	SetAIActionState(bHasValidAttack ? EAIActionState::Combat : EAIActionState::Patrol);
 }
@@ -450,6 +455,26 @@ void AWvAIController::SetBlackboardDestinationLocation(const FVector NewDestinat
 	BlackboardComponent->SetValueAsVector(BlackboardKeyConfig.DestinationKeyName, NewDestination);
 }
 
+/// <summary>
+/// apply to bp decorator
+/// </summary>
+void AWvAIController::UpdateTargetPointToWriteDestinationLocation(const bool bIsPredictionPoint)
+{
+	if (const ABaseCharacter* TargetCharacter = GetBlackboardTargetAsCharacter())
+	{
+		if (TargetCharacter->IsDead())
+		{
+			ClearSightTaget();
+			return;
+		}
+
+		const auto CharacterLocation = TargetCharacter->GetActorLocation();
+		const auto Offset = TargetCharacter->GetActorForwardVector() * TargetCharacter->GetVelocity().Length();
+		const auto Location = bIsPredictionPoint ? TargetCharacter->GetPredictionStopLocation(CharacterLocation) : CharacterLocation + Offset;
+		SetBlackboardDestinationLocation(Location);
+	}
+}
+
 void AWvAIController::SetBlackboardDead(const bool IsDead)
 {
 	BlackboardComponent->SetValueAsBool(BlackboardKeyConfig.IsDeadKeyName, IsDead);
@@ -483,6 +508,11 @@ AActor* AWvAIController::GetBlackboardFriend() const
 AActor* AWvAIController::GetBlackboardSearchNodeHolder() const
 {
 	return Cast<AActor>(BlackboardComponent->GetValueAsObject(BlackboardKeyConfig.SearchNodeHolderKeyName));
+}
+
+FVector AWvAIController::GetBlackboardDestinationLocation() const
+{
+	return BlackboardComponent->GetValueAsVector(BlackboardKeyConfig.DestinationKeyName);
 }
 
 EAIActionState AWvAIController::GetBlackboardActionState() const
@@ -597,8 +627,8 @@ void AWvAIController::DoCombatEnemyState(AActor* Actor)
 		SightTask.Begin(SIGHT_AGE, [this]()
 		{
 			// not hear task running and lost target is alive
-			auto LostTarget = GetBlackboardTargetAsCharacter();
-			if ((LostTarget && !LostTarget->IsDead()) && !HearTask.IsRunning())
+			auto LostTarget = GetBlackboardTarget();
+			if (IsValid(LostTarget) && !HearTask.IsRunning())
 			{
 				DoSearchEnemyState(LostTarget, LostTarget->GetActorLocation());
 				UE_LOG(LogWvAI, Warning, TEXT("%s has lost my target and I will warn me."), *GetNameSafe(GetPawn()));
@@ -697,7 +727,9 @@ void AWvAIController::Notify_UnFollow(bool bIsInImpact/* = false */)
 
 void AWvAIController::Execute_DoAttack()
 {
-	if (BaseCharacter->IsMeleePlaying())
+	// Align behavior with PlayerCharacter
+	auto InventoryComp = BaseCharacter->GetInventoryComponent();
+	if (BaseCharacter->IsMeleePlaying() && !InventoryComp->CanAimingWeapon())
 	{
 		return;
 	}
@@ -739,6 +771,33 @@ void AWvAIController::HandleTargetState()
 const bool AWvAIController::HandleAttackPawnPrepare()
 {
 	return BaseCharacter->HandleAttackPawnPrepare();
+}
+
+bool AWvAIController::IsTargetDead() const
+{
+	if (const IWvAbilityTargetInterface* Interface = Cast<IWvAbilityTargetInterface>(GetBlackboardTarget()))
+	{
+		return Interface->IsDead();
+	}
+	return false;
+}
+
+
+/// <summary>
+/// Determine if the magazine of a handgun or other weapon needs to be replaced
+/// </summary>
+bool AWvAIController::IsCurrentAmmosEmpty() const
+{
+	auto InventoryComp = BaseCharacter->GetInventoryComponent();
+	if (InventoryComp)
+	{
+		auto Weapon = InventoryComp->GetEquipWeapon();
+		if (Weapon)
+		{
+			return Weapon->IsCurrentAmmosEmpty();
+		}
+	}
+	return false;
 }
 #pragma endregion
 
@@ -1081,22 +1140,72 @@ void AWvAIController::HandleRemoveAIPerceptionDelegate()
 }
 
 #pragma region CloseCombat
+void AWvAIController::ModifyCloseCombatNearlestTarget()
+{
+	if (!BaseCharacter.IsValid())
+	{
+		return;
+	}
+
+	if (ABaseCharacter* TargetCharacter = GetBlackboardTargetAsCharacter())
+	{
+		constexpr float K_WrapingThreshold = 150.0f;
+		constexpr float Weight = 1.0f;
+
+		const auto CharacterLocation = TargetCharacter->GetActorLocation();
+		const auto DestinationPos = GetBlackboardDestinationLocation();
+		const auto BasePos = BaseCharacter->GetActorLocation();
+		const auto Dist = FVector::Distance(BasePos, DestinationPos);
+
+		UE_LOG(LogTemp, Log, TEXT("Dist => %.3f, function => %s"), Dist, *FString(__FUNCTION__));
+		if (Dist > K_WrapingThreshold)
+		{
+			return;
+		}
+
+		const auto Location = TargetCharacter->GetPredictionStopLocation(CharacterLocation);
+		BaseCharacter->FindNearlestTarget(Location, Weight);
+	}
+}
+
 void AWvAIController::CloseCombatActionBegin()
 {
 	if (BaseCharacter.IsValid())
 	{
-		
+		BaseCharacter->ResetNearlestTarget(false);
 
 		const int32 ComboType = BaseCharacter->GetCombatAnimationIndex();
 		const int32 ComboCountMax = BaseCharacter->CloseCombatMaxComboCount(ComboType);
-
 		AICloseCombatData.Initialize(ComboType, ComboCountMax);
+
+		// @TODO
+		//if (UKismetMathLibrary::RandomBool())
+		//{
+		//	ModifyCloseCombatNearlestTarget();
+		//}
+
+		if (ABaseCharacter* TargetCharacter = GetBlackboardTargetAsCharacter())
+		{
+			Super::SetFocus(TargetCharacter);
+		}
+
+		Execute_DoAttack();
 	}
 
 }
 
+/// <summary>
+/// not used
+/// </summary>
+void AWvAIController::CloseCombatActionUpdate()
+{
+	//NotifyCloseCombatUpdate();
+}
+
 void AWvAIController::CloseCombatActionEnd()
 {
+	Super::SetFocus(nullptr);
+
 	AICloseCombatData.Deinitialize();
 }
 
@@ -1107,10 +1216,9 @@ void AWvAIController::NotifyCloseCombatBegin()
 		const auto Weapon = BaseCharacter->GetInventoryComponent()->GetEquipWeapon();
 		if (Weapon && Weapon->IsAvailable())
 		{
-			OnInputEventGameplayTagTrigger.Broadcast(Weapon->GetPluralInputTriggerTag(), true);
-			//UE_LOG(LogWvAI, Warning, TEXT("[%s]"), *FString(__FUNCTION__));
+			auto TriggerTag = Weapon->GetPluralInputTriggerTag();
+			OnInputEventGameplayTagTrigger.Broadcast(TriggerTag, true);
 		}
-		//this->Execute_DoAttack();
 	});
 }
 
@@ -1125,9 +1233,9 @@ void AWvAIController::NotifyCloseCombatEnd()
 	AICloseCombatData.ComboSeedEnd();
 }
 
-bool AWvAIController::CanCloseCombatAttack() const
+bool AWvAIController::IsCloseCombatOverAttack() const
 {
-	return AICloseCombatData.CanAttack();
+	return AICloseCombatData.IsOverAttack();
 }
 
 bool AWvAIController::IsCloseCombatPlaying() const

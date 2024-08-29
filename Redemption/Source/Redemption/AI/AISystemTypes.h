@@ -115,7 +115,7 @@ public:
 	void Initialize(const int32 InComboTypeIndex, const int32 MaxComboCount);
 
 	void Deinitialize();
-	bool CanAttack() const;
+	bool IsOverAttack() const;
 
 	void ComboSeedBegin(TFunction<void(void)> InFinishDelegate);
 	void ComboSeedUpdate(const float DeltaTime);

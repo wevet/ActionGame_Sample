@@ -944,10 +944,8 @@ void UClimbingComponent::PrepareToHoldingLedge()
 
 	// hardlang for Sprinting
 	check(Character);
-	const FGameplayTag SprintTag = FGameplayTag::RequestGameplayTag(TEXT("Character.Locomotion.Gait.Sprinting"));
-	const UAbilitySystemComponent* ASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(Character);
 
-	const bool bWasSprinted = IsValid(ASC) ? ASC->HasMatchingGameplayTag(SprintTag) : false;
+	const bool bWasSprinted = Character->IsSprinting();
 
 	// Save the character's current transformation and transform the target climbing point locally.
 	CapsuleTargetTransformLS = UClimbingUtils::ComponentWorldToLocalMatrix(CapsuleTargetTransformWS);

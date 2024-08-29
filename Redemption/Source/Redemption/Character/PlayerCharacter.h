@@ -35,6 +35,8 @@ public:
 	virtual bool IsTargetLock() const override;
 	virtual void RegisterMission_Callback(const int32 MissionIndex) override;
 	virtual bool IsQTEActionPlaying() const override;
+	virtual void BuildOptimization() override;
+
 
 #pragma region IWvAbilityTargetInterface
 	virtual void OnReceiveKillTarget(AActor* Actor, const float Damage) override;
@@ -48,6 +50,8 @@ public:
 
 	FVector GetFollowCameraLocation() const;
 
+protected:
+	virtual void OnFinisherAnimAssetLoadComplete() override;
 
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))

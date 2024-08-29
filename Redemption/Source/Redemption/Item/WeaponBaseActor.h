@@ -4,11 +4,12 @@
 
 #include "CoreMinimal.h"
 #include "Item/ItemBaseActor.h"
-#include "Locomotion/LocomotionSystemTypes.h"
 #include "GameplayTagContainer.h"
 #include "Engine/DataAsset.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "WeaponBaseActor.generated.h"
+
+struct FPawnAttackParam;
 
 UCLASS(BlueprintType)
 class REDEMPTION_API UWeaponParameterDataAsset : public UDataAsset
@@ -65,10 +66,12 @@ public:
 	FGameplayTag GetItemtag() const { return Itemtag; }
 	FName GetWeaponName() const { return PawnAttackParam.WeaponName; }
 	int32 GetPriority() const { return Priority; }
-
+	FVector2D GetAttackRange() const { return PawnAttackParam.AttackRange; }
 	FPawnAttackParam GetWeaponAttackInfo() const { return PawnAttackParam; }
 
 	virtual const bool HandleAttackPrepare() { return true; }
+
+	virtual bool IsCurrentAmmosEmpty() const { return false; }
 
 protected:
 	//~AActor interface

@@ -13,6 +13,8 @@
 UStatusComponent::UStatusComponent()
 {
 	PrimaryComponentTick.bCanEverTick = true;
+
+	GenderType = EGenderType::Male;
 }
 
 void UStatusComponent::BeginPlay()
@@ -152,4 +154,13 @@ void UStatusComponent::GetCharacterHealth(FVector& OutHealth)
 	}
 }
 
+void UStatusComponent::SetGenderType(const EGenderType InGenderType)
+{
+	GenderType = InGenderType;
+}
+
+EGenderType UStatusComponent::GetGenderType() const
+{
+	return GenderType;
+}
 

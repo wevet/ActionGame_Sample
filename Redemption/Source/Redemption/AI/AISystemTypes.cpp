@@ -250,14 +250,14 @@ void FAICloseCombatData::Deinitialize()
 	UE_LOG(LogWvAI, Warning, TEXT("[%s]"), *FString(__FUNCTION__));
 }
 
-bool FAICloseCombatData::CanAttack() const
+bool FAICloseCombatData::IsOverAttack() const
 {
 	return CurAttackComboCount >= AttackComboCount;
 }
 
 void FAICloseCombatData::ComboSeedBegin(TFunction<void(void)> InFinishDelegate)
 {
-	if (CanAttack())
+	if (IsOverAttack())
 	{
 		return;
 	}
@@ -272,7 +272,7 @@ void FAICloseCombatData::ComboSeedBegin(TFunction<void(void)> InFinishDelegate)
 
 void FAICloseCombatData::ComboSeedUpdate(const float DeltaTime)
 {
-	if (CanAttack() || bIsComboCheckEnded)
+	if (IsOverAttack() || bIsComboCheckEnded)
 	{
 		// combo is full
 		return;
@@ -282,11 +282,18 @@ void FAICloseCombatData::ComboSeedUpdate(const float DeltaTime)
 	{
 		bIsComboCheckEnded = CurSeeds >= FMath::FRandRange(0.f, 100.0f);
 
-		if (bIsComboCheckEnded && FinishDelegate)
+		if (bIsComboCheckEnded)
 		{
-			FinishDelegate();
-			UE_LOG(LogWvAI, Verbose, TEXT("[%s]"), *FString(__FUNCTION__));
-			this->Internal_Update();
+			if (FinishDelegate)
+			{
+				FinishDelegate();
+				UE_LOG(LogWvAI, Verbose, TEXT("[%s]"), *FString(__FUNCTION__));
+				this->Internal_Update();
+			}
+		}
+		else
+		{
+			//
 		}
 	}
 	else
@@ -297,7 +304,7 @@ void FAICloseCombatData::ComboSeedUpdate(const float DeltaTime)
 
 void FAICloseCombatData::Internal_Update()
 {
-	if (!CanAttack())
+	if (!IsOverAttack())
 	{
 		++CurAttackComboCount;
 	}

@@ -633,14 +633,18 @@ ELSGait ULocomotionComponent::GetGaitModeFromVelocity() const
 
 bool ULocomotionComponent::CanSprint() const
 {
-	if (LocomotionEssencialVariables.LSMovementMode == ELSMovementMode::Ragdoll || !LocomotionEssencialVariables.bWasMoving || LocomotionEssencialVariables.bAiming)
-	{
-		return false;
-	}
-
 	if (LocomotionEssencialVariables.LSRotationMode == ELSRotationMode::VelocityDirection)
 	{
 		return true;
+	}
+
+	//if (!UWvCommonUtils::IsBotPawn(Character.Get()))
+	//{
+	//}
+
+	if (LocomotionEssencialVariables.LSMovementMode == ELSMovementMode::Ragdoll || !LocomotionEssencialVariables.bWasMoving || LocomotionEssencialVariables.bAiming)
+	{
+		return false;
 	}
 
 	const float YawLimit = 50.f;

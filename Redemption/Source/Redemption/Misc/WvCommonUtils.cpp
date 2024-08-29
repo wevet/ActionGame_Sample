@@ -8,6 +8,7 @@
 #include "GameExtension.h"
 
 #include "Kismet/KismetMathLibrary.h"
+#include "Kismet/KismetSystemLibrary.h"
 #include "Kismet/GameplayStatics.h"
 #include "NiagaraFunctionLibrary.h"
 #include "NiagaraComponent.h"
@@ -426,4 +427,32 @@ AActor* UWvCommonUtils::FindNearestDistanceTarget(AActor* Owner, TArray<AActor*>
 	}
 	return Target;
 }
+
+const FTransform UWvCommonUtils::GetSkeletonRefPosTransform(class USkeletalMesh* InSkMesh, FName BoneName)
+{
+	if (InSkMesh)
+	{
+		const auto& RefSkeleton = InSkMesh->GetRefSkeleton();
+		return FAnimationRuntime::GetComponentSpaceTransformRefPose(RefSkeleton, RefSkeleton.FindBoneIndex(BoneName));
+	}
+	return FTransform::Identity;
+}
+
+const FTransform UWvCommonUtils::GetRefPoseDecalTransform(class USkeletalMeshComponent* InSkMeshComp, FName BoneName, const FVector& InHitPos, const FRotator& DecalRot)
+{
+	FTransform RefPoseTransform = GetSkeletonRefPosTransform(InSkMeshComp->GetSkeletalMeshAsset(), BoneName);
+	FTransform BoneTransform = InSkMeshComp->GetSocketTransform(BoneName);
+
+	const FVector PosInRefSpace = RefPoseTransform.TransformPositionNoScale(BoneTransform.InverseTransformPositionNoScale(InHitPos));
+	const FQuat RotInRefSpace = RefPoseTransform.TransformRotation(BoneTransform.InverseTransformRotation(FQuat(DecalRot)));
+	return FTransform(RotInRefSpace, PosInRefSpace);
+}
+
+void UWvCommonUtils::SetSkeletalMeshLoadAssetBlocking(USkeletalMeshComponent* SkeletalMeshComponent, TSoftObjectPtr<USkeletalMesh> SkeletalMesh)
+{
+	auto Obj = UKismetSystemLibrary::LoadAsset_Blocking(SkeletalMesh);
+	USkeletalMesh* SK = Cast<USkeletalMesh>(Obj);
+	SkeletalMeshComponent->SetSkinnedAssetAndUpdate(SK, true);
+}
+
 
