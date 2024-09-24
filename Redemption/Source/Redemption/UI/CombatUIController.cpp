@@ -27,6 +27,9 @@ UCombatUIController::UCombatUIController(const FObjectInitializer& ObjectInitial
 	/* PlayerHealth */
 	PlayerHealthKeyName = FName(TEXT("PlayerHealth"));
 
+	/* PlayerSkill */
+	PlayerSkillKeyName = FName(TEXT("PlayerSkill"));
+
 	/* WeaponFocus */
 	WeaponFocusKeyName = FName(TEXT("WeaponFocus"));
 
@@ -78,6 +81,13 @@ void UCombatUIController::Initializer(ABaseCharacter* NewCharacter)
 	{
 		PlayerHealth->Initializer(CharacterOwner);
 	}
+
+	PlayerSkill = Cast<UPlayerSkill>(GetWidgetFromName(PlayerSkillKeyName));
+
+	if (PlayerSkill)
+	{
+		PlayerSkill->Initializer(CharacterOwner);
+	}
 }
 
 
@@ -91,6 +101,11 @@ void UCombatUIController::Renderer(const float DeltaTime)
 	if (PlayerHealth)
 	{
 		PlayerHealth->Renderer(DeltaTime);
+	}
+
+	if (PlayerSkill)
+	{
+		PlayerSkill->Renderer(DeltaTime);
 	}
 
 	FocusWeaponWindowRenderer();

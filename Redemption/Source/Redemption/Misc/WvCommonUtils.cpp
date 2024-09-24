@@ -111,7 +111,7 @@ bool UWvCommonUtils::IsBotPawn(AActor* Actor)
 void UWvCommonUtils::CircleSpawnPoints(const int32 InSpawnCount, const float InRadius, const FVector InRelativeLocation, TArray<FVector>& OutPointArray)
 {
 	const float AngleDiff = 360.f / (float)InSpawnCount;
-	for (int i = 0; i < InSpawnCount; ++i)
+	for (int32 i = 0; i < InSpawnCount; ++i)
 	{
 		FVector Position = InRelativeLocation;
 		float Ang = FMath::DegreesToRadians(90 - AngleDiff * i);
@@ -181,8 +181,7 @@ FHitReactInfoRow* UWvCommonUtils::FindHitReactInfoRow(ABaseCharacter* Character)
 		return nullptr;
 	}
 
-	const FWvAbilitySystemAvatarData& AbilitySystemData = Avatar->GetAbilitySystemData();
-	UWvHitReactDataAsset* HitReactDA = AbilitySystemData.HitReactData;
+	UWvHitReactDataAsset* HitReactDA = Avatar->GetHitReactDataAsset();
 	UCombatComponent* CombatComponent = Character->GetCombatComponent();
 	const UInventoryComponent* InventoryComponent = Character->GetInventoryComponent();
 
@@ -455,4 +454,21 @@ void UWvCommonUtils::SetSkeletalMeshLoadAssetBlocking(USkeletalMeshComponent* Sk
 	SkeletalMeshComponent->SetSkinnedAssetAndUpdate(SK, true);
 }
 
+
+bool UWvCommonUtils::IsInTargetView(const AActor* Owner, const FVector TargetPosition, const float ViewRange)
+{
+	const FVector NormalizePos = (Owner->GetActorLocation() - TargetPosition).GetSafeNormal();
+	const FVector Forward = Owner->GetActorForwardVector();
+	const float Angle = UKismetMathLibrary::DegAcos(FVector::DotProduct(Forward, NormalizePos));
+	return (FMath::Abs(Angle) < ViewRange);
+}
+
+const FVector UWvCommonUtils::ChangePositonByRotation(const float Rotation, FVector Position)
+{
+	float Radian = 3.14 / 180 * Rotation;
+	FVector NewPosition = Position;
+	NewPosition.X = Position.X * FMath::Cos(Radian) - Position.Y * FMath::Sin(Radian);
+	NewPosition.Y = Position.X * FMath::Sin(Radian) + Position.Y * FMath::Cos(Radian);
+	return NewPosition;
+}
 

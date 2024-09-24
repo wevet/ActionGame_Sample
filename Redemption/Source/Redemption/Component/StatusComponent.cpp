@@ -7,6 +7,8 @@
 #include "WvAbilityAttributeSet.h"
 #include "Ability/WvInheritanceAttributeSet.h"
 #include "WvAbilitySystemBlueprintFunctionLibrary.h"
+#include "Game/CharacterInstanceSubsystem.h"
+#include "Redemption.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(StatusComponent)
 
@@ -26,6 +28,16 @@ void UStatusComponent::BeginPlay()
 	ASC = Cast<UWvAbilitySystemComponent>(Character->GetAbilitySystemComponent());
 	HPChangeDelegateHandle = ASC->GetGameplayAttributeValueChangeDelegate(UWvAbilityAttributeSet::GetHPAttribute()).AddUObject(this, &UStatusComponent::HealthChange_Callback);
 	DamageChangeDelegateHandle = ASC->GetGameplayAttributeValueChangeDelegate(UWvAbilityAttributeSet::GetDamageAttribute()).AddUObject(this, &UStatusComponent::DamageChange_Callback);
+	SkillChangeDelegateHandle = ASC->GetGameplayAttributeValueChangeDelegate(UWvAbilityAttributeSet::GetSkillAttribute()).AddUObject(this, &UStatusComponent::SkillChange_Callback);
+
+	if (Character.IsValid())
+	{
+		Character->OnTeamHandleAttackDelegate.AddDynamic(this, &ThisClass::OnSendAbilityAttack);
+		Character->OnTeamWeaknessHandleAttackDelegate.AddDynamic(this, &ThisClass::OnSendWeaknessAttack);
+		Character->OnTeamHandleReceiveDelegate.AddDynamic(this, &ThisClass::OnReceiveAbilityAttack);
+		Character->OnTeamWeaknessHandleReceiveDelegate.AddDynamic(this, &ThisClass::OnReceiveWeaknessAttack);
+		Character->OnTeamHandleReceiveKillDelegate.AddDynamic(this, &ThisClass::OnReceiveKillTarget);
+	}
 
 	if (ASC.IsValid())
 	{
@@ -35,16 +47,25 @@ void UStatusComponent::BeginPlay()
 
 void UStatusComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-	Character.Reset();
+	if (Character.IsValid())
+	{
+		Character->OnTeamHandleAttackDelegate.RemoveDynamic(this, &ThisClass::OnSendAbilityAttack);
+		Character->OnTeamWeaknessHandleAttackDelegate.RemoveDynamic(this, &ThisClass::OnSendWeaknessAttack);
+		Character->OnTeamHandleReceiveDelegate.RemoveDynamic(this, &ThisClass::OnReceiveAbilityAttack);
+		Character->OnTeamWeaknessHandleReceiveDelegate.RemoveDynamic(this, &ThisClass::OnReceiveWeaknessAttack);
+		Character->OnTeamHandleReceiveKillDelegate.RemoveDynamic(this, &ThisClass::OnReceiveKillTarget);
+	}
 
 	if (ASC.IsValid())
 	{
 		ASC->GetGameplayAttributeValueChangeDelegate(UWvAbilityAttributeSet::GetHPAttribute()).Remove(HPChangeDelegateHandle);
 		ASC->GetGameplayAttributeValueChangeDelegate(UWvAbilityAttributeSet::GetDamageAttribute()).Remove(DamageChangeDelegateHandle);
+		ASC->GetGameplayAttributeValueChangeDelegate(UWvAbilityAttributeSet::GetSkillAttribute()).Remove(SkillChangeDelegateHandle);
 	}
 
 	ASC.Reset();
 	AAS.Reset();
+	Character.Reset();
 	Super::EndPlay(EndPlayReason);
 }
 
@@ -58,14 +79,51 @@ void UStatusComponent::HealthChange_Callback(const FOnAttributeChangeData& Data)
 	if (AAS.IsValid())
 	{
 		auto Health = AAS->GetHP();
-		UE_LOG(LogTemp, Log, TEXT("Health => %.3f, function => %s"), Health, *FString(__FUNCTION__));
+		auto MaxHealth = AAS->GetHPMax();
+		//UE_LOG(LogTemp, Log, TEXT("Health => %.3f, MaxHealth => %.3f, Owner => %s, function => %s"), Health, MaxHealth, *GetNameSafe(GetOwner()), *FString(__FUNCTION__));
 	}
 }
 
 void UStatusComponent::DamageChange_Callback(const FOnAttributeChangeData& Data)
 {
-	//
-	UE_LOG(LogTemp, Log, TEXT("Damage => %.3f, function => %s"), Data.NewValue, *FString(__FUNCTION__));
+	//UE_LOG(LogTemp, Log, TEXT("Damage => %.3f, Owner => %s, function => %s"), Data.NewValue, *GetNameSafe(GetOwner()), *FString(__FUNCTION__));
+}
+
+void UStatusComponent::SkillChange_Callback(const FOnAttributeChangeData& Data)
+{
+	if (!AAS.IsValid())
+	{
+		return;
+	}
+
+	if (!Character->IsBotCharacter())
+	{
+		auto Skill = AAS->GetSkill();
+		auto MaxSkill = AAS->GetSkillMax();
+		UE_LOG(LogTemp, Log, TEXT("Skill => %.3f, MaxSkill => %.3f, Owner => %s, function => %s"), Skill, MaxSkill, *GetNameSafe(GetOwner()), *FString(__FUNCTION__));
+
+	}
+
+	if (IsMaxSkll())
+	{
+		Character->SkillEnableAction(true);
+	}
+	else
+	{
+
+	}
+
+}
+
+const bool UStatusComponent::SetFullSkill()
+{
+	if (!AAS.IsValid())
+	{
+		return false;
+	}
+	UWvAbilitySystemBlueprintFunctionLibrary::FullSkill(Character.Get());
+	//AAS->SetSkill(AAS->GetSkillMax());
+	return true;
 }
 
 float UStatusComponent::GetHealthToWidget() const
@@ -77,11 +135,29 @@ float UStatusComponent::GetHealthToWidget() const
 	return 0.f;
 }
 
+float UStatusComponent::GetSkillToWidget() const
+{
+	if (AAS.IsValid())
+	{
+		return AAS->GetSkill() / AAS->GetSkillMax();
+	}
+	return 0.f;
+}
+
 bool UStatusComponent::IsHealthHalf() const
 {
 	if (AAS.IsValid())
 	{
 		return (AAS->GetHP() / AAS->GetHPMax()) < 0.5f;
+	}
+	return false;
+}
+
+bool UStatusComponent::IsMaxSkll() const
+{
+	if (AAS.IsValid())
+	{
+		return (AAS->GetSkill() >= AAS->GetSkillMax());
 	}
 	return false;
 }
@@ -154,6 +230,8 @@ void UStatusComponent::GetCharacterHealth(FVector& OutHealth)
 	}
 }
 
+
+#pragma region CharacterInfo
 void UStatusComponent::SetGenderType(const EGenderType InGenderType)
 {
 	GenderType = InGenderType;
@@ -163,4 +241,67 @@ EGenderType UStatusComponent::GetGenderType() const
 {
 	return GenderType;
 }
+
+void UStatusComponent::SetBodyShapeType(const EBodyShapeType InBodyShapeType)
+{
+	BodyShapeType = InBodyShapeType;
+}
+
+EBodyShapeType UStatusComponent::GetBodyShapeType() const
+{
+	return BodyShapeType;
+}
+
+FCharacterInfo UStatusComponent::GetCharacterInfo() const
+{
+	FCharacterInfo Info;
+	Info.GenderType = GenderType;
+	Info.BodyShapeType = BodyShapeType;
+
+	if (IWvAbilitySystemAvatarInterface* Avatar = Cast<IWvAbilitySystemAvatarInterface>(GetOwner()))
+	{
+		Info.Name = Avatar->GetAvatarName();
+	}
+
+	return Info;
+}
+#pragma endregion
+
+
+void UStatusComponent::OnSendAbilityAttack(AActor* Actor, const FWvBattleDamageAttackSourceInfo SourceInfo, const float Damage)
+{
+	// if owner actor attack other actor attack
+}
+
+void UStatusComponent::OnSendWeaknessAttack(AActor* Actor, const FName WeaknessName, const float Damage)
+{
+	if (AAS.IsValid())
+	{
+		auto Skill = AAS->GetSkill();
+	}
+}
+
+void UStatusComponent::OnReceiveAbilityAttack(AActor* Actor, const FWvBattleDamageAttackSourceInfo SourceInfo, const float Damage)
+{
+	//const auto WeaponState = (EAttackWeaponState)SourceInfo.WeaponID;
+	//const FString CategoryName = *FString::Format(TEXT("WeaponState => {0}"), { *GETENUMSTRING("/Script/Redemption.EAttackWeaponState", WeaponState) });
+	//UE_LOG(LogTemp, Warning, TEXT("Weapon %s function => %s"), *CategoryName, *FString(__FUNCTION__));
+}
+
+void UStatusComponent::OnReceiveWeaknessAttack(AActor* Actor, const FName WeaknessName, const float Damage)
+{
+}
+
+void UStatusComponent::OnReceiveKillTarget(AActor* Actor, const float Damage)
+{
+	if (Character.IsValid())
+	{
+		if (Character->IsBotCharacter())
+		{
+			UCharacterInstanceSubsystem::Get()->RemoveAICharacter(Character.Get());
+		}
+	}
+}
+
+
 

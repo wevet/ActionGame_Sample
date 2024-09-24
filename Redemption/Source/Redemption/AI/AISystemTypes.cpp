@@ -44,7 +44,7 @@ void FAIPerceptionTask::Abort(const bool bIsForce)
 	if (FinishDelegate)
 	{
 		FinishDelegate();
-		UE_LOG(LogWvAI, Log, TEXT("Task Abort => %s, function => %s"), *TaskName.ToString(), *FString(__FUNCTION__));
+		UE_LOG(LogWvAI, Log, TEXT("Task Abort => %s, function => [%s]"), *TaskName.ToString(), *FString(__FUNCTION__));
 	}
 
 	FinishDelegate.Reset();
@@ -63,14 +63,14 @@ void FAIPerceptionTask::Begin(const float InTimer, TFunction<void(void)> InFinis
 	if (!World.IsValid())
 	{
 		Abort(false);
-		UE_LOG(LogWvAI, Error, TEXT("Not Valid World => %s"), *FString(__FUNCTION__));
+		UE_LOG(LogWvAI, Error, TEXT("Not Valid World => [%s]"), *FString(__FUNCTION__));
 		return;
 	}
 
 	bIsTaskPlaying = true;
 	if (!bIsNeedTimer)
 	{
-		UE_LOG(LogWvAI, Log, TEXT("infinity task => %s"), *TaskName.ToString());
+		UE_LOG(LogWvAI, Log, TEXT("infinity task => [%s]"), *TaskName.ToString());
 		return;
 	}
 
@@ -130,7 +130,7 @@ void FAIPerceptionTask::End_Internal()
 	TM.ClearTimer(TaskTimerHandle);
 
 	const bool bCompleted = TaskInstance.IsCompleted();
-	UE_LOG(LogWvAI, Log, TEXT("AIPerceptionTask bCompleted => %s"), bCompleted ? TEXT("true") : TEXT("false"));
+	//UE_LOG(LogWvAI, Log, TEXT("AIPerceptionTask bCompleted => %s"), bCompleted ? TEXT("true") : TEXT("false"));
 
 	if (FinishDelegate)
 	{
@@ -146,7 +146,7 @@ void FAIPerceptionTask::End_Internal()
 void FAIPerceptionTask::AddLength(const float AddTimer)
 {
 	Timer += AddTimer;
-	UE_LOG(LogWvAI, Log, TEXT("Modify Timer => %.3f"), Timer);
+	UE_LOG(LogWvAI, Log, TEXT("Modify Timer => %.3f, function => [%s]"), Timer, *FString(__FUNCTION__));
 }
 #pragma endregion
 
@@ -229,16 +229,11 @@ void FAICloseCombatData::Initialize(const int32 InComboTypeIndex, const int32 Ma
 
 	for (const float Seed : BaseRandomSeeds)
 	{
-		{
-			const float Value = FMath::FRandRange(0.f, Seed);
-			ModifySeeds.Add(Value);
-			//UE_LOG(LogWvAI, Log, TEXT("ModifySeed => %.3f"), Value);
-		}
+		const float ModifySeed = FMath::FRandRange(0.f, Seed);
+		ModifySeeds.Add(ModifySeed);
 
-		{
-			const float Value = FMath::FRandRange(0.1f, 0.2f);
-			IntervalSeeds.Add(Value);
-		}
+		const float IntervalSeed = FMath::FRandRange(0.1f, 0.2f);
+		IntervalSeeds.Add(IntervalSeed);
 	}
 
 	UE_LOG(LogWvAI, Warning, TEXT("[%s]"), *FString(__FUNCTION__));
@@ -266,8 +261,7 @@ void FAICloseCombatData::ComboSeedBegin(TFunction<void(void)> InFinishDelegate)
 	bIsComboCheckEnded = false;
 	CurSeeds = ModifySeeds[CurAttackComboCount];
 	CurIntervalSeeds = IntervalSeeds[CurAttackComboCount];
-
-	UE_LOG(LogWvAI, Verbose, TEXT("[%s]"), *FString(__FUNCTION__));
+	UE_LOG(LogWvAI, Log, TEXT("[%s]"), *FString(__FUNCTION__));
 }
 
 void FAICloseCombatData::ComboSeedUpdate(const float DeltaTime)
@@ -287,7 +281,6 @@ void FAICloseCombatData::ComboSeedUpdate(const float DeltaTime)
 			if (FinishDelegate)
 			{
 				FinishDelegate();
-				UE_LOG(LogWvAI, Verbose, TEXT("[%s]"), *FString(__FUNCTION__));
 				this->Internal_Update();
 			}
 		}
@@ -330,7 +323,54 @@ void FAICloseCombatData::ComboAbort()
 {
 	Deinitialize();
 }
+#pragma endregion
 
+
+#pragma region FriendlyCoolDown
+void FFriendlyParams::Begin()
+{
+	bIsFriendlyCoolDownPlaying = true;
+	TaskInstance = Launch(UE_SOURCE_LOCATION, [this]
+	{
+		FPlatformProcess::Sleep(K_FRIENDLY_COOLDOWN_TIMER);
+		bIsFriendlyCoolDownPlaying = false;
+		UE_LOG(LogWvAI, Log, TEXT("FriendlyParams finish => %s"), *FString(__FUNCTION__));
+	},
+	ETaskPriority::Default, EExtendedTaskPriority::None);
+}
+
+bool FFriendlyParams::IsRunning() const
+{
+	return bIsFriendlyCoolDownPlaying;
+}
+
+void FFriendlyParams::Reset()
+{
+	FriendyCacheActors.Reset();
+}
+
+void FFriendlyParams::AddCache(AActor* Actor)
+{
+	if (!FriendyCacheActors.Contains(Actor))
+	{
+		FriendyCacheActors.Add(Actor);
+	}
+}
+
+void FFriendlyParams::RemoveCache()
+{
+	constexpr int32 CacheMaxCount = 3;
+	if (FriendyCacheActors.Num() >= CacheMaxCount)
+	{
+		// always first remove element
+		FriendyCacheActors.RemoveAt(0);
+	}
+}
+
+bool FFriendlyParams::HasCache(AActor* Actor) const
+{
+	return FriendyCacheActors.Contains(Actor);
+}
 #pragma endregion
 
 

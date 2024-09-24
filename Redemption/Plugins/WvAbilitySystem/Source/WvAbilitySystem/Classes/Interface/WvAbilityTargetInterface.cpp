@@ -93,6 +93,11 @@ bool IWvAbilityTargetInterface::IsTargetable() const
 	return false;
 }
 
+bool IWvAbilityTargetInterface::IsSprintingMovement() const
+{
+	return false;
+}
+
 bool IWvAbilityTargetInterface::IsInBattled() const
 {
 	return false;

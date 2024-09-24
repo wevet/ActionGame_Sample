@@ -295,22 +295,16 @@ public:
 
 	FLocomotionEssencialVariables GetLocomotionEssencialVariables() const { return LocomotionEssencialVariables; }
 
-	const UWvAbilitySystemComponent* FindAbilitySystemComponent();
 	UAnimMontage* GetCurrentMontage() const;
 
-	UFUNCTION(BlueprintCallable, Category = Ragdoll)
 	void StartRagdollAction();
+	void StopRagdollAction(TFunction<void(void)> Callback);
 
-	void StartRagdollActionOnlyMovementState();
-
-	UFUNCTION(BlueprintCallable, Category = Ragdoll)
-	void StopRagdollAction();
-
-	UFUNCTION(BlueprintCallable, Category = Ragdoll)
-	bool IsRagdollingGetUpFront() const;
+	bool IsRagdollingFaceDown() const;
 
 	// apply to MassCharacter
 	void EnableMassAgentMoving(const bool bIsEnable);
+	void UpdateCharacterMovementSettings();
 
 	void DrawLocomotionDebug();
 
@@ -332,7 +326,6 @@ private:
 	void DoCharacterFalling();
 
 	void DoCharacterGrounded();
-	void UpdateCharacterMovementSettings();
 
 	void MoveForward(const float NewForwardAxisValue);
 	void MoveRight(const float NewRightAxisValue);

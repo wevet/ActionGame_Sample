@@ -41,10 +41,10 @@ void UWvAnimNotifyState_ComboEnable::AbilityNotifyBegin(USkeletalMeshComponent* 
 	CurTime = 0.f;
 	TriggerTag = GetInputCombo(AbilityData);
 
-	if (Ability && Ability->HasComboTrigger())
-	{
-		UE_LOG(LogTemp, Log, TEXT("playing combo melee Tag => %s, [%s]"), *Ability->GetComboTriggerTag().GetTagName().ToString(), *FString(__FUNCTION__));
-	}
+	//if (Ability && Ability->HasComboTrigger())
+	//{
+	//	UE_LOG(LogTemp, Log, TEXT("playing combo melee Tag => %s, [%s]"), *Ability->GetComboTriggerTag().GetTagName().ToString(), *FString(__FUNCTION__));
+	//}
 
 	TArray<FGameplayTag> TagArray;
 	OtherComboDA.GenerateKeyArray(TagArray);
@@ -161,8 +161,9 @@ void UWvAnimNotifyState_ComboEnable::PressedToCombo()
 	}
 	else
 	{
-		UE_LOG(LogTemp, Log, TEXT("diffrece Tag : [LastPressedTag => %s, TriggerTag => %s]"), 
-			*LastPressedTag.GetTagName().ToString(), *TriggerTag.GetTagName().ToString());
+		//const auto A = LastPressedTag.GetTagName().ToString();
+		//const auto B = TriggerTag.GetTagName().ToString();
+		//UE_LOG(LogTemp, Log, TEXT("diffrece Tag : [LastPressedTag => %s, TriggerTag => %s] function => [%s]"), *A, *B, *FString(__FUNCTION__));
 
 		auto FindRef = OtherComboDA.FindRef(LastPressedTag);
 		if (FindRef)
@@ -171,7 +172,6 @@ void UWvAnimNotifyState_ComboEnable::PressedToCombo()
 			Result = AbilitySystemComponent->TryActivateAbilityByDataAsset(FindRef);
 		}
 
-		//UE_LOG(LogTemp, Log, TEXT("FindRef => %s"), *GetNameSafe(FindRef));
 	}
 
 	const auto TagName = LastPressedTag.GetTagName().ToString();
@@ -182,7 +182,7 @@ void UWvAnimNotifyState_ComboEnable::PressedToCombo()
 		if (CurrentAbility)
 		{
 			CurrentAbility->SetComboTriggerTag(LastPressedTag);
-			UE_LOG(LogTemp, Log, TEXT("%s : [LastPressedTag => %s, function => %s]"), *GetNameSafe(CurrentAbility), *TagName, *FString(__FUNCTION__));
+			//UE_LOG(LogTemp, Log, TEXT("%s : [LastPressedTag => %s, function => %s]"), *GetNameSafe(CurrentAbility), *TagName, *FString(__FUNCTION__));
 		}
 		else
 		{

@@ -28,6 +28,9 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Config")
 	TArray<ABaseInvestigationNode*> GridPoints;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Config")
+	FVector2D CircleRange{200.0f, 500.0f};
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "AI|Config")
 	TSubclassOf<class ABaseInvestigationNode> InvestigationNodeClass;
 

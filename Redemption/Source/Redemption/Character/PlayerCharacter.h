@@ -13,6 +13,7 @@ class UHitTargetComponent;
 class UQTEActionComponent;
 class AWvPlayerController;
 
+
 /**
  * 
  */
@@ -35,8 +36,6 @@ public:
 	virtual bool IsTargetLock() const override;
 	virtual void RegisterMission_Callback(const int32 MissionIndex) override;
 	virtual bool IsQTEActionPlaying() const override;
-	virtual void BuildOptimization() override;
-
 
 #pragma region IWvAbilityTargetInterface
 	virtual void OnReceiveKillTarget(AActor* Actor, const float Damage) override;
@@ -51,7 +50,8 @@ public:
 	FVector GetFollowCameraLocation() const;
 
 protected:
-	virtual void OnFinisherAnimAssetLoadComplete() override;
+	virtual void OnAsyncLoadCompleteHandler() override;
+
 
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
@@ -103,6 +103,7 @@ private:
 	void HandleRotationMode();
 	void HandleAimMode();
 
+	
 	void HandleJump(const bool bIsPress);
 	void HandleSprinting(const bool bIsPress);
 	void HandleMeleeAction(const bool bIsPress);

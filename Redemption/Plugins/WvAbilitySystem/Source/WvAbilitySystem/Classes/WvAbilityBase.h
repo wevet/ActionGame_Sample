@@ -34,6 +34,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = WvAbilityData)
 	class UWvAbilityDataAsset* GetWvAbilityDataNoChecked() const;
 
+
 	UFUNCTION(BlueprintImplementableEvent)
 	void ActivateWvAbility();
 

@@ -289,8 +289,17 @@ void UWvAbilitySystemBlueprintFunctionLibrary::SetAttributeSetValue(UWvAbilitySy
 		return;
 	}
 
+	//FGameplayEffectContextHandle EffectContext = ASC->MakeEffectContext();
+	//for (TSubclassOf<UGameplayEffect> GameplayEffect : Data.StartupEffects)
+	//{
+	//	FGameplayEffectSpecHandle NewHandle = ASC->MakeOutgoingSpec(GameplayEffect, 1, EffectContext);
+	//	if (NewHandle.IsValid())
+	//	{
+	//		ASC->ApplyGameplayEffectSpecToSelf(*NewHandle.Data.Get());
+	//	}
+	//}
+
 	UGameplayEffect* GE = ASC_GLOBAL()->GE_DynamicValue->GetDefaultObject<UGameplayEffect>();
-	FGameplayEffectSpec* GESpec = new FGameplayEffectSpec(GE, EffectContexHandle, 1);
 
 	FGameplayModifierInfo ModifierInfo = FGameplayModifierInfo();
 	ModifierInfo.Attribute = Attribute;
@@ -299,124 +308,111 @@ void UWvAbilitySystemBlueprintFunctionLibrary::SetAttributeSetValue(UWvAbilitySy
 	GE->Modifiers.Empty();
 	GE->Modifiers.Add(ModifierInfo);
 
-	ASC->ApplyGameplayEffectSpecToSelf(*GESpec);
+	FGameplayEffectSpec GESpec(GE, EffectContexHandle, 1);
+	ASC->ApplyGameplayEffectSpecToSelf(GESpec);
 }
 
 void UWvAbilitySystemBlueprintFunctionLibrary::KillMySelf(AActor* Actor)
 {
-	do
+	if (!Actor)
 	{
-		if (!Actor)
-		{
-			break;
-		}
-		IAbilitySystemInterface* Interface = Cast<IAbilitySystemInterface>(Actor);
-		if (!Interface)
-		{
-			break;
-		}
-		UWvAbilitySystemComponentBase* ASC = Cast<UWvAbilitySystemComponentBase>(Interface->GetAbilitySystemComponent());
-		if (!ASC)
-		{
-			break;
-		}
+		return;
+	}
 
-		if (!ASC->HasAttributeSetForAttribute(UWvAbilityAttributeSet::GetDamageAttribute()) ||
-			!ASC->HasAttributeSetForAttribute(UWvAbilityAttributeSet::GetHPAttribute()))
-		{
-			break;
-		}
-		const float CurrentHealth = ASC->GetNumericAttribute(UWvAbilityAttributeSet::GetHPAttribute());
-		SetAttributeSetValue(ASC, UWvAbilityAttributeSet::GetDamageAttribute(), CurrentHealth);
-
-	} while (false);
+	UWvAbilitySystemComponentBase* ASC = Cast<UWvAbilitySystemComponentBase>(UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(Actor));
+	if (!ASC)
+	{
+		return;
+	}
+	if (!ASC->HasAttributeSetForAttribute(UWvAbilityAttributeSet::GetDamageAttribute()) ||
+		!ASC->HasAttributeSetForAttribute(UWvAbilityAttributeSet::GetHPAttribute()))
+	{
+		return;
+	}
+	const float CurrentHealth = ASC->GetNumericAttribute(UWvAbilityAttributeSet::GetHPAttribute());
+	SetAttributeSetValue(ASC, UWvAbilityAttributeSet::GetDamageAttribute(), CurrentHealth);
 }
 
 void UWvAbilitySystemBlueprintFunctionLibrary::RecoverHP(AActor* Actor, const float Value)
 {
-	do
+	if (!Actor)
 	{
-		if (!Actor)
-		{
-			break;
-		}
-		IAbilitySystemInterface* Interface = Cast<IAbilitySystemInterface>(Actor);
-		if (!Interface)
-		{
-			break;
-		}
-		UWvAbilitySystemComponentBase* ASC = Cast<UWvAbilitySystemComponentBase>(Interface->GetAbilitySystemComponent());
-		if (!ASC)
-		{
-			break;
-		}
-		if (!ASC->HasAttributeSetForAttribute(UWvAbilityAttributeSet::GetRecoverHPAttribute()))
-		{
-			break;
-		}
-		SetAttributeSetValue(ASC, UWvAbilityAttributeSet::GetRecoverHPAttribute(), Value);
+		return;
+	}
 
-	} while (false);
+	UWvAbilitySystemComponentBase* ASC = Cast<UWvAbilitySystemComponentBase>(UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(Actor));
+	if (!ASC)
+	{
+		return;
+	}
+	if (!ASC->HasAttributeSetForAttribute(UWvAbilityAttributeSet::GetRecoverHPAttribute()))
+	{
+		return;
+	}
+	SetAttributeSetValue(ASC, UWvAbilityAttributeSet::GetRecoverHPAttribute(), Value);
 }
 
 void UWvAbilitySystemBlueprintFunctionLibrary::RecoverPercentHP(AActor* Actor, const float Percent)
 {
-	do
+	if (!Actor)
 	{
-		if (!Actor)
-		{
-			break;
-		}
+		return;
+	}
 
-		IAbilitySystemInterface* Interface = Cast<IAbilitySystemInterface>(Actor);
-		if (!Interface)
-		{
-			break;
-		}
-		UWvAbilitySystemComponentBase* ASC = Cast<UWvAbilitySystemComponentBase>(Interface->GetAbilitySystemComponent());
-		if (!ASC)
-		{
-			break;
-		}
-
-		if (!ASC->HasAttributeSetForAttribute(UWvAbilityAttributeSet::GetRecoverHPAttribute()) ||
-			!ASC->HasAttributeSetForAttribute(UWvAbilityAttributeSet::GetHPMaxAttribute()))
-		{
-			break;
-		}
-
-		const float MaxHealth = ASC->GetNumericAttribute(UWvAbilityAttributeSet::GetHPMaxAttribute());
-		const float RecoverHp = MaxHealth * Percent;
-		SetAttributeSetValue(ASC, UWvAbilityAttributeSet::GetRecoverHPAttribute(), RecoverHp);
-
-	} while (false);
+	UWvAbilitySystemComponentBase* ASC = Cast<UWvAbilitySystemComponentBase>(UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(Actor));
+	if (!ASC)
+	{
+		return;
+	}
+	if (!ASC->HasAttributeSetForAttribute(UWvAbilityAttributeSet::GetRecoverHPAttribute()) ||
+		!ASC->HasAttributeSetForAttribute(UWvAbilityAttributeSet::GetHPMaxAttribute()))
+	{
+		return;
+	}
+	const float MaxHealth = ASC->GetNumericAttribute(UWvAbilityAttributeSet::GetHPMaxAttribute());
+	const float RecoverHp = MaxHealth * Percent;
+	SetAttributeSetValue(ASC, UWvAbilityAttributeSet::GetRecoverHPAttribute(), RecoverHp);
 }
 
 void UWvAbilitySystemBlueprintFunctionLibrary::SetDamage(AActor* Actor, const float Value)
 {
-	do
+	if (!Actor)
 	{
-		if (!Actor)
-		{
-			break;
-		}
-		IAbilitySystemInterface* Interface = Cast<IAbilitySystemInterface>(Actor);
-		if (!Interface)
-		{
-			break;
-		}
-		UWvAbilitySystemComponentBase* ASC = Cast<UWvAbilitySystemComponentBase>(Interface->GetAbilitySystemComponent());
-		if (!ASC)
-		{
-			break;
-		}
-		if (!ASC->HasAttributeSetForAttribute(UWvAbilityAttributeSet::GetDamageAttribute()))
-		{
-			break;
-		}
-		SetAttributeSetValue(ASC, UWvAbilityAttributeSet::GetDamageAttribute(), Value);
+		return;
+	}
 
-	} while (false);
+	UWvAbilitySystemComponentBase* ASC = Cast<UWvAbilitySystemComponentBase>(UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(Actor));
+	if (!ASC)
+	{
+		return;
+	}
+	if (!ASC->HasAttributeSetForAttribute(UWvAbilityAttributeSet::GetDamageAttribute()))
+	{
+		return;
+	}
+	SetAttributeSetValue(ASC, UWvAbilityAttributeSet::GetDamageAttribute(), Value);
+
+}
+
+void UWvAbilitySystemBlueprintFunctionLibrary::FullSkill(AActor* Actor)
+{
+	if (!Actor)
+	{
+		return;
+	}
+
+	UWvAbilitySystemComponentBase* ASC = Cast<UWvAbilitySystemComponentBase>(UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(Actor));
+	if (!ASC)
+	{
+		return;
+	}
+	if (!ASC->HasAttributeSetForAttribute(UWvAbilityAttributeSet::GetSkillAttribute()))
+	{
+		return;
+	}
+	const float Value = ASC->GetNumericAttribute(UWvAbilityAttributeSet::GetSkillMaxAttribute());
+	UE_LOG(LogTemp, Log, TEXT("Value => %.3f, function => %s"), Value, *FString(__FUNCTION__));
+	SetAttributeSetValue(ASC, UWvAbilityAttributeSet::GetSkillAttribute(), Value);
 }
 
 class UApplyEffectExData* UWvAbilitySystemBlueprintFunctionLibrary::GetEffectExData(FGameplayEffectContextHandle ContextHandle)

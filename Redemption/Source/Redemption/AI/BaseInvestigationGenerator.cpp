@@ -4,6 +4,7 @@
 #include "AI/BaseInvestigationGenerator.h"
 #include "Character/BaseCharacter.h"
 #include "Component/WvCharacterMovementComponent.h"
+#include "Misc/WvCommonUtils.h"
 
 #include "Components/CapsuleComponent.h"
 #include "Kismet/KismetMathLibrary.h"
@@ -13,6 +14,8 @@
 #include UE_INLINE_GENERATED_CPP_BY_NAME(BaseInvestigationGenerator)
 
 #define OFFSET 300.0f
+#define SPAWN_POINT_MIN 2
+#define SPAWN_POINT_MAX 4
 
 ABaseInvestigationGenerator::ABaseInvestigationGenerator()
 {
@@ -23,6 +26,18 @@ ABaseInvestigationGenerator::ABaseInvestigationGenerator()
 void ABaseInvestigationGenerator::BeginPlay()
 {
 	Super::BeginPlay();
+
+	const float Range = FMath::RandRange(CircleRange.X, CircleRange.Y);
+	const int32 Count = FMath::RandRange(SPAWN_POINT_MIN, SPAWN_POINT_MAX);
+
+	TArray<FVector>Point;
+	UWvCommonUtils::CircleSpawnPoints(Count, Range, GetActorLocation(), Point);
+
+	for (int32 Index = 0; Index < Point.Num(); ++Index)
+	{
+		FTransform Trans{FRotator::ZeroRotator, Point[Index], FVector::OneVector};
+		SpawnNodeGenerator(Trans);
+	}
 }
 
 void ABaseInvestigationGenerator::Tick(float DeltaTime)

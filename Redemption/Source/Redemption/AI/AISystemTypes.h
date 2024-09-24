@@ -52,6 +52,9 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FName PredictionKeyName = FName(TEXT("Prediction"));
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FName CoverPointKeyName = FName(TEXT("CoverLocation"));
 };
 
 USTRUCT(BlueprintType)
@@ -148,5 +151,26 @@ private:
 	int32 ComboTypeIndex = INDEX_NONE;
 };
 
+
+#define K_FRIENDLY_COOLDOWN_TIMER 180.0f
+
+struct FFriendlyParams
+{
+public:
+	void Begin();
+	bool IsRunning() const;
+
+	void Reset();
+	void AddCache(AActor* Actor);
+	void RemoveCache();
+	bool HasCache(AActor* Actor) const;
+
+private:
+	UPROPERTY()
+	TArray<TWeakObjectPtr<AActor>> FriendyCacheActors;
+
+	UE::Tasks::FTask TaskInstance;
+	bool bIsFriendlyCoolDownPlaying = false;
+};
 
 

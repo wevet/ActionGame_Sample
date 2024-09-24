@@ -24,10 +24,10 @@ EBTNodeResult::Type UBTTask_ChangeAIActionState::ExecuteTask(UBehaviorTreeCompon
 
 		if (IWvAIActionStateInterface* ASI = Cast<IWvAIActionStateInterface>(ControlPawn))
 		{
-			//if (bOverridenActionState)
-			//{
-			//	ASI->SetAIActionState(OverrideAIActionState);
-			//}
+			if (bOverridenActionState)
+			{
+				ASI->SetAIActionState(OverrideAIActionState);
+			}
 
 			AIActionState = ASI->GetAIActionState();
 		}
@@ -68,6 +68,7 @@ EBTNodeResult::Type UBTTask_ChangeAIActionState::ExecuteTask(UBehaviorTreeCompon
 
 							const bool bWasCloseCombat = CombatComp->IsCloseCombatWeapon();
 							AIController->SetBlackboardCloseCombat(bWasCloseCombat);
+							AIController->HandleTargetLock(bWasCloseCombat);
 
 							if (bWasCloseCombat)
 							{
@@ -87,12 +88,14 @@ EBTNodeResult::Type UBTTask_ChangeAIActionState::ExecuteTask(UBehaviorTreeCompon
 					case EAIActionState::Search:
 					case EAIActionState::Follow:
 					{
+						AIController->HandleTargetLock(false);
 						CombatComp->EquipAvailableWeapon();
 					}
 					break;
 					case EAIActionState::Patrol:
 					case EAIActionState::Friendly:
 					{
+						AIController->HandleTargetLock(false);
 						CombatComp->UnEquipWeapon();
 					}
 					break;

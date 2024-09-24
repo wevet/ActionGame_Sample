@@ -40,6 +40,8 @@ public class Redemption : ModuleRules
 				"ChaosVehiclesCore",
 				"StateTreeModule",
 				"GameplayStateTreeModule",
+				"SkeletalMerging",
+				"HairStrandsCore",
 				//"GameplayStateTree",
 				//"StateTree",
 				//"MassGameplay",

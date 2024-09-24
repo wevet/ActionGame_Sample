@@ -83,3 +83,8 @@ UBehaviorTree* IWvAbilitySystemAvatarInterface::GetBehaviorTree() const
 	return nullptr;
 }
 
+UWvHitReactDataAsset* IWvAbilitySystemAvatarInterface::GetHitReactDataAsset() const
+{
+	return nullptr; 
+}
+

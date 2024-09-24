@@ -313,14 +313,14 @@ void UWvInputEventComponent::TriggerCacheInputEvent(UGameplayAbility* CallFromAb
 	if (AnimatingAbility != CallFromAbility)
 	{
 		//comsumed, cache finished
-		UE_LOG(LogTemp, Log, TEXT("comsumed, cache finished AnimatingAbility => %s, CallFromAbility => %s, [%s]"), 
-			*GetNameSafe(AnimatingAbility), *GetNameSafe(CallFromAbility) , *FString(__FUNCTION__));
+		UE_LOG(LogTemp, Verbose, TEXT("comsumed, cache finished AnimatingAbility => %s, CallFromAbility => %s, [%s]"), *GetNameSafe(AnimatingAbility), *GetNameSafe(CallFromAbility) , *FString(__FUNCTION__));
 		ResetCacheInput();
 		ResetWaitTillEnd();
 	}
 	else
 	{
-		UE_LOG(LogTemp, Log, TEXT("same AnimatingAbility => %s, [%s]"), *GetNameSafe(AnimatingAbility), *FString(__FUNCTION__));
+		UE_LOG(LogTemp, Verbose, TEXT("same AnimatingAbility => %s, [%s]"), *GetNameSafe(AnimatingAbility), *FString(__FUNCTION__));
+
 		if (CallFromAbility)
 		{
 			ResetWaitTillEnd(CallFromAbility);
@@ -770,21 +770,14 @@ void UWvInputEventComponent::ProcessGameEvent(const FGameplayTag& Tag, const boo
 				const bool bIsComboTagEqual = (CurrentAbility && LastAbility) ? CurrentAbility->GetComboRequiredTag() == LastAbility->GetComboRequiredTag() : false;
 				const bool bIsSameCombo = CurrentAbility && LastAbility && bIsAnimatingCombo && bIsComboTagEqual;
 
-				//if (!bIsAnimatingCombo)
-				//{
-				//	UE_LOG(LogTemp, Warning, TEXT("not AnimatingCombo => %s"), *FString(__FUNCTION__));
-				//}
-
 				if (bIsSameCombo)
 				{
-					// キャッシュ入力を維持し、代わりに現在のAbility終了を待つ。
-					//UE_LOG(LogTemp, Log, TEXT("keep cache input, exchange wait cur ability end instead => %s"), *FString(__FUNCTION__));
+					// keep cache input, exchange wait cur ability end instead
 					ResetWaitTillEnd(CurrentAbility);
 				}
 				else
 				{
-					// すでに新しいコンボ／アビリティに切り替え、クリア
-					//UE_LOG(LogTemp, Log, TEXT("Already switched to new combos/abilities and cleared => %s"), *FString(__FUNCTION__));
+					// Already switched to new combos/abilities and cleared
 					ResetCacheInput();
 					ResetWaitTillEnd();
 				}

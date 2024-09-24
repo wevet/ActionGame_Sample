@@ -8,7 +8,7 @@
 #include "Component/QTEActionComponent.h"
 #include "UI/UMGManager.h"
 #include "Game/WvGameInstance.h"
-
+#include "Game/CharacterInstanceSubsystem.h"
 
 #include "Engine/World.h"
 #include "BasePlayerState.h"
@@ -166,6 +166,11 @@ void AWvPlayerController::Freeze()
 
 void AWvPlayerController::UnFreeze()
 {
+}
+
+bool AWvPlayerController::IsInBattled() const
+{
+	return UCharacterInstanceSubsystem::Get()->IsInBattleAny();
 }
 #pragma endregion
 

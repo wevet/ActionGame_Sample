@@ -18,6 +18,8 @@ class REDEMPTION_API AMassCharacter : public ABaseCharacter
 	
 public:
 	AMassCharacter(const FObjectInitializer& ObjectInitializer);
+	virtual void Tick(float DeltaTime) override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	virtual void MoveBlockedBy(const FHitResult& Impact) override;
 
 #pragma region IWvAbilityTargetInterface
@@ -28,13 +30,15 @@ public:
 #pragma endregion
 
 
-	virtual void RequestAsyncLoad() override;
-
 	class UMassAgentComponent* GetMassAgentComponent() const;
 	class UStateTreeComponent* GetStateTreeComponent() const;
 
 protected:
 	virtual void BeginPlay() override;
+
+	virtual void OnAsyncLoadCompleteHandler() override;
+	
+	virtual void OnSyncLoadCompleteHandler() override;
 
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Component, meta = (AllowPrivateAccess = "true"))

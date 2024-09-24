@@ -1,6 +1,8 @@
 // Copyright 2022 wevet works All Rights Reserved.
 
+#pragma once
 #include "Locomotion/LocomotionSystemTypes.h"
+#include "WvAbilitySystemTypes.h"
 
 // builtin
 #include "Animation/AnimInstance.h"
@@ -18,6 +20,9 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	TSubclassOf<UAnimInstance> AnimInstanceClass;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	TSubclassOf<UAnimInstance> FemaleAnimInstanceClass;
 };
 
 
@@ -33,29 +38,29 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	TSubclassOf<UAnimInstance> UnArmedAnimInstanceClass;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	TSubclassOf<UAnimInstance> UnArmedFemaleAnimInstanceClass;
+
 	TSubclassOf<UAnimInstance> FindAnimInstance(const ELSOverlayState InOverlayState) const;
+
+	TSubclassOf<UAnimInstance> FindAnimInstance(const EGenderType GenderType, const ELSOverlayState InOverlayState) const;
 };
 
 
 UCLASS(BlueprintType)
-class REDEMPTION_API UHairMaterialsDataAsset : public UDataAsset
+class REDEMPTION_API USkillAnimationDataAsset : public UDataAsset
 {
 	GENERATED_BODY()
 
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	UMaterialInterface* HairMat;
+	TArray<FSkillAnimMontage> SkillAnimMontages;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	UMaterialInterface* FacialMat;
+	TArray<FSkillAnimMontage> ModAnimMontages;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	UMaterialInterface* HelmetMat;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	UTexture2D* DefaultGroomTexture;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	UTexture2D* DefaultMaskTexture;
+	FSkillAnimMontage Find(const FGameplayTag Tag, const EBodyShapeType BodyShapeType) const;
+	FSkillAnimMontage Find(const EBodyShapeType BodyShapeType) const;
 };
+
 

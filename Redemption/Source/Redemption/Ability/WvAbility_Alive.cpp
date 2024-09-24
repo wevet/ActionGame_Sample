@@ -33,7 +33,9 @@ void UWvAbility_Alive::ActivateAbility(const FGameplayAbilitySpecHandle Handle, 
 	}
 
 	auto Locomotion = Character->GetLocomotionComponent();
-	UAnimMontage* TargetMontage = Locomotion->IsRagdollingGetUpFront() ? GetUpFromFront : GetUpFromBack;
+	UAnimMontage* TargetMontage = Locomotion->IsRagdollingFaceDown() ? GetUpFromFront : GetUpFromBack;
+
+	Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
 
 	if (!IsValid(TargetMontage))
 	{
@@ -41,8 +43,6 @@ void UWvAbility_Alive::ActivateAbility(const FGameplayAbilitySpecHandle Handle, 
 		CancelAbility(Handle, ActorInfo, ActivationInfo, false);
 		return;
 	}
-
-	Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
 
 	if (MontageTask)
 	{
@@ -52,7 +52,10 @@ void UWvAbility_Alive::ActivateAbility(const FGameplayAbilitySpecHandle Handle, 
 		MontageTask->EndTask();
 	}
 
-	Locomotion->StopRagdollAction();
+	//Locomotion->StopRagdollAction();
+	//Character->WakeUpPoseSnapShot();
+	
+	Character->InitSkelMeshLocation();
 
 	MontageTask = UWvAT_PlayMontageAndWaitForEvent::PlayMontageAndWaitForEvent(
 		this,
@@ -76,13 +79,12 @@ void UWvAbility_Alive::EndAbility(const FGameplayAbilitySpecHandle Handle, const
 
 void UWvAbility_Alive::OnPlayMontageCompleted_Event(FGameplayTag EventTag, FGameplayEventData EventData)
 {
-	K2_EndAbility();
-
 	if (Character.IsValid())
 	{
 		Character->EndAliveAction();
 	}
 	Character.Reset();
+	K2_EndAbility();
 }
 
 

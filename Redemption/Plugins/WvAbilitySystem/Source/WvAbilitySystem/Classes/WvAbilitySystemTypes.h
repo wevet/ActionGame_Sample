@@ -24,7 +24,12 @@ WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Character_Neutral);
 
 WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Common_Attack_Ability);
 WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Common_Passive_Ability);
+WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Common_Friendly_Ability);
+WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Common_Attack_Coefficient);
+WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Common_AttackWeakness_Coefficient);
+WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Common_EffectContext_Health_Value);
 WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Common_EffectContext_Damage_Value);
+WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Common_EffectContext_Skill_Value);
 
 // State
 WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Character_StateMelee);
@@ -32,9 +37,21 @@ WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Character_StateHitReact);
 WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Character_StateDead); // Add DA_Death After 
 WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Character_StateDead_Action);
 
+// Status gameplay effect
+WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Character_Status_Buff_Damage);
+WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Character_Status_Buff_Skill);
+WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Character_Status_Buff_Recover);
+
 // any character Action to be taken by hitting an object
 WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Character_StateBlock);
 WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Character_StateBlock_Action);
+
+// Skill
+WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Character_StateSkill); //using skill playing
+WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Character_StateSkill_Trigger); // trigger tag
+WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Character_StateSkill_Enable); // enabling added tag
+WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Character_StateSkill_Ready); // 
+
 
 // melee counter action
 WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Character_StateCounter);
@@ -73,16 +90,33 @@ WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Config_HitReactFeature_De
 WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Weapon_HoldUp);
 WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Weapon_HoldUp_Sender);
 WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Weapon_HoldUp_Receiver);
+WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Weapon_HoldUp_Playing);
 
 // KnockOut
 WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Weapon_KnockOut);
 WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Weapon_KnockOut_Sender);
 WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Weapon_KnockOut_Receiver);
+WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Weapon_KnockOut_Playing);
 
 // Finisher
 WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Weapon_Finisher);
 WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Weapon_Finisher_Sender);
 WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Weapon_Finisher_Receiver);
+WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Weapon_Finisher_Playing);
+
+// weapon type
+WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Weapon_Melee_Default);
+WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Weapon_Melee_Knife);
+
+WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Weapon_Melee_Pistol);
+WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Weapon_Melee_Pistol_AmmoEmpty);
+WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Weapon_Melee_Rifle);
+WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Weapon_Melee_Rifle_AmmoEmpty);
+
+// bullet weapon state
+WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Weapon_Gun_Reload);
+WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Weapon_Gun_Fire);
+
 
 // GameplayCue
 WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_GameplayCue_HitImpact);
@@ -97,6 +131,25 @@ WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_GameplayCue_HitImpact_Env
 WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Common_PassiveAbilityTrigger_HitReact); // DA_Repel
 WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Common_PassiveAbilityTrigger_KillReact); // DA_Death
 WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Common_PassiveAbilityTrigger_KillTarget);
+
+// AI 
+// waypoint visited
+WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Charactre_AI_Waypoint_Visited);
+WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Charactre_AI_Waypoint_UnVisited);
+
+// AI ActionState ABaseCharacter::SetAIActionState using
+WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Character_AI_State_Search);
+WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Character_AI_State_Combat);
+WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Character_AI_State_Patrol);
+WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Character_AI_State_Follow);
+WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Character_AI_State_Friend);
+
+WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Character_AI_Leader);
+WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Character_AI_Ignore);
+
+// using friend ai action abp used
+WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Character_AI_Friend_Action);
+WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Character_AI_Friend_Action_Playing);
 
 
 class USkeletalMeshComponent;
@@ -223,6 +276,23 @@ struct FWvAbilityRow : public FTableRowBase
 	UPROPERTY(BlueprintReadWrite, EditAnywhere)
 	class UWvAbilityDataAsset* AbilityData;
 };
+
+
+UENUM(BlueprintType)
+enum class EGenderType : uint8
+{
+	Male   UMETA(DisplayName = "Male"),
+	Female UMETA(DisplayName = "Female"),
+};
+
+UENUM(BlueprintType)
+enum class EBodyShapeType : uint8
+{
+	Normal UMETA(DisplayName = "Normal"),
+	Over   UMETA(DisplayName = "Over"),
+	Under  UMETA(DisplayName = "Under"),
+};
+
 
 UENUM(BlueprintType)
 enum class EMagicAttackType : uint8
@@ -549,6 +619,27 @@ public:
 	}
 };
 
+
+USTRUCT()
+struct FCharacterInfo
+{
+	GENERATED_BODY()
+
+public:
+	UPROPERTY()
+	EBodyShapeType BodyShapeType;
+
+	UPROPERTY()
+	EGenderType GenderType;
+
+	UPROPERTY()
+	FName Name;
+
+	FCharacterInfo()
+	{}
+
+};
+
 USTRUCT(BlueprintType)
 struct FWvAbilityLocation
 {
@@ -779,8 +870,18 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	TArray<FName> WeaknessNames;
 
-	UPROPERTY(BlueprintReadOnly)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float ComboAttackCoefficient{ 1 };
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	bool bIsOverrideGEDamageValue = false;
+
+	UPROPERTY()
 	FName MaxDamageWeaknessName;
+
+	void SetMaxDamageWeaknessName(const FName NewMaxDamageWeaknessName);
+	FName GetMaxDamageWeaknessName() { return MaxDamageWeaknessName; }
+
 };
 
 
@@ -1216,6 +1317,22 @@ public:
 	UAnimMontage* GetComboMatchMontage(const FGameplayTag ComboTag) const;
 };
 
+
+USTRUCT(BlueprintType)
+struct FCloseCombatAnimationContainer
+{
+	GENERATED_BODY()
+
+public:
+	FCloseCombatAnimationContainer()
+	{
+	}
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	TArray<FCloseCombatAnimation> ComboAnimations;
+};
+
+
 UCLASS(BlueprintType)
 class WVABILITYSYSTEM_API UCloseCombatAnimationDataAsset : public UDataAsset
 {
@@ -1223,17 +1340,105 @@ class WVABILITYSYSTEM_API UCloseCombatAnimationDataAsset : public UDataAsset
 
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	TArray<FCloseCombatAnimation> ComboAnimations;
+	TMap<EBodyShapeType, FCloseCombatAnimationContainer> ComboAnimationContainer;
+
+	FCloseCombatAnimationContainer FindContainer(const EBodyShapeType BodyShape) const;
 
 public:
-	FCloseCombatAnimation GetRandCombatAnimation() const;
-	FCloseCombatAnimation GetChooseCombatAnimation(const int32 Index) const;
+	FCloseCombatAnimation GetChooseCombatAnimation(const EBodyShapeType BodyShape, const int32 Index) const;
 
-	int32 GetCombatAnimationIndex() const;
-	int32 CloseCombatMaxComboCount(const int32 Index) const;
+	int32 GetCombatAnimationIndex(const EBodyShapeType BodyShape) const;
+	int32 CloseCombatMaxComboCount(const EBodyShapeType BodyShape, const int32 Index) const;
 
-	UAnimMontage* GetAnimMontage(const int32 Index, const FGameplayTag Tag) const;
+	UAnimMontage* GetAnimMontage(const EBodyShapeType BodyShape, const int32 Index, const FGameplayTag Tag) const;
 };
 #pragma endregion
+
+
+#pragma region CharacterVFX
+UCLASS(BlueprintType)
+class WVABILITYSYSTEM_API UCharacterVFXDataAsset : public UDataAsset
+{
+	GENERATED_BODY()
+
+public:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UMaterialInterface* OverlayMaterial;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UMaterialInterface* FaceOverlayMaterial;
+};
+#pragma endregion
+
+
+USTRUCT(BlueprintType)
+struct FWvWeaknessDataTableRow : public FTableRowBase
+{
+	GENERATED_USTRUCT_BODY()
+
+public:
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	FName AttachBoneName;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	bool IsAutoActive = true;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	bool ContinueActive = true;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	bool IsOpenUse = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	float MaxHP = 1;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	float AttackCoefficient = 1;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	bool IsOpenPerceive{ true };
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	bool IsShowHitNiagara{ true };
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	FGameplayTag TriggerHitReactFeature;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float DamageAccumulation;
+};
+
+USTRUCT(BlueprintType)
+struct FWvWeaknessInfo
+{
+	GENERATED_USTRUCT_BODY()
+
+public:
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	FName WeaknessName;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	FWvWeaknessDataTableRow ConfigInfo;
+};
+
+
+USTRUCT(BlueprintType)
+struct WVABILITYSYSTEM_API FSkillAnimMontage
+{
+	GENERATED_BODY()
+
+public:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FGameplayTag CharacterTag;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	EBodyShapeType BodyShapeType = EBodyShapeType::Normal;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UAnimMontage* AnimMontage = nullptr;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float PlayRate = 1.0f;
+};
 
 

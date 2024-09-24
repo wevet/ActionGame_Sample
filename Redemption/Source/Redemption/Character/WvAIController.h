@@ -40,7 +40,7 @@ UCLASS()
 class REDEMPTION_API AWvAIController : public AAIController, public IWvAbilityTargetInterface
 {
 	GENERATED_BODY()
-	
+
 public:
 	AWvAIController(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
 	virtual void PreInitializeComponents() override;
@@ -65,7 +65,9 @@ public:
 	virtual void Freeze() override;
 	virtual void UnFreeze() override;
 	virtual bool IsAttackAllowed() const override;
+	virtual void BuildRunAI() override;
 	virtual void OnReceiveAbilityAttack(AActor* Actor, const FWvBattleDamageAttackSourceInfo SourceInfo, const float Damage) override;
+
 #pragma endregion
 
 
@@ -73,7 +75,7 @@ public:
 	FAIInputEventGameplayTagDelegate OnInputEventGameplayTagTrigger;
 
 	UPROPERTY(BlueprintAssignable)
-	FOnTeamHandleAttackDelegate OnTeamHandleAttackCallback;
+	FOnTeamHandleAttackDelegate OnReceiveTeamHandleAttackCallback;
 
 #pragma region Core
 	void ResumeTree();
@@ -103,6 +105,9 @@ public:
 	// catch the target prediction location
 	UFUNCTION(BlueprintCallable, Category = AI)
 	void SetBlackboardPredictionLocation(const FVector NewLocation);
+
+	UFUNCTION(BlueprintCallable, Category = AI)
+	void SetBlackboardCoverLocation(const FVector NewLocation);
 
 	UFUNCTION(BlueprintCallable, Category = AI)
 	void UpdateFollowPoint();
@@ -137,6 +142,15 @@ public:
 	UFUNCTION(BlueprintCallable, Category = AI)
 	bool IsCurrentAmmosEmpty() const;
 
+	UFUNCTION(BlueprintCallable, Category = AI)
+	void FriendlyActionAbility();
+
+	UFUNCTION(BlueprintCallable, Category = AI)
+	void CancelFriendlyActionAbility();
+
+	UFUNCTION(BlueprintCallable, Category = AI)
+	bool IsFriendlyActionPlaying() const;
+
 	void ClearSearchNodeHolders();
 	void SetBlackboardDead(const bool IsDead);
 
@@ -152,12 +166,17 @@ public:
 	UFUNCTION(BlueprintCallable, Category = AI)
 	void HandleSprint(const bool bEnable);
 
+	void HandleTargetLock(const bool bLockTarget);
+
+	UFUNCTION(BlueprintCallable, Category = AI)
+	void HandleStrafeMovement(const bool bEnableStrafeMovement);
+
 	bool IsInEnemyAgent(const AActor& Other) const;
 	bool IsInFriendAgent(const AActor& Other) const;
 	bool IsInNeutralAgent(const AActor& Other) const;
 	bool IsInDeadFriendAgent(const AActor& Other) const;
 	bool IsLeaderAgent(const AActor& Other) const;
-	bool IsFriendCombatSupport(const ABaseCharacter* OtherCharacter, AActor* &OutTarget) const;
+	bool IsFriendCombatSupport(const ABaseCharacter* OtherCharacter, AActor*& OutTarget) const;
 	bool IsInEnemyTargetDead() const;
 
 	void DoSearchEnemyState(AActor* Actor, FVector OverridePosition = FVector::ZeroVector);
@@ -172,6 +191,12 @@ public:
 	void Notify_UnFollow(bool bIsInImpact = false);
 
 	ABaseCharacter* GetBlackboardTargetAsCharacter() const;
+	ABaseCharacter* GetBlackboardFriendAsCharacter() const;
+
+	/// <summary>
+	/// friend character start task
+	/// </summary>
+	void StartFriendlyTask();
 
 	/// <summary>
 	/// apply to anim notity
@@ -231,10 +256,10 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	class UAISenseConfig_Hearing* HearConfig;
-	
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	class UAISenseConfig_Damage* DamageConfig;
-	
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	class UAISenseConfig_Prediction* PredictionConfig;
 
@@ -278,7 +303,11 @@ private:
 	void OnPredictionPerceptionUpdatedRecieve(AActor* Actor);
 
 	void AbortTasks(bool bIsForce = false);
-	
+
+	void AddFriendyCache(AActor* Actor);
+	void RemoveFriendyCache();
+	bool HasIncludeFriendyCache(AActor* Actor) const;
+
 	UPROPERTY()
 	struct FAIStimulus CurrentStimulus;
 
@@ -326,8 +355,13 @@ private:
 
 	FVector LastSeenLocation;
 
-	UPROPERTY()
-	FAICloseCombatData AICloseCombatData;
+	// closecombat params
+	struct FAICloseCombatData AICloseCombatData;
+
+	// friendly params
+	struct FFriendlyParams FriendlyParams;
+
+	void ApplyFriendlyCoolDown();
 };
 
 

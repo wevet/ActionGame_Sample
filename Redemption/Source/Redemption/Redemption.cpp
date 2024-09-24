@@ -36,6 +36,13 @@ UE_DEFINE_GAMEPLAY_TAG(TAG_Character_ActionKnife_Combo1, "Character.Action.Knife
 UE_DEFINE_GAMEPLAY_TAG(TAG_Character_ActionKnife_Combo2, "Character.Action.Knife.Combo2");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Character_ActionKnife_Combo3, "Character.Action.Knife.Combo3");
 
+// Combat Chain
+UE_DEFINE_GAMEPLAY_TAG(TAG_Character_ActionCombatChain, "Character.Action.CombatChain");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Character_ActionCombatChain_Trigger, "Character.Action.CombatChain.Trigger");
+
+// Rotation Mode Change
+UE_DEFINE_GAMEPLAY_TAG(TAG_Character_ActionStrafeChange, "Character.Action.StrafeChange");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Character_ActionAimChange, "Character.Action.AimChange");
 
 // JumpAction
 UE_DEFINE_GAMEPLAY_TAG(TAG_Character_ActionJump, "Character.Action.Jump");
@@ -55,9 +62,6 @@ UE_DEFINE_GAMEPLAY_TAG(TAG_Character_ActionDrive_Forbid, "Character.Action.Drive
 
 // if reload active tag added character state tag
 UE_DEFINE_GAMEPLAY_TAG(TAG_Character_Action_GunReload, "Character.Action.GunReload");
-
-UE_DEFINE_GAMEPLAY_TAG(TAG_Character_ActionStrafeChange, "Character.Action.StrafeChange");
-UE_DEFINE_GAMEPLAY_TAG(TAG_Character_ActionAimChange, "Character.Action.AimChange");
 
 // TargetLock
 UE_DEFINE_GAMEPLAY_TAG(TAG_Character_TargetLock, "Character.Action.TargetLock");
@@ -82,31 +86,6 @@ UE_DEFINE_GAMEPLAY_TAG(TAG_Locomotion_ForbidMovement, "Locomotion.Forbid.Movemen
 UE_DEFINE_GAMEPLAY_TAG(TAG_Locomotion_ForbidJump, "Locomotion.Forbid.Jump");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Locomotion_ForbidRagdoll, "Locomotion.Forbid.Ragdoll");
 
-// weapon type
-UE_DEFINE_GAMEPLAY_TAG(TAG_Weapon_Melee_Default, "Weapon.Melee.Default");
-UE_DEFINE_GAMEPLAY_TAG(TAG_Weapon_Melee_Knife, "Weapon.Melee.Knife");
-UE_DEFINE_GAMEPLAY_TAG(TAG_Weapon_Melee_Pistol, "Weapon.Melee.Pistol");
-UE_DEFINE_GAMEPLAY_TAG(TAG_Weapon_Melee_Pistol_AmmoEmpty, "Weapon.Melee.Pistol.Ammo.Empty");
-UE_DEFINE_GAMEPLAY_TAG(TAG_Weapon_Melee_Rifle, "Weapon.Melee.Rifle");
-UE_DEFINE_GAMEPLAY_TAG(TAG_Weapon_Melee_Rifle_AmmoEmpty, "Weapon.Melee.Rifle.Ammo.Empty");
-
-// bullet weapon state
-UE_DEFINE_GAMEPLAY_TAG(TAG_Weapon_Gun_Reload, "Weapon.Gun.Reload");
-UE_DEFINE_GAMEPLAY_TAG(TAG_Weapon_Gun_Fire, "Weapon.Gun.Fire");
-
-
-// AI 
-// waypoint visited
-UE_DEFINE_GAMEPLAY_TAG(TAG_AI_Waypoint_Visited, "AI.Waypoint.Visited");
-UE_DEFINE_GAMEPLAY_TAG(TAG_AI_Waypoint_UnVisited, "AI.Waypoint.UnVisited");
-UE_DEFINE_GAMEPLAY_TAG(TAG_AI_State_Search, "AI.State.Search");
-UE_DEFINE_GAMEPLAY_TAG(TAG_AI_State_Combat, "AI.State.Combat");
-UE_DEFINE_GAMEPLAY_TAG(TAG_AI_State_Patrol, "AI.State.Patrol");
-UE_DEFINE_GAMEPLAY_TAG(TAG_AI_State_Follow, "AI.State.Follow");
-UE_DEFINE_GAMEPLAY_TAG(TAG_AI_State_Friend, "AI.State.Friend");
-UE_DEFINE_GAMEPLAY_TAG(TAG_AI_Character_Leader, "AI.Character.Leader");
-UE_DEFINE_GAMEPLAY_TAG(TAG_AI_Character_Ignore, "AI.Character.Ignore");
-
 
 // vehicle
 UE_DEFINE_GAMEPLAY_TAG(TAG_Vehicle_Drive, "Vehicle.Drive");
@@ -116,7 +95,14 @@ UE_DEFINE_GAMEPLAY_TAG(TAG_Vehicle_State_Drive, "Vehicle.State.Drive");
 // smart object difinition
 UE_DEFINE_GAMEPLAY_TAG(TAG_Character_State_SmartObject_Using, "Character.State.SmartObject.Using");
 
-
+// async load data asset tag
+UE_DEFINE_GAMEPLAY_TAG(TAG_Game_Asset_AnimationBlueprint, "Game.Asset.AnimationBlueprint");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Game_Asset_HitReaction, "Game.Asset.HitReaction");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Game_Asset_FinisherSender, "Game.Asset.FinisherSender");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Game_Asset_FinisherReceiver, "Game.Asset.FinisherReceiver");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Game_Asset_CloseCombat, "Game.Asset.CloseCombat");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Game_Asset_CharacterVFX, "Game.Asset.CharacterVFX");
+//
 
 IMPLEMENT_PRIMARY_GAME_MODULE( FDefaultGameModuleImpl, Redemption, "Redemption" );
 

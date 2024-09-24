@@ -26,6 +26,9 @@ public:
 	virtual void InitAbilitySystemComponentByData(class UWvAbilitySystemComponentBase* ASC);
 
 	virtual UBehaviorTree* GetBehaviorTree() const;
+	virtual UWvHitReactDataAsset* GetHitReactDataAsset() const;
+
+	virtual FName GetAvatarName() const = 0;
 
 	UFUNCTION(BlueprintImplementableEvent)
 	void ReceiveOnInitAttribute();

@@ -97,6 +97,7 @@ void UWvAbility_Death::ActivateAbility(const FGameplayAbilitySpecHandle Handle, 
 	PlayHitReactMontage(TargetMontage);
 
 	const float MontageLength = FMath::Abs(TargetMontage->GetPlayLength() - MontageTrimTime);
+	//const float DT = Character->GetWorld()->GetDeltaSeconds();
 	Character->EndDeathAction(MontageLength);
 }
 

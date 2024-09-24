@@ -5,10 +5,10 @@
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
 #include "Components/Image.h"
-#include "Character/BaseCharacter.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "PlayerHealth.generated.h"
 
+class ABaseCharacter;
 /**
  * 
  */

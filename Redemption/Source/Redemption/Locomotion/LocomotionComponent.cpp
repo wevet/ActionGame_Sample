@@ -99,10 +99,10 @@ ULocomotionComponent::ULocomotionComponent(const FObjectInitializer& ObjectIniti
 	bDoRunning = false;
 
 	// LS
-	WalkingSpeed = 200.f;
-	RunningSpeed = 400.f;
-	SprintingSpeed = 700.f;
-	CrouchingSpeed = 250.0f;
+	WalkingSpeed = K_WALK_SPEED;
+	RunningSpeed = K_RUNNING_SPEED;
+	SprintingSpeed = K_SPRINTING_SPEED;
+	CrouchingSpeed = K_CROUCHING_SPEED;
 	WalkingAcceleration = 800.f;
 	RunningAcceleration = 1000.f;
 	WalkingDeceleration = 600.f;
@@ -116,7 +116,7 @@ ULocomotionComponent::ULocomotionComponent(const FObjectInitializer& ObjectIniti
 	LocomotionEssencialVariables.bRagdollOnGround = false;
 	LocomotionEssencialVariables.bWasMoving = false;
 	LocomotionEssencialVariables.bWasMovementInput = false;
-	LocomotionEssencialVariables.LSGait = ELSGait::Running;
+	LocomotionEssencialVariables.LSGait = ELSGait::Walking;
 	LocomotionEssencialVariables.LSStance = ELSStance::Standing;
 	LocomotionEssencialVariables.LSRotationMode = ELSRotationMode::VelocityDirection;
 	LocomotionEssencialVariables.LSMovementMode = ELSMovementMode::Grounded;
@@ -138,6 +138,11 @@ void ULocomotionComponent::BeginPlay()
 		SkeletalMeshComponent = Character->GetMesh();
 		CapsuleComponent = Character->GetCapsuleComponent();
 		bIsOwnerPlayerController = bool(Cast<APlayerController>(Character->GetController()));
+
+		if (IAbilitySystemInterface* ASI = Cast<IAbilitySystemInterface>(Character))
+		{
+			AbilitySystemComponent = Cast<UWvAbilitySystemComponent>(ASI->GetAbilitySystemComponent());
+		}
 	}
 
 	if (CharacterMovementComponent.IsValid())
@@ -151,14 +156,14 @@ void ULocomotionComponent::BeginPlay()
 
 	OnLSRotationModeChange();
 	OnLSStanceChange();
-	//OnLSGaitChange();
+	OnLSGaitChange();
 
-	if (FindAbilitySystemComponent() && LocomotionStateDataAsset)
+	if (AbilitySystemComponent.IsValid() && LocomotionStateDataAsset)
 	{
 		AbilitySystemComponent->AddGameplayTag(LocomotionStateDataAsset->FindRotationModeTag(LocomotionEssencialVariables.LSRotationMode));
 		AbilitySystemComponent->AddGameplayTag(LocomotionStateDataAsset->FindStanceTag(LocomotionEssencialVariables.LSStance));
+		AbilitySystemComponent->AddGameplayTag(LocomotionStateDataAsset->FindGaitTag(LocomotionEssencialVariables.LSGait));
 	}
-
 
 }
 
@@ -181,8 +186,6 @@ void ULocomotionComponent::TickComponent(float DeltaTime, ELevelTick TickType, F
 
 	AsyncWork = TGraphTask<FLocomotionTask>::CreateTask().ConstructAndDispatchWhenReady(this);
 	ThisTickFunction->GetCompletionHandle()->DontCompleteUntil(AsyncWork);
-
-	//DoTick(DeltaTime);
 }
 
 void ULocomotionComponent::DoTick()
@@ -265,11 +268,27 @@ void ULocomotionComponent::SetLSMovementMode_Implementation(const ELSMovementMod
 		return;
 	}
 
-	if (FindAbilitySystemComponent() && LocomotionStateDataAsset)
+	if (AbilitySystemComponent.IsValid() && LocomotionStateDataAsset)
 	{
 		AbilitySystemComponent->RemoveGameplayTag(LocomotionStateDataAsset->FindMovementModeTag(LocomotionEssencialVariables.LSMovementMode));
 		AbilitySystemComponent->AddGameplayTag(LocomotionStateDataAsset->FindMovementModeTag(NewALSMovementMode));
+
+		if (!Character->IsBotCharacter())
+		{
+			auto Tag2String = LocomotionStateDataAsset->FindMovementModeTag(NewALSMovementMode).GetTagName().ToString();
+			UE_LOG(LogTemp, Warning, TEXT("Tag2String => %s"), *Tag2String);
+		}
 	}
+
+	if (!IsValid(LocomotionStateDataAsset))
+	{
+		UE_LOG(LogTemp, Error, TEXT("LocomotionStateDataAsset not valid => [%s]"), *FString(__FUNCTION__));
+	}
+	if (!AbilitySystemComponent.IsValid())
+	{
+		UE_LOG(LogTemp, Error, TEXT("AbilitySystemComponent not valid => [%s]"), *FString(__FUNCTION__));
+	}
+
 	LocomotionEssencialVariables.LSPrevMovementMode = LocomotionEssencialVariables.LSMovementMode;
 	LocomotionEssencialVariables.LSMovementMode = NewALSMovementMode;
 	OnMovementModeChange();
@@ -282,12 +301,15 @@ void ULocomotionComponent::SetLSGaitMode_Implementation(const ELSGait NewLSGait)
 		return;
 	}
 
-	if (FindAbilitySystemComponent() && LocomotionStateDataAsset)
+	if (AbilitySystemComponent.IsValid() && LocomotionStateDataAsset)
 	{
 		AbilitySystemComponent->RemoveGameplayTag(LocomotionStateDataAsset->FindGaitTag(LocomotionEssencialVariables.LSGait));
 		AbilitySystemComponent->AddGameplayTag(LocomotionStateDataAsset->FindGaitTag(NewLSGait));
 	}
 	LocomotionEssencialVariables.LSGait = NewLSGait;
+
+	//const FString CurStateName = *FString::Format(TEXT("{0}"), { *GETENUMSTRING("/Script/Redemption.ELSGait", LocomotionEssencialVariables.LSGait) });
+	//UE_LOG(LogTemp, Log, TEXT("Gait Mode => %s"), *CurStateName);
 	OnLSGaitChange();
 }
 
@@ -298,7 +320,7 @@ void ULocomotionComponent::SetLSStanceMode_Implementation(const ELSStance NewLSS
 		return;
 	}
 
-	if (FindAbilitySystemComponent() && LocomotionStateDataAsset)
+	if (AbilitySystemComponent.IsValid() && LocomotionStateDataAsset)
 	{
 		AbilitySystemComponent->RemoveGameplayTag(LocomotionStateDataAsset->FindStanceTag(LocomotionEssencialVariables.LSStance));
 		AbilitySystemComponent->AddGameplayTag(LocomotionStateDataAsset->FindStanceTag(NewLSStance));
@@ -314,7 +336,7 @@ void ULocomotionComponent::SetLSRotationMode_Implementation(const ELSRotationMod
 		return;
 	}
 
-	if (FindAbilitySystemComponent() && LocomotionStateDataAsset)
+	if (AbilitySystemComponent.IsValid() && LocomotionStateDataAsset)
 	{
 		AbilitySystemComponent->RemoveGameplayTag(LocomotionStateDataAsset->FindRotationModeTag(LocomotionEssencialVariables.LSRotationMode));
 		AbilitySystemComponent->AddGameplayTag(LocomotionStateDataAsset->FindRotationModeTag(NewLSRotationMode));
@@ -390,15 +412,15 @@ void ULocomotionComponent::SetLSAiming(const bool NewLSAiming)
 	}
 
 	LocomotionEssencialVariables.bAiming = NewLSAiming;
-	if (FindAbilitySystemComponent() && LocomotionStateDataAsset)
+	if (AbilitySystemComponent.IsValid() && LocomotionStateDataAsset)
 	{
 		if (LocomotionEssencialVariables.bAiming)
 		{
-			AbilitySystemComponent->RemoveGameplayTag(LocomotionStateDataAsset->AimingTag, 1);
+			AbilitySystemComponent->AddGameplayTag(LocomotionStateDataAsset->AimingTag, 1);
 		}
 		else
 		{
-			AbilitySystemComponent->AddGameplayTag(LocomotionStateDataAsset->AimingTag, 1);
+			AbilitySystemComponent->RemoveGameplayTag(LocomotionStateDataAsset->AimingTag, 1);
 		}
 	}
 
@@ -477,23 +499,6 @@ float ULocomotionComponent::GetSwimmingSpeed() const
 	return CharacterMovementComponent->MaxSwimSpeed;
 }
 
-
-#pragma region Ability
-const UWvAbilitySystemComponent* ULocomotionComponent::FindAbilitySystemComponent()
-{
-	if (!AbilitySystemComponent.IsValid())
-	{
-		if (Character.IsValid())
-		{
-			if (IAbilitySystemInterface* ASI = Cast<IAbilitySystemInterface>(Character))
-			{
-				AbilitySystemComponent = Cast<UWvAbilitySystemComponent>(ASI->GetAbilitySystemComponent());
-			}
-		}
-	}
-	return AbilitySystemComponent.Get();
-}
-
 UAnimMontage* ULocomotionComponent::GetCurrentMontage() const
 {
 	if (AbilitySystemComponent.IsValid())
@@ -502,7 +507,6 @@ UAnimMontage* ULocomotionComponent::GetCurrentMontage() const
 	}
 	return nullptr;
 }
-#pragma endregion
 
 #pragma region CharacterSpeed
 FVector ULocomotionComponent::ChooseVelocity() const
@@ -511,7 +515,9 @@ FVector ULocomotionComponent::ChooseVelocity() const
 	{
 		if (SkeletalMeshComponent.IsValid())
 		{
-			return SkeletalMeshComponent->GetPhysicsLinearVelocity(PelvisBoneName);
+			const FName RootBone = FName(TEXT("root"));
+			//return SkeletalMeshComponent->GetPhysicsLinearVelocity(PelvisBoneName);
+			return SkeletalMeshComponent->GetPhysicsLinearVelocity(RootBone);
 		}
 	}
 	if (Character.IsValid())
@@ -564,11 +570,15 @@ float ULocomotionComponent::ChooseMaxWalkSpeed() const
 float ULocomotionComponent::ChooseMaxWalkSpeedCrouched() const
 {
 	float Speed = CrouchingSpeed;
+	float CrouchOffset = 0.f;
 	switch (LocomotionEssencialVariables.LSGait)
 	{
 		case ELSGait::Walking:
+		CrouchOffset = 70.f;
+		Speed -= CrouchOffset;
+		break;
 		case ELSGait::Running:
-		const float CrouchOffset = 50.f;
+		CrouchOffset = 50.f;
 		Speed -= CrouchOffset;
 		break;
 	}
@@ -679,6 +689,10 @@ void ULocomotionComponent::SprintCheck()
 	}
 	else
 	{
+
+		if (LocomotionEssencialVariables.LSGait == ELSGait::Walking)
+			return;
+
 		if (!bDoRunning)
 		{
 			bDoRunning = true;
@@ -696,15 +710,15 @@ bool ULocomotionComponent::IsInRagdolling() const
 	return LocomotionEssencialVariables.LSMovementMode == ELSMovementMode::Ragdoll;
 }
 
-bool ULocomotionComponent::IsRagdollingGetUpFront() const
+bool ULocomotionComponent::IsRagdollingFaceDown() const
 {
-	if (LocomotionEssencialVariables.bRagdollOnGround)
-	{
-		const FRotator Rotation = SkeletalMeshComponent->GetSocketRotation(PelvisBoneName);
-		UE_LOG(LogTemp, Log, TEXT("Rotation %s"), *Rotation.ToString());
-		return (Rotation.Roll > 0.0f);
-	}
-	return false;
+	const FRotator Rotation = SkeletalMeshComponent->GetSocketRotation(PelvisBoneName);
+	//UE_LOG(LogTemp, Log, TEXT("Rotation => %s, function => %s"), *Rotation.ToString(), *FString(__FUNCTION__));
+	return (Rotation.Roll > 0.0f);
+
+	//auto R_Vec = UKismetMathLibrary::GetRightVector(Rotation);
+	//auto Dot = FVector::DotProduct(R_Vec, FVector(0.f, 0.f, 1.0f));
+	//return Dot >= 0.f;
 }
 
 void ULocomotionComponent::StartRagdollAction()
@@ -718,51 +732,34 @@ void ULocomotionComponent::StartRagdollAction()
 	// Step 2: Disable capsule collision and enable mesh physics simulation starting from the pelvis.
 	CapsuleComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
-	if (!Character->IsBotCharacter())
-	{
-		//SkeletalMeshComponent->SetCollisionObjectType(ECollisionChannel::ECC_PhysicsBody);
-	}
+	SkeletalMeshComponent->SetCollisionObjectType(ECollisionChannel::ECC_PhysicsBody);
 	SkeletalMeshComponent->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 	SkeletalMeshComponent->SetAllBodiesBelowSimulatePhysics(PelvisBoneName, true, true);
-
-	//SkeletalMeshComponent->WakeAllRigidBodies();
-	//SkeletalMeshComponent->bBlendPhysics = 1;
-	//SkeletalMeshComponent->bIgnoreRadialForce = 1;
-	//SkeletalMeshComponent->bIgnoreRadialImpulse = 1;
-
 }
 
-void ULocomotionComponent::StartRagdollActionOnlyMovementState()
-{
-	Character->SetReplicateMovement(false);
-
-	// Step 1: Clear the Character Movement Mode and set teh Movement State to Ragdoll
-	CharacterMovementComponent->SetMovementMode(EMovementMode::MOVE_None);
-	ILocomotionInterface::Execute_SetLSMovementMode(this, ELSMovementMode::Ragdoll);
-
-	// Step 2: Disable capsule collision and enable mesh physics simulation starting from the pelvis.
-	CapsuleComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-
-	if (!Character->IsBotCharacter())
-	{
-		//SkeletalMeshComponent->SetCollisionObjectType(ECollisionChannel::ECC_PhysicsBody);
-	}
-	SkeletalMeshComponent->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
-	//SkeletalMeshComponent->SetAllBodiesBelowSimulatePhysics(PelvisBoneName, true, true);
-}
-
-void ULocomotionComponent::StopRagdollAction()
+void ULocomotionComponent::StopRagdollAction(TFunction<void(void)> Callback)
 {
 	Character->SetReplicateMovement(true);
-	Character->WakeUpPoseSnapShot();
-
 	CharacterMovementComponent->SetMovementMode(LocomotionEssencialVariables.bRagdollOnGround ? EMovementMode::MOVE_Walking : EMovementMode::MOVE_Falling);
 	CharacterMovementComponent->Velocity = LocomotionEssencialVariables.RagdollVelocity;
+	Character->WakeUpPoseSnapShot();
+
+	if (LocomotionEssencialVariables.bRagdollOnGround)
+	{
+		const FRotator Rotation = SkeletalMeshComponent->GetSocketRotation(PelvisBoneName);
+		const bool bGetUpFront = (Rotation.Roll > 0.0f) ? true : false;
+		//UE_LOG(LogTemp, Log, TEXT("Rotation %s"), *Rotation.ToString());
+	}
 
 	CapsuleComponent->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
-	//SkeletalMeshComponent->SetCollisionObjectType(ECollisionChannel::ECC_Pawn);
+	SkeletalMeshComponent->SetCollisionObjectType(ECollisionChannel::ECC_Pawn);
 	SkeletalMeshComponent->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 	SkeletalMeshComponent->SetAllBodiesSimulatePhysics(false);
+
+	if (Callback)
+	{
+		Callback();
+	}
 }
 
 void ULocomotionComponent::DoWhileRagdolling()
@@ -791,12 +788,20 @@ void ULocomotionComponent::DoWhileRagdolling()
 
 	// If the fall is too fast, disable gravity to prevent the ragdoll from continuing to accelerate.
 	// Stabilize the movement of the Ragdoll and prevent it from falling off the floor.
-	const bool bWasGravity = (ChooseVelocity().Z < -4000.f);
-	SkeletalMeshComponent->SetEnableGravity(bWasGravity ? false : true);
+	const bool bWasGravity = (ChooseVelocity().Z > -4000.f);
+	SkeletalMeshComponent->SetEnableGravity(bWasGravity);
 
+	// @NOTE
+	// Set Actor Location During Ragdoll
 	LocomotionEssencialVariables.RagdollVelocity = ChooseVelocity();
 	LocomotionEssencialVariables.RagdollLocation = SkeletalMeshComponent->GetSocketLocation(PelvisBoneName);
-	//const FRotator BoneRotation = SkeletalMeshComponent->GetSocketRotation(PelvisBoneName);
+
+	auto SocketRotation = SkeletalMeshComponent->GetSocketRotation(PelvisBoneName);
+	if (IsRagdollingFaceDown())
+	{
+		SocketRotation.Yaw -= 180.0f;
+	}
+	LocomotionEssencialVariables.RagdollRotation = SocketRotation;
 
 	auto RagdollLocation = LocomotionEssencialVariables.RagdollLocation;
 	const float CapsuleHalfHeight = Character->GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
@@ -840,17 +845,24 @@ void ULocomotionComponent::RagdollingAsyncTrace_Callback(const FTraceHandle& Tra
 	}
 
 	const FHitResult& HitResult = TraceDatum.OutHits[0];
-	const float CapsuleHalfHeight = Character->GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
-	const FVector RagdollLocation = HitResult.TraceStart;
 
 	LocomotionEssencialVariables.bRagdollOnGround = HitResult.bBlockingHit;
+	if (!LocomotionEssencialVariables.bRagdollOnGround)
+	{
+		const auto RagdollLocation = LocomotionEssencialVariables.RagdollLocation;
+		const auto RagdollRotation = LocomotionEssencialVariables.RagdollRotation;
+		Character->SetActorLocationAndRotation(RagdollLocation, RagdollRotation);
+		return;
+	}
+
+	const FVector TraceStartLocation = HitResult.TraceStart;
+	const float CapsuleHalfHeight = Character->GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
 	const float Offset = 2.0f;
 	const float Diff = FMath::Abs(HitResult.ImpactPoint.Z - HitResult.TraceStart.Z);
-	const float Value = LocomotionEssencialVariables.bRagdollOnGround ? (CapsuleHalfHeight - Diff) + Offset : 0.0f;
-	const FVector ActorLocation = FVector(RagdollLocation.X, RagdollLocation.Y, RagdollLocation.Z + Value);
+	const float Value = (CapsuleHalfHeight - Diff) + Offset;
+	const FVector ActorLocation = FVector(TraceStartLocation.X, TraceStartLocation.Y, TraceStartLocation.Z + Value);
 
-	const FRotator BoneRotation = SkeletalMeshComponent->GetSocketRotation(PelvisBoneName);
-	//const auto CurCharacterRotation = LocomotionEssencialVariables.CharacterRotation;
+	const FRotator BoneRotation = LocomotionEssencialVariables.RagdollRotation;
 	const float Yaw = (BoneRotation.Roll > 0.0f) ? BoneRotation.Yaw : BoneRotation.Yaw - 180.f;
 	const FRotator ActorRotation = FRotator(0.0f, Yaw, 0.0f);
 
@@ -1503,7 +1515,7 @@ void ULocomotionComponent::SetSprintPressed(const bool NewSprintPressed)
 	}
 
 	bShouldSprint = NewSprintPressed;
-	if (FindAbilitySystemComponent() && LocomotionStateDataAsset && CharacterMovementComponent.IsValid())
+	if (AbilitySystemComponent.IsValid() && LocomotionStateDataAsset && CharacterMovementComponent.IsValid())
 	{
 		CharacterMovementComponent->RotationRate = bShouldSprint ? SprintingRotationRate : RunningRotationRate;
 

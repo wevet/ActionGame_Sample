@@ -15,7 +15,7 @@ class UWvSkeletalMeshComponent;
  * 
  */
 UCLASS()
-class REDEMPTION_API AWvWheeledVehiclePawn : public AWheeledVehiclePawn, public IWvEnvironmentInterface
+class REDEMPTION_API AWvWheeledVehiclePawn : public AWheeledVehiclePawn, public IWvEnvironmentInterface, public IWvAbilityTargetInterface
 {
 	GENERATED_BODY()
 
@@ -37,6 +37,11 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "WvWheeledVehiclePawn")
 	int32 GetCurrentGear() const;
+
+#pragma region IWvEnvironmentInterface
+	virtual USceneComponent* GetOverlapBaseComponent() override;
+	virtual bool IsSprintingMovement() const override;
+#pragma endregion
 
 #pragma region IWvEnvironmentInterface
 	virtual void OnReceiveAbilityAttack(AActor* Attacker, const FHitResult& HitResult) override;

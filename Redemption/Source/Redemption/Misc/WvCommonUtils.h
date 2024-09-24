@@ -66,6 +66,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "CommonUtils")
 	static void SetSkeletalMeshLoadAssetBlocking(USkeletalMeshComponent* SkeletalMeshComponent, TSoftObjectPtr<USkeletalMesh> SkeletalMesh);
 
+	UFUNCTION(BlueprintPure, Category = "CommonUtils")
+	static bool IsInTargetView(const AActor* Owner, const FVector TargetPosition, const float ViewRange);
+
 	static FHitReactInfoRow* FindHitReactInfoRow(ABaseCharacter* Character);
 
 	static AActor* CloneActor(const AActor* InputActor);
@@ -126,6 +129,8 @@ public:
 
 	static const FTransform GetSkeletonRefPosTransform(class USkeletalMesh* InSkMesh, FName BoneName);
 	static const FTransform GetRefPoseDecalTransform(class USkeletalMeshComponent* InSkMeshComp, FName BoneName, const FVector& InHitPos, const FRotator& DecalRot);
+
+	static const FVector ChangePositonByRotation(const float Rotation, FVector Position);
 };
 
 

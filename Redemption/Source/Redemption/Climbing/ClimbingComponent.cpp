@@ -945,7 +945,7 @@ void UClimbingComponent::PrepareToHoldingLedge()
 	// hardlang for Sprinting
 	check(Character);
 
-	const bool bWasSprinted = Character->IsSprinting();
+	const bool bWasSprinted = Character->IsSprintingMovement();
 
 	// Save the character's current transformation and transform the target climbing point locally.
 	CapsuleTargetTransformLS = UClimbingUtils::ComponentWorldToLocalMatrix(CapsuleTargetTransformWS);

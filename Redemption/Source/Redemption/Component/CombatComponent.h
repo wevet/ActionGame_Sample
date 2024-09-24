@@ -7,11 +7,14 @@
 #include "Item/WeaponBaseActor.h"
 #include "Locomotion/LocomotionSystemTypes.h"
 #include "Ability/WvAbilityType.h"
+#include "CombatSystemTypes.h"
 #include "CombatComponent.generated.h"
 
 class UWvAbilityBase;
 class UWvAbilitySystemComponent;
 class ABaseCharacter;
+class UWidgetComponent;
+
 
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
@@ -40,8 +43,6 @@ protected:
 	EAttackWeaponState AttackWeaponState = EAttackWeaponState::EmptyWeapon;
 
 public:
-	static int32 DEFAULT_FOLLOW_NUM;
-
 	bool AbilityDamageBoxTrace(class UWvAbilityBase* Ability, const int32 EffectGroupIndex, const FVector Start, const FVector End, FVector HalfSize, const FRotator Orientation, TArray<AActor*>& ActorsToIgnore);
 	bool AbilityDamageCapsuleTrace(class UWvAbilityBase* Ability, const int32 EffectGroupIndex, const FVector Start, const FVector End, const float Radius, const float HalfHeight, const FQuat CapsuleQuat, TArray<AActor*>& ActorsToIgnore);
 	const bool BulletTraceAttackToAbilitySystemComponent(class UWvAbilityBase* Ability, const int32 WeaponID, const int32 EffectGroupIndex, TArray<FHitResult>& Hits, const FVector SourceLocation);
@@ -51,13 +52,19 @@ public:
 	const bool LineOfSightTraceOuterEnvironments(class UWvAbilityBase* Ability, const int32 EffectGroupIndex, const TArray<FHitResult>& HitResults, const FVector SourceLocation);
 
 	UFUNCTION(BlueprintCallable)
-	FGameplayTag GetHitReactFeature();
+	FGameplayTag GetHitReactFeature() const;
 
 	UFUNCTION(BlueprintCallable)
 	bool GetIsFixedHitReactFeature() const;
 
 	UFUNCTION(BlueprintCallable)
 	bool HasBoneShaking() const;
+
+	UFUNCTION(BlueprintCallable)
+	float GetProgressValue() const;
+
+	UFUNCTION(BlueprintCallable)
+	bool IsChainPlaying() const;
 
 	void SetHitReactFeature(const FGameplayTag Tag, const bool bIsFixed);
 	void SetWeaknessHitReactFeature(const FGameplayTag Tag);
@@ -118,12 +125,20 @@ private:
 	void HandleDeath();
 
 	UFUNCTION()
-	void WeaknessHitReactEventCallbak(const AActor* AttackActor, const FName WeaknessName, const float HitValue);
+	void WeaknessHitReactEventCallback(const AActor* AttackActor, const FName WeaknessName, const float HitValue);
+
+	UFUNCTION()
+	void OnSendAbilityAttack(AActor* Actor, const FWvBattleDamageAttackSourceInfo SourceInfo, const float Damage);
+	
+	UFUNCTION()
+	void OnSendWeaknessAttack(AActor* Actor, const FName WeaknessName, const float Damage);
 
 	void StartBoneShake(const FName HitBoneName, const FGameplayTag BoneShakeTriggerTag, const FGameplayTag BoneShakeStrengthTag);
 	void TickUpdateUpdateBoneShake();
-	bool UpdateBoneShake(const float DeltaTime);
+	bool UpdateBoneShake(const float DeltaTime) const;
 
+	void ShowChainWidgetComponent(const bool NewVisibility);
+	void HandleChainComboUpdate();
 
 #pragma region BattleCommand
 	void Modify_Weapon(const ELSOverlayState LSOverlayState);
@@ -134,11 +149,12 @@ private:
 
 	TWeakObjectPtr<UWvAbilitySystemComponent> ASC;
 	TWeakObjectPtr<ABaseCharacter> Character;
+	TWeakObjectPtr<UWidgetComponent> ChainWidgetComponent;
 
 	bool bIsDebugTrace = false;
 
 	FTimerHandle TimerHandle;
-	FTimerHandle TickBoneShakeTimerHandle;
+	FTimerHandle ShakeBone_TimerHandle;
 
 	bool IsFixedHitReactFeature{ false };
 	FGameplayTag HitReactFeature;
@@ -150,4 +166,8 @@ private:
 
 	UPROPERTY()
 	class USkeletalMeshBoneShakeExecuteData* SkeletalMeshBoneShakeExecuteData;
+
+	UPROPERTY()
+	struct FComboChainSystem ComboChainSystem;
+	bool bIsChainWidgetShown = false;
 };

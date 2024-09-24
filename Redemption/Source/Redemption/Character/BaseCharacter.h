@@ -16,7 +16,6 @@
 #include "Mission/MissionSystemTypes.h"
 
 // builtin
-#include "Runtime/Launch/Resources/Version.h"
 #include "BehaviorTree/BehaviorTree.h"
 #include "AbilitySystemInterface.h"
 #include "Containers/Array.h"
@@ -59,7 +58,9 @@ class UCombatComponent;
 class UStatusComponent;
 class UWeaknessComponent;
 class UWvAnimInstance;
+class UWvFaceAnimInstance;
 class UStaticMeshComponent;
+class ULODSyncComponent;
 
 
 UCLASS(Abstract)
@@ -74,6 +75,7 @@ class REDEMPTION_API ABaseCharacter : public ACharacter,
 
 public:
 	ABaseCharacter(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
+	virtual void OnConstruction(const FTransform& Transform) override;
 	virtual void PreInitializeComponents() override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	virtual void PreReplication(IRepChangedPropertyTracker& ChangedPropertyTracker) override;
@@ -94,16 +96,16 @@ protected:
 
 
 public:
-	/**
-	* Returns the ability system component to use for this actor.
-	* It may live on another actor, such as a Pawn using the PlayerState's component
-	*/
+#pragma region IAbilitySystemInterface
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
+#pragma endregion
 
 #pragma region IWvAbilitySystemAvatarInterface
 	virtual const FWvAbilitySystemAvatarData& GetAbilitySystemData() override;
 	virtual void InitAbilitySystemComponentByData(class UWvAbilitySystemComponentBase* ASC) override;
 	virtual UBehaviorTree* GetBehaviorTree() const override;
+	virtual UWvHitReactDataAsset* GetHitReactDataAsset() const override;
+	virtual FName GetAvatarName() const override;
 #pragma endregion
 
 #pragma region IWvAbilityTargetInterface
@@ -130,6 +132,7 @@ public:
 	virtual void Freeze() override;
 	virtual void UnFreeze() override;
 	virtual bool IsFreezing() const override;
+	virtual bool IsSprintingMovement() const override;
 
 	virtual void DoAttack() override;
 	virtual void DoResumeAttack() override;
@@ -151,6 +154,7 @@ public:
 	virtual void NotifyControllerChanged() override;
 	//~End of APawn interface
 
+#pragma region IAISightTargetInterface
 	/**
 	* The method needs to check whether the implementer is visible from given observer's location.
 	* @param ObserverLocation	The location of the observer
@@ -162,6 +166,7 @@ public:
 	* @return	True if visible from the observer's location
 	*/
 	virtual bool CanBeSeenFrom(const FVector& ObserverLocation, FVector& OutSeenLocation, int32& NumberOfLoSChecksPerformed, float& OutSightStrength, const AActor* IgnoreActor = nullptr, const bool* bWasVisible = nullptr, int32* UserData = nullptr) const;
+#pragma endregion
 
 public:
 	UFUNCTION(BlueprintCallable, Category = Components)
@@ -195,10 +200,13 @@ public:
 	class UClimbingComponent* GetClimbingComponent() const;
 
 	UFUNCTION(BlueprintCallable, Category = Components)
-	USceneComponent* GetHeldObjectRoot() const;
+	class USceneComponent* GetHeldObjectRoot() const;
 
 	UFUNCTION(BlueprintCallable, Category = Components)
-	UStaticMeshComponent* GetAccessoryObjectRoot() const;
+	class UStaticMeshComponent* GetAccessoryObjectRoot() const;
+
+	UFUNCTION(BlueprintCallable, Category = Components)
+	class USkeletalMeshComponent* GetFaceMeshComponent() const;
 
 	UFUNCTION(BlueprintCallable, Category = Movement)
 	float GetDistanceFromToeToKnee(FName KneeL = TEXT("calf_l"), FName BallL = TEXT("ball_l"), FName KneeR = TEXT("calf_r"), FName BallR = TEXT("ball_r")) const;
@@ -207,14 +215,34 @@ public:
 	FActionStateChangeDelegate ActionStateChangeDelegate;
 
 	UPROPERTY(BlueprintAssignable)
-	FAsyncLoadCompleteDelegate MaterialLoadCompleteDelegate;
+	FAsyncLoadCompleteDelegate AsyncLoadCompleteDelegate;
 
 	UPROPERTY(BlueprintAssignable)
 	FAimingChangeDelegate AimingChangeDelegate;
 
 	UPROPERTY(BlueprintAssignable)
+	FAimingChangeDelegate OnSkillEnableDelegate;
+
+	UPROPERTY(BlueprintAssignable)
 	FOverlayChangeDelegate OverlayChangeDelegate;
 
+	UPROPERTY(BlueprintAssignable)
+	FOnTeamHandleAttackDelegate OnTeamHandleAttackDelegate;
+
+	UPROPERTY(BlueprintAssignable)
+	FOnTeamWeaknessHandleAttackDelegate OnTeamWeaknessHandleAttackDelegate;
+
+	UPROPERTY(BlueprintAssignable)
+	FOnTeamHandleAttackDelegate OnTeamHandleReceiveDelegate;
+
+	UPROPERTY(BlueprintAssignable)
+	FOnTeamWeaknessHandleAttackDelegate OnTeamWeaknessHandleReceiveDelegate;
+
+	UPROPERTY(BlueprintAssignable)
+	FOnTeamHandleKillDelegate OnTeamHandleSendKillDelegate;
+
+	UPROPERTY(BlueprintAssignable)
+	FOnTeamHandleKillDelegate OnTeamHandleReceiveKillDelegate;
 
 	FVector2D GetInputAxis() const;
 	FVector GetLedgeInputVelocity() const;
@@ -235,6 +263,8 @@ public:
 	void AbortClimbing();
 	void AbortLaddering();
 
+	void InitSkelMeshLocation();
+
 	UFUNCTION(BlueprintCallable, Category = Action)
 	void HandleCrouchAction(const bool bCanCrouch);
 
@@ -253,6 +283,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = Movement)
 	FTransform GetPivotOverlayTansform() const;
 
+	UFUNCTION(BlueprintCallable, Category = Action)
+	void OverlayStateChange(const ELSOverlayState CurrentOverlay);
+
 	const bool HandleAttackPawnPrepare();
 
 	void BeginDeathAction();
@@ -262,13 +295,10 @@ public:
 	void EndAliveAction();
 	void WakeUpPoseSnapShot();
 
-	void OverlayStateChange(const ELSOverlayState CurrentOverlay);
 	virtual bool IsTargetLock() const;
 
 	UFUNCTION(BlueprintCallable, Category = Network)
 	bool IsBotCharacter() const;
-
-	bool IsSprinting() const;
 
 	// noise event
 	void ReportNoiseEvent(const FVector Offset, const float Volume, const float Radius);
@@ -282,6 +312,8 @@ public:
 	FVector GetPredictionStopLocation(const FVector CurrentLocation) const;
 
 	virtual void RequestAsyncLoad();
+	virtual void RequestAsyncLoadByTag(const FGameplayTag Tag);
+	virtual void RequestComponentsAsyncLoad();
 
 	// leader setting
 	UFUNCTION(BlueprintCallable, Category = "MassAI")
@@ -314,6 +346,15 @@ public:
 	UFUNCTION(BlueprintCallable, Category = Status)
 	EGenderType GetGenderType() const;
 
+	UFUNCTION(BlueprintCallable, Category = Status)
+	void SetBodyShapeType(const EBodyShapeType InBodyShapeType);
+
+	UFUNCTION(BlueprintCallable, Category = Status)
+	EBodyShapeType GetBodyShapeType() const;
+
+	UFUNCTION(BlueprintCallable, Category = Status)
+	void SetFullSkill();
+
 	ABaseCharacter* GetLeaderCharacterFromController() const;
 
 	void StartRVOAvoidance();
@@ -341,17 +382,19 @@ public:
 	int32 CloseCombatMaxComboCount(const int32 Index) const;
 	UAnimMontage* GetCloseCombatAnimMontage(const int32 Index, const FGameplayTag Tag) const;
 
-	// call to BP_Matched_Montage
-	UFUNCTION(BlueprintCallable, Category = MontageMatching)
-	void UpdateMontageMatching(const float InPosition);
+	void CancelAnimatingAbility();
+	void CancelAnimatingAbilityMontage();
 
-	// call to BP_Matched_Montage
-	UFUNCTION(BlueprintCallable, Category = MontageMatching)
-	void FinishMontageMatching();
+	void FriendlyActionAbility();
+	void CancelFriendlyActionAbility();
+	bool IsFriendlyActionPlaying() const;
+
+	void CencelActiveAbilities(const FGameplayTag InTag);
+	void CencelActiveAbilities(const FGameplayTagContainer Container);
 
 #pragma region Utils
 	UFUNCTION(BlueprintCallable, Category = Utils)
-	void RecalcurateBounds(UMeshComponent* IgnoreMesh);
+	void RecalcurateBounds();
 
 	UFUNCTION(BlueprintCallable, Category = Utils)
 	void AsyncSetSkelMesh(USkeletalMeshComponent* SkeletalMeshComponent, TSoftObjectPtr<USkeletalMesh> SkelMesh);
@@ -366,20 +409,32 @@ public:
 	UMaterialInstanceDynamic* GetStaticMeshDynamicMaterialInstance(UStaticMeshComponent* StaticMeshComponent, const FName SlotName) const;
 
 	UFUNCTION(BlueprintCallable, Category = Utils)
-	UMaterialInstanceDynamic* GetGroomDynamicMaterialInstance(UPrimitiveComponent* MeshComponent, const FName SlotName) const;
+	UMaterialInstanceDynamic* GetGroomDynamicMaterialInstanceWithMaterials(UPrimitiveComponent* MeshComponent, const FName SlotName, 
+		UMaterialInterface* HairMat, 
+		UMaterialInterface* FacialMat, 
+		UMaterialInterface* HelmetMat) const;
 
 	UFUNCTION(BlueprintCallable, Category = Utils)
-	void SetUpdateAnimationEditor(USkeletalMeshComponent* Face);
+	void SetUpdateAnimationEditor();
 
 	UFUNCTION(BlueprintCallable, Category = Utils)
-	void HairStrandsLODSetUp(USkeletalMeshComponent* Face);
+	void HairStrandsLODSetUp();
 
 	UFUNCTION(BlueprintCallable, Category = Utils)
-	UTexture2D* GetDefaultGroomTexture() const;
+	void OnMobDeath();
+
+	// call to BP_Matched_Montage
+	UFUNCTION(BlueprintCallable, Category = MontageMatching)
+	void UpdateMontageMatching(const float InPosition);
+
+	// call to BP_Matched_Montage
+	UFUNCTION(BlueprintCallable, Category = MontageMatching)
+	void FinishMontageMatching();
 
 	UFUNCTION(BlueprintCallable, Category = Utils)
-	UTexture2D* GetDefaultMaskTexture() const;
+	void SetOverlayMaterials(const bool IsEnable, TArray<USkeletalMeshComponent*> IgnoreMeshes);
 
+	void SetGroomSimulation(const bool IsEnable);
 #pragma endregion
 
 	bool HasAccelerating() const;
@@ -389,6 +444,13 @@ public:
 	virtual void BuildOptimization();
 	void BuildLODMesh(USkeletalMeshComponent* SkelMesh);
 	void HandleMeshUpdateRateOptimizations(const bool IsInEnableURO, USkeletalMeshComponent* SkelMesh);
+
+	virtual void SkillEnableAction(const bool IsEnable);
+	virtual void SkillAction();
+	float GetSkillToWidget() const;
+
+	void SetIsDespawnCheck(const bool NewIsDespawnCheck);
+	bool GetIsDespawnCheck() const;
 
 #pragma region NearlestAction
 	void CalcurateNearlestTarget(const float SyncPointWeight, bool bIsPlayer = false);
@@ -457,24 +519,21 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Component, meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<class UStaticMeshComponent> AccessoryObjectRoot;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Component, meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<class UWvSkeletalMeshComponent> Face;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Component, meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<class ULODSyncComponent> LODSyncComponent;
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "BaseCharacter|Config")
 	FCustomWvAbilitySystemAvatarData AbilitySystemData;
 
 #pragma region DA
 	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = "BaseCharacter|Config")
-	TSoftObjectPtr<UOverlayAnimInstanceDataAsset> OverlayAnimInstanceDA;
-
-	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = "BaseCharacter|Config")
-	TMap<FGameplayTag, TSoftObjectPtr<UFinisherDataAsset>> FinisherDAList;
+	TMap<FGameplayTag, TSoftObjectPtr<UDataAsset>> GameDataAssets;
 
 	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = "BaseCharacter|Config")
 	UAIActionStateDataAsset* AIActionStateDA;
-
-	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = "BaseCharacter|Config")
-	TSoftObjectPtr<UCloseCombatAnimationDataAsset> CloseCombatAnimationDA;
-
-	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = "BaseCharacter|Config")
-	TSoftObjectPtr<UHairMaterialsDataAsset> HairMaterialsDA;
 #pragma endregion
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "BaseCharacter|Config")
@@ -485,9 +544,6 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "BaseCharacter|Config")
 	class UBehaviorTree* BehaviorTree;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "BaseCharacter|Config")
-	TSubclassOf<UAnimInstance> UnArmedAnimInstance;
 
 	UPROPERTY(Transient, ReplicatedUsing = OnRep_ReplicatedAcceleration)
 	FWvReplicatedAcceleration ReplicatedAcceleration;
@@ -531,6 +587,8 @@ protected:
 
 	virtual void InitAbilitySystemComponent();
 
+	TArray<USkeletalMeshComponent*> GetBodyMeshComponents() const;
+
 	virtual void DisplayDrawDebug_Internal();
 
 	UPROPERTY()
@@ -538,6 +596,9 @@ protected:
 
 	UPROPERTY()
 	TObjectPtr<UWvAnimInstance> AnimInstance;
+
+	UPROPERTY()
+	TObjectPtr<UWvFaceAnimInstance> FaceAnimInstance;
 
 	UPROPERTY()
 	FRequestAbilityAnimationData FinisherAnimationData;
@@ -549,6 +610,12 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input)
 	float InputDirVerAngleThreshold = 40.0f;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = URO)
+	bool bIsAllowOptimization = true;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Async)
+	bool bIsAllowAsyncLoadComponentAssets = true;
+
 	// ai only mission property
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = Mission)
 	FSendMissionData SendMissionData;
@@ -558,7 +625,6 @@ protected:
 	float MovementInputAmount;
 
 	FTimerHandle Ragdoll_TimerHandle;
-	void EndDeathAction_Callback();
 
 	void HandleDriveAction();
 
@@ -579,37 +645,33 @@ protected:
 
 #pragma region AsyncLoad
 	UPROPERTY()
-	TObjectPtr<UOverlayAnimInstanceDataAsset> OverlayAnimDAInstance;
+	TObjectPtr<UOverlayAnimInstanceDataAsset> OverlayAnimDA;
 
 	UPROPERTY()
-	TObjectPtr<UCloseCombatAnimationDataAsset> CloseCombatAnimationDAInstance;
+	TObjectPtr<UCloseCombatAnimationDataAsset> CloseCombatDA;
 
 	UPROPERTY()
-	TObjectPtr<UFinisherDataAsset> FinisherSender;
+	TObjectPtr<UFinisherDataAsset> FinisherSenderDA;
 
 	UPROPERTY()
-	TObjectPtr<UFinisherDataAsset> FinisherReceiner;
+	TObjectPtr<UFinisherDataAsset> FinisherReceinerDA;
 
 	UPROPERTY()
-	TObjectPtr<UHairMaterialsDataAsset> HairMaterialsInstance;
+	TObjectPtr<UWvHitReactDataAsset> HitReactionDA;
 
-	TSharedPtr<FStreamableHandle> ABPStreamableHandle;
-	TSharedPtr<FStreamableHandle> FinisherStreamableHandle;
-	TSharedPtr<FStreamableHandle> CCStreamableHandle;
-	TSharedPtr<FStreamableHandle> MaterialStreamableHandle;
+	UPROPERTY()
+	TObjectPtr<UCharacterVFXDataAsset> CharacterVFXDA;
 
-	virtual void OnFinisherAnimAssetLoadComplete();
-	void OnABPAnimAssetLoadComplete();
-	void OnCloseCombatAnimAssetLoadComplete();
+	TSharedPtr<FStreamableHandle> AsyncLoadStreamer;
 
-	void OnLoadOverlayABP();
-	void OnLoadFinisherSenderAsset();
-	void OnLoadFinisherReceiverAsset();
-	void OnLoadCloseCombatAssets();
+	virtual void OnAsyncLoadCompleteHandler();
+	virtual void OnSyncLoadCompleteHandler();
 
-	virtual void OnLoadHairMaterialDA();
-	void OnMaterialAssetLoadComplete();
-	void OnLoadMaterialAsset();
+	template<typename T>
+	T* OnAsyncLoadDataAsset(const FGameplayTag Tag) const;
+
+	template<typename T>
+	T* OnSyncLoadDataAsset(const FGameplayTag Tag) const;
 
 #pragma endregion
 
@@ -618,6 +680,10 @@ protected:
 	TSharedPtr<FStreamableHandle> SkelMeshHandle;
 	TSharedPtr<FStreamableHandle> StaticMeshHandle;
 #pragma endregion
+
+
+	bool bIsDespawnCheck = false;
+	FTransform InitSkelMeshTransform;
 };
 
 

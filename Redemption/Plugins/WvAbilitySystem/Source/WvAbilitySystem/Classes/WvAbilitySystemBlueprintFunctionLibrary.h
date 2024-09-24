@@ -49,6 +49,8 @@ public:
 	static void RecoverPercentHP(AActor* Actor, const float Percent);
 	static void SetDamage(AActor* Actor, const float Value);
 
+	static void FullSkill(AActor* Actor);
+
 	static class UApplyEffectExData* GetEffectExData(FGameplayEffectContextHandle ContextHandle);
 
 	static EHitVerticalDirection EvaluteHitVerticalDirection(const FVector Direction);

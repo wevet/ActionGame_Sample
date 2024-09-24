@@ -8,9 +8,11 @@
 
 #include "Misc/WvCommonUtils.h"
 #include "Redemption.h"
+#include "GameExtension.h"
 #include "WvAbilityBase.h"
 #include "WvAbilitySystemBlueprintFunctionLibrary.h"
 #include "WvAbilityDataAsset.h"
+//#include "WvAbilitySystemTypes.h"
 #include "WvGameplayEffectContext.h"
 #include "Character/BaseCharacter.h"
 #include "Character/WvAIController.h"
@@ -22,17 +24,19 @@
 #include "Kismet/KismetSystemLibrary.h"
 #include "Engine/EngineTypes.h"
 #include "AbilitySystemBlueprintLibrary.h"
+#include "Components/WidgetComponent.h"
+
 // sence
 #include "Perception/AISense_Hearing.h"
 #include "Perception/AISense_Damage.h"
 
+#define K_CHAIN_COMPONENT_TAG FName(TEXT("Chain"))
 
 #if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
 static TAutoConsoleVariable<int32> CVarDebugCharacterCombatTrace(TEXT("wv.CharacterCombatDebugTrace"), 0, TEXT("Charactermovement ledge end\n") TEXT("<=0: Debug off\n") TEXT(">=1: Debug on\n"), ECVF_Default);
 #endif // !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(CombatComponent)
-
 
 UCombatComponent::UCombatComponent(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
@@ -49,21 +53,44 @@ void UCombatComponent::BeginPlay()
 
 	if (ASC.IsValid())
 	{
-		ASC->AbilityTagUpdateDelegate.AddDynamic(this, &UCombatComponent::OnTagUpdate);
+		ASC->AbilityTagUpdateDelegate.AddDynamic(this, &ThisClass::OnTagUpdate);
 	}
+
+	if (Character.IsValid())
+	{
+		Character->OnTeamHandleAttackDelegate.AddDynamic(this, &ThisClass::OnSendAbilityAttack);
+		Character->OnTeamWeaknessHandleAttackDelegate.AddDynamic(this, &ThisClass::OnSendWeaknessAttack);
+	}
+
+	TArray<UActorComponent*> Components = GetOwner()->GetComponentsByTag(UWidgetComponent::StaticClass(), K_CHAIN_COMPONENT_TAG);
+	for (UActorComponent* Component : Components)
+	{
+		if (!ChainWidgetComponent.IsValid())
+		{
+			ChainWidgetComponent = Cast<UWidgetComponent>(Component);
+		}
+	}
+
 }
 
 void UCombatComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	if (ASC.IsValid())
 	{
-		ASC->AbilityTagUpdateDelegate.RemoveDynamic(this, &UCombatComponent::OnTagUpdate);
+		ASC->AbilityTagUpdateDelegate.RemoveDynamic(this, &ThisClass::OnTagUpdate);
 	}
 
+	if (Character.IsValid())
+	{
+		Character->OnTeamHandleAttackDelegate.RemoveDynamic(this, &ThisClass::OnSendAbilityAttack);
+		Character->OnTeamWeaknessHandleAttackDelegate.RemoveDynamic(this, &ThisClass::OnSendWeaknessAttack);
+	}
+
+	ChainWidgetComponent.Reset();
 	Character.Reset();
 	ASC.Reset();
 	FTimerManager& TM = GetWorld()->GetTimerManager();
-	TM.ClearTimer(TickBoneShakeTimerHandle);
+	TM.ClearTimer(ShakeBone_TimerHandle);
 	TM.ClearTimer(TimerHandle);
 
 	Super::EndPlay(EndPlayReason);
@@ -77,7 +104,69 @@ void UCombatComponent::BeginDestroy()
 void UCombatComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+
+	if (ComboChainSystem.IsPlaying())
+	{
+		ComboChainSystem.Update(DeltaTime);
+	}
+	else
+	{
+		ShowChainWidgetComponent(false);
+		Super::SetComponentTickEnabled(false);
+	}
 }
+
+
+#pragma region ChainCombo
+void UCombatComponent::OnSendAbilityAttack(AActor* Actor, const FWvBattleDamageAttackSourceInfo SourceInfo, const float Damage)
+{
+	HandleChainComboUpdate();
+}
+
+void UCombatComponent::OnSendWeaknessAttack(AActor* Actor, const FName WeaknessName, const float Damage)
+{
+	HandleChainComboUpdate();
+}
+
+void UCombatComponent::HandleChainComboUpdate()
+{
+	if (!IsCloseCombatWeapon())
+	{
+		return;
+	}
+
+	if (ComboChainSystem.IsPlaying())
+	{
+		ComboChainSystem.Push();
+		return;
+	}
+
+	ShowChainWidgetComponent(true);
+	ComboChainSystem.Begin();
+	Super::SetComponentTickEnabled(true);
+}
+
+float UCombatComponent::GetProgressValue() const
+{
+	return ComboChainSystem.GetProgressValue();
+}
+
+bool UCombatComponent::IsChainPlaying() const
+{
+	return ComboChainSystem.IsPlaying();
+}
+
+void UCombatComponent::ShowChainWidgetComponent(const bool NewVisibility)
+{
+	if (ChainWidgetComponent.IsValid())
+	{
+		bIsChainWidgetShown = NewVisibility;
+		ChainWidgetComponent->SetVisibility(NewVisibility);
+	}
+
+	//UE_LOG(LogTemp, Error, TEXT("widget => %s, function => %s"), *GetNameSafe(ChainWidgetComponent.Get()), *FString(__FUNCTION__));
+}
+#pragma endregion
 
 
 #pragma region AbilityDamage
@@ -417,7 +506,7 @@ void UCombatComponent::AttackToASC(const FWvBattleDamageAttackSourceInfo SourceI
 
 
 #pragma region HitReaction
-FGameplayTag UCombatComponent::GetHitReactFeature()
+FGameplayTag UCombatComponent::GetHitReactFeature() const
 {
 	return HitReactFeature;
 }
@@ -558,6 +647,12 @@ void UCombatComponent::StartHitReact(FGameplayEffectContextHandle& Context, cons
 	FWvBattleDamageAttackSourceInfo* SourceInfoPtr = nullptr;
 	EAttackWeaponState WeaponState = EAttackWeaponState::InValid;
 
+	// DamageAccumulationInfo
+	//if (DamageAccumulationInfo->IsTrigger())
+	//{
+	//}
+
+
 	if (TargetData)
 	{
 		if (TargetData->TargetInfo.WeaknessNames.Num() > 0)
@@ -569,8 +664,9 @@ void UCombatComponent::StartHitReact(FGameplayEffectContextHandle& Context, cons
 				WeaponState = InventoryComp->GetEquipWeaponType();
 			}
 
+			auto Local_WName = TargetData->TargetInfo.GetMaxDamageWeaknessName();
 			const FName HitBoneName = Context.GetHitResult()->BoneName;
-			WeaknessName = &TargetData->TargetInfo.MaxDamageWeaknessName;
+			WeaknessName = &Local_WName;
 			const FCharacterWeaknessData WeaknessData = Character->GetWeaknessComponent()->FindCharacterWeaknessData(WeaponState, HitBoneName);
 
 			for (FName BoneName : TargetData->TargetInfo.WeaknessNames)
@@ -596,7 +692,7 @@ void UCombatComponent::StartHitReact(FGameplayEffectContextHandle& Context, cons
 			ASC->ExecuteGameplayCue(EffectExData->CueConfig.CommitTargetDataExecuteCueTag, CueParam);
 		}
 
-		const UWvHitReactDataAsset* HitReactDA = Cast<UWvHitReactDataAsset>(Character->GetCustomWvAbilitySystemData().HitReactData);
+		const UWvHitReactDataAsset* HitReactDA = Character->GetHitReactDataAsset();
 		FGameplayTag StrengthTag = WeaknessName ? EffectExData->BoneShakeConfig.WeaknessBoneShakeStrengthTag : EffectExData->BoneShakeConfig.DefaultBoneShakeStrengthTag;
 		FGameplayTag DefaultStrengthTag = WeaknessName ? TAG_Character_HitReact_Default_Weakness : TAG_Character_HitReact_Default_Streangth;
 		StrengthTag = StrengthTag != FGameplayTag::EmptyTag ? StrengthTag : DefaultStrengthTag;
@@ -621,10 +717,16 @@ void UCombatComponent::StartHitReact(FGameplayEffectContextHandle& Context, cons
 			{
 				SkeletalMeshBoneShakeExecuteData->HitDirection = Context.GetHitResult()->Normal;
 			}
-			if (SkeletalMeshBoneShakeExecuteData->HitDirection == FVector::ZeroVector)
+
+			if (SkeletalMeshBoneShakeExecuteData->HitDirection.IsNearlyZero())
 			{
 				SkeletalMeshBoneShakeExecuteData->HitDirection = FVector(FMath::RandRange(-1.f, 1.f), FMath::RandRange(-1.f, 1.f), FMath::RandRange(-1.f, 1.f));
 			}
+
+			//if (SkeletalMeshBoneShakeExecuteData->HitDirection == FVector::ZeroVector)
+			//{
+
+			//}
 
 			SkeletalMeshBoneShakeExecuteData->BoneShakeDatas.Reset();
 
@@ -636,21 +738,24 @@ void UCombatComponent::StartHitReact(FGameplayEffectContextHandle& Context, cons
 
 			if (SkeletalMeshBoneShakeExecuteData->BoneShakeDatas.Num() > 0)
 			{
-				GetWorld()->GetTimerManager().SetTimer(TickBoneShakeTimerHandle, this, &ThisClass::TickUpdateUpdateBoneShake, GetWorld()->GetDeltaSeconds(), true);
+				const float DT = GetWorld()->GetDeltaSeconds();
+				FTimerManager& TM = GetWorld()->GetTimerManager();
+
+				TM.SetTimer(ShakeBone_TimerHandle, this, &ThisClass::TickUpdateUpdateBoneShake, DT, true);
 			}
 		}
 		else
 		{
-			UE_LOG(LogTemp, Warning, TEXT("unmatch condition, function => %s"), *FString(__FUNCTION__));
+			UE_LOG(LogTemp, Error, TEXT("unmatch condition, function => %s"), *FString(__FUNCTION__));
 		}
 	}
 	else
 	{
-		UE_LOG(LogTemp, Warning, TEXT("nullptr EffectExData, function => %s"), *FString(__FUNCTION__));
+		UE_LOG(LogTemp, Error, TEXT("nullptr EffectExData, function => %s"), *FString(__FUNCTION__));
 	}
 }
 
-void UCombatComponent::WeaknessHitReactEventCallbak(const AActor* AttackActor, const FName WeaknessName, const float HitValue)
+void UCombatComponent::WeaknessHitReactEventCallback(const AActor* AttackActor, const FName WeaknessName, const float HitValue)
 {
 
 }
@@ -664,31 +769,33 @@ void UCombatComponent::StartBoneShake(const FName HitBoneName, const FGameplayTa
 
 	//UE_LOG(LogTemp, Log, TEXT("function => %s"), *FString(__FUNCTION__));
 	FSkeletalMeshShakeData* SkeletalMeshShakeData = HitReactBoneShakeDA->SkeletalShakeData.Find(BoneShakeTriggerTag);
+	if (!SkeletalMeshShakeData)
+	{
+		SkeletalMeshShakeData = HitReactBoneShakeDA->SkeletalShakeData.Find(TAG_Character_ShakeBone_Default_Trigger);
+	}
 
 	if (!SkeletalMeshShakeData)
 	{
-		// get default datas
-		SkeletalMeshShakeData = HitReactBoneShakeDA->SkeletalShakeData.Find(TAG_Character_ShakeBone_Default_Trigger);
-		if (!SkeletalMeshShakeData)
-		{
-			return;
-		}
+		UE_LOG(LogTemp, Error, TEXT("not valid SkeletalMeshShakeData => [%s]"), *FString(__FUNCTION__));
+		return;
 	}
 
 	FHitReactBoneShakeStrengthConfig* HitReactBoneShakeStrengthConfig = SkeletalMeshShakeData->StrengthBoneShakeData.Find(BoneShakeStrengthTag);
 	if (!HitReactBoneShakeStrengthConfig)
 	{
-		// get default datas
 		HitReactBoneShakeStrengthConfig = SkeletalMeshShakeData->StrengthBoneShakeData.Find(TAG_Character_ShakeBone_Default_Streangth);
-		if (!HitReactBoneShakeStrengthConfig)
-		{
-			return;
-		}
+	}
+
+	if (!HitReactBoneShakeStrengthConfig)
+	{
+		UE_LOG(LogTemp, Error, TEXT("not valid HitReactBoneShakeStrengthConfig => [%s]"), *FString(__FUNCTION__));
+		return;
 	}
 
 	FNearestShakableBone* CurNearestShakableBone = SkeletalMeshShakeData->NearestShakableBoneData.Find(HitBoneName);
 	if (!CurNearestShakableBone || CurNearestShakableBone->Bone.IsNone())
 	{
+		UE_LOG(LogTemp, Error, TEXT("not valid CurNearestShakableBone => [%s]"), *FString(__FUNCTION__));
 		return;
 	}
 
@@ -699,6 +806,7 @@ void UCombatComponent::StartBoneShake(const FName HitBoneName, const FGameplayTa
 	FHitReactBoneShake* MainHitReactBoneShake = HitReactBoneShakeStrengthConfig->BoneShakeData.Find(MainShakeBoneName);
 	if (!MainHitReactBoneShake)
 	{
+		UE_LOG(LogTemp, Error, TEXT("not valid MainHitReactBoneShake => [%s]"), *FString(__FUNCTION__));
 		return;
 	}
 
@@ -774,20 +882,64 @@ void UCombatComponent::StartBoneShake(const FName HitBoneName, const FGameplayTa
 
 void UCombatComponent::TickUpdateUpdateBoneShake()
 {
-	const float DT = GetWorld()->GetDeltaSeconds();
+	auto World = GetWorld();
+	if (!IsValid(World))
+	{
+		return;
+	}
+
+	const float DT = World->GetDeltaSeconds();
 	if (!UpdateBoneShake(DT))
 	{
-		if (GetWorld())
-		{
-			GetWorld()->GetTimerManager().ClearTimer(TickBoneShakeTimerHandle);
-		}
-		TickBoneShakeTimerHandle.Invalidate();
+		FTimerManager& TM = World->GetTimerManager();
+		TM.ClearTimer(ShakeBone_TimerHandle);
+
+		ShakeBone_TimerHandle.Invalidate();
 	}
 }
 
-bool UCombatComponent::UpdateBoneShake(const float DeltaTime)
+bool UCombatComponent::UpdateBoneShake(const float DeltaTime) const
 {
-	return TickBoneShakeTimerHandle.IsValid();
+	if (!SkeletalMeshBoneShakeExecuteData || SkeletalMeshBoneShakeExecuteData->BoneShakeDatas.Num() <= 0)
+	{
+		return false;
+	}
+
+	auto PC = Game::ControllerExtension::GetPlayer(GetWorld());
+	if (!IsValid(PC))
+	{
+		return false;
+	}
+
+	FRotator PlayerControllerRotator = PC->GetControlRotation();
+
+	bool bHasShakeing = false;
+	for (int32 Index = 0; Index < SkeletalMeshBoneShakeExecuteData->BoneShakeDatas.Num(); ++Index)
+	{
+		UBoneShakeExecuteData* ExecuteData = SkeletalMeshBoneShakeExecuteData->BoneShakeDatas[Index];
+
+		if (ExecuteData->CurTime == ExecuteData->TotalTime)
+		{
+			ExecuteData->ShakeOffsetLocation = FVector::ZeroVector;
+			continue;
+		}
+
+		bHasShakeing = true;
+
+		FVector ShakeDirection = SkeletalMeshBoneShakeExecuteData->HitDirection;
+		ShakeDirection *= ExecuteData->Direction;
+		ExecuteData->Direction *= -1;
+
+		ShakeDirection = UWvCommonUtils::ChangePositonByRotation(PlayerControllerRotator.Yaw, ShakeDirection);
+
+		ExecuteData->CurTime += DeltaTime;
+		ExecuteData->CurTime = ExecuteData->CurTime > ExecuteData->TotalTime ? ExecuteData->TotalTime : ExecuteData->CurTime;
+		const float Alpha = ExecuteData->DampingCurve ? ExecuteData->DampingCurve->GetFloatValue(ExecuteData->CurTime / ExecuteData->TotalTime) : 1.0f;
+		const float Strength = Alpha * ExecuteData->Strength;
+		ExecuteData->ShakeOffsetLocation = ShakeDirection * Strength;
+	}
+
+	return bHasShakeing;
 }
 
 #pragma endregion
@@ -803,11 +955,7 @@ bool UCombatComponent::HasAttackTarget() const
 	AWvAIController* AIC = Cast<AWvAIController>(Character.Get()->GetController());
 	if (IsValid(AIC))
 	{
-		const IWvAbilityTargetInterface* LocalCharacter = Cast<IWvAbilityTargetInterface>(AIC->GetBlackboardTarget());
-		if (LocalCharacter)
-		{
-			return !LocalCharacter->IsDead();
-		}
+		return !AIC->IsTargetDead();
 	}
 	return false;
 }
@@ -879,8 +1027,9 @@ void UCombatComponent::EquipAvailableWeapon()
 	auto Inventory = Character->GetInventoryComponent();
 	if (Inventory)
 	{
-		AWeaponBaseActor* Weapon = nullptr;
+		AWeaponBaseActor* Weapon = Inventory->GetAvailableWeapon();
 
+#if false
 		switch (AttackWeaponState)
 		{
 		case EAttackWeaponState::EmptyWeapon:
@@ -893,6 +1042,7 @@ void UCombatComponent::EquipAvailableWeapon()
 			Weapon = Inventory->GetAvailableWeapon();
 			break;
 		}
+#endif
 
 		if (Weapon)
 		{
@@ -937,8 +1087,6 @@ bool UCombatComponent::IsCloseCombatWeapon() const
 
 
 #pragma region Follow
-int32 UCombatComponent::DEFAULT_FOLLOW_NUM = 5;
-
 void UCombatComponent::AddFollower(APawn* NewPawn)
 {
 	if (!IsValid(NewPawn))
@@ -1022,7 +1170,7 @@ const FVector UCombatComponent::GetFormationPoint(const APawn* InPawn)
 
 bool UCombatComponent::CanFollow() const
 {
-	const int32 StackCount = IsValid(ASC_GLOBAL()) ? ASC_GLOBAL()->BotLeaderConfig.FollowStackCount : DEFAULT_FOLLOW_NUM;
+	const int32 StackCount = IsValid(ASC_GLOBAL()) ? ASC_GLOBAL()->BotLeaderConfig.FollowStackCount : K_FOLLOW_NUM;
 	return Followers.Num() < StackCount;
 }
 #pragma endregion

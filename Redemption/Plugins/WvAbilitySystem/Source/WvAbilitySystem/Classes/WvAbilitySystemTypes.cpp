@@ -16,7 +16,12 @@
 
 UE_DEFINE_GAMEPLAY_TAG(TAG_Common_Attack_Ability, "AbilityType.CommonAttackAbility");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Common_Passive_Ability, "AbilityType.CommonPassiveAbility");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Common_Friendly_Ability, "AbilityType.CommonFriendlyAbility");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Common_Attack_Coefficient, "AbilityType.CommonAttackCoefficient");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Common_AttackWeakness_Coefficient, "AbilityType.CommonAttackWeaknessCoefficient");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Common_EffectContext_Health_Value, "Param.EC.CommonHealth.Value");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Common_EffectContext_Damage_Value, "Param.EC.CommonDamage.Value");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Common_EffectContext_Skill_Value, "Param.EC.CommonSkill.Value");
 
 // Avatar
 UE_DEFINE_GAMEPLAY_TAG(TAG_Character_Default, "Character.Default");
@@ -32,9 +37,21 @@ UE_DEFINE_GAMEPLAY_TAG(TAG_Character_StateHitReact, "Character.State.HitReact");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Character_StateDead, "Character.State.Dead");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Character_StateDead_Action, "Character.State.Dead.Action");
 
+// Status
+UE_DEFINE_GAMEPLAY_TAG(TAG_Character_Status_Buff_Damage, "Character.Status.Buff.Damage");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Character_Status_Buff_Skill, "Character.Status.Buff.Skill");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Character_Status_Buff_Recover, "Character.Status.Buff.Recover");
+//
+
 // any character Action to be taken by hitting an object
 UE_DEFINE_GAMEPLAY_TAG(TAG_Character_StateBlock, "Character.State.Block");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Character_StateBlock_Action, "Character.State.Block.Action");
+
+// Skill
+UE_DEFINE_GAMEPLAY_TAG(TAG_Character_StateSkill, "Character.State.Skill"); //using skill playing
+UE_DEFINE_GAMEPLAY_TAG(TAG_Character_StateSkill_Trigger, "Character.State.Skill.Trigger"); // trigger tag
+UE_DEFINE_GAMEPLAY_TAG(TAG_Character_StateSkill_Enable, "Character.State.Skill.Enable"); // enabling added tag
+UE_DEFINE_GAMEPLAY_TAG(TAG_Character_StateSkill_Ready, "Character.State.Skill.Ready"); // ready trigger tag
 
 UE_DEFINE_GAMEPLAY_TAG(TAG_Character_StateCounter, "Character.State.Counter");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Character_StateCounter_Action, "Character.State.Counter.Action");
@@ -68,20 +85,37 @@ UE_DEFINE_GAMEPLAY_TAG(TAG_Character_ShakeBone_Default_Weakness, "Character.Shak
 UE_DEFINE_GAMEPLAY_TAG(TAG_Config_HitReactFeature_Hit, "Config.HitReactFeature.Hit");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Config_HitReactFeature_Dead, "Config.HitReactFeature.Dead");
 
+
 // HoldUp 
 UE_DEFINE_GAMEPLAY_TAG(TAG_Weapon_HoldUp, "Weapon.HoldUp");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Weapon_HoldUp_Sender, "Weapon.HoldUp.Sender");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Weapon_HoldUp_Receiver, "Weapon.HoldUp.Receiver");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Weapon_HoldUp_Playing, "Weapon.HoldUp.Playing");
 
 // KnockOut
 UE_DEFINE_GAMEPLAY_TAG(TAG_Weapon_KnockOut, "Weapon.KnockOut");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Weapon_KnockOut_Sender, "Weapon.KnockOut.Sender");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Weapon_KnockOut_Receiver, "Weapon.KnockOut.Receiver");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Weapon_KnockOut_Playing, "Weapon.KnockOut.Playing");
 
 // Finisher
 UE_DEFINE_GAMEPLAY_TAG(TAG_Weapon_Finisher, "Weapon.Finisher");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Weapon_Finisher_Sender, "Weapon.Finisher.Sender");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Weapon_Finisher_Receiver, "Weapon.Finisher.Receiver");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Weapon_Finisher_Playing, "Weapon.Finisher.Playing");
+
+// weapon type
+UE_DEFINE_GAMEPLAY_TAG(TAG_Weapon_Melee_Default, "Weapon.Melee.Default");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Weapon_Melee_Knife, "Weapon.Melee.Knife");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Weapon_Melee_Pistol, "Weapon.Melee.Pistol");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Weapon_Melee_Pistol_AmmoEmpty, "Weapon.Melee.Pistol.Ammo.Empty");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Weapon_Melee_Rifle, "Weapon.Melee.Rifle");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Weapon_Melee_Rifle_AmmoEmpty, "Weapon.Melee.Rifle.Ammo.Empty");
+
+// bullet weapon state
+UE_DEFINE_GAMEPLAY_TAG(TAG_Weapon_Gun_Reload, "Weapon.Gun.Reload");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Weapon_Gun_Fire, "Weapon.Gun.Fire");
+
 
 // GameplayCue
 UE_DEFINE_GAMEPLAY_TAG(TAG_GameplayCue_HitImpact, "GameplayCue.HitImpact");
@@ -97,6 +131,23 @@ UE_DEFINE_GAMEPLAY_TAG(TAG_Common_PassiveAbilityTrigger_HitReact, "PassiveAbilit
 UE_DEFINE_GAMEPLAY_TAG(TAG_Common_PassiveAbilityTrigger_KillReact, "PassiveAbilityTrigger.KillReact");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Common_PassiveAbilityTrigger_KillTarget, "PassiveAbilityTrigger.KillTarget");
 
+// AI 
+// waypoint visited
+UE_DEFINE_GAMEPLAY_TAG(TAG_Charactre_AI_Waypoint_Visited, "Character.AI.Waypoint.Visited");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Charactre_AI_Waypoint_UnVisited, "Character.AI.Waypoint.UnVisited");
+
+UE_DEFINE_GAMEPLAY_TAG(TAG_Character_AI_State_Search, "Character.AI.State.Search");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Character_AI_State_Combat, "Character.AI.State.Combat");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Character_AI_State_Patrol, "Character.AI.State.Patrol");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Character_AI_State_Follow, "Character.AI.State.Follow");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Character_AI_State_Friend, "Character.AI.State.Friend");
+
+UE_DEFINE_GAMEPLAY_TAG(TAG_Character_AI_Leader, "Character.AI.Leader");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Character_AI_Ignore, "Character.AI.Ignore");
+
+// using friend ai action abp used
+UE_DEFINE_GAMEPLAY_TAG(TAG_Character_AI_Friend_Action, "Character.AI.Friend.Action");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Character_AI_Friend_Action_Playing, "Character.AI.Friend.Action.Playing");
 
 bool FWvOverlapResult::IsValid() const
 {
@@ -578,15 +629,21 @@ FGameplayTag UAIActionStateDataAsset::FindActionStateTag(const EAIActionState In
 
 FFinisherAnimationContainer UFinisherDataAsset::FindContainer(const FGameplayTag Tag) const
 {
-	FFinisherAnimationContainer Container;
-	const bool bIsValid = (FinisherAnimationMap.Num() > 0 && FinisherAnimationMap.Contains(Tag));
-	if (!bIsValid)
+	//const bool bIsValid = (FinisherAnimationMap.Num() > 0 && FinisherAnimationMap.Contains(Tag));
+	if (FinisherAnimationMap.Contains(Tag))
 	{
-		return Container;
+		return FinisherAnimationMap[Tag];
 	}
 
-	return FinisherAnimationMap[Tag];
+	FFinisherAnimationContainer Container;
+	return Container;
 }
+
+void FWvBattleDamageAttackTargetInfo::SetMaxDamageWeaknessName(const FName NewMaxDamageWeaknessName)
+{
+	MaxDamageWeaknessName = NewMaxDamageWeaknessName;
+}
+
 
 
 #pragma region CloseCombat
@@ -604,41 +661,41 @@ UAnimMontage* FCloseCombatAnimation::GetComboMatchMontage(const FGameplayTag Com
 	return nullptr;
 }
 
-FCloseCombatAnimation UCloseCombatAnimationDataAsset::GetRandCombatAnimation() const
-{
-	const int32 Index = FMath::RandRange(0, ComboAnimations.Num() - 1);
-	auto Result = ComboAnimations[Index];
-	return Result;
-}
 
-FCloseCombatAnimation UCloseCombatAnimationDataAsset::GetChooseCombatAnimation(const int32 Index) const
+FCloseCombatAnimation UCloseCombatAnimationDataAsset::GetChooseCombatAnimation(const EBodyShapeType BodyShape, const int32 Index) const
 {
-	if (ComboAnimations.IsValidIndex(Index))
+	const auto Container = FindContainer(BodyShape);
+	if (Container.ComboAnimations.IsValidIndex(Index))
 	{
-		return ComboAnimations[Index];
+		return Container.ComboAnimations[Index];
 	}
 	else
 	{
 		UE_LOG(LogTemp, Warning, TEXT("not valid index => %d, returned default ComboAnimationData => [%s]"), Index, *FString(__FUNCTION__));
 	}
-
-	return ComboAnimations[0];
+	return Container.ComboAnimations[0];
 }
 
-int32 UCloseCombatAnimationDataAsset::GetCombatAnimationIndex() const
+FCloseCombatAnimationContainer UCloseCombatAnimationDataAsset::FindContainer(const EBodyShapeType BodyShape) const
 {
-	return FMath::RandRange(0, ComboAnimations.Num() - 1);
+	return ComboAnimationContainer.FindRef(BodyShape);
 }
 
-int32 UCloseCombatAnimationDataAsset::CloseCombatMaxComboCount(const int32 Index) const
+int32 UCloseCombatAnimationDataAsset::GetCombatAnimationIndex(const EBodyShapeType BodyShape) const
 {
-	const FCloseCombatAnimation AnimData = GetChooseCombatAnimation(Index);
+	const auto Container = FindContainer(BodyShape);
+	return FMath::RandRange(0, Container.ComboAnimations.Num() - 1);
+}
+
+int32 UCloseCombatAnimationDataAsset::CloseCombatMaxComboCount(const EBodyShapeType BodyShape, const int32 Index) const
+{
+	const FCloseCombatAnimation AnimData = GetChooseCombatAnimation(BodyShape, Index);
 	return AnimData.TagToComboMontageMap.Num();
 }
 
-UAnimMontage* UCloseCombatAnimationDataAsset::GetAnimMontage(const int32 Index, const FGameplayTag Tag) const
+UAnimMontage* UCloseCombatAnimationDataAsset::GetAnimMontage(const EBodyShapeType BodyShape, const int32 Index, const FGameplayTag Tag) const
 {
-	const FCloseCombatAnimation AnimData = GetChooseCombatAnimation(Index);
+	const FCloseCombatAnimation AnimData = GetChooseCombatAnimation(BodyShape, Index);
 	return AnimData.GetComboMatchMontage(Tag);
 }
 #pragma endregion

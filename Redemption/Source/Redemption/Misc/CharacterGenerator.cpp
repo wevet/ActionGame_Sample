@@ -103,6 +103,7 @@ void ACharacterGenerator::GeneratedBaseCharacter(AActor* SpawningObject)
 	if (ABaseCharacter* Character = Cast<ABaseCharacter>(SpawningObject))
 	{
 		UCharacterInstanceSubsystem::Get()->AssignAICharacter(Character);
+
 		if (LeaderCount > CurrentLeaderCount)
 		{
 			if (UWvCommonUtils::Probability(LeaderSpawnPercent))

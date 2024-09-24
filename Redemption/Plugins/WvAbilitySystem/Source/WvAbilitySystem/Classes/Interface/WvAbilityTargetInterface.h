@@ -16,6 +16,8 @@
 DECLARE_MULTICAST_DELEGATE_OneParam(FAbilityDeadAnimProcessForEventDelegate, AActor* /*Actor*/);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnTeamIndexChangedDelegate, UObject*, ObjectChangingTeam, int32, OldTeamID, int32, NewTeamID);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnTeamHandleAttackDelegate, AActor*, Actor, FWvBattleDamageAttackSourceInfo, SourceInfo, float, Damage);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnTeamWeaknessHandleAttackDelegate, AActor*, Actor, FName, WeaknessName, float, Damage);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnTeamHandleKillDelegate, AActor*, Actor, float, Damage);
 
 
 inline int32 GenericTeamIdToInteger(FGenericTeamId ID)
@@ -65,6 +67,7 @@ public:
 	virtual bool IsDead() const;
 	virtual bool IsTargetable() const;
 	virtual bool IsInBattled() const;
+	virtual bool IsSprintingMovement() const;
 
 	virtual void Freeze() {};
 	virtual void UnFreeze() {};
@@ -74,6 +77,8 @@ public:
 	virtual void DoResumeAttack() {};
 	virtual void DoStopAttack() {};
 	virtual const bool CanAttack();
+
+	virtual void BuildRunAI() {};
 
 	virtual void DoStartCinematic() {};
 	virtual void DoStopCinematic() {};

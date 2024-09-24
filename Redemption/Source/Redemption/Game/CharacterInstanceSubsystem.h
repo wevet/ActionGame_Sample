@@ -33,6 +33,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = CharacterInstanceSubsystem)
 	void DoForceKill(bool bFindWorldActorIterator = false);
 
+	UFUNCTION(BlueprintCallable, Category = CharacterInstanceSubsystem)
+	void DoForceKillIgnorePlayer(bool bFindWorldActorIterator = false);
+
 	void AssignAICharacter(ABaseCharacter* NewCharacter);
 	void RemoveAICharacter(ABaseCharacter* InCharacter);
 	void GeneratorSpawnedFinish();
@@ -41,10 +44,12 @@ public:
 	bool IsInFriendAgent(const ABaseCharacter* Other) const;
 	bool IsInNeutralAgent(const ABaseCharacter* Other) const;
 
+	bool IsInBattleAny() const;
+
 	TArray<ABaseCharacter*> GetLeaderAgent() const;
 
-	void FocusNPCCharacter(ABaseCharacter* InCharacter);
-	void UnFocusNPCCharacter(ABaseCharacter* InCharacter);
+	void StartCinematicCharacter(ABaseCharacter* InCharacter);
+	void StopCinematicCharacter(ABaseCharacter* InCharacter);
 
 private:
 	UPROPERTY()
@@ -54,5 +59,7 @@ private:
 
 	void UpdateCharacterInWorld();
 	void WorldCharacterIterator(TArray<class ABaseCharacter*>& OutCharacterArray);
+
+	TArray<UWvSkeletalMeshComponent*> GetSkelMeshComponents(const ABaseCharacter* InCharacter) const;
 
 };

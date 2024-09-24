@@ -94,8 +94,9 @@ UWvCharacterMovementComponent::UWvCharacterMovementComponent(const FObjectInitia
 	bRunPhysicsWithNoController = true;
 
 	GroundFriction = 4.0f;
-	MaxWalkSpeed = 375.0f;
-	MaxWalkSpeedCrouched = 200.0f;
+	MaxWalkSpeed = K_WALK_SPEED;
+	MaxWalkSpeedCrouched = K_CROUCHING_SPEED;
+
 	MinAnalogWalkSpeed = 25.0f;
 	bCanWalkOffLedgesWhenCrouching = true;
 	bIgnoreBaseRotation = true;

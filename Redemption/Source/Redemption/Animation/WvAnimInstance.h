@@ -10,6 +10,7 @@
 #include "GameplayEffectTypes.h"
 #include "PoseSearch/PoseSearchLibrary.h"
 #include "Locomotion/LocomotionSystemTypes.h"
+#include "WvAbilitySystemTypes.h"
 #include "Locomotion/LocomotionInterface.h"
 #include "WvAnimInstance.generated.h"
 

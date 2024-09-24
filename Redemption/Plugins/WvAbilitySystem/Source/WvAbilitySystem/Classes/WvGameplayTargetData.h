@@ -47,6 +47,13 @@ public:
 
 	bool NetSerialize(FArchive& Ar, class UPackageMap* Map, bool& bOutSuccess);
 
+	virtual void SetOverrideDamageValue(FGameplayEffectSpec& Spec);
+
+	virtual void SetWeaknessAttackCoefficient(FGameplayEffectSpec& Spec);
+
+	virtual void SetComboAttackCoefficient(FGameplayEffectSpec& Spec);
+
+
 	virtual UScriptStruct* GetScriptStruct() const override
 	{
 		return FWvGameplayAbilityTargetData::StaticStruct();

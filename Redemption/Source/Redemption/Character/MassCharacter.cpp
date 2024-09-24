@@ -11,7 +11,8 @@
 #include "Component/WvCharacterMovementComponent.h"
 #include "Component/WvSkeletalMeshComponent.h"
 #include "Game/WvGameInstance.h"
-
+#include "Vehicle/WvWheeledVehiclePawn.h"
+#include "Game/CharacterInstanceSubsystem.h"
 
 #include "Components/CapsuleComponent.h"
 #include "Components/StaticMeshComponent.h"
@@ -35,7 +36,26 @@ AMassCharacter::AMassCharacter(const FObjectInitializer& ObjectInitializer) : Su
 	// sets Damage
 	//WvMeshComp->SetCollisionResponseToChannel(ECollisionChannel::ECC_GameTraceChannel3, ECollisionResponse::ECR_Block);
 
+	WvMeshComp->VisibilityBasedAnimTickOption = EVisibilityBasedAnimTickOption::OnlyTickPoseWhenRendered;
+	Face->VisibilityBasedAnimTickOption = EVisibilityBasedAnimTickOption::OnlyTickPoseWhenRendered;
+
+	// dont async load components
+	bIsAllowAsyncLoadComponentAssets = false;
+
 	SetReplicateMovement(false);
+}
+
+void AMassCharacter::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+}
+
+void AMassCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+
+	UCharacterInstanceSubsystem::Get()->RemoveAICharacter(this);
+
+	Super::EndPlay(EndPlayReason);
 }
 
 void AMassCharacter::BeginPlay()
@@ -51,7 +71,6 @@ void AMassCharacter::BeginPlay()
 	WvAbilitySystemComponent->AddGameplayTag(TAG_Locomotion_ForbidClimbing, 1);
 	WvAbilitySystemComponent->AddGameplayTag(TAG_Locomotion_ForbidMantling, 1);
 
-
 	LocomotionComponent->EnableMassAgentMoving(true);
 
 	// temp remove delegate
@@ -59,6 +78,8 @@ void AMassCharacter::BeginPlay()
 	{
 		AIC->HandleRemoveAIPerceptionDelegate();
 	}
+
+	UCharacterInstanceSubsystem::Get()->AssignAICharacter(this);
 }
 
 void AMassCharacter::MoveBlockedBy(const FHitResult& Impact)
@@ -66,18 +87,18 @@ void AMassCharacter::MoveBlockedBy(const FHitResult& Impact)
 	auto Act = Impact.GetActor();
 	if (IsValid(Act))
 	{
-		if (Act->GetClass()->IsChildOf(APlayerCharacter::StaticClass()))
+		// character or vehicle
+		if (IWvAbilityTargetInterface* Interface = Cast<IWvAbilityTargetInterface>(Act))
 		{
-			auto BaseCharacter = Cast<APlayerCharacter>(Act);
-			if (!BaseCharacter->IsSprinting())
+			if (!Interface->IsSprintingMovement())
 			{
 				return;
 			}
 
 			const FVector HitLocation = Impact.ImpactPoint;
 			const FVector HitNormal = Impact.ImpactNormal;
-			const FVector AttackerLocation = BaseCharacter->GetOverlapBaseComponent()->GetComponentLocation();
-			const FVector AttackerDir = BaseCharacter->GetActorForwardVector();
+			const FVector AttackerLocation = Interface->GetOverlapBaseComponent()->GetComponentLocation();
+			const FVector AttackerDir = Act->GetActorForwardVector();
 			const FVector HitCompLocation = Impact.GetComponent()->GetComponentLocation();
 
 			const FVector LocationVec = HitCompLocation - AttackerLocation;
@@ -87,17 +108,17 @@ void AMassCharacter::MoveBlockedBy(const FHitResult& Impact)
 			const FVector DecalDir = FMath::Lerp(AttackerDir, -HitNormal, 0.3f);
 			const FRotator Rot = FRotationMatrix::MakeFromX(DecalDir.GetSafeNormal()).Rotator();
 
-			//const FTransform DecalTransform = UWvCommonUtils::GetRefPoseDecalTransform(GetMesh(), Impact.BoneName, HitLocation, Rot).Inverse();
+#if 1
+			DrawDebugSphere(GetWorld(), HitLocation + DecalDir * 10.0f, 35.f, 8, FColor::Blue, false, 5);
+			DrawDebugSphere(GetWorld(), HitLocation, 35.f, 8, FColor::Yellow, false, 5);
+			DrawDebugSphere(GetWorld(), GetActorLocation() + DecalDir * 50.0f, 35.f, 8, FColor::Red, false, 5);
 
-			//DrawDebugSphere(GetWorld(), HitLocation + DecalDir * 10.0f, 35.f, 8, FColor::Blue, false, 5);
-			//DrawDebugSphere(GetWorld(), HitLocation, 35.f, 8, FColor::Yellow, false, 5);
-			//DrawDebugSphere(GetWorld(), GetActorLocation() + DecalDir * 50.0f, 35.f, 8, FColor::Red, false, 5);
+			DrawDebugLine(GetWorld(), AttackerDir, AttackerLocation, FColor::Yellow, false, 5.0f, 10);
+			DrawDebugLine(GetWorld(), DecalDir, GetActorLocation(), FColor::Blue, false, 5.0f, 10);
+#endif
 
-			//DrawDebugLine(GetWorld(), AttackerDir, AttackerLocation, FColor::Yellow, false, 5.0f, 10);
-			//DrawDebugLine(GetWorld(), DecalDir, GetActorLocation(), FColor::Blue, false, 5.0f, 10);
-
-			//UE_LOG(LogTemp, Warning, TEXT("%s"), *FString(__FUNCTION__));
 		}
+
 	}
 }
 
@@ -118,8 +139,6 @@ void AMassCharacter::OnReceiveKillTarget(AActor* Actor, const float Damage)
 
 	MassAgentComponent->KillEntity(false);
 	StateTreeComponent->StopLogic(K_REASON_DEAD);
-
-	OnReceiveKillTarget_Callback();
 }
 
 void AMassCharacter::Freeze()
@@ -147,49 +166,25 @@ void AMassCharacter::OnReceiveHitReact(FGameplayEffectContextHandle Context, con
 }
 #pragma endregion
 
-void AMassCharacter::RequestAsyncLoad()
+void AMassCharacter::OnAsyncLoadCompleteHandler()
 {
-	FStreamableManager& StreamableManager = UWvGameInstance::GetStreamableManager();
+	//Super::OnAsyncLoadCompleteHandler();
 
-	if (!OverlayAnimInstanceDA.IsNull())
-	{
-		const FSoftObjectPath ObjectPath = OverlayAnimInstanceDA.ToSoftObjectPath();
-		ABPStreamableHandle = StreamableManager.RequestAsyncLoad(ObjectPath, [this] 
-		{
-			Super::OnABPAnimAssetLoadComplete();
-		});
-	}
-
-	TArray<FSoftObjectPath> Paths;
-	for (TPair<FGameplayTag, TSoftObjectPtr<UFinisherDataAsset>>Pair : FinisherDAList)
-	{
-		if (Pair.Value.IsNull())
-		{
-			continue;
-		}
-		Paths.Add(Pair.Value.ToSoftObjectPath());
-	}
-	FinisherStreamableHandle = StreamableManager.RequestAsyncLoad(Paths, [this] 
-	{
-		Super::OnFinisherAnimAssetLoadComplete();
-	});
-
-
-	Super::OnLoadHairMaterialDA();
+	OverlayAnimDA = OnAsyncLoadDataAsset<UOverlayAnimInstanceDataAsset>(TAG_Game_Asset_AnimationBlueprint);
+	FinisherReceinerDA = OnAsyncLoadDataAsset<UFinisherDataAsset>(TAG_Game_Asset_FinisherReceiver);
+	HitReactionDA = OnAsyncLoadDataAsset<UWvHitReactDataAsset>(TAG_Game_Asset_HitReaction);
+	AsyncLoadStreamer.Reset();
+	AsyncLoadCompleteDelegate.Broadcast();
 }
+
 
 void AMassCharacter::OnLoadCloseCombatAsset()
 {
-	FStreamableManager& StreamableManager = UWvGameInstance::GetStreamableManager();
 
-	if (!CloseCombatAnimationDA.IsNull())
-	{
-		const FSoftObjectPath ObjectPath = CloseCombatAnimationDA.ToSoftObjectPath();
-		CCStreamableHandle = StreamableManager.RequestAsyncLoad(ObjectPath, [this]
-		{
-			Super::OnCloseCombatAnimAssetLoadComplete();
-		});
-	}
+}
+
+void AMassCharacter::OnSyncLoadCompleteHandler()
+{
 }
 
 

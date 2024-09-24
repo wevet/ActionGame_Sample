@@ -9,13 +9,7 @@
 #include "LocomotionSystemTypes.generated.h"
 
 class UTexture2D;
-
-UENUM(BlueprintType)
-enum class EGenderType : uint8
-{
-	Male   UMETA(DisplayName = "Male"),
-	Female UMETA(DisplayName = "Female"),
-};
+enum class EBodyShapeType : uint8;
 
 UENUM(BlueprintType)
 enum class EWvDirectionType : uint8
@@ -85,6 +79,7 @@ enum class ELSOverlayState : uint8
 	Barrel UMETA(DisplayName = "Barrel"),
 	Knife UMETA(DisplayName = "Knife"),
 	Mass UMETA(DisplayName = "Mass"),
+	//ShotGun UMETA(DisplayName = "ShotGun"),
 };
 
 UENUM(BlueprintType)
@@ -398,6 +393,9 @@ public:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
 	FVector RagdollVelocity;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
+	FRotator RagdollRotation;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
 	FRotator JumpRotation;
@@ -1077,3 +1075,6 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	EWvDirectionType DirectionType;
 };
+
+
+

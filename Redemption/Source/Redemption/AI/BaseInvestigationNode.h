@@ -28,5 +28,9 @@ public:
 protected:
 	virtual void BeginPlay() override;
 
-	
+	UFUNCTION(BlueprintCallable, Category = "Misc")
+	bool IsCharacterOwner(AActor* InActor) const;
+
+	UFUNCTION(BlueprintCallable, Category = "Misc")
+	void OnVisitResult();
 };

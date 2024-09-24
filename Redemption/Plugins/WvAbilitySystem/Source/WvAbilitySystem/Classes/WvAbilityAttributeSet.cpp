@@ -22,6 +22,9 @@ UWvAbilityAttributeSet::UWvAbilityAttributeSet(const FObjectInitializer& ObjectI
 
 	Stamina = 100.0f;
 	StaminaMax = 100.0f;
+
+	Skill = 0.f;
+	SkillMax = 100.0f;
 }
 
 void UWvAbilityAttributeSet::AdjustAttributeForMaxChange(const FGameplayAttributeData& AffectedAttribute, const FGameplayAttributeData& MaxAttribute, float NewMaxValue, const FGameplayAttribute& AffectedAttributeProperty)
@@ -68,12 +71,18 @@ void UWvAbilityAttributeSet::PreAttributeChange(const FGameplayAttribute& Attrib
 	//--Damage----------------------------------------------
 	if (Attribute == GetDamageAttribute())
 	{
-		FGameplayTagContainer OwnedGameplayTag;
-		ASC->GetOwnedGameplayTags(OwnedGameplayTag);
-		if (OwnedGameplayTag.HasTag(TAG_Character_DamageBlock))
+		if (ASC->HasMatchingGameplayTag(TAG_Character_DamageBlock))
 		{
 			NewValue = 0;
 			UE_LOG(LogWvAbility, Log, TEXT("damage block => %s, function => %s"), *GetNameSafe(GetOwningActor()), *FString(__FUNCTION__));
+		}
+	}
+
+	if (Attribute == GetSkillAttribute())
+	{
+		if (ASC->HasActivatingAbilitiesWithTag(TAG_Character_StateSkill_Trigger))
+		{
+			UE_LOG(LogWvAbility, Warning, TEXT("skill damage block => %.3f, function => %s"), NewValue, *FString(__FUNCTION__));
 		}
 	}
 }
@@ -84,9 +93,10 @@ void UWvAbilityAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModC
 
 	PostGameplayEffectExecute_HP(Data);
 	PostGameplayEffectExecute_Stamina(Data);
+	PostGameplayEffectExecute_Skill(Data);
 }
 
-//-HP-----------------------------------
+#pragma region HP
 void UWvAbilityAttributeSet::PostGameplayEffectExecute_HP(const FGameplayEffectModCallbackData& Data)
 {
 	if (Data.EvaluatedData.Attribute == GetDamageAttribute())
@@ -158,7 +168,8 @@ void UWvAbilityAttributeSet::HandleHitReactEvent(const FGameplayEffectModCallbac
 	FWvGameplayAbilityTargetData TargetData;
 	if (UWvAbilitySystemBlueprintFunctionLibrary::GetGameplayAbilityTargetData(Context, TargetData))
 	{
-		WeaknessName = TargetData.TargetInfo.WeaknessNames.Num() > 0 ? &TargetData.TargetInfo.MaxDamageWeaknessName : nullptr;
+		auto Local_WName = TargetData.TargetInfo.GetMaxDamageWeaknessName();
+		WeaknessName = TargetData.TargetInfo.WeaknessNames.Num() > 0 ? &Local_WName : nullptr;
 		SourceInfoPtr = &TargetData.SourceInfo;
 	}
 
@@ -201,7 +212,7 @@ void UWvAbilityAttributeSet::HandleDeadEvent(const FGameplayEffectModCallbackDat
 	AActor* SenderActor = Context.GetInstigatorAbilitySystemComponent()->GetAvatarActor();
 	AActor* ReceiverActor = GetOwningAbilitySystemComponent()->GetAvatarActor();
 
-	// Called if target is killed.
+	// Called if sender is target killed.
 	if (SenderActor)
 	{
 		FGameplayEventData Payload{};
@@ -214,8 +225,15 @@ void UWvAbilityAttributeSet::HandleDeadEvent(const FGameplayEffectModCallbackDat
 		{
 			ASC->HandleGameplayEvent(TAG_Common_PassiveAbilityTrigger_KillTarget, &Payload);
 		}
+
+		IWvAbilityTargetInterface* Sender = Cast<IWvAbilityTargetInterface>(SenderActor);
+		if (Sender)
+		{
+			Sender->OnSendKillTarget(ReceiverActor, GetDamage());
+		}
 	}
 
+	// Called if target is dead
 	if (ReceiverActor)
 	{
 		FGameplayEventData Payload{};
@@ -226,28 +244,22 @@ void UWvAbilityAttributeSet::HandleDeadEvent(const FGameplayEffectModCallbackDat
 
 		if (UAbilitySystemComponent* ASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(ReceiverActor))
 		{
-			UE_LOG(LogWvAbility, Error, TEXT("%s"), *FString(__FUNCTION__));
-
 			ASC->HandleGameplayEvent(TAG_Common_PassiveAbilityTrigger_KillReact, &Payload);
+		}
+
+		IWvAbilityTargetInterface* Receiver = Cast<IWvAbilityTargetInterface>(ReceiverActor);
+		if (Receiver)
+		{
+			Receiver->OnReceiveKillTarget(SenderActor, GetDamage());
 		}
 	}
 
-	IWvAbilityTargetInterface* Sender = Cast<IWvAbilityTargetInterface>(SenderActor);
-	IWvAbilityTargetInterface* Receiver = Cast<IWvAbilityTargetInterface>(ReceiverActor);
 
-	if (Receiver)
-	{
-		Receiver->OnReceiveKillTarget(SenderActor, GetDamage());
-	}
-
-	if (Sender)
-	{
-		Sender->OnSendKillTarget(ReceiverActor, GetDamage());
-	}
 }
+#pragma endregion
 
 
-//-Stamina-----------------------------------
+#pragma region Stamina
 void UWvAbilityAttributeSet::PostGameplayEffectExecute_Stamina(const FGameplayEffectModCallbackData& Data)
 {
 	if (Data.EvaluatedData.Attribute == GetStaminaAttribute())
@@ -267,4 +279,31 @@ void UWvAbilityAttributeSet::PostGameplayEffectExecute_Stamina(const FGameplayEf
 		SetStamina(FMath::Clamp(CurStamina, 0.0f, StaminaMax.GetBaseValue()));
 	}
 }
+#pragma endregion
 
+
+#pragma region Skill
+void UWvAbilityAttributeSet::PostGameplayEffectExecute_Skill(const FGameplayEffectModCallbackData& Data)
+{
+	if (Data.EvaluatedData.Attribute == GetSkillAttribute())
+	{
+		UWvAbilitySystemComponentBase* ASC = Cast<UWvAbilitySystemComponentBase>(GetOwningAbilitySystemComponent());
+		if (ASC && ASC->HasMatchingGameplayTag(TAG_Character_StateSkill_Enable))
+		{
+			SetSkill(SkillMax.GetBaseValue());
+		}
+		else
+		{
+			SetSkill(FMath::Clamp(GetSkill(), 0.0f, SkillMax.GetBaseValue()));
+		}
+
+		if (ASC)
+		{
+			auto LocalSkill = GetSkill();
+			UE_LOG(LogWvAbility, Log, TEXT("skill attr => %0.0f, Owner => %s, function => %s"), LocalSkill, *GetNameSafe(ASC->GetOwner()), *FString(__FUNCTION__));
+
+		}
+
+	}
+}
+#pragma endregion

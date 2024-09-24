@@ -12,6 +12,7 @@
 #include "Locomotion/LocomotionComponent.h"
 #include "Climbing/ClimbingComponent.h"
 #include "Animation/WvAnimInstance.h"
+#include "GameExtension.h"
 
 // built in
 #include "Camera/CameraComponent.h"
@@ -26,6 +27,7 @@
 #include "Kismet/KismetMathLibrary.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "AbilitySystemBlueprintLibrary.h"
+#include "GroomComponent.h"
 
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(PlayerCharacter)
@@ -35,6 +37,7 @@ APlayerCharacter::APlayerCharacter(const FObjectInitializer& ObjectInitializer) 
 {
 	BaseTurnRate = 45.f;
 	BaseLookUpRate = 45.f;
+	bIsAllowOptimization = false;
 
 	CameraBoom = CreateDefaultSubobject<UWvSpringArmComponent>(TEXT("CameraBoom"));
 	CameraBoom->SetupAttachment(RootComponent);
@@ -51,6 +54,7 @@ APlayerCharacter::APlayerCharacter(const FObjectInitializer& ObjectInitializer) 
 
 	QTEActionComponent = CreateDefaultSubobject<UQTEActionComponent>(TEXT("QTEActionComponent"));
 	QTEActionComponent->bAutoActivate = 1;
+
 }
 
 void APlayerCharacter::BeginPlay()
@@ -171,6 +175,8 @@ void APlayerCharacter::OnReceiveKillTarget(AActor* Actor, const float Damage)
 {
 	Super::OnReceiveKillTarget(Actor, Damage);
 	LocomotionComponent->SetLookAimTarget(false, nullptr, nullptr);
+
+	Super::SetGroomSimulation(false);
 }
 
 void APlayerCharacter::Freeze()
@@ -345,7 +351,7 @@ void APlayerCharacter::OnDoubleClickInputEventTrigger_Callback(const FGameplayTa
 		return;
 	}
 
-
+	UE_LOG(LogTemp, Warning, TEXT("[%s]"), *FString(__FUNCTION__));
 }
 
 #pragma region HandleEvent
@@ -674,15 +680,15 @@ void APlayerCharacter::OnQTEEnd_Callback(const bool bIsSuccess)
 
 }
 
-void APlayerCharacter::OnFinisherAnimAssetLoadComplete()
-{
-	Super::OnLoadFinisherSenderAsset();
-	Super::OnFinisherAnimAssetLoadComplete();
-}
 
-void APlayerCharacter::BuildOptimization()
+#pragma region AsyncLoad
+void APlayerCharacter::OnAsyncLoadCompleteHandler()
 {
-
+	Super::OnAsyncLoadCompleteHandler();
+	FinisherSenderDA = Super::OnAsyncLoadDataAsset<UFinisherDataAsset>(TAG_Game_Asset_FinisherSender);
+	//CharacterVFXDA = Super::OnAsyncLoadDataAsset<UCharacterVFXDataAsset>(TAG_Game_Asset_CharacterVFX);
 }
+#pragma endregion
+
 
 

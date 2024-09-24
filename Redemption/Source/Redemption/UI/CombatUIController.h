@@ -6,6 +6,7 @@
 #include "Blueprint/UserWidget.h"
 #include "Character/PlayerCharacter.h"
 #include "PlayerHealth.h"
+#include "PlayerSkill.h"
 #include "WeaponFocus.h"
 #include "WeaponWindow.h"
 #include "Locomotion/LocomotionSystemTypes.h"
@@ -40,6 +41,9 @@ protected:
 	FName PlayerHealthKeyName;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "MainUI|Variable")
+	FName PlayerSkillKeyName;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "MainUI|Variable")
 	FName WeaponFocusKeyName;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "MainUI|Variable")
@@ -59,6 +63,7 @@ protected:
 
 private:
 	TObjectPtr<class UPlayerHealth> PlayerHealth;
+	TObjectPtr<class UPlayerSkill> PlayerSkill;
 	TObjectPtr<class UWeaponFocus> WeaponFocus;
 	TObjectPtr<class UWeaponWindow> WeaponWindow;
 	TObjectPtr<class UCanvasPanel> BasePanel;

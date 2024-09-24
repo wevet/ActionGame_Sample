@@ -61,28 +61,26 @@ void ABulletHoldWeaponActor::DoFire()
 
 const bool ABulletHoldWeaponActor::HandleAttackPrepare()
 {
-	if (Character.IsValid())
+	if (!Character.IsValid())
 	{
-		if (IsCurrentAmmosEmpty())
+		return Super::HandleAttackPrepare();
+	}
+
+	if (IsCurrentAmmosEmpty())
+	{
+		if (Character->GetWvAbilitySystemComponent()->HasMatchingGameplayTag(TAG_Character_Action_GunReload))
 		{
-			if (Character->GetWvAbilitySystemComponent()->HasMatchingGameplayTag(TAG_Character_Action_GunReload))
-			{
-				// reloading..
-				return false;
-			}
-			else
-			{
-				UE_LOG(LogTemp, Log, TEXT("reload ability start => %s"), *FString(__FUNCTION__));
-				Notify_ReloadOwner();
-				return false;
-			}
+			// reloading..
+			return false;
 		}
 		else
 		{
-			return true;
+			//UE_LOG(LogTemp, Log, TEXT("reload ability start => %s"), *FString(__FUNCTION__));
+			Notify_ReloadOwner();
+			return false;
 		}
 	}
-	return Super::HandleAttackPrepare();
+	return true;
 }
 
 bool ABulletHoldWeaponActor::IsCurrentAmmosEmpty() const

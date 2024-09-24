@@ -38,6 +38,7 @@ protected:
 
 
 	void PostGameplayEffectExecute_Stamina(const FGameplayEffectModCallbackData& Data);
+	void PostGameplayEffectExecute_Skill(const FGameplayEffectModCallbackData& Data);
 
 public:
 	UPROPERTY(BlueprintReadOnly)
@@ -47,6 +48,14 @@ public:
 	UPROPERTY(BlueprintReadOnly)
 	FGameplayAttributeData HPMax;
 	ATTRIBUTE_ACCESSORS(UWvAbilityAttributeSet, HPMax)
+
+	UPROPERTY(BlueprintReadOnly)
+	FGameplayAttributeData Skill;
+	ATTRIBUTE_ACCESSORS(UWvAbilityAttributeSet, Skill)
+
+	UPROPERTY(BlueprintReadOnly)
+	FGameplayAttributeData SkillMax;
+	ATTRIBUTE_ACCESSORS(UWvAbilityAttributeSet, SkillMax)
 
 	UPROPERTY(BlueprintReadOnly)
 	FGameplayAttributeData RecoverHP;

@@ -62,22 +62,15 @@ void UWvAbility_VehicleDrive::ActivateAbility(const FGameplayAbilitySpecHandle H
 
 	UE_LOG(LogTemp, Log, TEXT("Instigator => %s, Target => %s, function => %s"), *GetNameSafe(Instigator.Get()), *GetNameSafe(Target.Get()), *FString(__FUNCTION__));
 
-	// If operation is started, collision is immediately disabled; if operation is terminated, collision remains disabled.
-	DriveStartAction();
-
 	PlayMontage();
 }
 
 void UWvAbility_VehicleDrive::DriveStartAction()
 {
-	if (bIsDriveEndEvent)
-	{
-		return;
-	}
-
 	if (ABaseCharacter* Character = Cast<ABaseCharacter>(Instigator))
 	{
 		Character->BeginVehicleAction();
+		Character->SetActorHiddenInGame(true);
 	}
 
 	if (AWvWheeledVehiclePawn* VehiclePawn = Cast<AWvWheeledVehiclePawn>(Target))
@@ -89,11 +82,6 @@ void UWvAbility_VehicleDrive::DriveStartAction()
 
 void UWvAbility_VehicleDrive::DriveEndAction()
 {
-	if (!bIsDriveEndEvent)
-	{
-		return;
-	}
-
 	if (AWvWheeledVehiclePawn* VehiclePawn = Cast<AWvWheeledVehiclePawn>(Target))
 	{
 		VehiclePawn->UnSetDrivingByPawn();
@@ -101,6 +89,7 @@ void UWvAbility_VehicleDrive::DriveEndAction()
 	if (ABaseCharacter* Character = Cast<ABaseCharacter>(Instigator))
 	{
 		Character->EndVehicleAction();
+		Character->SetActorHiddenInGame(false);
 		HandlePossess(Character);
 	}
 }
@@ -152,7 +141,17 @@ void UWvAbility_VehicleDrive::PlayMontage()
 
 void UWvAbility_VehicleDrive::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled)
 {
-	DriveEndAction();
+
+	if (!bIsDriveEndEvent)
+	{
+		// If operation is started, collision is immediately disabled; if operation is terminated, collision remains disabled.
+		DriveStartAction();
+	}
+	else
+	{
+		DriveEndAction();
+	}
+
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
 }
 

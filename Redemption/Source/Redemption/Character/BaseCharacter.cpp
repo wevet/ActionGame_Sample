@@ -15,6 +15,7 @@
 #include "WvPlayerController.h"
 #include "WvAIController.h"
 #include "Animation/WvAnimInstance.h"
+#include "Animation/WvFaceAnimInstance.h"
 #include "Ability/WvInheritanceAttributeSet.h"
 #include "Game/WvGameInstance.h"
 #include "Vehicle/WvWheeledVehiclePawn.h"
@@ -23,7 +24,10 @@
 #include "Climbing/ClimbingComponent.h"
 #include "Climbing/LadderComponent.h"
 #include "Component/AsyncComponentInterface.h"
+#include "WvAbilitySystemBlueprintFunctionLibrary.h"
 
+
+#include "Components/LODSyncComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/InputComponent.h"
 #include "Components/StaticMeshComponent.h"
@@ -50,13 +54,13 @@
 #include "Kismet/KismetMathLibrary.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Kismet/GameplayStatics.h"
-#include "Animation/AnimInstance.h"
 #include "Perception/AISense_Hearing.h"
 #include "Perception/AISense_Prediction.h"
 #include "AbilitySystemBlueprintLibrary.h"
 
 // Misc
 #include "Engine/SkeletalMeshSocket.h"
+#include "Runtime/Launch/Resources/Version.h"
 
 #include "WvAIController.h"
 #include "Level/FieldInstanceSubsystem.h"
@@ -83,6 +87,14 @@ ABaseCharacter::ABaseCharacter(const FObjectInitializer& ObjectInitializer)
 	// Rotate mesh to be X forward since it is exported as Y forward.
 	WvMeshComp->SetRelativeRotation(FRotator(0.0f, -90.0f, 0.0f));
 	WvMeshComp->SetReceivesDecals(true);
+
+	// face sk mesh
+	Face = ObjectInitializer.CreateDefaultSubobject<UWvSkeletalMeshComponent>(this, TEXT("Face"));
+	Face->SetupAttachment(WvMeshComp);
+	Face->SetReceivesDecals(true);
+
+	// @TODO
+	// create sk comp Bottom Top Feet Body
 
 	UWvCharacterMovementComponent* WvMoveComp = CastChecked<UWvCharacterMovementComponent>(GetCharacterMovement());
 	WvMoveComp->GravityScale = 1.0f;
@@ -155,6 +167,11 @@ ABaseCharacter::ABaseCharacter(const FObjectInitializer& ObjectInitializer)
 	ClimbingComponent = ObjectInitializer.CreateDefaultSubobject<UClimbingComponent>(this, TEXT("ClimbingComponent"));
 	ClimbingComponent->bAutoActivate = 1;
 
+	// lod sync
+	LODSyncComponent = ObjectInitializer.CreateDefaultSubobject<ULODSyncComponent>(this, TEXT("LODSyncComponent"));
+	LODSyncComponent->bAutoActivate = 1;
+	LODSyncComponent->NumLODs = 8;
+
 	// item attach helper
 	HeldObjectRoot = ObjectInitializer.CreateDefaultSubobject<USceneComponent>(this, TEXT("HeldObjectRoot"));
 	HeldObjectRoot->bAutoActivate = 1;
@@ -180,9 +197,31 @@ ABaseCharacter::ABaseCharacter(const FObjectInitializer& ObjectInitializer)
 	// sets Damage
 	WvMeshComp->SetCollisionResponseToChannel(ECollisionChannel::ECC_GameTraceChannel3, ECollisionResponse::ECR_Block);
 	WvMeshComp->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
-
 	// custom collision preset
 	WvMeshComp->SetCollisionProfileName(K_CHARACTER_COLLISION_PRESET);
+
+
+	Face->SetCollisionResponseToChannel(ECollisionChannel::ECC_Camera, ECollisionResponse::ECR_Block);
+	Face->SetCollisionResponseToChannel(ECollisionChannel::ECC_Visibility, ECollisionResponse::ECR_Block);
+	Face->SetCollisionResponseToChannel(ECollisionChannel::ECC_GameTraceChannel1, ECollisionResponse::ECR_Ignore);
+	Face->SetCollisionResponseToChannel(ECollisionChannel::ECC_GameTraceChannel2, ECollisionResponse::ECR_Ignore);
+	// sets Damage
+	Face->SetCollisionResponseToChannel(ECollisionChannel::ECC_GameTraceChannel3, ECollisionResponse::ECR_Block);
+	Face->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+	// custom collision preset
+	Face->SetCollisionProfileName(K_CHARACTER_COLLISION_PRESET);
+}
+
+void ABaseCharacter::OnConstruction(const FTransform& Transform)
+{
+	Super::OnConstruction(Transform);
+
+	// cache transform
+	USkeletalMeshComponent* SkelMesh = GetMesh();
+	InitSkelMeshTransform.SetLocation(SkelMesh->GetRelativeLocation());
+	InitSkelMeshTransform.SetRotation(FQuat(SkelMesh->GetRelativeRotation()));
+	InitSkelMeshTransform.SetScale3D(SkelMesh->GetRelativeScale3D());
+
 }
 
 void ABaseCharacter::BeginPlay()
@@ -190,9 +229,11 @@ void ABaseCharacter::BeginPlay()
 	Super::BeginPlay();
 
 	AnimInstance = Cast<UWvAnimInstance>(GetMesh()->GetAnimInstance());
+	FaceAnimInstance = Cast<UWvFaceAnimInstance>(Face->GetAnimInstance());
 
 	USkeletalMeshComponent* SkelMesh = GetMesh();
 	SkelMesh->AddTickPrerequisiteActor(this);
+	Face->AddTickPrerequisiteActor(this);
 
 	CombatComponent->AddTickPrerequisiteActor(this);
 	PawnNoiseEmitterComponent->AddTickPrerequisiteActor(this);
@@ -223,13 +264,10 @@ void ABaseCharacter::BeginPlay()
 	CMC->MaxStepHeight = GetDistanceFromToeToKnee();
 	CMC->SetWalkableFloorAngle(K_WALKABLE_FLOOR_ANGLE);
 
-	if (UnArmedAnimInstance)
-	{
-		SkelMesh->LinkAnimClassLayers(UnArmedAnimInstance);
-	}
-
 	BuildOptimization();
 	RequestAsyncLoad();
+
+	HairStrandsLODSetUp();
 }
 
 void ABaseCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -248,11 +286,12 @@ void ABaseCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
 
 	ResetFinisherAnimationData();
 
-	OverlayAnimDAInstance = nullptr;
-	CloseCombatAnimationDAInstance = nullptr;
-	FinisherSender = nullptr;
-	FinisherReceiner = nullptr;
-	HairMaterialsInstance = nullptr;
+	OverlayAnimDA = nullptr;
+	CloseCombatDA = nullptr;
+	FinisherSenderDA = nullptr;
+	FinisherReceinerDA = nullptr;
+	HitReactionDA = nullptr;
+	CharacterVFXDA = nullptr;
 
 	Super::EndPlay(EndPlayReason);
 }
@@ -452,6 +491,16 @@ const FCustomWvAbilitySystemAvatarData& ABaseCharacter::GetCustomWvAbilitySystem
 	return AbilitySystemData;
 }
 
+class UBehaviorTree* ABaseCharacter::GetBehaviorTree() const
+{
+	return BehaviorTree;
+}
+
+class UWvHitReactDataAsset* ABaseCharacter::GetHitReactDataAsset() const
+{
+	return HitReactionDA;
+}
+
 void ABaseCharacter::InitAbilitySystemComponentByData(class UWvAbilitySystemComponentBase* ASC)
 {
 	IWvAbilitySystemAvatarInterface::InitAbilitySystemComponentByData(ASC);
@@ -492,6 +541,11 @@ void ABaseCharacter::InitAbilitySystemComponentByData(class UWvAbilitySystemComp
 		}
 	}
 	WvAbilitySystemComponent->GiveAllRegisterAbility();
+}
+
+FName ABaseCharacter::GetAvatarName() const
+{
+	return NAME_None;
 }
 #pragma endregion
 
@@ -539,11 +593,12 @@ USceneComponent* ABaseCharacter::GetOverlapBaseComponent()
 
 void ABaseCharacter::OnSendWeaknessAttack(AActor* Actor, const FName WeaknessName, const float Damage)
 {
+	OnTeamWeaknessHandleAttackDelegate.Broadcast(Actor, WeaknessName, Damage);
 }
 
 void ABaseCharacter::OnSendAbilityAttack(AActor* Actor, const FWvBattleDamageAttackSourceInfo SourceInfo, const float Damage)
 {
-	//UE_LOG(LogTemp, Log, TEXT("Owner => %s, Actor => %s, function => %s"), *GetNameSafe(this), *GetNameSafe(Actor), *FString(__FUNCTION__));
+	OnTeamHandleAttackDelegate.Broadcast(Actor, SourceInfo, Damage);
 }
 
 void ABaseCharacter::OnSendKillTarget(AActor* Actor, const float Damage)
@@ -552,11 +607,12 @@ void ABaseCharacter::OnSendKillTarget(AActor* Actor, const float Damage)
 	{
 		Interface->OnSendKillTarget(Actor, Damage);
 	}
-	//UE_LOG(LogTemp, Log, TEXT("Owner => %s, Actor => %s, function => %s"), *GetNameSafe(this), *GetNameSafe(Actor), *FString(__FUNCTION__));
+	OnTeamHandleSendKillDelegate.Broadcast(Actor, Damage);
 }
 
 void ABaseCharacter::OnReceiveWeaknessAttack(AActor* Actor, const FName WeaknessName, const float Damage)
 {
+	OnTeamWeaknessHandleReceiveDelegate.Broadcast(Actor, WeaknessName, Damage);
 }
 
 void ABaseCharacter::OnReceiveAbilityAttack(AActor* Actor, const FWvBattleDamageAttackSourceInfo SourceInfo, const float Damage)
@@ -565,6 +621,7 @@ void ABaseCharacter::OnReceiveAbilityAttack(AActor* Actor, const FWvBattleDamage
 	{
 		Interface->OnReceiveAbilityAttack(Actor, SourceInfo, Damage);
 	}
+	OnTeamHandleReceiveDelegate.Broadcast(Actor, SourceInfo, Damage);
 }
 
 void ABaseCharacter::OnReceiveKillTarget(AActor* Actor, const float Damage)
@@ -573,6 +630,9 @@ void ABaseCharacter::OnReceiveKillTarget(AActor* Actor, const float Damage)
 	{
 		Interface->OnReceiveKillTarget(Actor, Damage);
 	}
+	OnTeamHandleReceiveKillDelegate.Broadcast(Actor, Damage);
+
+	OnReceiveKillTarget_Callback();
 }
 
 void ABaseCharacter::OnReceiveHitReact(FGameplayEffectContextHandle Context, const bool IsInDead, const float Damage)
@@ -592,14 +652,9 @@ bool ABaseCharacter::IsTargetable() const
 
 bool ABaseCharacter::IsInBattled() const
 {
-	//if (IWvAbilityTargetInterface* Interface = Cast<IWvAbilityTargetInterface>(GetController()))
-	//{
-	//	Interface->IsInBattled();
-	//}
-
-	if (WvAbilitySystemComponent)
+	if (IWvAbilityTargetInterface* Interface = Cast<IWvAbilityTargetInterface>(GetController()))
 	{
-		return WvAbilitySystemComponent->HasMatchingGameplayTag(TAG_Character_TargetLocking);
+		Interface->IsInBattled();
 	}
 	return false;
 }
@@ -657,6 +712,14 @@ bool ABaseCharacter::IsFreezing() const
 		return WvAbilitySystemComponent->HasAllMatchingGameplayTags(Container);
 	}
 	return false;
+}
+
+bool ABaseCharacter::IsSprintingMovement() const
+{
+	const FGameplayTag SprintTag = FGameplayTag::RequestGameplayTag(TEXT("Character.Locomotion.Gait.Sprinting"));
+	//UE_LOG(LogTemp, Log, TEXT("IsSprinting => %s"), WvAbilitySystemComponent->HasMatchingGameplayTag(SprintTag) ? TEXT("true") : TEXT("false"));
+	const bool bResult = IsValid(WvAbilitySystemComponent) ? WvAbilitySystemComponent->HasMatchingGameplayTag(SprintTag) : false;
+	return bResult || LocomotionComponent->GetLSGaitMode_Implementation() == ELSGait::Sprinting;
 }
 
 void ABaseCharacter::DoAttack()
@@ -836,6 +899,11 @@ USceneComponent* ABaseCharacter::GetHeldObjectRoot() const
 UStaticMeshComponent* ABaseCharacter::GetAccessoryObjectRoot() const
 {
 	return AccessoryObjectRoot;
+}
+
+USkeletalMeshComponent* ABaseCharacter::GetFaceMeshComponent() const
+{
+	return Face;
 }
 #pragma endregion
 
@@ -1028,7 +1096,7 @@ void ABaseCharacter::DoStopCrouch()
 
 void ABaseCharacter::DoStartAiming()
 {
-	//StrafeMovement();
+	StrafeMovement();
 	DoWalking();
 	LocomotionComponent->SetLSAiming(true);
 
@@ -1161,94 +1229,17 @@ FTransform ABaseCharacter::GetChestTransform(const FName BoneName) const
 	return GetMesh()->GetSocketTransform(BoneName);
 }
 
-/// <summary>
-/// overlay widget position
-/// </summary>
-/// <returns></returns>
-FTransform ABaseCharacter::GetPivotOverlayTansform() const
-{
-	auto RootPos = GetMesh()->GetSocketLocation(TEXT("root"));
-	auto HeadPos = GetMesh()->GetSocketLocation(TEXT("head"));
-	TArray<FVector> Points({ RootPos, HeadPos, });
-	auto AveragePoint = UKismetMathLibrary::GetVectorArrayAverage(Points);
-	return FTransform(GetActorRotation(), AveragePoint, FVector::OneVector);
-}
-
-FVector2D ABaseCharacter::GetInputAxis() const
-{
-	return InputAxis;
-}
-
-FVector ABaseCharacter::GetLedgeInputVelocity() const
-{
-	return GetForwardMoveDir(-GetActorUpVector()) * InputAxis.Y + GetRightMoveDir(-GetActorUpVector()) * InputAxis.X;
-}
-
-FVector ABaseCharacter::GetRightMoveDir(FVector CompareDir) const
-{
-	const FRotator ControllRotation = GetControlRotation();
-	FVector CameraRight = UKismetMathLibrary::GetRightVector(ControllRotation);
-	const float Angle = UWvCommonUtils::GetAngleBetweenVector(CameraRight, CompareDir);
-	const float HalfAngle = (180 - Angle);
-	if (Angle < InputDirVerThreshold)
-	{
-		CameraRight = UKismetMathLibrary::GetUpVector(ControllRotation);
-	}
-	else if (HalfAngle < InputDirVerAngleThreshold)
-	{
-		CameraRight = FVector::ZeroVector - UKismetMathLibrary::GetUpVector(ControllRotation);
-	}
-	CameraRight = UKismetMathLibrary::ProjectVectorOnToPlane(CameraRight, GetActorUpVector());
-	CameraRight.Normalize();
-	return CameraRight;
-}
-
-FVector ABaseCharacter::GetForwardMoveDir(FVector CompareDir) const
-{
-	const FRotator ControllRotation = GetControlRotation();
-	FVector CameraForward = UKismetMathLibrary::GetForwardVector(ControllRotation);
-	const float Angle = UWvCommonUtils::GetAngleBetweenVector(CameraForward, CompareDir);
-	const float HalfAngle = (180 - Angle);
-	if (Angle < InputDirVerThreshold)
-	{
-		CameraForward = UKismetMathLibrary::GetUpVector(ControllRotation);
-	}
-	else if (HalfAngle < InputDirVerAngleThreshold)
-	{
-		CameraForward = FVector::ZeroVector - UKismetMathLibrary::GetUpVector(ControllRotation);
-	}
-	CameraForward = UKismetMathLibrary::ProjectVectorOnToPlane(CameraForward, GetActorUpVector());
-	CameraForward.Normalize();
-	return CameraForward;
-}
-
-FVector ABaseCharacter::GetCharacterFeetLocation() const
-{
-	auto Position = GetActorLocation();
-	const float Height = GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
-	Position.Z -= Height;
-	return Position;
-}
-
-float ABaseCharacter::GetDistanceFromToeToKnee(FName KneeL, FName BallL, FName KneeR, FName BallR) const
-{
-	const FVector KneeLPosition = GetMesh()->GetSocketLocation(KneeL);
-	const FVector BallLPosition = GetMesh()->GetSocketLocation(BallL);
-
-	const FVector KneeRPosition = GetMesh()->GetSocketLocation(KneeR);
-	const FVector BallRPosition = GetMesh()->GetSocketLocation(BallR);
-
-	const float L = (KneeLPosition - BallLPosition).Size();
-	const float R = (KneeRPosition - BallRPosition).Size();
-
-	const float Result = FMath::Max(FMath::Abs(L), FMath::Abs(R));
-	return FMath::Max(GetWvCharacterMovementComponent()->MaxStepHeight, Result);
-}
-
+#pragma region Ragdoll
 void ABaseCharacter::BeginDeathAction()
 {
-	WvAbilitySystemComponent->AddGameplayTag(TAG_Character_StateDead, 1);
-	WvAbilitySystemComponent->AddGameplayTag(TAG_Locomotion_ForbidMovement, 1);
+	if (!IsDead())
+	{
+		WvAbilitySystemComponent->AddGameplayTag(TAG_Character_StateDead, 1);
+		WvAbilitySystemComponent->AddGameplayTag(TAG_Locomotion_ForbidMovement, 1);
+
+		//Face->SetLeaderPoseComponent(GetMesh(), true, true);
+		Face->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	}
 }
 
 void ABaseCharacter::EndDeathAction(const float Interval)
@@ -1259,58 +1250,45 @@ void ABaseCharacter::EndDeathAction(const float Interval)
 		TM.ClearTimer(Ragdoll_TimerHandle);
 	}
 
-	TM.SetTimer(Ragdoll_TimerHandle, this, &ABaseCharacter::EndDeathAction_Callback, Interval, false);
-}
-
-void ABaseCharacter::EndDeathAction_Callback()
-{
-	if (WvAbilitySystemComponent->HasMatchingGameplayTag(TAG_Locomotion_ForbidRagdoll))
+	TM.SetTimer(Ragdoll_TimerHandle, [this] 
 	{
-		LocomotionComponent->StartRagdollActionOnlyMovementState();
-	}
-	else
-	{
+		CancelAnimatingAbility();
 		LocomotionComponent->StartRagdollAction();
-	}
+	}, 
+	Interval, false);
 }
 
 void ABaseCharacter::BeginAliveAction()
 {
-	//LocomotionComponent->StopRagdollAction();
-
 	if (IsDead())
 	{
-		WvAbilitySystemComponent->TryActivateAbilityByTag(TAG_Character_StateAlive_Action);
-		if (!bIsCrouched)
+
+		StatusComponent->DoAlive();
+		LocomotionComponent->StopRagdollAction([this]() 
 		{
-			DoStartCrouch();
-		}
+			//WvAbilitySystemComponent->TryActivateAbilityByTag(TAG_Character_StateAlive_Action);
+		});
+
+		WvAbilitySystemComponent->TryActivateAbilityByTag(TAG_Character_StateAlive_Action);
 	}
 }
 
 void ABaseCharacter::EndAliveAction()
 {
+	//DoStartCrouch();
+
+	Face->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+	SetGroomSimulation(true);
+
 	WvAbilitySystemComponent->RemoveGameplayTag(TAG_Character_StateDead, 1);
 	WvAbilitySystemComponent->RemoveGameplayTag(TAG_Locomotion_ForbidMovement, 1);
-	StatusComponent->DoAlive();
 }
 
-void ABaseCharacter::DoForceKill()
+void ABaseCharacter::InitSkelMeshLocation()
 {
-	auto Pawn = Game::ControllerExtension::GetPlayerPawn(GetWorld(), 0);
-
-	const float KillDamage = StatusComponent->GetKillDamage();
-	//OnReceiveKillTarget(Pawn, StatusComponent->GetKillDamage());
-	//StatusComponent->DoKill();
-
-	FGameplayEffectContextHandle Context;
-
-	FGameplayEventData Payload{};
-	Payload.ContextHandle = Context;
-	Payload.Instigator = this;
-	Payload.Target = Pawn;
-	Payload.EventMagnitude = KillDamage;
-	WvAbilitySystemComponent->HandleGameplayEvent(TAG_Common_PassiveAbilityTrigger_KillReact, &Payload);
+	GetMesh()->SetRelativeTransform(InitSkelMeshTransform);
+	//auto Location = InitSkelMeshTransform.GetLocation();
+	//GetMesh()->SetRelativeLocation(Location);
 }
 
 void ABaseCharacter::WakeUpPoseSnapShot()
@@ -1318,25 +1296,43 @@ void ABaseCharacter::WakeUpPoseSnapShot()
 	AnimInstance->WakeUpPoseSnapShot();
 }
 
+void ABaseCharacter::DoForceKill()
+{
+	//auto Pawn = Game::ControllerExtension::GetPlayerPawn(GetWorld(), 0);
+
+	const float KillDamage = StatusComponent->GetKillDamage();
+	StatusComponent->DoKill();
+
+	FGameplayEffectContextHandle Context;
+	FGameplayEventData Payload{};
+	Payload.ContextHandle = Context;
+	Payload.Instigator = this;
+	Payload.Target = nullptr;
+	Payload.EventMagnitude = KillDamage;
+	WvAbilitySystemComponent->HandleGameplayEvent(TAG_Common_PassiveAbilityTrigger_KillReact, &Payload);
+}
+#pragma endregion
+
 void ABaseCharacter::OverlayStateChange(const ELSOverlayState CurrentOverlay)
 {
-	if (!IsValid(OverlayAnimDAInstance))
+	if (!IsValid(OverlayAnimDA))
 	{
-		OnLoadOverlayABP();
+		OverlayAnimDA = OnAsyncLoadDataAsset<UOverlayAnimInstanceDataAsset>(TAG_Game_Asset_AnimationBlueprint);
 	}
 
-	if (IsValid(OverlayAnimDAInstance))
+	if (IsValid(OverlayAnimDA))
 	{
-		auto AnimInstanceClass = OverlayAnimDAInstance->FindAnimInstance(CurrentOverlay);
+		auto AnimInstanceClass = OverlayAnimDA->FindAnimInstance(CurrentOverlay);
 		if (AnimInstanceClass)
 		{
-			AnimInstance->LinkAnimClassLayers(AnimInstanceClass);
-		}
-
-		if (OverlayChangeDelegate.IsBound())
-		{
+			//AnimInstance->LinkAnimClassLayers(AnimInstanceClass);
+			GetMesh()->LinkAnimClassLayers(AnimInstanceClass);
 			OverlayChangeDelegate.Broadcast(CurrentOverlay);
 		}
+	}
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT("not valid DA => [%s]"), *FString(__FUNCTION__));
 	}
 
 }
@@ -1395,14 +1391,9 @@ bool ABaseCharacter::CanBeSeenFrom(const FVector& ObserverLocation, FVector& Out
 	return false;
 }
 
-class UBehaviorTree* ABaseCharacter::GetBehaviorTree() const
-{
-	return BehaviorTree;
-}
-
 bool ABaseCharacter::IsLeader() const
 {
-	return WvAbilitySystemComponent->HasMatchingGameplayTag(TAG_AI_Character_Leader);
+	return WvAbilitySystemComponent->HasMatchingGameplayTag(TAG_Character_AI_Leader);
 }
 
 void ABaseCharacter::HandleAllowAttack(const bool InAllow)
@@ -1419,7 +1410,7 @@ void ABaseCharacter::HandleAllowAttack(const bool InAllow)
 
 void ABaseCharacter::SetLeaderTag()
 {
-	WvAbilitySystemComponent->AddGameplayTag(TAG_AI_Character_Leader, 1);
+	WvAbilitySystemComponent->AddGameplayTag(TAG_Character_AI_Leader, 1);
 	SetLeaderDisplay();
 }
 
@@ -1566,11 +1557,11 @@ void ABaseCharacter::GetCharacterHealth(FVector& OutHealth)
 	StatusComponent->GetCharacterHealth(OutHealth);
 }
 
-
 bool ABaseCharacter::IsMeleePlaying() const
 {
 	return WvAbilitySystemComponent->HasMatchingGameplayTag(TAG_Character_StateMelee);
 }
+
 
 #pragma region NearlestAction
 /// <summary>
@@ -1663,7 +1654,7 @@ const TArray<AActor*> ABaseCharacter::FindNearlestTargets(const float Distance, 
 			FilterTargets.Add(Target);
 
 //#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
-#if false
+#if 1
 			const FVector From = GetActorLocation();
 			const FVector To = Target->GetActorLocation();
 			DrawDebugSphere(GetWorld(), From, 20.f, 12, FColor::Blue, false, 2);
@@ -1721,9 +1712,9 @@ AActor* ABaseCharacter::FindNearlestTarget(const float Distance, const float Ang
 
 const bool ABaseCharacter::CanFiniherSender()
 {
-	if (!IsValid(FinisherSender))
+	if (!IsValid(FinisherSenderDA))
 	{
-		OnLoadFinisherSenderAsset();
+		FinisherSenderDA = OnAsyncLoadDataAsset<UFinisherDataAsset>(TAG_Game_Asset_FinisherSender);
 		return false;
 	}
 	return true;
@@ -1731,9 +1722,9 @@ const bool ABaseCharacter::CanFiniherSender()
 
 const bool ABaseCharacter::CanFiniherReceiver()
 {
-	if (!IsValid(FinisherReceiner))
+	if (!IsValid(FinisherReceinerDA))
 	{
-		OnLoadFinisherReceiverAsset();
+		FinisherReceinerDA = OnAsyncLoadDataAsset<UFinisherDataAsset>(TAG_Game_Asset_FinisherReceiver);
 		return false;
 	}
 	return true;
@@ -1847,13 +1838,13 @@ void ABaseCharacter::BuildFinisherAbility(const FGameplayTag RequireTag)
 
 void ABaseCharacter::BuildFinisherAnimationSender(const FGameplayTag RequireTag, FFinisherAnimation& OutFinisherAnimation, int32 &OutIndex)
 {
-	if (!IsValid(FinisherSender))
+	if (!IsValid(FinisherSenderDA))
 	{
 		UE_LOG(LogTemp, Warning, TEXT("not valid FinisherSender"));
 		return;
 	}
 
-	FFinisherAnimationContainer AnimationContainer = FinisherSender->FindContainer(RequireTag);
+	FFinisherAnimationContainer AnimationContainer = FinisherSenderDA->FindContainer(RequireTag);
 	if (AnimationContainer.Montages.Num() <= 0)
 	{
 		return;
@@ -1869,13 +1860,13 @@ void ABaseCharacter::BuildFinisherAnimationSender(const FGameplayTag RequireTag,
 
 const bool ABaseCharacter::BuildFinisherAnimationReceiver(const FGameplayTag RequireTag, const int32 Index, FFinisherAnimation& OutFinisherAnimation)
 {
-	if (!IsValid(FinisherReceiner))
+	if (!IsValid(FinisherReceinerDA))
 	{
 		UE_LOG(LogTemp, Warning, TEXT("not valid FinisherReceiner"));
 		return false;
 	}
 
-	FFinisherAnimationContainer AnimationContainer = FinisherReceiner->FindContainer(RequireTag);
+	FFinisherAnimationContainer AnimationContainer = FinisherReceinerDA->FindContainer(RequireTag);
 	if (AnimationContainer.Montages.Num() <= 0)
 	{
 		return false;
@@ -1906,9 +1897,63 @@ FRequestAbilityAnimationData ABaseCharacter::GetFinisherAnimationData() const
 }
 #pragma endregion
 
+
 #pragma region AsyncLoad
 void ABaseCharacter::RequestAsyncLoad()
 {
+	OnSyncLoadCompleteHandler();
+
+	FStreamableManager& StreamableManager = UWvGameInstance::GetStreamableManager();
+
+	TArray<FSoftObjectPath> TempPaths;
+	for (TPair<FGameplayTag, TSoftObjectPtr<UDataAsset>>Pair : GameDataAssets)
+	{
+		if (Pair.Value.IsNull())
+			continue;
+		TempPaths.Add(Pair.Value.ToSoftObjectPath());
+	}
+
+	AsyncLoadStreamer = StreamableManager.RequestAsyncLoad(TempPaths, [this]
+	{
+		this->OnAsyncLoadCompleteHandler();
+	});
+
+	RequestComponentsAsyncLoad();
+}
+
+void ABaseCharacter::RequestAsyncLoadByTag(const FGameplayTag Tag)
+{
+	if (!GameDataAssets.Contains(Tag))
+	{
+		UE_LOG(LogTemp, Error, TEXT("Can't Find Contains Tag => %s, function => %s"), *Tag.GetTagName().ToString(), *FString(__FUNCTION__));
+		return;
+	}
+
+	FStreamableManager& StreamableManager = UWvGameInstance::GetStreamableManager();
+	const FSoftObjectPath TempPath = GameDataAssets.FindRef(Tag).ToSoftObjectPath();
+	AsyncLoadStreamer = StreamableManager.RequestAsyncLoad(TempPath, [this]
+	{
+		this->OnAsyncLoadCompleteHandler();
+	});
+
+	RequestComponentsAsyncLoad();
+}
+
+void ABaseCharacter::RequestComponentsAsyncLoad()
+{
+	if (!bIsAllowAsyncLoadComponentAssets)
+	{
+		return;
+	}
+
+	/*
+	* InventoryComponent
+	* ClimbingComponent
+	* LadderComponent
+	* WvCharacterMovementComponent
+	* QTEActionComponent
+	*/
+
 	auto Components = Game::ComponentExtension::GetComponentsArray<UActorComponent>(this);
 	for (UActorComponent* ActComp : Components)
 	{
@@ -1917,144 +1962,86 @@ void ABaseCharacter::RequestAsyncLoad()
 			Interface->RequestAsyncLoad();
 		}
 	}
+}
 
+void ABaseCharacter::OnAsyncLoadCompleteHandler()
+{
+	FinisherReceinerDA = OnAsyncLoadDataAsset<UFinisherDataAsset>(TAG_Game_Asset_FinisherReceiver);
+	CloseCombatDA = OnAsyncLoadDataAsset<UCloseCombatAnimationDataAsset>(TAG_Game_Asset_CloseCombat);
+	HitReactionDA = OnAsyncLoadDataAsset<UWvHitReactDataAsset>(TAG_Game_Asset_HitReaction);
 
-	FStreamableManager& StreamableManager = UWvGameInstance::GetStreamableManager();
-	if (!OverlayAnimInstanceDA.IsNull())
+	// player only load
+	CharacterVFXDA = OnAsyncLoadDataAsset<UCharacterVFXDataAsset>(TAG_Game_Asset_CharacterVFX);
+
+	AsyncLoadStreamer.Reset();
+	AsyncLoadCompleteDelegate.Broadcast();
+}
+
+void ABaseCharacter::OnSyncLoadCompleteHandler()
+{
+	OverlayAnimDA = OnSyncLoadDataAsset<UOverlayAnimInstanceDataAsset>(TAG_Game_Asset_AnimationBlueprint);
+
+}
+
+template<typename T>
+T* ABaseCharacter::OnAsyncLoadDataAsset(const FGameplayTag Tag) const
+{
+	T* DataAsset = nullptr;
+	if (GameDataAssets.Contains(Tag))
 	{
-		const FSoftObjectPath ObjectPath = OverlayAnimInstanceDA.ToSoftObjectPath();
-		ABPStreamableHandle = StreamableManager.RequestAsyncLoad(ObjectPath, FStreamableDelegate::CreateUObject(this, &ThisClass::OnABPAnimAssetLoadComplete));
-	}
-
-	if (!CloseCombatAnimationDA.IsNull())
-	{
-		const FSoftObjectPath ObjectPath = CloseCombatAnimationDA.ToSoftObjectPath();
-		CCStreamableHandle = StreamableManager.RequestAsyncLoad(ObjectPath, FStreamableDelegate::CreateUObject(this, &ThisClass::OnCloseCombatAnimAssetLoadComplete));
-	}
-
-	TArray<FSoftObjectPath> Paths;
-	for (TPair<FGameplayTag, TSoftObjectPtr<UFinisherDataAsset>>Pair : FinisherDAList)
-	{
-		if (Pair.Value.IsNull())
+		bool bIsResult = false;
+		do
 		{
-			continue;
-		}
-		Paths.Add(Pair.Value.ToSoftObjectPath());
-	}
-	FinisherStreamableHandle = StreamableManager.RequestAsyncLoad(Paths, FStreamableDelegate::CreateUObject(this, &ThisClass::OnFinisherAnimAssetLoadComplete));
-
-	OnLoadHairMaterialDA();
-}
-
-void ABaseCharacter::OnABPAnimAssetLoadComplete()
-{
-	OnLoadOverlayABP();
-	ABPStreamableHandle.Reset();
-}
-
-void ABaseCharacter::OnLoadOverlayABP()
-{
-	bool bIsResult = false;
-	do
-	{
-		OverlayAnimDAInstance = OverlayAnimInstanceDA.LoadSynchronous();
-		bIsResult = (IsValid(OverlayAnimDAInstance));
-
-	} while (!bIsResult);
-	UE_LOG(LogTemp, Log, TEXT("Complete %s => [%s]"), *GetNameSafe(OverlayAnimDAInstance), *FString(__FUNCTION__));
-}
-
-void ABaseCharacter::OnFinisherAnimAssetLoadComplete()
-{
-	OnLoadFinisherReceiverAsset();
-	FinisherStreamableHandle.Reset();
-}
-
-void ABaseCharacter::OnLoadFinisherSenderAsset()
-{
-	if (!IsValid(FinisherSender))
-	{
-		if (FinisherDAList.Contains(TAG_Weapon_Finisher_Sender))
-		{
-			bool bIsResult = false;
-			do
+			auto Inst = GameDataAssets[Tag].LoadSynchronous();
+			DataAsset = Cast<T>(Inst);
+			if (DataAsset)
 			{
-				FinisherSender = FinisherDAList[TAG_Weapon_Finisher_Sender].LoadSynchronous();
-				bIsResult = (IsValid(FinisherSender));
-
-			} while (!bIsResult);
-			UE_LOG(LogTemp, Log, TEXT("Complete %s => [%s]"), *GetNameSafe(FinisherSender), *FString(__FUNCTION__));
-		}
-	}
-}
-
-void ABaseCharacter::OnLoadFinisherReceiverAsset()
-{
-	if (!IsValid(FinisherReceiner))
-	{
-		if (FinisherDAList.Contains(TAG_Weapon_Finisher_Receiver))
-		{
-			bool bIsResult = false;
-			do
+				bIsResult = (IsValid(DataAsset));
+			}
+			else
 			{
-				FinisherReceiner = FinisherDAList[TAG_Weapon_Finisher_Receiver].LoadSynchronous();
-				bIsResult = (IsValid(FinisherReceiner));
+				break;
+			}
 
-			} while (!bIsResult);
-			UE_LOG(LogTemp, Log, TEXT("Complete %s => [%s]"), *GetNameSafe(FinisherReceiner), *FString(__FUNCTION__));
+		} while (!bIsResult);
+
+		if (bIsResult)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("%s Asset Load Complete %s => [%s]"), *GetNameSafe(this), *GetNameSafe(DataAsset), *FString(__FUNCTION__));
 		}
+		else
+		{
+			UE_LOG(LogTemp, Error, TEXT("%s Asset Load Fail %s => [%s]"), *GetNameSafe(this), *GetNameSafe(DataAsset), *FString(__FUNCTION__));
+		}
+
 	}
+	return DataAsset;
 }
 
-void ABaseCharacter::OnCloseCombatAnimAssetLoadComplete()
+template<typename T>
+T* ABaseCharacter::OnSyncLoadDataAsset(const FGameplayTag Tag) const
 {
-	OnLoadCloseCombatAssets();
-	CCStreamableHandle.Reset();
-}
+	T* DataAsset = nullptr;
 
-void ABaseCharacter::OnLoadCloseCombatAssets()
-{
-	bool bIsResult = false;
-	do
+	if (GameDataAssets.Contains(Tag))
 	{
-		CloseCombatAnimationDAInstance = CloseCombatAnimationDA.LoadSynchronous();
-		bIsResult = (IsValid(CloseCombatAnimationDAInstance));
-
-	} while (!bIsResult);
-	UE_LOG(LogTemp, Log, TEXT("Complete %s => [%s]"), *GetNameSafe(CloseCombatAnimationDAInstance), *FString(__FUNCTION__));
-}
-
-void ABaseCharacter::OnLoadHairMaterialDA()
-{
-	FStreamableManager& StreamableManager = UWvGameInstance::GetStreamableManager();
-
-	if (!HairMaterialsDA.IsNull())
-	{
-		const FSoftObjectPath ObjectPath = HairMaterialsDA.ToSoftObjectPath();
-		MaterialStreamableHandle = StreamableManager.RequestAsyncLoad(ObjectPath, FStreamableDelegate::CreateUObject(this, &ThisClass::OnMaterialAssetLoadComplete));
+		auto Obj = UKismetSystemLibrary::LoadAsset_Blocking(GameDataAssets[Tag]);
+		DataAsset = Cast<T>(Obj);
 	}
-}
 
-void ABaseCharacter::OnMaterialAssetLoadComplete()
-{
-	OnLoadMaterialAsset();
-	MaterialStreamableHandle.Reset();
-}
-
-void ABaseCharacter::OnLoadMaterialAsset()
-{
-	bool bIsResult = false;
-	do
+	if (DataAsset)
 	{
-		HairMaterialsInstance = HairMaterialsDA.LoadSynchronous();
-		bIsResult = (IsValid(HairMaterialsInstance));
+		UE_LOG(LogTemp, Warning, TEXT("%s Asset Load Complete %s => [%s]"), *GetNameSafe(this), *GetNameSafe(DataAsset), *FString(__FUNCTION__));
+	}
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT("%s Asset Load Fail %s => [%s]"), *GetNameSafe(this), *GetNameSafe(DataAsset), *FString(__FUNCTION__));
+	}
 
-	} while (!bIsResult);
-	UE_LOG(LogTemp, Log, TEXT("Complete %s => [%s]"), *GetNameSafe(HairMaterialsInstance), *FString(__FUNCTION__));
-
-	MaterialLoadCompleteDelegate.Broadcast();
+	return DataAsset;
 }
 #pragma endregion
+
 
 #pragma region VehicleAction
 bool ABaseCharacter::IsVehicleDriving() const
@@ -2067,7 +2054,8 @@ void ABaseCharacter::BeginVehicleAction()
 	GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_None);
 	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	GetMesh()->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
-	GetMesh()->SetVisibility(false);
+	Face->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+	//GetMesh()->SetVisibility(false);
 
 	GetCombatComponent()->VisibilityCurrentWeapon(true);
 	WvAbilitySystemComponent->AddGameplayTag(TAG_Vehicle_State_Drive, 1);
@@ -2078,7 +2066,8 @@ void ABaseCharacter::EndVehicleAction()
 	GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_Walking);
 	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 	GetMesh()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
-	GetMesh()->SetVisibility(true);
+	Face->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+	//GetMesh()->SetVisibility(true);
 
 	GetCombatComponent()->VisibilityCurrentWeapon(false);
 	WvAbilitySystemComponent->RemoveGameplayTag(TAG_Vehicle_State_Drive, 1);
@@ -2134,6 +2123,8 @@ void ABaseCharacter::HandleDriveAction()
 }
 #pragma endregion
 
+
+#pragma region CutScene
 void ABaseCharacter::BeginCinematic()
 {
 	UWvCharacterMovementComponent* CMC = GetWvCharacterMovementComponent();
@@ -2151,48 +2142,151 @@ void ABaseCharacter::EndCinematic()
 		CMC->bUpdateOnlyIfRendered = true;
 	}
 }
+#pragma endregion
+
 
 #pragma region CloseCombat
 int32 ABaseCharacter::GetCombatAnimationIndex() const
 {
-	if (IsValid(CloseCombatAnimationDAInstance))
+	if (IsValid(CloseCombatDA))
 	{
-		return CloseCombatAnimationDAInstance->GetCombatAnimationIndex();
+		auto BodyShape = GetBodyShapeType();
+		return CloseCombatDA->GetCombatAnimationIndex(BodyShape);
 	}
 	return INDEX_NONE;
 }
 
 int32 ABaseCharacter::CloseCombatMaxComboCount(const int32 Index) const
 {
-	if (IsValid(CloseCombatAnimationDAInstance))
+	if (IsValid(CloseCombatDA))
 	{
-		return CloseCombatAnimationDAInstance->CloseCombatMaxComboCount(Index);
+		auto BodyShape = GetBodyShapeType();
+		return CloseCombatDA->CloseCombatMaxComboCount(BodyShape, Index);
 	}
 	return INDEX_NONE;
 }
 
 UAnimMontage* ABaseCharacter::GetCloseCombatAnimMontage(const int32 Index, const FGameplayTag Tag) const
 {
-	if (IsValid(CloseCombatAnimationDAInstance))
+	if (IsValid(CloseCombatDA))
 	{
-		return CloseCombatAnimationDAInstance->GetAnimMontage(Index, Tag);
+		auto BodyShape = GetBodyShapeType();
+		return CloseCombatDA->GetAnimMontage(BodyShape, Index, Tag);
 	}
 	return nullptr;
 }
 #pragma endregion
 
-void ABaseCharacter::UpdateMontageMatching(const float InPosition)
+
+void ABaseCharacter::CancelAnimatingAbility()
 {
-	//UE_LOG(LogTemp, Log, TEXT("Ladder Position => %.3f : [%s]"), InPosition, *FString(__FUNCTION__));
+	auto AnimAbility = WvAbilitySystemComponent->GetAnimatingAbility();
+	if (IsValid(AnimAbility))
+	{
+		WvAbilitySystemComponent->CancelAbility(AnimAbility);
+		//UE_LOG(LogWvAI, Log, TEXT("Cancel Ability => %s"), *GetNameSafe(AnimAbility));
+	}
 }
 
-void ABaseCharacter::FinishMontageMatching()
+void ABaseCharacter::CancelAnimatingAbilityMontage()
 {
-	auto CMC = GetWvCharacterMovementComponent();
-	if (CMC)
+	auto AnimMontage = WvAbilitySystemComponent->GetCurrentMontage();
+	if (IsValid(AnimMontage))
 	{
-		CMC->MantleEnd();
+		constexpr float LocalInterval = 0.2f;
+		AnimInstance->Montage_Stop(LocalInterval, AnimMontage);
 	}
+}
+
+void ABaseCharacter::FriendlyActionAbility()
+{
+	WvAbilitySystemComponent->TryActivateAbilityByTag(TAG_Character_AI_Friend_Action);
+}
+
+void ABaseCharacter::CancelFriendlyActionAbility()
+{
+	CencelActiveAbilities(TAG_Character_AI_Friend_Action);
+}
+
+void ABaseCharacter::CencelActiveAbilities(const FGameplayTag InTag)
+{
+	FGameplayTagContainer Container;
+	Container.AddTag(InTag);
+	CencelActiveAbilities(Container);
+}
+
+void ABaseCharacter::CencelActiveAbilities(const FGameplayTagContainer Container)
+{
+	TArray<UGameplayAbility*> Abilities;
+	WvAbilitySystemComponent->GetActiveAbilitiesWithTags(Container, Abilities);
+
+	Abilities.RemoveAll([](UGameplayAbility* Ability)
+	{
+		return Ability == nullptr;
+	});
+
+	for (UGameplayAbility* Ability : Abilities)
+	{
+		WvAbilitySystemComponent->CancelAbility(Ability);
+		UE_LOG(LogWvAI, Log, TEXT("Cancel Ability => %s"), *GetNameSafe(Ability));
+	}
+
+}
+
+
+#pragma region Skill
+/// <summary>
+/// if skill max statuscomponent apply 
+/// disable gameplay ability ended apply
+/// </summary>
+/// <param name="IsEnable"></param>
+void ABaseCharacter::SkillEnableAction(const bool IsEnable)
+{
+	if (IsEnable)
+	{
+		if (!WvAbilitySystemComponent->HasMatchingGameplayTag(TAG_Character_StateSkill_Enable))
+		{
+			WvAbilitySystemComponent->AddGameplayTag(TAG_Character_StateSkill_Enable, 1);
+			OnSkillEnableDelegate.Broadcast(IsEnable);
+		}
+
+	}
+	else
+	{
+		if (WvAbilitySystemComponent->HasMatchingGameplayTag(TAG_Character_StateSkill_Enable))
+		{
+			WvAbilitySystemComponent->RemoveGameplayTag(TAG_Character_StateSkill_Enable, 1);
+			OnSkillEnableDelegate.Broadcast(IsEnable);
+		}
+	}
+}
+
+void ABaseCharacter::SkillAction()
+{
+	WvAbilitySystemComponent->TryActivateAbilityByTag(TAG_Character_StateSkill_Trigger);
+}
+
+float ABaseCharacter::GetSkillToWidget() const
+{
+	return StatusComponent->GetSkillToWidget();
+}
+
+/// <summary>
+/// debug code
+/// </summary>
+void ABaseCharacter::SetFullSkill()
+{
+	if (StatusComponent->SetFullSkill())
+	{
+		//SkillEnableAction(true);
+	}
+}
+#pragma endregion
+
+
+bool ABaseCharacter::IsFriendlyActionPlaying() const
+{
+	return WvAbilitySystemComponent->HasMatchingGameplayTag(TAG_Character_AI_Friend_Action_Playing);
 }
 
 bool ABaseCharacter::HasAccelerating() const
@@ -2214,6 +2308,11 @@ bool ABaseCharacter::IsQTEActionPlaying() const
 #pragma region URO
 void ABaseCharacter::BuildOptimization()
 {
+	if (!bIsAllowOptimization)
+	{
+		return;
+	}
+
 	auto Components = Game::ComponentExtension::GetComponentsArray<USkeletalMeshComponent>(this);
 
 	for (USkeletalMeshComponent* SkelMesh : Components)
@@ -2280,38 +2379,14 @@ void ABaseCharacter::HandleMeshUpdateRateOptimizations(const bool IsInEnableURO,
 }
 #pragma endregion
 
-bool ABaseCharacter::IsSprinting() const
+void ABaseCharacter::SetIsDespawnCheck(const bool NewIsDespawnCheck)
 {
-	//const FGameplayTag SprintTag = FGameplayTag::RequestGameplayTag(TEXT("Character.Locomotion.Gait.Sprinting"));
-	//UE_LOG(LogTemp, Log, TEXT("IsSprinting => %s"), WvAbilitySystemComponent->HasMatchingGameplayTag(SprintTag) ? TEXT("true") : TEXT("false"));
-	//return IsValid(WvAbilitySystemComponent) ? WvAbilitySystemComponent->HasMatchingGameplayTag(SprintTag) : false;
-	return LocomotionComponent->GetLSGaitMode_Implementation() == ELSGait::Sprinting;
+	bIsDespawnCheck = NewIsDespawnCheck;
 }
 
-void ABaseCharacter::UpdateAccessory(const FAccessoryData& InAccessoryData)
+bool ABaseCharacter::GetIsDespawnCheck() const
 {
-	Accessory = InAccessoryData;
+	return bIsDespawnCheck;
 }
-
-UStaticMesh* ABaseCharacter::GetAccessoryMesh() const
-{
-	return AccessoryObjectRoot->GetStaticMesh();
-}
-
-FAccessoryData ABaseCharacter::GetAccessoryData() const
-{
-	return Accessory;
-}
-
-void ABaseCharacter::SetGenderType(const EGenderType InGenderType)
-{
-	StatusComponent->SetGenderType(InGenderType);
-}
-
-EGenderType ABaseCharacter::GetGenderType() const
-{
-	return StatusComponent->GetGenderType();
-}
-
 
 

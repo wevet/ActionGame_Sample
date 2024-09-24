@@ -48,6 +48,21 @@ void UWvAbility_Melee::ActivateAbility(const FGameplayAbilitySpecHandle Handle, 
 		{
 			Character->ResetNearlestTarget(true);
 		}
+
+		if (HasComboTrigger())
+		{
+			UE_LOG(LogTemp, Error, TEXT("playing combo melee => %s, GAS => %s, [%s]"), 
+				*GetComboTriggerTag().GetTagName().ToString(),
+				*GetNameSafe(this),
+				*FString(__FUNCTION__));
+		}
+		else
+		{
+			UE_LOG(LogTemp, Warning, TEXT("playing first melee Tag => %s, GAS => %s, [%s]"), 
+				*GetComboTriggerTag().GetTagName().ToString(), 
+				*GetNameSafe(this),
+				*FString(__FUNCTION__));
+		}
 	}
 
 	const auto LocomotionEssencialVariables = Character->GetLocomotionComponent()->GetLocomotionEssencialVariables();

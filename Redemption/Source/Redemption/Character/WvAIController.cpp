@@ -26,6 +26,8 @@
 static TAutoConsoleVariable<int32> CVarDebugCharacterBehaviorTree(TEXT("wv.DebugCharacterBehaviorTree"), 0, TEXT("CharacterBehaviorTree debug system\n") TEXT("<=0: Debug off\n") TEXT(">=1: Debug on\n"), ECVF_Default);
 #endif
 
+#define CLEAR_FRIENDLY_DATA 0
+
 AWvAIController::AWvAIController(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
 	bWantsPlayerState = true;
@@ -82,6 +84,14 @@ void AWvAIController::BeginPlay()
 	MissionComponent->RegisterMissionDelegate.AddDynamic(this, &ThisClass::RegisterMission_Callback);
 }
 
+void AWvAIController::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	HandleRemoveAIPerceptionDelegate();
+
+	MissionComponent->RegisterMissionDelegate.RemoveDynamic(this, &ThisClass::RegisterMission_Callback);
+	Super::EndPlay(EndPlayReason);
+}
+
 void AWvAIController::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
@@ -104,20 +114,6 @@ void AWvAIController::OnPossess(APawn* InPawn)
 	IgnoreTargets.Add(InPawn);
 	BaseCharacter = Cast<ABaseCharacter>(InPawn);
 
-	if (IWvAbilitySystemAvatarInterface* Avatar = Cast<IWvAbilitySystemAvatarInterface>(InPawn))
-	{
-		UBehaviorTree* BehaviorTree = Avatar->GetBehaviorTree();
-		if (IsValid(BehaviorTree))
-		{
-			BlackboardComponent->InitializeBlackboard(*BehaviorTree->BlackboardAsset);
-			BehaviorTreeComponent->StartTree(*BehaviorTree);
-		}
-		else
-		{
-			//UE_LOG(LogWvAI, Error, TEXT("NotValid BehaviorTree => %s"), *FString(__FUNCTION__));
-		}
-	}
-
 	if (UAbilitySystemComponent* AbilitySystemComponent = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(InPawn))
 	{
 		ASC = Cast<UWvAbilitySystemComponent>(AbilitySystemComponent);
@@ -129,6 +125,9 @@ void AWvAIController::OnPossess(APawn* InPawn)
 		BaseCharacter->StartRVOAvoidance();
 	}
 
+	// @TODO asyncload‚Ìê‡‚Íai‚ªæ‚ÉŽÀs‚³‚ê‚é‚Ì‚Å— “Ç‚ÝŠ®—¹ŒãBuildRunAI‚ðŒÄ‚Ño‚·‚æ‚¤‚É‚·‚é
+	BuildRunAI();
+
 	HearTask = FAIPerceptionTask(FName(TEXT("HearTask")), GetWorld());
 	SightTask = FAIPerceptionTask(FName(TEXT("SightTask")), GetWorld());
 	FollowTask = FAIPerceptionTask(FName(TEXT("FollowTask")), GetWorld());
@@ -139,19 +138,13 @@ void AWvAIController::OnUnPossess()
 {
 	AbortTasks(true);
 	StopTree();
+
+	FriendlyParams.Reset();
 	BaseCharacter.Reset();
 	IgnoreTargets.Reset(0);
 	Generators.Reset(0);
 	ASC.Reset();
 	Super::OnUnPossess();
-}
-
-void AWvAIController::EndPlay(const EEndPlayReason::Type EndPlayReason)
-{
-	HandleRemoveAIPerceptionDelegate();
-
-	MissionComponent->RegisterMissionDelegate.RemoveDynamic(this, &ThisClass::RegisterMission_Callback);
-	Super::EndPlay(EndPlayReason);
 }
 
 void AWvAIController::InitPlayerState()
@@ -293,14 +286,10 @@ void AWvAIController::OnSendKillTarget(AActor* Actor, const float Damage)
 
 bool AWvAIController::IsInBattled() const
 {
-	//auto OutTarget = GetBlackboardTarget();
-	//return IsValid(OutTarget) && IsSightTaskRunning();
-
-	auto OutTarget = GetBlackboardTarget();
-	//return IsValid(OutTarget);
-	if (const IWvAbilityTargetInterface* TeamAgent = Cast<IWvAbilityTargetInterface>(GetPawn()))
+	auto OutTarget = GetBlackboardTargetAsCharacter();
+	if (IsValid(OutTarget))
 	{
-		return TeamAgent->IsInBattled();
+		return !OutTarget->IsDead();
 	}
 	return false;
 }
@@ -331,13 +320,25 @@ bool AWvAIController::IsAttackAllowed() const
 void AWvAIController::OnReceiveAbilityAttack(AActor* Actor, const FWvBattleDamageAttackSourceInfo SourceInfo, const float Damage)
 {
 	// controlled pawn is damaged !
-	if (OnTeamHandleAttackCallback.IsBound())
-	{
-		OnTeamHandleAttackCallback.Broadcast(Actor, SourceInfo, Damage);
-	}
-
-
+	OnReceiveTeamHandleAttackCallback.Broadcast(Actor, SourceInfo, Damage);
 	CloseCombatAbort();
+}
+
+void AWvAIController::BuildRunAI()
+{
+	if (IWvAbilitySystemAvatarInterface* Avatar = Cast<IWvAbilitySystemAvatarInterface>(GetPawn()))
+	{
+		UBehaviorTree* BehaviorTree = Avatar->GetBehaviorTree();
+		if (IsValid(BehaviorTree))
+		{
+			BlackboardComponent->InitializeBlackboard(*BehaviorTree->BlackboardAsset);
+			BehaviorTreeComponent->StartTree(*BehaviorTree);
+		}
+		else
+		{
+			//UE_LOG(LogWvAI, Error, TEXT("NotValid BehaviorTree => %s"), *FString(__FUNCTION__));
+		}
+	}
 }
 #pragma endregion
 
@@ -356,7 +357,6 @@ void AWvAIController::StopTree()
 
 void AWvAIController::SetAIActionState(const EAIActionState NewAIActionState)
 {
-
 	if (IWvAIActionStateInterface* ASI = Cast<IWvAIActionStateInterface>(GetPawn()))
 	{
 		ASI->SetAIActionState(NewAIActionState);
@@ -365,17 +365,23 @@ void AWvAIController::SetAIActionState(const EAIActionState NewAIActionState)
 	{
 		UE_LOG(LogWvAI, Error, TEXT("not valid IWvAIActionStateInterface => %s"), *FString(__FUNCTION__));
 	}
-
 }
 
 void AWvAIController::SetBlackboardTarget(AActor* NewTarget)
 {
 	if (UAbilitySystemComponent* TargetASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(NewTarget))
 	{
-		if (TargetASC->HasMatchingGameplayTag(TAG_AI_Character_Ignore))
+		if (TargetASC->HasMatchingGameplayTag(TAG_Character_AI_Ignore))
 		{
+			UE_LOG(LogWvAI, Warning, TEXT("%s is attack ignore ! => [%s]"), *GetNameSafe(NewTarget), *FString(__FUNCTION__));
 			return;
 		}
+	}
+
+	if (!IsAttackAllowed())
+	{
+		UE_LOG(LogWvAI, Warning, TEXT("%s is not attack allowed ! => [%s]"), *GetNameSafe(GetPawn()), *FString(__FUNCTION__));
+		return;
 	}
 
 	bool bHasValidAttack = IsValid(NewTarget);// && IsAttackAllowed();
@@ -384,28 +390,16 @@ void AWvAIController::SetBlackboardTarget(AActor* NewTarget)
 		bHasValidAttack &= (TargetCharacter->IsDead() == false);
 	}
 
-	if (bHasValidAttack)
-	{
-		BaseCharacter->DoTargetLockOn();
-	}
-	else
-	{
-		BaseCharacter->DoTargetLockOff();
-	}
-
 	BlackboardComponent->SetValueAsObject(BlackboardKeyConfig.TargetKeyName, NewTarget);
 	if (ULocomotionComponent* Locomotion = GetPawn()->FindComponentByClass<ULocomotionComponent>())
 	{
 		Locomotion->SetLookAimTarget(bHasValidAttack, NewTarget, nullptr);
 	}
 
-	//if (UCombatComponent* Combat = GetPawn()->FindComponentByClass<UCombatComponent>())
+	//if (bHasValidAttack)
 	//{
-	//	const bool bIsCloseCombat = Combat->IsCloseCombatWeapon();
-	//	SetBlackboardCloseCombat(bIsCloseCombat);
+	//	UE_LOG(LogWvAI, Error, TEXT("target is valid => %s, function => [%s]"), *GetNameSafe(NewTarget), *FString(__FUNCTION__));
 	//}
-
-	SetAIActionState(bHasValidAttack ? EAIActionState::Combat : EAIActionState::Patrol);
 }
 
 void AWvAIController::SetBlackboardSearchNodeHolder(AActor* NewTarget)
@@ -415,19 +409,23 @@ void AWvAIController::SetBlackboardSearchNodeHolder(AActor* NewTarget)
 	{
 		Generators.Add(NewTarget);
 	}
-	SetAIActionState(IsValid(NewTarget) ? EAIActionState::Search : EAIActionState::Patrol);
 }
 
 void AWvAIController::SetBlackboardLeader(AActor* NewTarget)
 {
 	BlackboardComponent->SetValueAsObject(BlackboardKeyConfig.LeaderKeyName, NewTarget);
-	SetAIActionState(IsValid(NewTarget) ? EAIActionState::Follow : EAIActionState::Patrol);
 }
 
 void AWvAIController::SetBlackboardFriend(AActor* NewTarget)
 {
 	BlackboardComponent->SetValueAsObject(BlackboardKeyConfig.FriendKeyName, NewTarget);
-	SetAIActionState(IsValid(NewTarget) ? EAIActionState::Friendly : EAIActionState::Patrol);
+
+	if (NewTarget)
+	{
+		AddFriendyCache(NewTarget);
+		RemoveFriendyCache();
+	}
+
 }
 
 void AWvAIController::SetBlackboardPatrolLocation(const FVector NewLocation)
@@ -438,6 +436,11 @@ void AWvAIController::SetBlackboardPatrolLocation(const FVector NewLocation)
 void AWvAIController::SetBlackboardPredictionLocation(const FVector NewLocation)
 {
 	BlackboardComponent->SetValueAsVector(BlackboardKeyConfig.PredictionKeyName, NewLocation);
+}
+
+void AWvAIController::SetBlackboardCoverLocation(const FVector NewLocation)
+{
+	BlackboardComponent->SetValueAsVector(BlackboardKeyConfig.CoverPointKeyName, NewLocation);
 }
 
 void AWvAIController::SetBlackboardFollowLocation(const FVector NewLocation)
@@ -485,14 +488,19 @@ void AWvAIController::SetBlackboardCloseCombat(const bool IsCloseCombat)
 	BlackboardComponent->SetValueAsBool(BlackboardKeyConfig.IsCloseCombat, IsCloseCombat);
 }
 
+ABaseCharacter* AWvAIController::GetBlackboardTargetAsCharacter() const
+{
+	return Cast<ABaseCharacter>(GetBlackboardTarget());
+}
+
+ABaseCharacter* AWvAIController::GetBlackboardFriendAsCharacter() const
+{
+	return Cast<ABaseCharacter>(GetBlackboardFriend());
+}
+
 AActor* AWvAIController::GetBlackboardTarget() const
 {
 	return Cast<AActor>(BlackboardComponent->GetValueAsObject(BlackboardKeyConfig.TargetKeyName));
-}
-
-ABaseCharacter* AWvAIController::GetBlackboardTargetAsCharacter() const
-{
-	return Cast<ABaseCharacter>(BlackboardComponent->GetValueAsObject(BlackboardKeyConfig.TargetKeyName));
 }
 
 AActor* AWvAIController::GetBlackboardLeader() const
@@ -542,21 +550,18 @@ void AWvAIController::DoSearchEnemyState(AActor* Actor, FVector OverridePosition
 		return;
 	}
 
-	if (HearTask.IsRunning())
+	if (IsInBattled())
 	{
-		if (!IsValid(GetBlackboardSearchNodeHolder()))
-		{
-			//HearTask.End();
-			UE_LOG(LogTemp, Log, TEXT("ended hear perception => %s"), *FString(__FUNCTION__));
-		}
-		else
-		{
-			// already running
-			UE_LOG(LogTemp, Log, TEXT("had searchnode actor.. hear running => %s"), *FString(__FUNCTION__));
-		}
+		UE_LOG(LogWvAI, Verbose, TEXT("pawn is battled => [%s]"), *FString(__FUNCTION__));
 		return;
 	}
 
+	if (HearTask.IsRunning())
+	{
+		// already running
+		UE_LOG(LogWvAI, Verbose, TEXT("had searchnode actor.. hear running => [%s]"), *FString(__FUNCTION__));
+		return;
+	}
 
 	UNavigationSystemV1* NavSys = UNavigationSystemV1::GetCurrent(GetWorld());
 	FNavLocation EndPathLocation;
@@ -573,12 +578,12 @@ void AWvAIController::DoSearchEnemyState(AActor* Actor, FVector OverridePosition
 
 	if (!bValidPoint)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("not valid ProjectPointToNavigation => %s"), *FString(__FUNCTION__));
+		UE_LOG(LogWvAI, Warning, TEXT("not valid ProjectPointToNavigation => %s"), *FString(__FUNCTION__));
 	}
 
-	UNavigationPath* NavPath = NavSys->FindPathToLocationSynchronously(GetWorld(), GetPawn()->GetActorLocation(), EndPosition);
+	//UNavigationPath* NavPath = NavSys->FindPathToLocationSynchronously(GetWorld(), GetPawn()->GetActorLocation(), EndPosition);
 
-#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
+#if false
 	if (CVarDebugCharacterBehaviorTree.GetValueOnGameThread() > 0)
 	{
 		UKismetSystemLibrary::DrawDebugSphere(GetWorld(), TargetLocation, 60.f, 12, FColor::Blue, false, 4);
@@ -594,12 +599,12 @@ void AWvAIController::DoSearchEnemyState(AActor* Actor, FVector OverridePosition
 	auto Generator = GetWorld()->SpawnActor<ABaseInvestigationGenerator>(NodeGeneratorClasses, Origin, SpawnParams);
 
 	SetBlackboardSearchNodeHolder(Generator);
-	SetBlackboardDestinationLocation(EndPosition);
+	SetBlackboardPatrolLocation(EndPosition);
 
 	HearTask.Begin(HEAR_AGE, [this]()
 	{
 		ClearSearchNodeHolders();
-		UE_LOG(LogTemp, Log, TEXT("finish search node perception => %s"), *FString(__FUNCTION__));
+		//UE_LOG(LogWvAI, Log, TEXT("finish search node perception => %s"), *FString(__FUNCTION__));
 	});
 
 }
@@ -616,24 +621,36 @@ void AWvAIController::DoCombatEnemyState(AActor* Actor)
 
 		if (SightTask.IsRunning())
 		{
-			// already running
-			SightTask.AddLength(SIGHT_AGE);
+			//UE_LOG(LogWvAI, Warning, TEXT("already combat task running => [%s]"), *FString(__FUNCTION__));
 			return;
 		}
 
 		ClearSearchNodeHolders();
 		SetBlackboardTarget(Actor);
 
+		if (HearTask.IsRunning())
+		{
+			HearTask.End();
+			UE_LOG(LogWvAI, Warning, TEXT("cancel target search task => [%s]"), *FString(__FUNCTION__));
+		}
+
+		if (FriendlyTask.IsRunning())
+		{
+			FriendlyTask.End();
+			UE_LOG(LogWvAI, Warning, TEXT("cancel friendy action task => [%s]"), *FString(__FUNCTION__));
+		}
+
 		SightTask.Begin(SIGHT_AGE, [this]()
 		{
-			// not hear task running and lost target is alive
+			// targetî•ñ‚ðíœ‚µ‚ÄŒx‰úƒ‚[ƒh‚É‘JˆÚ‚·‚é
 			auto LostTarget = GetBlackboardTarget();
+			ClearSightTaget();
+
 			if (IsValid(LostTarget) && !HearTask.IsRunning())
 			{
 				DoSearchEnemyState(LostTarget, LostTarget->GetActorLocation());
 				UE_LOG(LogWvAI, Warning, TEXT("%s has lost my target and I will warn me."), *GetNameSafe(GetPawn()));
 			}
-			ClearSightTaget();
 		});
 
 	}
@@ -669,7 +686,7 @@ void AWvAIController::DoFollowActionState(AActor* Actor)
 		else
 		{
 			//UpdateFollowPoint();
-			UE_LOG(LogTemp, Log, TEXT("update follow running => %s"), *FString(__FUNCTION__));
+			UE_LOG(LogWvAI, Log, TEXT("update follow running => %s"), *FString(__FUNCTION__));
 		}
 	}
 	else
@@ -683,27 +700,67 @@ void AWvAIController::DoFollowActionState(AActor* Actor)
 
 void AWvAIController::DoFriendlyActionState(AActor* Actor)
 {
-	if (IsValid(Actor))
+	if (!IsValid(Actor))
 	{
-		if (!FriendlyTask.IsRunning())
+		return;
+	}
+
+	if (HasIncludeFriendyCache(Actor))
+	{
+		//UE_LOG(LogWvAI, Log, TEXT("Excluded because it is the most recently contacted Character. => [%s]"), *FString(__FUNCTION__));
+		return;
+	}
+
+	if (!FriendlyTask.IsRunning())
+	{
+		if (ABaseCharacter* FriendCharacter = Cast<ABaseCharacter>(Actor))
 		{
-			SetBlackboardFriend(Actor);
-			SetBlackboardFriendLocation(Actor->GetActorLocation());
-			FriendlyTask.Begin(FRIEND_AGE, [this]()
+			const FVector FriendMiddlePoint = UKismetMathLibrary::VLerp(BaseCharacter->GetActorLocation(), FriendCharacter->GetActorLocation(), 0.5f);
+
+			// self controlled character apply
 			{
-				ClearFriendlyTarget();
-			});
+				const auto LookAt = UKismetMathLibrary::FindLookAtRotation(BaseCharacter->GetActorLocation(), FriendCharacter->GetActorLocation());
+				auto Rot = BaseCharacter->GetActorRotation();
+				Rot.Yaw = LookAt.Yaw;
+				BaseCharacter->SetActorRotation(Rot);
+
+				SetBlackboardFriend(FriendCharacter);
+				SetBlackboardFriendLocation(FriendMiddlePoint);
+				StartFriendlyTask();
+			}
+
+			auto AIC = Cast<AWvAIController>(FriendCharacter->GetController());
+			if (AIC)
+			{
+				const auto LookAt = UKismetMathLibrary::FindLookAtRotation(FriendCharacter->GetActorLocation(), BaseCharacter->GetActorLocation());
+				auto Rot = FriendCharacter->GetActorRotation();
+				Rot.Yaw = LookAt.Yaw;
+				FriendCharacter->SetActorRotation(Rot);
+
+				AIC->SetBlackboardFriend(BaseCharacter.Get());
+				AIC->SetBlackboardFriendLocation(FriendMiddlePoint);
+				AIC->StartFriendlyTask();
+			}
+
+			
 		}
-		else
-		{
-			//
-		}
+
+		
 	}
 	else
 	{
-		SetBlackboardFriend(nullptr);
-		SetBlackboardFriendLocation(FVector::ZeroVector);
+		//
 	}
+}
+
+void AWvAIController::StartFriendlyTask()
+{
+	FriendlyTask.Begin(FRIEND_AGE, [this]()
+	{
+		ClearFriendlyTarget();
+		ApplyFriendlyCoolDown();
+		UE_LOG(LogWvAI, Log, TEXT("clear friendy action => [%s]"), *FString(__FUNCTION__));
+	});
 }
 
 void AWvAIController::Notify_Follow()
@@ -749,6 +806,30 @@ void AWvAIController::HandleSprint(const bool bEnable)
 		{
 			BaseCharacter->DoStopSprinting();
 		}
+	}
+}
+
+void AWvAIController::HandleTargetLock(const bool bLockTarget)
+{
+	if (bLockTarget)
+	{
+		BaseCharacter->DoTargetLockOn();
+	}
+	else
+	{
+		BaseCharacter->DoTargetLockOff();
+	}
+}
+
+void AWvAIController::HandleStrafeMovement(const bool bEnableStrafeMovement)
+{
+	if (bEnableStrafeMovement)
+	{
+		BaseCharacter->StrafeMovement();
+	}
+	else
+	{
+		BaseCharacter->VelocityMovement();
 	}
 }
 
@@ -829,12 +910,9 @@ bool AWvAIController::IsInDeadFriendAgent(const AActor& Other) const
 {
 	const bool bResult = IsInFriendAgent(Other);
 	bool bHasFriendDead = false;
-	if (const APawn* OtherPawn = Cast<APawn>(&Other))
+	if (const IWvAbilityTargetInterface* TeamAgent = Cast<IWvAbilityTargetInterface>(Cast<APawn>(&Other)))
 	{
-		if (const IWvAbilityTargetInterface* TeamAgent = Cast<IWvAbilityTargetInterface>(OtherPawn))
-		{
-			bHasFriendDead = TeamAgent->IsDead();
-		}
+		bHasFriendDead = TeamAgent->IsDead();
 	}
 	return bResult && bHasFriendDead;
 }
@@ -930,12 +1008,6 @@ void AWvAIController::OnTargetPerceptionUpdatedRecieve(AActor* Actor, FAIStimulu
 		LastSeenLocation = Stimulus.StimulusLocation;
 	}
 
-	if (SightTask.IsRunning())
-	{
-		// any task playing
-		return;
-	}
-
 	CurrentStimulus = Stimulus;
 	const FAISenseID CurrentSenseID = CurrentStimulus.Type;
 
@@ -966,11 +1038,11 @@ void AWvAIController::OnSightPerceptionUpdatedRecieve(AActor* Actor)
 
 	if (bSightRunning)
 	{
-		auto CutTarget = GetBlackboardTarget();
-		if (IsValid(CutTarget) && CutTarget == Actor)
-		{
-			DoCombatEnemyState(Actor);
-		}
+		//auto CutTarget = GetBlackboardTarget();
+		//if (IsValid(CutTarget) && CutTarget == Actor)
+		//{
+		//	DoCombatEnemyState(Actor);
+		//}
 		return;
 	}
 
@@ -982,13 +1054,13 @@ void AWvAIController::OnSightPerceptionUpdatedRecieve(AActor* Actor)
 	{
 		DoSearchEnemyState(Actor);
 	}
+	else if (IsInFriendAgent(*Actor))
+	{
+		DoFriendlyActionState(Actor);
+	}
 	else if (IsLeaderAgent(*Actor))
 	{
 		//DoFollowActionState(Actor);
-	}
-	else if (IsInFriendAgent(*Actor))
-	{
-		//DoFriendlyActionState(Actor);
 	}
 	else if (IsInNeutralAgent(*Actor))
 	{
@@ -1000,7 +1072,7 @@ void AWvAIController::OnSightPerceptionUpdatedRecieve(AActor* Actor)
 
 void AWvAIController::OnHearPerceptionUpdatedRecieve(AActor* Actor)
 {
-	if (IsInEnemyAgent(*Actor))
+	if (IsInEnemyAgent(*Actor) || IsInNeutralAgent(*Actor))
 	{
 		// etc target action gun.. target foot steps hearing
 		DoSearchEnemyState(Actor);
@@ -1013,11 +1085,6 @@ void AWvAIController::OnHearPerceptionUpdatedRecieve(AActor* Actor)
 		{
 			DoCombatEnemyState(OutTarget);
 		}
-	}
-	else if (IsInNeutralAgent(*Actor))
-	{
-		// etc environment actor
-		DoSearchEnemyState(Actor);
 	}
 
 }
@@ -1039,7 +1106,7 @@ void AWvAIController::ClearSearchNodeHolders()
 {
 	if (Generators.Num() > 1)
 	{
-		UE_LOG(LogWvAI, Error, TEXT("Generator is unnecessarily generated. => %d Character. => %s"), Generators.Num(), *GetNameSafe(GetPawn()));
+		UE_LOG(LogWvAI, Log, TEXT("Generator is unnecessarily generated. => %d Character. => %s"), Generators.Num(), *GetNameSafe(GetPawn()));
 
 		for (TWeakObjectPtr<AActor> Generator : Generators)
 		{
@@ -1079,7 +1146,20 @@ void AWvAIController::ClearSightTaget()
 
 void AWvAIController::ClearFriendlyTarget()
 {
+
+#if CLEAR_FRIENDLY_DATA
+	if (ABaseCharacter* FriendCharacter = GetBlackboardFriendAsCharacter())
+	{
+		auto AIC = Cast<AWvAIController>(FriendCharacter->GetController());
+		if (AIC)
+		{
+			AIC->SetBlackboardFriend(nullptr);
+		}
+	}
+#endif
+
 	SetBlackboardFriend(nullptr);
+	SetBlackboardFriendLocation(FVector::ZeroVector);
 }
 
 void AWvAIController::ClearFollowTarget()
@@ -1123,7 +1203,7 @@ void AWvAIController::ClearFollowTarget()
 
 void AWvAIController::RegisterMission_Callback(const int32 MissionIndex)
 {
-	UE_LOG(LogTemp, Log, TEXT("Send Order => %d, function => %s"), MissionIndex, *FString(__FUNCTION__));
+	UE_LOG(LogWvAI, Log, TEXT("Send Order => %d, function => %s"), MissionIndex, *FString(__FUNCTION__));
 }
 
 void AWvAIController::HandleRemoveAIPerceptionDelegate()
@@ -1139,6 +1219,7 @@ void AWvAIController::HandleRemoveAIPerceptionDelegate()
 	}
 }
 
+
 #pragma region CloseCombat
 void AWvAIController::ModifyCloseCombatNearlestTarget()
 {
@@ -1149,7 +1230,7 @@ void AWvAIController::ModifyCloseCombatNearlestTarget()
 
 	if (ABaseCharacter* TargetCharacter = GetBlackboardTargetAsCharacter())
 	{
-		constexpr float K_WrapingThreshold = 150.0f;
+		constexpr float K_WrapingThreshold = 200.0f;
 		constexpr float Weight = 1.0f;
 
 		const auto CharacterLocation = TargetCharacter->GetActorLocation();
@@ -1157,7 +1238,7 @@ void AWvAIController::ModifyCloseCombatNearlestTarget()
 		const auto BasePos = BaseCharacter->GetActorLocation();
 		const auto Dist = FVector::Distance(BasePos, DestinationPos);
 
-		UE_LOG(LogTemp, Log, TEXT("Dist => %.3f, function => %s"), Dist, *FString(__FUNCTION__));
+		UE_LOG(LogWvAI, Log, TEXT("Dist => %.3f, function => %s"), Dist, *FString(__FUNCTION__));
 		if (Dist > K_WrapingThreshold)
 		{
 			return;
@@ -1204,7 +1285,7 @@ void AWvAIController::CloseCombatActionUpdate()
 
 void AWvAIController::CloseCombatActionEnd()
 {
-	Super::SetFocus(nullptr);
+	Super::ClearFocus(EAIFocusPriority::Gameplay);
 
 	AICloseCombatData.Deinitialize();
 }
@@ -1254,4 +1335,75 @@ int32 AWvAIController::GetComboTypeIndex() const
 }
 #pragma endregion
 
+
+#pragma region FriendAction
+void AWvAIController::AddFriendyCache(AActor* Actor)
+{
+	FriendlyParams.AddCache(Actor);
+}
+
+void AWvAIController::RemoveFriendyCache()
+{
+	FriendlyParams.RemoveCache();
+}
+
+bool AWvAIController::HasIncludeFriendyCache(AActor* Actor) const
+{
+	return FriendlyParams.HasCache(Actor);
+}
+
+void AWvAIController::FriendlyActionAbility()
+{
+	if (BaseCharacter.IsValid())
+	{
+		BaseCharacter->FriendlyActionAbility();
+
+#if CLEAR_FRIENDLY_DATA
+		if (ABaseCharacter* FriendCharacter = GetBlackboardFriendAsCharacter())
+		{
+			FriendCharacter->FriendlyActionAbility();
+		}
+		else
+		{
+			UE_LOG(LogWvAI, Error, TEXT("nullptr FriendCharacter => [%s]"), *FString(__FUNCTION__));
+		}
+#endif
+
+	}
+}
+
+void AWvAIController::CancelFriendlyActionAbility()
+{
+	if (BaseCharacter.IsValid())
+	{
+		//BaseCharacter->CancelFriendlyActionAbility();
+		BaseCharacter->CancelAnimatingAbility();
+		BaseCharacter->CancelAnimatingAbilityMontage();
+
+#if CLEAR_FRIENDLY_DATA
+		if (ABaseCharacter* FriendCharacter = GetBlackboardFriendAsCharacter())
+		{
+			//FriendCharacter->CancelFriendlyActionAbility();
+			FriendCharacter->CancelAnimatingAbility();
+			FriendCharacter->CancelAnimatingAbilityMontage();
+		}
+		else
+		{
+			UE_LOG(LogWvAI, Error, TEXT("nullptr FriendCharacter => [%s]"), *FString(__FUNCTION__));
+		}
+#endif
+
+	}
+}
+
+bool AWvAIController::IsFriendlyActionPlaying() const
+{
+	return BaseCharacter->IsFriendlyActionPlaying();
+}
+
+void AWvAIController::ApplyFriendlyCoolDown()
+{
+	FriendlyParams.Begin();
+}
+#pragma endregion
 

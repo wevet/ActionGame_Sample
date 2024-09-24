@@ -5,13 +5,53 @@
 #include "Character/WvAIController.h"
 #include "Component/WvSkeletalMeshComponent.h"
 #include "Misc/WvCommonUtils.h"
+#include "Redemption.h"
+#include "GameExtension.h"
+
 #include "Engine/World.h"
 #include "EngineUtils.h"
 
 // plugin
 #include "IAnimationBudgetAllocator.h"
+#include "SignificanceManager.h"
+
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(CharacterInstanceSubsystem)
+
+float GSignificanceDistance = 15000.0f;
+
+float MySignificanceFunction(USignificanceManager::FManagedObjectInfo* Obj, const FTransform& InTransform)
+{
+	// Note that the function is called in parallel processing by ParallelFor from SignificanceManager.
+	if (ABaseCharacter* Actor = Cast<ABaseCharacter>(Obj->GetObject()))
+	{
+		// Significance calculation based on distance between player and self
+		float Significance = 0.0f;
+		const FVector Distance = InTransform.GetLocation() - Actor->GetActorLocation();
+		if (Distance.Size() < GSignificanceDistance)
+		{
+			Significance = 1.f - Distance.Size() / GSignificanceDistance;
+		}
+		return Significance;
+	}
+	return 0.f;
+}
+
+void MyPostSignificanceFunction(USignificanceManager::FManagedObjectInfo* Obj, float OldSignificance, float Significance, bool bUnregistered)
+{
+	if (ABaseCharacter* Actor = Cast<ABaseCharacter>(Obj->GetObject()))
+	{
+		// @TODO tempolaly function
+		if (Significance > 0.f)
+		{
+			Actor->SetActorTickEnabled(true);
+		}
+		else
+		{
+			Actor->SetActorTickEnabled(false);
+		}
+	}
+}
 
 UCharacterInstanceSubsystem* UCharacterInstanceSubsystem::Instance = nullptr;
 
@@ -34,6 +74,10 @@ void UCharacterInstanceSubsystem::Deinitialize()
 {
 	UE_LOG(LogTemp, Log, TEXT("%s"), *FString(__FUNCTION__));
 
+	if (USignificanceManager* SignificanceManager = USignificanceManager::Get(GetWorld()))
+	{
+		SignificanceManager->UnregisterAll(K_SIGNIGICANCE_ACTOR);
+	}
 	Characters.Reset(0);
 }
 
@@ -92,6 +136,27 @@ void UCharacterInstanceSubsystem::DoForceKill(bool bFindWorldActorIterator/* = f
 
 	for (ABaseCharacter* Character : Characters)
 	{
+		if (IsValid(Character) && !Character->IsDead())
+		{
+			Character->DoForceKill();
+		}
+	}
+}
+
+void UCharacterInstanceSubsystem::DoForceKillIgnorePlayer(bool bFindWorldActorIterator/* = false*/)
+{
+	if (bFindWorldActorIterator)
+	{
+		UpdateCharacterInWorld();
+	}
+
+	Characters.RemoveAll([](ABaseCharacter* Character)
+	{
+		return !Character->IsBotCharacter();
+	});
+
+	for (ABaseCharacter* Character : Characters)
+	{
 		if (IsValid(Character))
 		{
 			Character->DoForceKill();
@@ -105,7 +170,18 @@ void UCharacterInstanceSubsystem::AssignAICharacter(ABaseCharacter* NewCharacter
 	{
 		Characters.Add(NewCharacter);
 
-		IAnimationBudgetAllocator::Get(GetWorld())->RegisterComponent(NewCharacter->GetWvSkeletalMeshComponent());
+
+		auto Components = GetSkelMeshComponents(NewCharacter);
+		for (UWvSkeletalMeshComponent* ActComp : Components)
+		{
+			IAnimationBudgetAllocator::Get(GetWorld())->RegisterComponent(ActComp);
+		}
+
+		if (USignificanceManager* SignificanceManager = USignificanceManager::Get(GetWorld()))
+		{
+			//const auto Tag = NewCharacter->GetAvatarTag().GetTagName();
+			SignificanceManager->RegisterObject(NewCharacter, K_SIGNIGICANCE_ACTOR, MySignificanceFunction, USignificanceManager::EPostSignificanceType::Sequential, MyPostSignificanceFunction);
+		}
 	}
 }
 
@@ -115,8 +191,28 @@ void UCharacterInstanceSubsystem::RemoveAICharacter(ABaseCharacter* InCharacter)
 	{
 		Characters.Remove(InCharacter);
 
-		IAnimationBudgetAllocator::Get(GetWorld())->UnregisterComponent(InCharacter->GetWvSkeletalMeshComponent());
+		auto Components = GetSkelMeshComponents(InCharacter);
+		for (UWvSkeletalMeshComponent* ActComp : Components)
+		{
+			IAnimationBudgetAllocator::Get(GetWorld())->UnregisterComponent(ActComp);
+		}
+
+		if (USignificanceManager* SignificanceManager = USignificanceManager::Get(GetWorld()))
+		{
+			SignificanceManager->UnregisterObject(InCharacter);
+		}
 	}
+}
+
+TArray<UWvSkeletalMeshComponent*> UCharacterInstanceSubsystem::GetSkelMeshComponents(const ABaseCharacter* InCharacter) const
+{
+	auto Components = Game::ComponentExtension::GetComponentsArray<UWvSkeletalMeshComponent>(InCharacter);
+	Components.RemoveAll([](UWvSkeletalMeshComponent* SkelMesh)
+	{
+		return SkelMesh == nullptr;
+	});
+
+	return Components;
 }
 
 bool UCharacterInstanceSubsystem::IsInEnemyAgent(const ABaseCharacter* Other) const
@@ -146,6 +242,18 @@ bool UCharacterInstanceSubsystem::IsInNeutralAgent(const ABaseCharacter* Other) 
 	return true;
 }
 
+bool UCharacterInstanceSubsystem::IsInBattleAny() const
+{
+	for (const ABaseCharacter* Character : Characters)
+	{
+		if (Character->IsInBattled())
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
 TArray<ABaseCharacter*> UCharacterInstanceSubsystem::GetLeaderAgent() const
 {
 	TArray<ABaseCharacter*> Result = Characters;
@@ -173,16 +281,20 @@ void UCharacterInstanceSubsystem::UpdateCharacterInWorld()
 	});
 }
 
-void UCharacterInstanceSubsystem::FocusNPCCharacter(ABaseCharacter* InCharacter)
+void UCharacterInstanceSubsystem::StartCinematicCharacter(ABaseCharacter* InCharacter)
 {
+	RemoveAICharacter(InCharacter);
+
 	if (IsValid(InCharacter))
 	{
 		InCharacter->DoStartCinematic();
 	}
 }
 
-void UCharacterInstanceSubsystem::UnFocusNPCCharacter(ABaseCharacter* InCharacter)
+void UCharacterInstanceSubsystem::StopCinematicCharacter(ABaseCharacter* InCharacter)
 {
+	AssignAICharacter(InCharacter);
+
 	if (IsValid(InCharacter))
 	{
 		InCharacter->DoStopCinematic();

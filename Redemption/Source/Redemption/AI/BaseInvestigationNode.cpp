@@ -2,6 +2,9 @@
 
 #include "BaseInvestigationNode.h"
 #include "Components/PrimitiveComponent.h"
+#include "Misc/WvCommonUtils.h"
+//#include "Redemption.h"
+#include "WvAbilitySystemTypes.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(BaseInvestigationNode)
 
@@ -14,6 +17,9 @@ ABaseInvestigationNode::ABaseInvestigationNode()
 void ABaseInvestigationNode::BeginPlay()
 {
 	Super::BeginPlay();
+
+
+	MyTagContainer.AddTag(TAG_Charactre_AI_Waypoint_UnVisited);
 
 #if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
 	static const IConsoleVariable* CVar = IConsoleManager::Get().FindConsoleVariable(TEXT("wv.DebugCharacterBehaviorTree"));
@@ -31,6 +37,24 @@ void ABaseInvestigationNode::BeginPlay()
 	}
 
 #endif
+}
+
+bool ABaseInvestigationNode::IsCharacterOwner(AActor* InActor) const
+{
+	if (UWvCommonUtils::IsBotPawn(Cast<APawn>(GetOwner())))
+	{
+		if (InActor)
+		{
+			return GetOwner() == InActor;
+		}
+	}
+	return false;
+}
+
+void ABaseInvestigationNode::OnVisitResult()
+{
+	MyTagContainer.Reset(0);
+	MyTagContainer.AddTag(TAG_Charactre_AI_Waypoint_Visited);
 }
 
 

@@ -168,10 +168,24 @@ void AWvWheeledVehiclePawn::HandleDriveAction()
 
 }
 
+#pragma region IWvEnvironmentInterface
+USceneComponent* AWvWheeledVehiclePawn::GetOverlapBaseComponent()
+{
+	return GetMesh();
+}
+
+bool AWvWheeledVehiclePawn::IsSprintingMovement() const
+{
+	return GetCurrentGear() > 0;
+}
+#pragma endregion
+
+#pragma region IWvEnvironmentInterface
 void AWvWheeledVehiclePawn::OnReceiveAbilityAttack(AActor* Attacker, const FHitResult& HitResult)
 {
 	UE_LOG(LogTemp, Log, TEXT("Attacker => %s, function => %s"), *GetNameSafe(Attacker), *FString(__FUNCTION__));
 }
+#pragma endregion
 
 float AWvWheeledVehiclePawn::GetForwardSpeed() const
 {

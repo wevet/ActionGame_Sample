@@ -2,6 +2,7 @@
 
 
 #include "UI/PlayerHealth.h"
+#include "Character/BaseCharacter.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(PlayerHealth)
 

@@ -77,6 +77,16 @@ TArray<FActiveGameplayEffectHandle> FWvGameplayAbilityTargetData::ApplyGameplayE
 		return AppliedHandles;
 	}
 
+	//Basic attack power setting (overrides GE setting)
+	SetOverrideDamageValue(InSpec);
+
+	//Weak Attack Factor
+	SetWeaknessAttackCoefficient(InSpec);
+
+	//Combo Factor
+	SetComboAttackCoefficient(InSpec);
+
+
 	FGameplayEffectSpec	SpecToApply(InSpec);
 	FGameplayEffectContextHandle EffectContext = SpecToApply.GetContext().Duplicate();
 	SpecToApply.SetContext(EffectContext);
@@ -96,6 +106,77 @@ TArray<FActiveGameplayEffectHandle> FWvGameplayAbilityTargetData::ApplyGameplayE
 	}
 	return AppliedHandles;
 }
+
+void FWvGameplayAbilityTargetData::SetOverrideDamageValue(FGameplayEffectSpec& Spec)
+{
+	if (!TargetInfo.bIsOverrideGEDamageValue)
+	{
+		return;
+	}
+
+	//FGameplayTag Tag_Param_EC_OverrideDamagerValue = GetGameplayTag_Global_Param_EC_OverrideDamagerValue();
+	//Spec.SetSetByCallerMagnitude(Tag_Param_EC_OverrideDamagerValue, TargetInfo.bIsOverrideGEDamageValue);
+}
+
+void FWvGameplayAbilityTargetData::SetWeaknessAttackCoefficient(FGameplayEffectSpec& Spec)
+{
+	if (TargetInfo.WeaknessNames.Num() <= 0)
+	{
+		return;
+	}
+
+	AActor* TargetActor = GetTargetActor();
+	if (!TargetActor)
+	{
+		return;
+	}
+
+	//UWeaknessComponent* WeaknessComponent = Cast<UWeaknessComponent>(TargetActor->GetComponentByClass(UWeaknessComponent::StaticClass()));
+	//if (!WeaknessComponent)
+	//{
+	//	return;
+	//}
+
+	float MaxCoefficient = 0;
+	FName MaxWeaknessName = TargetInfo.WeaknessNames[0];
+	for (int32 Index = 0; Index < TargetInfo.WeaknessNames.Num(); ++Index)
+	{
+		MaxWeaknessName = TargetInfo.WeaknessNames[Index];
+		FName WeaknessName = TargetInfo.WeaknessNames[Index];
+		FWvWeaknessInfo ConfigInfo;
+
+#if false
+		if (WeaknessComponent->GetActiveWeaknessConfigInfo(WeaknessName, ConfigInfo))
+		{
+			const float LocalCoefficient = ConfigInfo.ConfigInfo.AttackCoefficient;
+			if (MaxCoefficient < LocalCoefficient)
+			{
+				MaxWeaknessName = WeaknessName;
+				MaxCoefficient = LocalCoefficient;
+			}
+		}
+#endif
+	}
+
+	if (MaxCoefficient > 0)
+	{
+		//FGameplayTag Tag_Param_EC_WeaknessHitReact_AttackCoefficient = GetGameplayTag_Global_Param_EC_WeaknessHitReact_AttackCoefficient();
+		Spec.SetSetByCallerMagnitude(TAG_Common_AttackWeakness_Coefficient, MaxCoefficient);
+	}
+
+	TargetInfo.SetMaxDamageWeaknessName(MaxWeaknessName);
+}
+
+void FWvGameplayAbilityTargetData::SetComboAttackCoefficient(FGameplayEffectSpec& Spec)
+{
+	if (TargetInfo.ComboAttackCoefficient <= 1)
+	{
+		return;
+	}
+
+	Spec.SetSetByCallerMagnitude(TAG_Common_Attack_Coefficient, TargetInfo.ComboAttackCoefficient);
+}
+
 #pragma endregion
 
 
