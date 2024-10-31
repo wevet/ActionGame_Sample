@@ -28,8 +28,7 @@ FLSComponentAndTransform UWvCommonUtils::ComponentWorldToLocal(const FLSComponen
 {
 	FLSComponentAndTransform LocalSpaceComponent;
 	LocalSpaceComponent.Component = WorldSpaceComponent.Component;
-	// DisplayName GetWorldTransform
-	LocalSpaceComponent.Transform = WorldSpaceComponent.Transform * UKismetMathLibrary::InvertTransform(WorldSpaceComponent.Component->K2_GetComponentToWorld());
+	LocalSpaceComponent.Transform = WorldSpaceComponent.Transform * WorldSpaceComponent.Component->GetComponentToWorld().Inverse();
 	return LocalSpaceComponent;
 }
 
@@ -43,28 +42,12 @@ FLSComponentAndTransform UWvCommonUtils::ComponentLocalToWorld(const FLSComponen
 
 FTransform UWvCommonUtils::TransformMinus(const FTransform A, const FTransform B)
 {
-	FTransform Out = FTransform::Identity;
-	Out.SetLocation(A.GetLocation() - B.GetLocation());
-	Out.SetScale3D(A.GetScale3D() - B.GetScale3D());
-
-	const float Roll = (A.GetRotation().Rotator().Roll - B.GetRotation().Rotator().Roll);
-	const float Pitch = (A.GetRotation().Rotator().Pitch - B.GetRotation().Rotator().Pitch);
-	const float Yaw = (A.GetRotation().Rotator().Yaw - B.GetRotation().Rotator().Yaw);
-	Out.SetRotation(FQuat(FRotator(Pitch, Yaw, Roll)));
-	return Out;
+	return FTransform(A.GetRotation().Rotator() - B.GetRotation().Rotator(), A.GetLocation() - B.GetLocation(), A.GetScale3D() - B.GetScale3D());
 }
 
 FTransform UWvCommonUtils::TransformPlus(const FTransform A, const FTransform B)
 {
-	FTransform Out = FTransform::Identity;
-	Out.SetLocation(A.GetLocation() + B.GetLocation());
-	Out.SetScale3D(A.GetScale3D() + B.GetScale3D());
-
-	const float Roll = (A.GetRotation().Rotator().Roll + B.GetRotation().Rotator().Roll);
-	const float Pitch = (A.GetRotation().Rotator().Pitch + B.GetRotation().Rotator().Pitch);
-	const float Yaw = (A.GetRotation().Rotator().Yaw + B.GetRotation().Rotator().Yaw);
-	Out.SetRotation(FQuat(FRotator(Pitch, Yaw, Roll)));
-	return Out;
+	return FTransform(A.GetRotation().Rotator() + B.GetRotation().Rotator(), A.GetLocation() + B.GetLocation(), A.GetScale3D() + B.GetScale3D());
 }
 
 bool UWvCommonUtils::IsHost(const AController* Controller)
@@ -284,21 +267,6 @@ float UWvCommonUtils::GetAngleBetween3DVector(FVector Vec1, FVector Vec2, FVecto
 	return Angle;
 }
 
-FTransform UWvCommonUtils::TransformSubStract(const FTransform& TransformA, const FTransform& TransformB)
-{
-	FVector Location = TransformA.GetLocation() - TransformB.GetLocation();
-	FVector Scale = TransformA.GetScale3D() - TransformB.GetScale3D();
-	FQuat Rotation = TransformA.GetRotation() - TransformA.GetRotation();
-	return FTransform(Rotation, Location, Scale);
-}
-
-FTransform UWvCommonUtils::TransformAdd(const FTransform& TransformA, const FTransform& TransformB)
-{
-	FVector Location = TransformA.GetTranslation() + TransformB.GetTranslation();
-	FVector Scale = TransformA.GetScale3D() + TransformB.GetScale3D();
-	FQuat Rotation = TransformA.GetRotation() + TransformB.GetRotation();
-	return FTransform(Rotation, Location, Scale);
-}
 
 UFXSystemComponent* UWvCommonUtils::SpawnParticleAtLocation(const UObject* WorldContextObject, UFXSystemAsset* Particle, FVector Location, FRotator Rotation, FVector Scale)
 {
@@ -470,5 +438,46 @@ const FVector UWvCommonUtils::ChangePositonByRotation(const float Rotation, FVec
 	NewPosition.X = Position.X * FMath::Cos(Radian) - Position.Y * FMath::Sin(Radian);
 	NewPosition.Y = Position.X * FMath::Sin(Radian) + Position.Y * FMath::Cos(Radian);
 	return NewPosition;
+}
+
+
+void UWvCommonUtils::OrderByDistance(AActor* Owner, TArray<AActor*>& OutArray, const bool bIsShortest)
+{
+	OutArray.Sort([Owner, bIsShortest](const AActor& A, const AActor& B)
+	{
+		const float DistanceA = A.GetDistanceTo(Owner);
+		const float DistanceB = B.GetDistanceTo(Owner);
+		return bIsShortest ? DistanceA > DistanceB : DistanceA < DistanceB;
+	});
+}
+
+
+static void DrawDebugSweptSphere(const UWorld* InWorld, FVector const& Start, FVector const& End, float Radius, FColor const& Color, bool bPersistentLines = false, float LifeTime = -1.f, uint8 DepthPriority = 0)
+{
+	FVector const TraceVec = End - Start;
+	float const Dist = TraceVec.Size();
+
+	FVector const Center = Start + TraceVec * 0.5f;
+	float const HalfHeight = (Dist * 0.5f) + Radius;
+
+	FQuat const CapsuleRot = FRotationMatrix::MakeFromZ(TraceVec).ToQuat();
+	DrawDebugCapsule(InWorld, Center, HalfHeight, Radius, CapsuleRot, Color, bPersistentLines, LifeTime, DepthPriority);
+}
+
+
+void UWvCommonUtils::DrawDebugSphereTraceSingle(const UWorld* World, const FVector& Start, const FVector& End, const FCollisionShape& CollisionShape, const bool bHit, const FHitResult& OutHit, const FLinearColor TraceColor, const FLinearColor TraceHitColor, const float DrawTime)
+{
+	if (bHit && OutHit.bBlockingHit)
+	{
+		// Red up to the blocking hit, green thereafter
+		DrawDebugSweptSphere(World, Start, OutHit.Location, CollisionShape.GetSphereRadius(), TraceColor.ToFColor(true), false, DrawTime);
+		DrawDebugSweptSphere(World, OutHit.Location, End, CollisionShape.GetSphereRadius(), TraceHitColor.ToFColor(true), false, DrawTime);
+		DrawDebugPoint(World, OutHit.ImpactPoint, 16.0f, TraceColor.ToFColor(true), false, DrawTime);
+	}
+	else
+	{
+		// no hit means all red
+		DrawDebugSweptSphere(World, Start, End, CollisionShape.GetSphereRadius(), TraceColor.ToFColor(true), false, DrawTime);
+	}
 }
 

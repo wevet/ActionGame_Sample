@@ -110,6 +110,9 @@ void UWvAnimInstance::NativeInitializeAnimation()
 	if (UAbilitySystemComponent* ASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(Character.Get()))
 	{
 		InitializeWithAbilitySystem(ASC);
+
+		// 指定タグが追加/削除時に呼ぶ処理をバインド
+		ASC->RegisterGameplayTagEvent(TAG_Character_ActionLookAt, EGameplayTagEventType::NewOrRemoved).AddUObject(this, &ThisClass::TagChangeEvent);
 	}
 }
 
@@ -137,9 +140,10 @@ void UWvAnimInstance::NativeThreadSafeUpdateAnimation(float DeltaSeconds)
 
 	if (Character.IsValid())
 	{
-		if (Character->GetAbilitySystemComponent())
+		if (UAbilitySystemComponent* ASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(Character.Get()))
 		{
-			bIsStateMelee = Character->GetAbilitySystemComponent()->HasMatchingGameplayTag(TAG_Character_StateMelee);
+			bIsForbidRagdoll = ASC->HasMatchingGameplayTag(TAG_Locomotion_ForbidRagdoll);
+			bIsStateMelee = ASC->HasMatchingGameplayTag(TAG_Character_StateMelee);
 		}
 
 		if (Character->GetInventoryComponent())
@@ -150,7 +154,6 @@ void UWvAnimInstance::NativeThreadSafeUpdateAnimation(float DeltaSeconds)
 		GenderType = Character->GetGenderType();
 		bIsInjured = bWasBulletWeaponEquip ? false : Character->IsHealthHalf();
 
-
 		bIsAccessoryOverlay = bool(Character->GetAccessoryMesh());
 		AccessoryType = Character->GetAccessoryData().AccessoryType;
 		DirectionType = Character->GetAccessoryData().DirectionType;
@@ -159,10 +162,6 @@ void UWvAnimInstance::NativeThreadSafeUpdateAnimation(float DeltaSeconds)
 		bWasTargetLock = bIsInjured ? false : Character->IsTargetLock() && !bWasBulletWeaponEquip;//!bIsStateMelee && 
 
 
-		if (UAbilitySystemComponent* ASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(Character.Get()))
-		{
-			bIsForbidRagdoll = ASC->HasMatchingGameplayTag(TAG_Locomotion_ForbidRagdoll);
-		}
 	}
 
 	if (IsValid(CharacterMovementComponent))
@@ -274,24 +273,38 @@ void UWvAnimInstance::CalculateGaitValue()
 
 void UWvAnimInstance::CalculateAimOffset()
 {
-	switch (LSRotationMode)
+	TFunction<void(void)> _AimRotateFunction = [this]()
 	{
-		case ELSRotationMode::VelocityDirection:
+		const FRotator DeltaRot = UKismetMathLibrary::NormalizedDeltaRotator(LookingRotation, CharacterRotation);
+		FVector2D NewAimOffset = FVector2D(DeltaRot.Yaw, DeltaRot.Pitch);
+		NewAimOffset.X = FMath::Clamp(NewAimOffset.X, -AimOffsetClampRange.X, AimOffsetClampRange.X);
+		NewAimOffset.Y = FMath::Clamp(NewAimOffset.Y, -AimOffsetClampRange.Y, AimOffsetClampRange.Y);
+		AimOffset = NewAimOffset;
+	};
+
+	TFunction<void(void)> _AimVelocityFunction = [this]() 
+	{
+		const float DeltaSeconds = GetWorld()->GetDeltaSeconds();
+		constexpr float DefaultInterpSpeed = 4.0f;
+		AimOffset = UKismetMathLibrary::Vector2DInterpTo(AimOffset, FVector2D::ZeroVector, DeltaSeconds, DefaultInterpSpeed);
+	};
+
+
+	if (bIsLookAtAcion)
+	{
+		_AimRotateFunction();
+	}
+	else
+	{
+		switch (LSRotationMode)
 		{
-			const float DeltaSeconds = GetWorld()->GetDeltaSeconds();
-			constexpr float DefaultInterpSpeed = 4.0f;
-			AimOffset = UKismetMathLibrary::Vector2DInterpTo(AimOffset, FVector2D::ZeroVector, DeltaSeconds, DefaultInterpSpeed);
+			case ELSRotationMode::VelocityDirection:
+			_AimVelocityFunction();
+			break;
+			case ELSRotationMode::LookingDirection:
+			_AimRotateFunction();
+			break;
 		}
-		break;
-		case ELSRotationMode::LookingDirection:
-		{
-			const FRotator DeltaRot = UKismetMathLibrary::NormalizedDeltaRotator(LookingRotation, CharacterRotation);
-			FVector2D NewAimOffset = FVector2D(DeltaRot.Yaw, DeltaRot.Pitch);
-			NewAimOffset.X = FMath::Clamp(NewAimOffset.X, -AimOffsetClampRange.X, AimOffsetClampRange.X);
-			NewAimOffset.Y = FMath::Clamp(NewAimOffset.Y, -AimOffsetClampRange.Y, AimOffsetClampRange.Y);
-			AimOffset = NewAimOffset;
-		}
-		break;
 	}
 
 	AimSweepTime = UKismetMathLibrary::MapRangeClamped(AimOffset.Y, -90.0f, 90.f, 1.0f, 0.0f);
@@ -549,13 +562,13 @@ UPredictionAnimInstance* UWvAnimInstance::GetPredictionAnimInstance() const
 	static FName TagName = FName(TEXT("FootIK"));
 	return Cast<UPredictionAnimInstance>(this->GetLinkedAnimGraphInstanceByTag(TagName));
 }
-#pragma endregion
-
 
 void UWvAnimInstance::WakeUpPoseSnapShot()
 {
 	SavePoseSnapshot(RagdollPoseSnapshot);
 }
+#pragma endregion
+
 
 #pragma region LadderOrBalance
 void UWvAnimInstance::UpdateLadderIKData(UPrimitiveComponent* Component, const FClimbingIKData LeftIKHand, const FClimbingIKData RightIKHand, const FClimbingIKData LeftIKFoot, const FClimbingIKData RightIKFoot)
@@ -582,4 +595,11 @@ void UWvAnimInstance::ApplyJumpSequence(const bool bIsStartSeq, const float Norm
 	UE_LOG(LogTemp, Log, TEXT("%s"), *FString(__FUNCTION__));
 }
 #pragma endregion
+
+
+void UWvAnimInstance::TagChangeEvent(const FGameplayTag CallBackTag, int32 NewCount)
+{
+	UE_LOG(LogTemp, Log, TEXT("TagChangeEvent %s %d"), *CallBackTag.GetTagName().ToString(), NewCount);
+}
+
 

@@ -240,6 +240,12 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion|AimOffset")
 	FVector2D AimOffsetClampRange { 180.0f, 180.0f };
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion|AimOffset")
+	bool bIsLookAtAcion = false;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion|AimOffset")
+	FVector2D AimOffset;
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Linked Layer Data")
 	bool bIsLinkedLayerChanged = false;
 
@@ -263,9 +269,6 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
 	float DeltaVelocityDifference;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion|AimOffset")
-	FVector2D AimOffset;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "DistanceMatching")
 	float GroundDistance = -1.0f;
@@ -291,6 +294,7 @@ protected:
 	//FMotionMatchingSettings MotionMatchingSettings;
 
 
+	virtual void TagChangeEvent(const FGameplayTag CallBackTag, int32 NewCount);
 
 private:
 	UPROPERTY()

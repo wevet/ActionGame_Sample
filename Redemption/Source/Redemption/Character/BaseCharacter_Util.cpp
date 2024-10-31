@@ -45,14 +45,7 @@
 
 void ABaseCharacter::RecalcurateBounds()
 {
-	auto Components = Game::ComponentExtension::GetComponentsArray<UMeshComponent>(this);
-
-	Components.RemoveAll([](UMeshComponent* SkelMesh)
-	{
-		return SkelMesh == nullptr;
-	});
-
-	for (UMeshComponent* SkelMesh : Components)
+	for (UMeshComponent* SkelMesh : GetBodyMeshComponents())
 	{
 		SkelMesh->bUseAttachParentBound = true;
 	}
@@ -102,6 +95,7 @@ void ABaseCharacter::AsyncSetAccessoryMesh(TSoftObjectPtr<UStaticMesh> StaticMes
 			if (Mesh)
 			{
 				AccessoryObjectRoot->AttachToComponent(GetMesh(), FAttachmentTransformRules::KeepRelativeTransform, SocketName);
+				AccessoryObjectRoot->bUseAttachParentBound = true;
 			}
 			AccessoryObjectRoot->SetVisibility(IsValid(Mesh));
 		}
@@ -205,20 +199,31 @@ void ABaseCharacter::HairStrandsLODSetUp()
 void ABaseCharacter::OnMobDeath()
 {
 	Face->SetLeaderPoseComponent(GetMesh(), true, true);
-	//Face->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	Face->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
 	RecalcurateBounds();
 
-	AccessoryObjectRoot->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-	AccessoryObjectRoot->bUseAttachParentBound = true;
-
-
+	// force lod accessory
 	{
-		auto Components = Game::ComponentExtension::GetComponentsArray<USkeletalMeshComponent>(this);
+		AccessoryObjectRoot->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		AccessoryObjectRoot->bUseAttachParentBound = true;
 
-		Components.RemoveAll([](USkeletalMeshComponent* SkelMesh)
+		auto ACC_Mesh = GetAccessoryMesh();
+		if (ACC_Mesh)
 		{
-			return SkelMesh == nullptr;
+			const int32 NumLods = ACC_Mesh->GetNumLODs();
+			AccessoryObjectRoot->SetForcedLodModel(NumLods);
+		}
+	}
+
+#if false
+	{
+		// In case of ragdoll, the lod of the root mesh is not changed.
+		// Because it will be jerky.
+		auto Components = Game::ComponentExtension::GetComponentsArray<USkeletalMeshComponent>(this);
+		Components.RemoveAll([this](USkeletalMeshComponent* SkelMesh)
+		{
+			return SkelMesh == nullptr || SkelMesh == GetMesh();
 		});
 
 		for (USkeletalMeshComponent* Component : Components)
@@ -226,8 +231,13 @@ void ABaseCharacter::OnMobDeath()
 			const int32 MaxLod = Component->GetNumLODs();
 			Component->SetForcedLOD(MaxLod);
 		}
+
+		const int32 MaxLod = GetMesh()->GetNumLODs();
+		const int32 MinLod = (GetMesh()->GetNumLODs() - 1) - MaxLod;
+		GetMesh()->SetForcedLOD(FMath::Min(0, MinLod));
 	}
 
+	// force lod hair
 	{
 		auto Components = Game::ComponentExtension::GetComponentsArray<UGroomComponent>(this);
 		Components.RemoveAll([](UGroomComponent* Groom)
@@ -237,8 +247,8 @@ void ABaseCharacter::OnMobDeath()
 
 		for (UGroomComponent* Component : Components)
 		{
-			const int32 MaxLod = Component->GetNumLODs();
-			Component->SetForcedLOD(MaxLod);
+			const int32 NumLods = Component->GetNumLODs();
+			Component->SetForcedLOD(NumLods);
 			Component->ReleaseHairSimulation();
 			Component->SetEnableSimulation(false);
 
@@ -248,23 +258,9 @@ void ABaseCharacter::OnMobDeath()
 			}
 		}
 	}
+#endif
 
-	//constexpr float Timer = 5.0f;
-	//FTimerHandle Handle;
-	//GetWorldTimerManager().SetTimer(Handle, [this]()
-	//{
-	//	auto Components = Game::ComponentExtension::GetComponentsArray<USkeletalMeshComponent>(this);
-	//	Components.RemoveAll([](USkeletalMeshComponent* SkelMesh)
-	//	{
-	//		return SkelMesh == nullptr;
-	//	});
-	//	for (USkeletalMeshComponent* Component : Components)
-	//	{
-	//		const int32 MaxLod = Component->GetNumLODs();
-	//		Component->SetForcedLOD(MaxLod);
-	//	}
-	//}, 
-	//Timer, false);
+
 }
 
 void ABaseCharacter::UpdateAccessory(const FAccessoryData& InAccessoryData)
@@ -309,11 +305,34 @@ EBodyShapeType ABaseCharacter::GetBodyShapeType() const
 	return EBodyShapeType::Normal;
 }
 
+
+void ABaseCharacter::GenerateRandomBodyShapeType()
+{
+	const uint8 Index = (uint8)FMath::RandRange(0, 2);
+
+	SetBodyShapeType((EBodyShapeType)Index);
+}
+
+
+void ABaseCharacter::GenerateRandomGenderType()
+{
+	const uint8 Index = (uint8)FMath::RandRange(0, 1);
+
+	SetGenderType((EGenderType)Index);
+}
+
+
 TArray<USkeletalMeshComponent*> ABaseCharacter::GetBodyMeshComponents() const
 {
 	TArray<USkeletalMeshComponent*>Result;
 	Result.Add(GetMesh());
 	Result.Add(Face);
+
+	Result.Add(Body);
+	Result.Add(Top);
+	Result.Add(Bottom);
+	Result.Add(Feet);
+
 	return Result;
 }
 
@@ -469,6 +488,136 @@ void ABaseCharacter::FinishMontageMatching()
 	{
 		CMC->MantleEnd();
 	}
+}
+
+
+void ABaseCharacter::EnableMasterPose(USkeletalMeshComponent* SkeletalMeshComponent)
+{
+	const auto Asset = SkeletalMeshComponent->GetSkeletalMeshAsset();
+
+	if (IsValid(Asset))
+	{
+		if (Asset->GetPostProcessAnimBlueprint() == nullptr && SkeletalMeshComponent->AnimClass == nullptr)
+		{
+			SkeletalMeshComponent->SetLeaderPoseComponent(GetMesh());
+		}
+	}
+}
+
+
+void ABaseCharacter::SetMasterPoseBody()
+{
+	EnableMasterPose(Body);
+	EnableMasterPose(Top);
+	EnableMasterPose(Bottom);
+	EnableMasterPose(Feet);
+}
+
+void ABaseCharacter::SetCrowdMasterPoseBody()
+{
+	SetMasterPoseBody();
+	SetUpdateAnimationEditor();
+	RecalcurateBounds();
+}
+
+void ABaseCharacter::LoadAndSetMeshes(const bool bIsBlockLoadAssets, TSoftObjectPtr<USkeletalMesh> BaseMesh, TSoftObjectPtr<USkeletalMesh> BodyMesh, TSoftObjectPtr<USkeletalMesh> FaceMesh, TSoftObjectPtr<USkeletalMesh> TopMesh, TSoftObjectPtr<USkeletalMesh> BottomMesh, TSoftObjectPtr<USkeletalMesh> FeetMesh)
+{
+
+	if (bIsBlockLoadAssets)
+	{
+		UWvCommonUtils::SetSkeletalMeshLoadAssetBlocking(GetMesh(), BaseMesh);
+		UWvCommonUtils::SetSkeletalMeshLoadAssetBlocking(Body, BodyMesh);
+		UWvCommonUtils::SetSkeletalMeshLoadAssetBlocking(Face, FaceMesh);
+		UWvCommonUtils::SetSkeletalMeshLoadAssetBlocking(Top, TopMesh);
+		UWvCommonUtils::SetSkeletalMeshLoadAssetBlocking(Bottom, BottomMesh);
+		UWvCommonUtils::SetSkeletalMeshLoadAssetBlocking(Feet, FeetMesh);
+		return;
+	}
+
+	FStreamableManager& StreamableManager = UWvGameInstance::GetStreamableManager();
+
+	TArray<TSoftObjectPtr<USkeletalMesh>> LocalArray({ BaseMesh, BodyMesh, FaceMesh, TopMesh, BottomMesh, FeetMesh});
+
+	InitialBodyMeshesPath.Reset(0);
+	for (auto SoftMesh : LocalArray)
+	{
+		InitialBodyMeshesPath.Add(SoftMesh.ToSoftObjectPath());
+	}
+
+	StreamableManager.RequestAsyncLoad(InitialBodyMeshesPath, [this] 
+	{
+		this->OnLoadAndSetMeshes_Callback();
+	});
+
+}
+
+
+void ABaseCharacter::OnLoadAndSetMeshes_Callback()
+{
+	// 0 Base
+	// 1 Body
+	// 2 Face
+	// 3 Top
+	// 4 BottomMesh
+	// 5 FeetMesh
+
+	if (InitialBodyMeshesPath.IsValidIndex(0))
+	{
+		auto LoadedObj = TSoftObjectPtr<USkeletalMesh>(InitialBodyMeshesPath[0]).Get();
+		if (LoadedObj)
+		{
+			GetMesh()->SetSkinnedAssetAndUpdate(LoadedObj, true);
+		}
+	}
+
+	if (InitialBodyMeshesPath.IsValidIndex(1))
+	{
+		auto LoadedObj = TSoftObjectPtr<USkeletalMesh>(InitialBodyMeshesPath[1]).Get();
+		if (LoadedObj)
+		{
+			Body->SetSkinnedAssetAndUpdate(LoadedObj, true);
+		}
+	}
+
+	if (InitialBodyMeshesPath.IsValidIndex(2))
+	{
+		auto LoadedObj = TSoftObjectPtr<USkeletalMesh>(InitialBodyMeshesPath[2]).Get();
+		if (LoadedObj)
+		{
+			Face->SetSkinnedAssetAndUpdate(LoadedObj, true);
+		}
+	}
+
+	if (InitialBodyMeshesPath.IsValidIndex(3))
+	{
+		auto LoadedObj = TSoftObjectPtr<USkeletalMesh>(InitialBodyMeshesPath[3]).Get();
+		if (LoadedObj)
+		{
+			Top->SetSkinnedAssetAndUpdate(LoadedObj, true);
+		}
+	}
+
+	if (InitialBodyMeshesPath.IsValidIndex(4))
+	{
+		auto LoadedObj = TSoftObjectPtr<USkeletalMesh>(InitialBodyMeshesPath[4]).Get();
+		if (LoadedObj)
+		{
+			Bottom->SetSkinnedAssetAndUpdate(LoadedObj, true);
+		}
+	}
+
+	if (InitialBodyMeshesPath.IsValidIndex(5))
+	{
+		auto LoadedObj = TSoftObjectPtr<USkeletalMesh>(InitialBodyMeshesPath[5]).Get();
+		if (LoadedObj)
+		{
+			Feet->SetSkinnedAssetAndUpdate(LoadedObj, true);
+		}
+	}
+
+	UE_LOG(LogTemp, Log, TEXT("All meshes have been loaded and set. => [%s]"), *FString(__FUNCTION__));
+	this->AsyncMeshesLoadCompleteDelegate.Broadcast();
+	this->OnAsyncMeshesLoadCompleteDelegate();
 }
 
 

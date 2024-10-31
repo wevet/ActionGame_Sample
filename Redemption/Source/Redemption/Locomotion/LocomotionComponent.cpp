@@ -273,11 +273,11 @@ void ULocomotionComponent::SetLSMovementMode_Implementation(const ELSMovementMod
 		AbilitySystemComponent->RemoveGameplayTag(LocomotionStateDataAsset->FindMovementModeTag(LocomotionEssencialVariables.LSMovementMode));
 		AbilitySystemComponent->AddGameplayTag(LocomotionStateDataAsset->FindMovementModeTag(NewALSMovementMode));
 
-		if (!Character->IsBotCharacter())
-		{
-			auto Tag2String = LocomotionStateDataAsset->FindMovementModeTag(NewALSMovementMode).GetTagName().ToString();
-			UE_LOG(LogTemp, Warning, TEXT("Tag2String => %s"), *Tag2String);
-		}
+		//if (!Character->IsBotCharacter())
+		//{
+		//	auto Tag2String = LocomotionStateDataAsset->FindMovementModeTag(NewALSMovementMode).GetTagName().ToString();
+		//	UE_LOG(LogTemp, Warning, TEXT("Tag2String => %s"), *Tag2String);
+		//}
 	}
 
 	if (!IsValid(LocomotionStateDataAsset))

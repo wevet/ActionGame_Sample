@@ -4,6 +4,7 @@
 #include "Character/EnemyCharacter.h"
 #include "GameExtension.h"
 #include "Component/InventoryComponent.h"
+#include "Component/WvSkeletalMeshComponent.h"
 
 
 AEnemyCharacter::AEnemyCharacter(const FObjectInitializer& ObjectInitializer)
@@ -11,6 +12,14 @@ AEnemyCharacter::AEnemyCharacter(const FObjectInitializer& ObjectInitializer)
 
 	// dont async load components
 	bIsAllowAsyncLoadComponentAssets = true;
+
+	UWvSkeletalMeshComponent* WvMeshComp = CastChecked<UWvSkeletalMeshComponent>(GetMesh());
+	check(WvMeshComp);
+
+	// sets Damage
+	//WvMeshComp->SetCollisionResponseToChannel(ECollisionChannel::ECC_GameTraceChannel3, ECollisionResponse::ECR_Block);
+
+
 }
 
 void AEnemyCharacter::MoveBlockedBy(const FHitResult& Impact)

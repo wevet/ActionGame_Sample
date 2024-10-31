@@ -22,6 +22,9 @@ UE_DEFINE_GAMEPLAY_TAG(TAG_Character_ActionMelee_ComboRequire, "Character.Action
 // Attack frag tag
 UE_DEFINE_GAMEPLAY_TAG(TAG_Character_ActionMelee_Forbid, "Character.Action.Melee.Forbid");
 
+// look at target
+UE_DEFINE_GAMEPLAY_TAG(TAG_Character_ActionLookAt, "Character.Action.LookAt");
+
 // Melee Action 
 UE_DEFINE_GAMEPLAY_TAG(TAG_Character_ActionMelee, "Character.Action.Melee");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Character_ActionMelee_Hold, "Character.Action.Melee.Hold");

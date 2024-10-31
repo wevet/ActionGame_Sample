@@ -173,10 +173,10 @@ struct REDEMPTION_API FMantleAsset
 
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	UAnimMontage* AnimMontage;
+	TObjectPtr<UAnimMontage> AnimMontage = nullptr;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	UCurveVector* Position;
+	TObjectPtr<UCurveVector> PositionCorrectionCurve = nullptr;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FVector StartingOffset;
@@ -202,7 +202,6 @@ public:
 public:
 	FMantleAsset()
 	{
-		AnimMontage = nullptr;
 		StartingOffset = FVector::ZeroVector;
 		LowHeight = 0.0f;
 		LowPlayRate = 1.0f;
@@ -220,10 +219,10 @@ struct REDEMPTION_API FMantleParams
 
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	UAnimMontage * AnimMontage;
+	TObjectPtr<UAnimMontage> AnimMontage = nullptr;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	UCurveVector* Position;
+	TObjectPtr<UCurveVector> PositionCorrectionCurve;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float StartingPosition;
@@ -238,7 +237,7 @@ public:
 	FMantleParams()
 	{
 		AnimMontage = nullptr;
-		Position = nullptr;
+		PositionCorrectionCurve = nullptr;
 		StartingPosition = 0.0f;
 		PlayRate = 1.0f;
 		StartingOffset = FVector::ZeroVector;
@@ -300,6 +299,9 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FVector LandingLocationOffset = FVector::ZeroVector;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	TObjectPtr<UCurveFloat> MantleTimelineCurve;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	TEnumAsByte<ETraceTypeQuery> MantleTraceChannel;

@@ -218,6 +218,9 @@ public:
 	FAsyncLoadCompleteDelegate AsyncLoadCompleteDelegate;
 
 	UPROPERTY(BlueprintAssignable)
+	FAsyncLoadCompleteDelegate AsyncMeshesLoadCompleteDelegate;
+
+	UPROPERTY(BlueprintAssignable)
 	FAimingChangeDelegate AimingChangeDelegate;
 
 	UPROPERTY(BlueprintAssignable)
@@ -297,6 +300,8 @@ public:
 
 	virtual bool IsTargetLock() const;
 
+	bool HasComboTrigger() const;
+
 	UFUNCTION(BlueprintCallable, Category = Network)
 	bool IsBotCharacter() const;
 
@@ -323,6 +328,8 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "MassAI")
 	void HandleAllowAttack(const bool InAllow);
+
+	void HandleLookAtTag(const bool bIsAddTag);
 
 	UFUNCTION(BlueprintCallable, Category = Accessory)
 	void UpdateAccessory(const FAccessoryData& InAccessoryData);
@@ -409,7 +416,8 @@ public:
 	UMaterialInstanceDynamic* GetStaticMeshDynamicMaterialInstance(UStaticMeshComponent* StaticMeshComponent, const FName SlotName) const;
 
 	UFUNCTION(BlueprintCallable, Category = Utils)
-	UMaterialInstanceDynamic* GetGroomDynamicMaterialInstanceWithMaterials(UPrimitiveComponent* MeshComponent, const FName SlotName, 
+	UMaterialInstanceDynamic* GetGroomDynamicMaterialInstanceWithMaterials(UPrimitiveComponent* MeshComponent, 
+		const FName SlotName, 
 		UMaterialInterface* HairMat, 
 		UMaterialInterface* FacialMat, 
 		UMaterialInterface* HelmetMat) const;
@@ -435,6 +443,27 @@ public:
 	void SetOverlayMaterials(const bool IsEnable, TArray<USkeletalMeshComponent*> IgnoreMeshes);
 
 	void SetGroomSimulation(const bool IsEnable);
+
+	UFUNCTION(BlueprintCallable, Category = Utils)
+	void EnableMasterPose(USkeletalMeshComponent* SkeletalMeshComponent);
+
+	UFUNCTION(BlueprintCallable, Category = Utils)
+	void SetMasterPoseBody();
+
+	UFUNCTION(BlueprintCallable, Category = Utils)
+	void LoadAndSetMeshes(const bool bIsBlockLoadAssets, TSoftObjectPtr<USkeletalMesh> BaseMesh, TSoftObjectPtr<USkeletalMesh> BodyMesh, TSoftObjectPtr<USkeletalMesh> FaceMesh, TSoftObjectPtr<USkeletalMesh> TopMesh, TSoftObjectPtr<USkeletalMesh> BottomMesh, TSoftObjectPtr<USkeletalMesh> FeetMesh);
+
+	UFUNCTION(BlueprintCallable, Category = Utils)
+	void SetCrowdMasterPoseBody();
+
+	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "Utils")
+	void OnAsyncMeshesLoadCompleteDelegate();
+
+	UFUNCTION(BlueprintCallable, Category = Utils)
+	void GenerateRandomBodyShapeType();
+
+	UFUNCTION(BlueprintCallable, Category = Utils)
+	void GenerateRandomGenderType();
 #pragma endregion
 
 	bool HasAccelerating() const;
@@ -465,6 +494,8 @@ public:
 	void BuildFinisherAnimationData(UAnimMontage* InMontage, const bool IsTurnAround, AActor* TurnActor, float PlayRate = 1.0f);
 	void ResetFinisherAnimationData();
 	FRequestAbilityAnimationData GetFinisherAnimationData() const;
+
+	bool HasFinisherIgnoreTag(const ABaseCharacter* Target, const FGameplayTag RequireTag) const;
 #pragma endregion
 
 #pragma region VehicleAction
@@ -521,6 +552,18 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Component, meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<class UWvSkeletalMeshComponent> Face;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Component, meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<class UWvSkeletalMeshComponent> Body;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Component, meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<class UWvSkeletalMeshComponent> Feet;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Component, meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<class UWvSkeletalMeshComponent> Bottom;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Component, meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<class UWvSkeletalMeshComponent> Top;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Component, meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<class ULODSyncComponent> LODSyncComponent;
@@ -679,6 +722,12 @@ protected:
 #pragma region Utils
 	TSharedPtr<FStreamableHandle> SkelMeshHandle;
 	TSharedPtr<FStreamableHandle> StaticMeshHandle;
+
+	TArray<FSoftObjectPath> InitialBodyMeshesPath;
+
+	void OnLoadAndSetMeshes_Callback();
+
+
 #pragma endregion
 
 

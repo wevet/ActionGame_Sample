@@ -31,6 +31,8 @@
 #include "AbilitySystemBlueprintLibrary.h"
 #include "MotionWarpingComponent.h"
 
+#include "Components/TimelineComponent.h"
+
 DEFINE_LOG_CATEGORY_STATIC(LogCharacterMovement, Log, All);
 
 // log LogCharacterMovement Verbose
@@ -71,6 +73,9 @@ namespace WvCharacter
 	FAutoConsoleVariableRef CVar_GroundTraceDistance(TEXT("wv.GroundTraceDistance"), GroundTraceDistance, TEXT("Distance to trace down when generating ground information."), ECVF_Cheat);
 };
 
+const FName NAME_MantleEnd(TEXT("OnMantleEnd"));
+const FName NAME_MantleUpdate(TEXT("OnMantleUpdate"));
+const FName NAME_MantleTimeline(TEXT("MantleTimeline"));
 
 UWvCharacterMovementComponent::UWvCharacterMovementComponent(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
@@ -121,6 +126,8 @@ UWvCharacterMovementComponent::UWvCharacterMovementComponent(const FObjectInitia
 	bUseAccelerationForPaths = true;
 
 	//CharacterMovementCVars::AsyncCharacterMovement = 1;
+
+	
 }
 
 void UWvCharacterMovementComponent::BeginPlay()
@@ -142,12 +149,22 @@ void UWvCharacterMovementComponent::BeginPlay()
 	InitUnScaledCapsuleHalfHeight = Capsule->GetUnscaledCapsuleHalfHeight();
 	ClimbQueryParams.AddIgnoredActor(CharacterOwner);
 
+	MantleTimeline = new FTimeline();
+
+
 }
 
 void UWvCharacterMovementComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	WallClimbingDAInstance = nullptr;
 	MantleDAInstance = nullptr;
+
+	if (MantleTimeline) 
+	{
+		delete MantleTimeline;
+		MantleTimeline = nullptr;
+	}
+
 	Super::EndPlay(EndPlayReason);
 }
 
@@ -308,6 +325,11 @@ void UWvCharacterMovementComponent::TickComponent(float DeltaTime, enum ELevelTi
 			//AnalogInputModifier = ComputeAnalogInputModifier();
 
 			TryWallClimbingMovement();
+
+			if (MantleTimeline != nullptr && MantleTimeline->IsPlaying())
+			{
+				MantleTimeline->TickTimeline(DeltaTime);
+			}
 		}
 	}
 }
@@ -1693,6 +1715,7 @@ const bool UWvCharacterMovementComponent::GroundMantling()
 		return false;
 
 	return MantleCheck(MantleDAInstance->GroundedTraceSettings);
+
 }
 
 const bool UWvCharacterMovementComponent::FallingMantling()
@@ -1701,12 +1724,15 @@ const bool UWvCharacterMovementComponent::FallingMantling()
 		return false;
 
 	return MantleCheck(MantleDAInstance->FallingTraceSettings);
+
 }
 
 const bool UWvCharacterMovementComponent::MantleCheck(const FMantleTraceSettings InTraceSetting)
 {
 	if (!IsValid(MantleDAInstance))
+	{
 		return false;
+	}
 
 	FVector TracePoint = FVector::ZeroVector;
 	FVector TraceNormal = FVector::ZeroVector;
@@ -1743,11 +1769,10 @@ const bool UWvCharacterMovementComponent::MantleCheck(const FMantleTraceSettings
 
 FVector UWvCharacterMovementComponent::GetCapsuleBaseLocation(const float ZOffset) const
 {
-	float HalfHeight = CharacterOwner->GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
-	HalfHeight += ZOffset;
-	const FVector ComponentUp = UpdatedComponent->GetUpVector() * HalfHeight;
-	const FVector ComponentLocation = UpdatedComponent->GetComponentLocation();
-	return (ComponentLocation - ComponentUp);
+	const float HalfHeight = CharacterOwner->GetCapsuleComponent()->GetScaledCapsuleHalfHeight() + ZOffset;
+	const FVector UpVector = UpdatedComponent->GetUpVector() * HalfHeight;
+	const FVector CapsuleLocation = UpdatedComponent->GetComponentLocation();
+	return (CapsuleLocation - UpVector);
 }
 
 FVector UWvCharacterMovementComponent::GetCapsuleLocationFromBase(const FVector BaseLocation, const float ZOffset) const
@@ -1762,15 +1787,30 @@ FVector UWvCharacterMovementComponent::GetCapsuleLocationFromBase(const FVector 
 bool UWvCharacterMovementComponent::CapsuleHasRoomCheck(const FVector TargetLocation, const float HeightOffset, const float RadiusOffset) const
 {
 	check(CharacterOwner->GetCapsuleComponent());
-	const float Hemisphere = CharacterOwner->GetCapsuleComponent()->GetScaledCapsuleHalfHeight_WithoutHemisphere();
-	const float Offset = Hemisphere + (RadiusOffset * -1.f) + HeightOffset;
+
+	// Perform a trace to see if the capsule has room to be at the target location.
+	const float ZTarget = CharacterOwner->GetCapsuleComponent()->GetScaledCapsuleHalfHeight_WithoutHemisphere() - RadiusOffset + HeightOffset;
+	FVector TraceStart = TargetLocation;
+	TraceStart.Z += ZTarget;
+	FVector TraceEnd = TargetLocation;
+	TraceEnd.Z -= ZTarget;
+	const float Radius = CharacterOwner->GetCapsuleComponent()->GetUnscaledCapsuleRadius() + RadiusOffset;
+
+	//const float Hemisphere = CharacterOwner->GetCapsuleComponent()->GetScaledCapsuleHalfHeight_WithoutHemisphere();
+	//const float Offset = Hemisphere + (RadiusOffset * -1.f) + HeightOffset;
 
 	// Editor Settings
 	const FName ProfileName = K_CHARACTER_COLLISION_PRESET;
-	const FVector OffsetPosition = FVector(0.0f, 0.0f, Offset);
-	const FVector StartLocation = (TargetLocation + OffsetPosition);
-	const FVector EndLocation = (TargetLocation - OffsetPosition);
+	//const FVector OffsetPosition = FVector(0.0f, 0.0f, Offset);
+	//const FVector StartLocation = (TargetLocation + OffsetPosition);
+	//const FVector EndLocation = (TargetLocation - OffsetPosition);
 	const float TraceRadius = (CharacterOwner->GetCapsuleComponent()->GetScaledCapsuleRadius() + RadiusOffset);
+
+	FCollisionQueryParams Params;
+	Params.AddIgnoredActor(CharacterOwner);
+
+	FHitResult HitResult;
+	const FCollisionShape SphereCollisionShape = FCollisionShape::MakeSphere(Radius);
 
 	FHitResult HitData(ForceInit);
 	TArray<AActor*> Ignore;
@@ -1784,10 +1824,14 @@ bool UWvCharacterMovementComponent::CapsuleHasRoomCheck(const FVector TargetLoca
 	}
 #endif
 
+	const bool bHit = CharacterOwner->GetWorld()->SweepSingleByChannel(HitResult, TraceStart, TraceEnd, FQuat::Identity, ECC_Visibility, 
+		FCollisionShape::MakeSphere(Radius), Params);
+
+#if false
 	const bool bWasHitResult = UKismetSystemLibrary::SphereTraceSingleByProfile(
 		CharacterOwner->GetWorld(),
-		StartLocation,
-		EndLocation,
+		TraceStart,
+		TraceEnd,
 		TraceRadius,
 		ProfileName,
 		false,
@@ -1798,13 +1842,23 @@ bool UWvCharacterMovementComponent::CapsuleHasRoomCheck(const FVector TargetLoca
 		FLinearColor::FLinearColor(0.13f, 0.89f, 0.14f, 1.0),
 		FLinearColor::FLinearColor(0.93f, 0.29f, 1.0f, 1.0),
 		DrawTime);
+#endif
 
-	//const bool bIsHitResult = !(HitData.bBlockingHit || HitData.bStartPenetrating);
-	const bool bIsHitResult = (HitData.bBlockingHit);
+	const bool bIsHitResult = !(HitData.bBlockingHit || HitData.bStartPenetrating);
+	//const bool bIsHitResult = (HitData.bBlockingHit);
 
 #if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
 	if (CVarDebugMantlingSystem.GetValueOnGameThread() > 0)
 	{
+		UWvCommonUtils::DrawDebugSphereTraceSingle(CharacterOwner->GetWorld(), TraceStart,
+			TraceEnd,
+			SphereCollisionShape,
+			bHit,
+			HitResult,
+			FLinearColor(0.130706f, 0.896269f, 0.144582f, 1.0f),  // light green
+			FLinearColor(0.932733f, 0.29136f, 1.0f, 1.0f),        // light purple
+			1.0f);
+
 		UE_LOG(LogTemp, Warning, TEXT("%s"), *FString(__FUNCTION__));
 		UE_LOG(LogTemp, Warning, TEXT("result => %s"), bIsHitResult ? TEXT("true") : TEXT("false"));
 	}
@@ -1813,10 +1867,11 @@ bool UWvCharacterMovementComponent::CapsuleHasRoomCheck(const FVector TargetLoca
 	return bIsHitResult;
 }
 
+
 // Step 1: Trace forward to find a wall / object the character cannot walk on.
 void UWvCharacterMovementComponent::TraceForwardToFindWall(const FMantleTraceSettings InTraceSetting, FVector& OutInitialTraceImpactPoint, FVector& OutInitialTraceNormal, bool& OutHitResult)
 {
-	const FVector InputValue = GetLedgeInputVelocity();
+	const FVector TraceDirection = GetLedgeInputVelocity();
 	const FVector BaseLocation = GetCapsuleBaseLocation(2.0f);
 
 	const float Radius = InTraceSetting.ForwardTraceRadius;
@@ -1824,14 +1879,13 @@ void UWvCharacterMovementComponent::TraceForwardToFindWall(const FMantleTraceSet
 	const float AddLedgeHeigth = (InTraceSetting.MaxLedgeHeight + InTraceSetting.MinLedgeHeight) / 2.f;
 	const FVector StartOffset = FVector(0.0f, 0.0f, AddLedgeHeigth);
 
-	FVector StartLocation = BaseLocation + (InputValue * -30.f);
+	FVector StartLocation = BaseLocation + (TraceDirection * -30.f);
 	StartLocation += StartOffset;
 
-	FVector EndLocation = InputValue * InTraceSetting.ReachDistance;
+	FVector EndLocation = TraceDirection * InTraceSetting.ReachDistance;
 	EndLocation += StartLocation;
 
-	float HalfHeight = (InTraceSetting.MaxLedgeHeight - InTraceSetting.MinLedgeHeight) / 2.f;
-	HalfHeight += 1.0f;
+	const float HalfHeight = 1.0f + (InTraceSetting.MaxLedgeHeight - InTraceSetting.MinLedgeHeight) / 2.f;
 
 	FHitResult HitData(ForceInit);
 
@@ -1883,7 +1937,7 @@ void UWvCharacterMovementComponent::TraceForwardToFindWall(const FMantleTraceSet
 	}
 }
 
-// step2 Trace downward from the first trace's Impact Point and determine if the hit location is walkable.
+// Step 2: Trace downward from the first trace's Impact Point and determine if the hit location is walkable.
 void UWvCharacterMovementComponent::SphereTraceByMantleCheck(const FMantleTraceSettings TraceSetting, const FVector InitialTraceImpactPoint, const FVector InitialTraceNormal, bool& OutHitResult, FVector& OutDownTraceLocation, UPrimitiveComponent*& OutPrimitiveComponent)
 {
 	const FVector CapsuleLocation = GetCapsuleBaseLocation(2.0f);
@@ -1932,9 +1986,7 @@ void UWvCharacterMovementComponent::SphereTraceByMantleCheck(const FMantleTraceS
 		DrawTime);
 
 	const bool bWalkableHit = IsWalkable(HitData);
-	//const bool bResult = HitData.bBlockingHit;
 
-	//OutHitResult = (bWalkableHit && bResult);
 	OutHitResult = bWalkableHit;
 	OutDownTraceLocation = FVector(HitData.Location.X, HitData.Location.Y, HitData.ImpactPoint.Z);
 	OutPrimitiveComponent = HitData.Component.Get();
@@ -1948,12 +2000,12 @@ void UWvCharacterMovementComponent::SphereTraceByMantleCheck(const FMantleTraceS
 #endif
 }
 
-// step3 Check if the capsule has room to stand at the downward trace's location. 
+// Step 3: Check if the capsule has room to stand at the downward trace's location.
 // If so, set that location as the Target Transform and calculate the mantle height.
 void UWvCharacterMovementComponent::ConvertMantleHeight(const FVector DownTraceLocation, const FVector InitialTraceNormal, bool& OutRoomCheck, FTransform& OutTargetTransform, float& OutMantleHeight)
 {
 	const float ZOffset = 20.0f;
-	const FVector RelativeLocation = GetCapsuleLocationFromBase(DownTraceLocation, 0.0f);
+	const FVector RelativeLocation = GetCapsuleLocationFromBase(DownTraceLocation, 2.0f);
 	const FVector Offset = FVector(-1.0f, -1.0f, 0.0f);
 
 	// DisplayName RotationFromXVector
@@ -1967,6 +2019,7 @@ void UWvCharacterMovementComponent::ConvertMantleHeight(const FVector DownTraceL
 	OutTargetTransform.SetRotation(RelativeRotation.Quaternion());
 	const FVector Diff = (RelativeLocation - UpdatedComponent->GetComponentLocation());
 	OutMantleHeight = Diff.Z;
+
 
 #if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
 	if (CVarDebugMantlingSystem.GetValueOnGameThread() > 0)
@@ -2048,6 +2101,11 @@ void UWvCharacterMovementComponent::MantleStart(const float InMantleHeight, cons
 {
 	const FMantleAsset MantleAsset = GetMantleAsset(InMantleType);
 
+	if (!IsValid(MantleAsset.PositionCorrectionCurve))
+	{
+		return;
+	}
+
 	const float LowHeight = MantleAsset.LowHeight;
 	const float LowPlayRate = MantleAsset.LowPlayRate;
 	const float LowStartPosition = MantleAsset.LowStartPosition;
@@ -2056,7 +2114,7 @@ void UWvCharacterMovementComponent::MantleStart(const float InMantleHeight, cons
 	const float HighStartPosition = MantleAsset.HighStartPosition;
 
 	MantleParams.AnimMontage = MantleAsset.AnimMontage;
-	MantleParams.Position = MantleAsset.Position;
+	MantleParams.PositionCorrectionCurve = MantleAsset.PositionCorrectionCurve;
 	MantleParams.StartingOffset = MantleAsset.StartingOffset;
 	MantleParams.PlayRate = UKismetMathLibrary::MapRangeClamped(InMantleHeight, LowHeight, HighHeight, LowPlayRate, HighPlayRate);
 	MantleParams.StartingPosition = UKismetMathLibrary::MapRangeClamped(InMantleHeight, LowHeight, HighHeight, LowStartPosition, HighStartPosition);
@@ -2074,16 +2132,13 @@ void UWvCharacterMovementComponent::MantleStart(const float InMantleHeight, cons
 	//MantleLocation += MantleDataAsset->LandingLocationOffset;
 	//MantleMovementParams.MantleTarget.SetLocation(MantleLocation);
 
-	// Step 4: Calculate the Animated Start Offset from the Target Location. 
-	// This would be the location the actual animation starts at relative to the Target Transform. 
-	FVector Rotate2Vector = UKismetMathLibrary::Conv_RotatorToVector(FRotator(MantleMovementParams.MantleTarget.GetRotation()));
-	Rotate2Vector *= MantleParams.StartingOffset.Y;
-	const FVector From = MantleMovementParams.MantleTarget.GetLocation();
-	const FVector To = FVector(Rotate2Vector.X, Rotate2Vector.Y, MantleParams.StartingOffset.Z);
-	FTransform FromTransform = FTransform::Identity;
-	FromTransform.SetRotation(MantleMovementParams.MantleTarget.GetRotation());
-	FromTransform.SetLocation(From - To);
-	MantleMovementParams.MantleAnimatedStartOffset = UWvCommonUtils::TransformMinus(FromTransform, MantleMovementParams.MantleTarget);
+	// Step 4: Calculate the Animated Start Offset from the Target Location.
+	// This would be the location the actual animation starts at relative to the Target Transform.
+	FVector RotatedVector = MantleMovementParams.MantleTarget.GetRotation().Vector() * MantleParams.StartingOffset.Y;
+	RotatedVector.Z = MantleParams.StartingOffset.Z;
+	const FTransform StartOffset(MantleMovementParams.MantleTarget.Rotator(), MantleMovementParams.MantleTarget.GetLocation() - RotatedVector,
+		FVector::OneVector);
+	MantleMovementParams.MantleAnimatedStartOffset = UWvCommonUtils::TransformMinus(StartOffset, MantleMovementParams.MantleTarget);
 
 	if (!MantleParams.AnimMontage)
 	{
@@ -2116,14 +2171,25 @@ void UWvCharacterMovementComponent::MantleStart(const float InMantleHeight, cons
 	}
 #endif
 
+	// Step 6: Configure the Mantle Timeline so that it is the same length as the
+	// Lerp/Correction curve minus the starting position, and plays at the same speed as the animation.
+	// Then start the timeline.
+	float MinTime = 0.0f;
+	float MaxTime = 0.0f;
+	MantleParams.PositionCorrectionCurve->GetTimeRange(MinTime, MaxTime);
+	MantleTimeline->SetTimelineLength(MaxTime - MantleParams.StartingPosition);
+	MantleTimeline->SetPlayRate(MantleParams.PlayRate);
+	MantleTimeline->PlayFromStart();
+
 	MantleMovementParams.MantlePlayPosition = 0.f;
 	UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(CharacterOwner, TAG_Locomotion_Mantling, FGameplayEventData());
 	SetMovementMode(MOVE_Custom, CUSTOM_MOVE_Mantling);
+
 }
 
 void UWvCharacterMovementComponent::MantleUpdate(const float BlendIn)
 {
-	if (!MantleParams.Position)
+	if (!IsValid(MantleParams.PositionCorrectionCurve))
 	{
 		return;
 	}
@@ -2132,50 +2198,62 @@ void UWvCharacterMovementComponent::MantleUpdate(const float BlendIn)
 	MantleMovementParams.MantleTarget = UWvCommonUtils::ComponentLocalToWorld(MantleLedgeLS).Transform;
 
 	// Step 2: Update the Position and Correction Alphas using the Position/Correction curve set for each Mantle.
-	//const float PlayBackPosition = MantleTimeLine->GetPlayBackPosition();
 	MantleMovementParams.MantlePlayPosition += BlendIn;
 	MantleMovementParams.MantlePlayPosition = FMath::Clamp(MantleMovementParams.MantlePlayPosition, 0.f, 1.0f);
 
-	const FVector CurveVector = MantleParams.Position->GetVectorValue(MantleParams.StartingPosition + MantleMovementParams.MantlePlayPosition);
+	//UE_LOG(LogTemp, Log, TEXT("BlendIn => %.3f"), BlendIn);
+
+	const FVector CurveVector = MantleParams.PositionCorrectionCurve->GetVectorValue(MantleParams.StartingPosition + MantleTimeline->GetPlaybackPosition());
 	const float PositionAlpha = CurveVector.X;
 	const float XYCorrectionAlpha = CurveVector.Y;
 	const float ZCorrectionAlpha = CurveVector.Z;
 
-	// Step 3: Lerp multiple transforms together for independent control 
-	// over the horizontal and vertical blend to the animated start position, as well as the target position.
+	// Step 3: Lerp multiple transforms together for independent control over the horizontal
+	// and vertical blend to the animated start position, as well as the target position.
 
 	// Blend into the animated horizontal and rotation offset using the Y value of the Position/Correction Curve.
-	FTransform TransA = FTransform::Identity;
-	auto AnimPosA = MantleMovementParams.MantleAnimatedStartOffset.GetLocation();
-	AnimPosA.Z = MantleMovementParams.MantleActualStartOffset.GetLocation().Z;
-	TransA.SetRotation(MantleMovementParams.MantleAnimatedStartOffset.GetRotation());
-	TransA.SetLocation(AnimPosA);
-	const FTransform A = UKismetMathLibrary::TLerp(MantleMovementParams.MantleActualStartOffset, TransA, XYCorrectionAlpha);
+	const FTransform TargetHzTransform(MantleMovementParams.MantleAnimatedStartOffset.GetRotation(),
+		{
+			MantleMovementParams.MantleAnimatedStartOffset.GetLocation().X,
+			MantleMovementParams.MantleAnimatedStartOffset.GetLocation().Y,
+			MantleMovementParams.MantleActualStartOffset.GetLocation().Z
+		},
+		FVector::OneVector);
+	const FTransform& HzLerpResult = UKismetMathLibrary::TLerp(MantleMovementParams.MantleActualStartOffset, TargetHzTransform, XYCorrectionAlpha);
 
 	// Blend into the animated vertical offset using the Z value of the Position/Correction Curve.
-	FTransform TransB = FTransform::Identity;
-	auto ActPosA = MantleMovementParams.MantleActualStartOffset.GetLocation();
-	ActPosA.Z = MantleMovementParams.MantleAnimatedStartOffset.GetLocation().Z;
-	TransB.SetRotation(MantleMovementParams.MantleActualStartOffset.GetRotation());
-	TransB.SetLocation(ActPosA);
-	const FTransform B = UKismetMathLibrary::TLerp(MantleMovementParams.MantleActualStartOffset, TransB, ZCorrectionAlpha);
+	const FTransform TargetVtTransform(MantleMovementParams.MantleActualStartOffset.GetRotation(),
+		{
+			MantleMovementParams.MantleActualStartOffset.GetLocation().X,
+			MantleMovementParams.MantleActualStartOffset.GetLocation().Y,
+			MantleMovementParams.MantleAnimatedStartOffset.GetLocation().Z
+		},
+		FVector::OneVector);
+	const FTransform& VtLerpResult = UKismetMathLibrary::TLerp(MantleMovementParams.MantleActualStartOffset, TargetVtTransform, ZCorrectionAlpha);
 
-	// Blend from the currently blending transforms into the final mantle target using the X value of the Position/Correction Curve.
-	FTransform BlendTransform = FTransform::Identity;
-	const FVector BlendPosA{ A.GetLocation().X, A.GetLocation().Y, B.GetLocation().Z, };
-	//BlendPosA.Z = B.GetLocation().Z;
-	BlendTransform.SetRotation(A.GetRotation());
-	BlendTransform.SetLocation(BlendPosA);
-	FTransform Result = UWvCommonUtils::TransformPlus(MantleMovementParams.MantleTarget, BlendTransform);
-	const FTransform Final = UKismetMathLibrary::TLerp(Result, MantleMovementParams.MantleTarget, PositionAlpha);
+	// result
+	const FTransform ResultTransform(HzLerpResult.GetRotation(),
+		{
+			HzLerpResult.GetLocation().X, 
+			HzLerpResult.GetLocation().Y,
+			VtLerpResult.GetLocation().Z
+		},
+		FVector::OneVector);
+	// Blend from the currently blending transforms into the final mantle target using the X
+	// value of the Position/Correction Curve.
+	const FTransform& ResultLerp = UKismetMathLibrary::TLerp(UWvCommonUtils::TransformPlus(MantleMovementParams.MantleTarget, ResultTransform), 
+		MantleMovementParams.MantleTarget, 
+		PositionAlpha);
 
-	// Initial Blend In (controlled in the timeline curve) to allow the actor to blend into the Position/Correction curve at the midoint.
-	// This prevents pops when mantling an object lower than the animated mantle.
-	const FTransform NaltleEndTransform = UWvCommonUtils::TransformPlus(MantleMovementParams.MantleTarget, MantleMovementParams.MantleActualStartOffset);
-	const FTransform LerpedTarget = UKismetMathLibrary::TLerp(NaltleEndTransform, Final, MantleMovementParams.MantlePlayPosition);//BlendIn
+	// Initial Blend In (controlled in the timeline curve) to allow the actor to blend into the Position/Correction
+	// curve at the midpoint. This prevents pops when mantling an object lower than the animated mantle.
+	const FTransform& LerpedTarget = UKismetMathLibrary::TLerp(UWvCommonUtils::TransformPlus(MantleMovementParams.MantleTarget, 
+		MantleMovementParams.MantleActualStartOffset), 
+		ResultLerp, 
+		BlendIn);
 
 	// Step 4: Set the actors location and rotation to the Lerped Target.
-	CharacterOwner->SetActorLocationAndRotation(LerpedTarget.GetLocation(), FRotator(FQuat(LerpedTarget.GetRotation())), false);
+	CharacterOwner->SetActorLocationAndRotation(LerpedTarget.GetLocation(), LerpedTarget.GetRotation().Rotator());
 
 	//Velocity = LerpedTarget.GetLocation();
 	//const FVector Adjusted = Velocity * BlendIn;
@@ -2196,7 +2274,7 @@ void UWvCharacterMovementComponent::MantleUpdate(const float BlendIn)
 	if (CVarDebugMantlingSystem.GetValueOnGameThread() > 0)
 	{
 		DrawDebugSphere(GetWorld(), LerpedTarget.GetLocation(), 30.0f, 12, FColor::Blue, false, 1.0f);
-		DrawDebugSphere(GetWorld(), Velocity, 20.0f, 12, FColor::Red, false, 1.0f);
+		//DrawDebugSphere(GetWorld(), Velocity, 20.0f, 12, FColor::Red, false, 1.0f);
 		DrawDebugSphere(GetWorld(), MantleMovementParams.MantleTarget.GetLocation(), 40.0f, 12, FColor::Green, false, 1.0f);
 	}
 #endif
@@ -2211,6 +2289,19 @@ void UWvCharacterMovementComponent::MantleEnd()
 	const bool bIsWalkable = (IsWalkable(FloorResult.HitResult));
 	const bool bIsBot = CharacterOwner->IsBotControlled();
 	SetMovementMode(bIsWalkable ? bIsBot ? EMovementMode::MOVE_NavWalking : EMovementMode::MOVE_Walking : EMovementMode::MOVE_Falling);
+}
+
+void UWvCharacterMovementComponent::OnMantleUpdate(const float BlendIn)
+{
+	MantleUpdate(BlendIn);
+
+	//UE_LOG(LogTemp, Log, TEXT("[%s]"), *FString(__FUNCTION__));
+}
+
+void UWvCharacterMovementComponent::OnMantleEnd()
+{
+	MantleEnd();
+	UE_LOG(LogTemp, Log, TEXT("[%s]"), *FString(__FUNCTION__));
 }
 
 /// <summary>
@@ -2263,7 +2354,7 @@ void UWvCharacterMovementComponent::PhysMantling(float deltaTime, int32 Iteratio
 		}
 	}
 
-	MantleUpdate(deltaTime);
+	//MantleUpdate(deltaTime);
 
 	if (!bJustTeleported && !HasAnimRootMotion() && !CurrentRootMotion.HasOverrideVelocity())
 	{
@@ -3207,6 +3298,22 @@ void UWvCharacterMovementComponent::OnLoadMantleDA()
 
 	} while (!bIsResult);
 	UE_LOG(LogTemp, Log, TEXT("Complete %s => [%s]"), *GetNameSafe(MantleDAInstance), *FString(__FUNCTION__));
+
+
+	// Bindings
+	if (IsValid(MantleDAInstance->MantleTimelineCurve))
+	{
+		FOnTimelineFloat TimelineUpdated;
+		FOnTimelineEvent TimelineFinished;
+		TimelineUpdated.BindUFunction(this, NAME_MantleUpdate);
+		TimelineFinished.BindUFunction(this, NAME_MantleEnd);
+		MantleTimeline->SetTimelineFinishedFunc(TimelineFinished);
+		MantleTimeline->SetLooping(false);
+		MantleTimeline->SetTimelineLengthMode(TL_TimelineLength);
+		MantleTimeline->AddInterpFloat(MantleDAInstance->MantleTimelineCurve, TimelineUpdated);
+
+		UE_LOG(LogTemp, Log, TEXT("setup result MantleTimeline => [%s]"), *FString(__FUNCTION__));
+	}
 }
 
 void UWvCharacterMovementComponent::OnWallClimbingAssetLoadComplete()

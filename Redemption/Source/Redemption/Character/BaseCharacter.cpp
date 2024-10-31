@@ -93,6 +93,22 @@ ABaseCharacter::ABaseCharacter(const FObjectInitializer& ObjectInitializer)
 	Face->SetupAttachment(WvMeshComp);
 	Face->SetReceivesDecals(true);
 
+	Body = ObjectInitializer.CreateDefaultSubobject<UWvSkeletalMeshComponent>(this, TEXT("Body"));
+	Body->SetupAttachment(WvMeshComp);
+	Body->SetReceivesDecals(true);
+
+	Bottom = ObjectInitializer.CreateDefaultSubobject<UWvSkeletalMeshComponent>(this, TEXT("Bottom"));
+	Bottom->SetupAttachment(WvMeshComp);
+	Bottom->SetReceivesDecals(true);
+
+	Top = ObjectInitializer.CreateDefaultSubobject<UWvSkeletalMeshComponent>(this, TEXT("Top"));
+	Top->SetupAttachment(WvMeshComp);
+	Top->SetReceivesDecals(true);
+
+	Feet = ObjectInitializer.CreateDefaultSubobject<UWvSkeletalMeshComponent>(this, TEXT("Feet"));
+	Feet->SetupAttachment(WvMeshComp);
+	Feet->SetReceivesDecals(true);
+
 	// @TODO
 	// create sk comp Bottom Top Feet Body
 
@@ -210,6 +226,25 @@ ABaseCharacter::ABaseCharacter(const FObjectInitializer& ObjectInitializer)
 	Face->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 	// custom collision preset
 	Face->SetCollisionProfileName(K_CHARACTER_COLLISION_PRESET);
+
+
+	//Body->SetCollisionProfileName(K_CHARACTER_COLLISION_PRESET);
+	//Bottom->SetCollisionProfileName(K_CHARACTER_COLLISION_PRESET);
+	//Top->SetCollisionProfileName(K_CHARACTER_COLLISION_PRESET);
+	//Feet->SetCollisionProfileName(K_CHARACTER_COLLISION_PRESET);
+
+	Body->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	Bottom->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	Top->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	Feet->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+	WvMeshComp->VisibilityBasedAnimTickOption = EVisibilityBasedAnimTickOption::OnlyTickPoseWhenRendered;
+	Face->VisibilityBasedAnimTickOption = EVisibilityBasedAnimTickOption::OnlyTickPoseWhenRendered;
+
+	Body->VisibilityBasedAnimTickOption = EVisibilityBasedAnimTickOption::OnlyTickPoseWhenRendered;
+	Bottom->VisibilityBasedAnimTickOption = EVisibilityBasedAnimTickOption::OnlyTickPoseWhenRendered;
+	Top->VisibilityBasedAnimTickOption = EVisibilityBasedAnimTickOption::OnlyTickPoseWhenRendered;
+	Feet->VisibilityBasedAnimTickOption = EVisibilityBasedAnimTickOption::OnlyTickPoseWhenRendered;
 }
 
 void ABaseCharacter::OnConstruction(const FTransform& Transform)
@@ -221,6 +256,7 @@ void ABaseCharacter::OnConstruction(const FTransform& Transform)
 	InitSkelMeshTransform.SetLocation(SkelMesh->GetRelativeLocation());
 	InitSkelMeshTransform.SetRotation(FQuat(SkelMesh->GetRelativeRotation()));
 	InitSkelMeshTransform.SetScale3D(SkelMesh->GetRelativeScale3D());
+	//InitSkelMeshTransform = SkelMesh->GetComponentTransform();
 
 }
 
@@ -1055,6 +1091,13 @@ void ABaseCharacter::StrafeMovement()
 
 void ABaseCharacter::DoSprinting()
 {
+	auto LocomotionVariables = LocomotionComponent->GetLocomotionEssencialVariables();
+
+	if (LocomotionVariables.bAiming)
+	{
+		DoStopAiming();
+	}
+
 	LocomotionComponent->SetSprintPressed(true);
 
 	//AbortClimbing();
@@ -1099,11 +1142,7 @@ void ABaseCharacter::DoStartAiming()
 	StrafeMovement();
 	DoWalking();
 	LocomotionComponent->SetLSAiming(true);
-
-	if (AimingChangeDelegate.IsBound())
-	{
-		AimingChangeDelegate.Broadcast(true);
-	}
+	AimingChangeDelegate.Broadcast(true);
 }
 
 void ABaseCharacter::DoStopAiming()
@@ -1111,11 +1150,7 @@ void ABaseCharacter::DoStopAiming()
 	//StrafeMovement();
 	DoStopWalking();
 	LocomotionComponent->SetLSAiming(false);
-
-	if (AimingChangeDelegate.IsBound())
-	{
-		AimingChangeDelegate.Broadcast(false);
-	}
+	AimingChangeDelegate.Broadcast(false);
 }
 
 void ABaseCharacter::DoTargetLockOn()
@@ -1408,6 +1443,18 @@ void ABaseCharacter::HandleAllowAttack(const bool InAllow)
 	}
 }
 
+void ABaseCharacter::HandleLookAtTag(const bool bIsAddTag)
+{
+	if (bIsAddTag)
+	{
+		WvAbilitySystemComponent->RemoveGameplayTag(TAG_Character_ActionLookAt, 1);
+	}
+	else
+	{
+		WvAbilitySystemComponent->AddGameplayTag(TAG_Character_ActionLookAt, 1);
+	}
+}
+
 void ABaseCharacter::SetLeaderTag()
 {
 	WvAbilitySystemComponent->AddGameplayTag(TAG_Character_AI_Leader, 1);
@@ -1563,6 +1610,16 @@ bool ABaseCharacter::IsMeleePlaying() const
 }
 
 
+bool ABaseCharacter::HasComboTrigger() const
+{
+	const UWvAbilityBase* AnimAbility = Cast<UWvAbilityBase>(WvAbilitySystemComponent->GetAnimatingAbility());
+	if (IsValid(AnimAbility))
+	{
+		return AnimAbility->HasComboTrigger();
+	}
+	return false;
+}
+
 #pragma region NearlestAction
 /// <summary>
 /// call to melee ability
@@ -1684,6 +1741,10 @@ AActor* ABaseCharacter::FindNearlestTarget(const float Distance, const float Ang
 		return Actor == nullptr;
 	});
 
+	// Sort by distance
+	UWvCommonUtils::OrderByDistance(this, HitTargets, true);
+
+
 	// Get the target with the smallest angle difference from the camera forward vector
 	float ClosestDotToCenter = 0.f;
 	ABaseCharacter* NearlestTarget = nullptr;
@@ -1730,6 +1791,27 @@ const bool ABaseCharacter::CanFiniherReceiver()
 	return true;
 }
 
+bool ABaseCharacter::HasFinisherIgnoreTag(const ABaseCharacter* Target, const FGameplayTag RequireTag) const
+{
+	auto ASC = Target->GetAbilitySystemComponent();
+	if (ASC)
+	{
+		if (RequireTag == TAG_Weapon_Finisher)
+		{
+			return ASC->HasMatchingGameplayTag(TAG_Weapon_Finisher_Ignore);
+		}
+		else if (RequireTag == TAG_Weapon_HoldUp)
+		{
+			return ASC->HasMatchingGameplayTag(TAG_Weapon_HoldUp_Ignore);
+		}
+		else if (RequireTag == TAG_Weapon_KnockOut)
+		{
+			return ASC->HasMatchingGameplayTag(TAG_Weapon_KnockOut_Ignore);
+		}
+	}
+	return false;
+}
+
 void ABaseCharacter::BuildFinisherAbility(const FGameplayTag RequireTag)
 {
 	if (!CanFiniherSender())
@@ -1753,6 +1835,12 @@ void ABaseCharacter::BuildFinisherAbility(const FGameplayTag RequireTag)
 
 	if (!TargetCharacter->CanFiniherReceiver())
 	{
+		return;
+	}
+
+	if (HasFinisherIgnoreTag(TargetCharacter, RequireTag))
+	{
+		// has ignore tag
 		return;
 	}
 
@@ -1936,7 +2024,7 @@ void ABaseCharacter::RequestAsyncLoadByTag(const FGameplayTag Tag)
 		this->OnAsyncLoadCompleteHandler();
 	});
 
-	RequestComponentsAsyncLoad();
+	//RequestComponentsAsyncLoad();
 }
 
 void ABaseCharacter::RequestComponentsAsyncLoad()
@@ -1951,7 +2039,7 @@ void ABaseCharacter::RequestComponentsAsyncLoad()
 	* ClimbingComponent
 	* LadderComponent
 	* WvCharacterMovementComponent
-	* QTEActionComponent
+	* QTEActionComponent (player only)
 	*/
 
 	auto Components = Game::ComponentExtension::GetComponentsArray<UActorComponent>(this);

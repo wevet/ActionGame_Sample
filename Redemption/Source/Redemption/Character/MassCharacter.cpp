@@ -36,8 +36,6 @@ AMassCharacter::AMassCharacter(const FObjectInitializer& ObjectInitializer) : Su
 	// sets Damage
 	//WvMeshComp->SetCollisionResponseToChannel(ECollisionChannel::ECC_GameTraceChannel3, ECollisionResponse::ECR_Block);
 
-	WvMeshComp->VisibilityBasedAnimTickOption = EVisibilityBasedAnimTickOption::OnlyTickPoseWhenRendered;
-	Face->VisibilityBasedAnimTickOption = EVisibilityBasedAnimTickOption::OnlyTickPoseWhenRendered;
 
 	// dont async load components
 	bIsAllowAsyncLoadComponentAssets = false;
@@ -68,9 +66,14 @@ void AMassCharacter::BeginPlay()
 	PawnNoiseEmitterComponent->SetComponentTickEnabled(false);
 
 	// disable climbing mantling ragdolling
+	// added init ignore tag
 	WvAbilitySystemComponent->AddGameplayTag(TAG_Locomotion_ForbidClimbing, 1);
 	WvAbilitySystemComponent->AddGameplayTag(TAG_Locomotion_ForbidMantling, 1);
+	WvAbilitySystemComponent->AddGameplayTag(TAG_Weapon_Finisher_Ignore, 1);
+	WvAbilitySystemComponent->AddGameplayTag(TAG_Weapon_HoldUp_Ignore, 1);
+	WvAbilitySystemComponent->AddGameplayTag(TAG_Weapon_KnockOut_Ignore, 1);
 
+	// loco convert velocity 
 	LocomotionComponent->EnableMassAgentMoving(true);
 
 	// temp remove delegate

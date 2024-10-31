@@ -471,11 +471,13 @@ void UWvCameraFollowComponent::TargetActorWithAxisInput(const float AxisValue)
 		}
 
 		const bool bIsTargetable = TargetIsTargetable(Actor);
-		if (bIsTargetable)
+		if (bIsTargetable && UWvCommonUtils::IsInViewport(Actor))
 		{
 			ActorsToLook.Add(Actor);
 		}
 	}
+
+	UWvCommonUtils::OrderByDistance(GetOwner(), ActorsToLook, true);
 
 	// Find Targets in Range (left or right, based on Character and CurrentTarget)
 	TArray<AActor*> TargetsInRange = FindTargetsInRange(ActorsToLook, RangeMin, RangeMax);
@@ -897,7 +899,7 @@ void UWvCameraFollowComponent::CreateAndAttachTargetLockedOnWidgetComponent(AAct
 
 TArray<AActor*> UWvCameraFollowComponent::GetAllTargetableOfClass() const
 {
-	TArray<AActor*> Actors;
+	TArray<AActor*> ActorsToLook;
 
 	const TArray<UHitTargetComponent*> Components = GetTargetComponents();
 	for (UHitTargetComponent* Component : Components)
@@ -906,10 +908,13 @@ TArray<AActor*> UWvCameraFollowComponent::GetAllTargetableOfClass() const
 		const bool bIsTargetable = TargetIsTargetable(Actor);
 		if (bIsTargetable && UWvCommonUtils::IsInViewport(Actor))
 		{
-			Actors.Add(Actor);
+			ActorsToLook.Add(Actor);
 		}
 	}
-	return Actors;
+
+	UWvCommonUtils::OrderByDistance(GetOwner(), ActorsToLook, true);
+
+	return ActorsToLook;
 }
 
 TArray<UHitTargetComponent*> UWvCameraFollowComponent::GetTargetComponents() const
@@ -981,7 +986,7 @@ void UWvCameraFollowComponent::SetupLocalPlayerController()
 {
 	if (!Character.IsValid())
 	{
-		UE_LOG(LogTemp, Error, TEXT("[%s] TargetSystemComponent: Component is meant to be added to Pawn only ..."), *GetName());
+		UE_LOG(LogTemp, Error, TEXT("[%s] UWvCameraFollowComponent is meant to be added to Pawn only ..."), *GetNameSafe(this));
 		return;
 	}
 

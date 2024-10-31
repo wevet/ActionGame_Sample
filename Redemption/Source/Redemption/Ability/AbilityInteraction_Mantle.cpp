@@ -81,11 +81,15 @@ void UAbilityInteraction_Mantle::ActivateAbility(const FGameplayAbilitySpecHandl
 
 void UAbilityInteraction_Mantle::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled)
 {
-	MovementComponent->MantleEnd();
+	if (MovementComponent->IsMantling())
+	{
+		MovementComponent->MantleEnd();
 
 #if WITH_EDITOR
-	UE_LOG(LogTemp, Log, TEXT("funcName => %s"), *FString(__FUNCTION__));
+		UE_LOG(LogTemp, Log, TEXT("funcName => %s"), *FString(__FUNCTION__));
 #endif
+	}
+
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
 }
 

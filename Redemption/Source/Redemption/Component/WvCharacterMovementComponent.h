@@ -21,6 +21,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FHandleImpactAtStepUpFail, const FV
 class ABaseCharacter;
 class ULocomotionComponent;
 class UWvAbilitySystemComponent;
+struct FTimeline;
 
 /**
  * 
@@ -155,10 +156,12 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Character Movement: State", Transient)
 	bool bPrePenetrationAdjustmentVelocityValid;
 
-	UPROPERTY(EditDefaultsOnly, Category = "Character Movement: Mantle")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Character Movement: Mantle")
 	TSoftObjectPtr<UMantleAnimationDataAsset> MantleDA;
 
-	UPROPERTY(EditDefaultsOnly, Category = "Character Movement: WallClimbing")
+	FTimeline* MantleTimeline;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Character Movement: WallClimbing")
 	TSoftObjectPtr<UClimbingDataAsset> WallClimbingDA;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Character Movement: Falling")
@@ -266,6 +269,13 @@ private:
 	void MantleUpdate(const float BlendIn);
 
 	void PhysMantling(float deltaTime, int32 Iterations);
+
+	UFUNCTION()
+	void OnMantleUpdate(const float BlendIn);
+
+	UFUNCTION()
+	void OnMantleEnd();
+	
 #pragma endregion
 
 

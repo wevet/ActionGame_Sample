@@ -79,9 +79,6 @@ public:
 	static float GetAngleBetween3DVector(FVector Vec1, FVector Vec2);
 	static float GetAngleBetween3DVector(FVector Vec1, FVector Vec2, FVector RefUpVector);
 
-	static FTransform TransformSubStract(const FTransform& TransformA, const FTransform& TransformB);
-	static FTransform TransformAdd(const FTransform& TransformA, const FTransform& TransformB);
-
 	template<typename T>
 	static FORCEINLINE void SpawnActorDeferred(AActor* PlayerActor, UClass* ItemClass, const FTransform InTransform, AActor* InOwner, TFunction<void(T* Context)> Callback)
 	{
@@ -131,6 +128,11 @@ public:
 	static const FTransform GetRefPoseDecalTransform(class USkeletalMeshComponent* InSkMeshComp, FName BoneName, const FVector& InHitPos, const FRotator& DecalRot);
 
 	static const FVector ChangePositonByRotation(const float Rotation, FVector Position);
+
+	static void OrderByDistance(AActor* Owner, TArray<AActor*>& OutArray, const bool bIsShortest);
+
+
+	static void DrawDebugSphereTraceSingle(const UWorld* World, const FVector& Start, const FVector& End, const FCollisionShape& CollisionShape, const bool bHit, const FHitResult& OutHit, const FLinearColor TraceColor, const FLinearColor TraceHitColor, const float DrawTime);
 };
 
 

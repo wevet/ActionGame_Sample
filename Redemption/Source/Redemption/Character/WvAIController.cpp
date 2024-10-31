@@ -103,7 +103,7 @@ void AWvAIController::Tick(float DeltaTime)
 		{
 			BaseCharacter->DrawActionState();
 		}
-}
+	}
 #endif
 }
 
@@ -125,7 +125,8 @@ void AWvAIController::OnPossess(APawn* InPawn)
 		BaseCharacter->StartRVOAvoidance();
 	}
 
-	// @TODO asyncload‚Ìê‡‚Íai‚ªæ‚ÉŽÀs‚³‚ê‚é‚Ì‚Å— “Ç‚ÝŠ®—¹ŒãBuildRunAI‚ðŒÄ‚Ño‚·‚æ‚¤‚É‚·‚é
+	// @TODO 
+	// In case of asyncload, ai is executed first, so BuildRunAI should be called after back-reading is completed.
 	BuildRunAI();
 
 	HearTask = FAIPerceptionTask(FName(TEXT("HearTask")), GetWorld());
@@ -391,24 +392,27 @@ void AWvAIController::SetBlackboardTarget(AActor* NewTarget)
 	}
 
 	BlackboardComponent->SetValueAsObject(BlackboardKeyConfig.TargetKeyName, NewTarget);
-	if (ULocomotionComponent* Locomotion = GetPawn()->FindComponentByClass<ULocomotionComponent>())
+	if (ULocomotionComponent* Locomotion = BaseCharacter->FindComponentByClass<ULocomotionComponent>())
 	{
 		Locomotion->SetLookAimTarget(bHasValidAttack, NewTarget, nullptr);
 	}
+	BaseCharacter->HandleLookAtTag(bHasValidAttack);
 
-	//if (bHasValidAttack)
-	//{
-	//	UE_LOG(LogWvAI, Error, TEXT("target is valid => %s, function => [%s]"), *GetNameSafe(NewTarget), *FString(__FUNCTION__));
-	//}
 }
 
 void AWvAIController::SetBlackboardSearchNodeHolder(AActor* NewTarget)
 {
 	BlackboardComponent->SetValueAsObject(BlackboardKeyConfig.SearchNodeHolderKeyName, NewTarget);
-	if (IsValid(NewTarget))
+
+	if (!Generators.Contains(NewTarget))
 	{
 		Generators.Add(NewTarget);
 	}
+
+	Generators.RemoveAll([](TWeakObjectPtr<AActor> Target)
+	{
+		return !Target.IsValid();
+	});
 }
 
 void AWvAIController::SetBlackboardLeader(AActor* NewTarget)
@@ -531,9 +535,9 @@ EAIActionState AWvAIController::GetBlackboardActionState() const
 void AWvAIController::UpdateFollowPoint()
 {
 	// is running
-	if (IsValid(GetBlackboardLeader()))
+	const auto Leader = GetBlackboardLeader();
+	if (IsValid(Leader))
 	{
-		auto Leader = GetBlackboardLeader();
 		UCombatComponent* Comp = Leader->FindComponentByClass<UCombatComponent>();
 		if (Comp)
 		{

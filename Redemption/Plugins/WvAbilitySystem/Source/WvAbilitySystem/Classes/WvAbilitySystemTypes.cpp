@@ -91,18 +91,21 @@ UE_DEFINE_GAMEPLAY_TAG(TAG_Weapon_HoldUp, "Weapon.HoldUp");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Weapon_HoldUp_Sender, "Weapon.HoldUp.Sender");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Weapon_HoldUp_Receiver, "Weapon.HoldUp.Receiver");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Weapon_HoldUp_Playing, "Weapon.HoldUp.Playing");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Weapon_HoldUp_Ignore, "Weapon.HoldUp.Ignore");
 
 // KnockOut
 UE_DEFINE_GAMEPLAY_TAG(TAG_Weapon_KnockOut, "Weapon.KnockOut");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Weapon_KnockOut_Sender, "Weapon.KnockOut.Sender");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Weapon_KnockOut_Receiver, "Weapon.KnockOut.Receiver");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Weapon_KnockOut_Playing, "Weapon.KnockOut.Playing");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Weapon_KnockOut_Ignore, "Weapon.KnockOut.Ignore");
 
 // Finisher
 UE_DEFINE_GAMEPLAY_TAG(TAG_Weapon_Finisher, "Weapon.Finisher");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Weapon_Finisher_Sender, "Weapon.Finisher.Sender");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Weapon_Finisher_Receiver, "Weapon.Finisher.Receiver");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Weapon_Finisher_Playing, "Weapon.Finisher.Playing");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Weapon_Finisher_Ignore, "Weapon.Finisher.Ignore");
 
 // weapon type
 UE_DEFINE_GAMEPLAY_TAG(TAG_Weapon_Melee_Default, "Weapon.Melee.Default");
