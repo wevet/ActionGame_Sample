@@ -360,6 +360,9 @@ public:
 	EBodyShapeType GetBodyShapeType() const;
 
 	UFUNCTION(BlueprintCallable, Category = Status)
+	FCharacterInfo GetCharacterInfo() const;
+
+	UFUNCTION(BlueprintCallable, Category = Status)
 	void SetFullSkill();
 
 	ABaseCharacter* GetLeaderCharacterFromController() const;
@@ -380,8 +383,6 @@ public:
 	void GetCharacterHealth(FVector& OutHealth);
 
 	void DoForceKill();
-
-	void DrawActionState();
 
 	virtual void RegisterMission_Callback(const int32 MissionIndex) {};
 

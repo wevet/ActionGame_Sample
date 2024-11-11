@@ -70,8 +70,7 @@ private:
 
 	UWvInheritanceAttributeSet* GetInheritanceAttributeSet() const;
 
-	EGenderType GenderType;
-	EBodyShapeType BodyShapeType;
+	FCharacterInfo CharacterInfo;
 
 	UFUNCTION()
 	void OnSendAbilityAttack(AActor* Actor, const FWvBattleDamageAttackSourceInfo SourceInfo, const float Damage);

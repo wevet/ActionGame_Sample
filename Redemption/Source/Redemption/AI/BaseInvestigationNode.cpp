@@ -5,6 +5,8 @@
 #include "Misc/WvCommonUtils.h"
 //#include "Redemption.h"
 #include "WvAbilitySystemTypes.h"
+#include "Character/BaseCharacter.h"
+
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(BaseInvestigationNode)
 
@@ -22,9 +24,8 @@ void ABaseInvestigationNode::BeginPlay()
 	MyTagContainer.AddTag(TAG_Charactre_AI_Waypoint_UnVisited);
 
 #if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
-	static const IConsoleVariable* CVar = IConsoleManager::Get().FindConsoleVariable(TEXT("wv.DebugCharacterBehaviorTree"));
-	const int32 ConsoleValue = CVar->GetInt();
 
+	const int32 ConsoleValue = CVarDebugCharacterStatus.GetValueOnGameThread();
 	TArray<UPrimitiveComponent*> Components;
 	GetComponents(UPrimitiveComponent::StaticClass(), Components);
 
@@ -35,8 +36,8 @@ void ABaseInvestigationNode::BeginPlay()
 			Primitive->SetHiddenInGame(!(ConsoleValue > 0));
 		}
 	}
-
 #endif
+
 }
 
 bool ABaseInvestigationNode::IsCharacterOwner(AActor* InActor) const

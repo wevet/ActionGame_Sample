@@ -21,6 +21,7 @@
 #include "Materials/MaterialInstanceDynamic.h"
 #include "PhysicsEngine/PhysicsSettings.h"
 #include "PhysicalMaterials/PhysicalMaterial.h"
+#include "Engine/StaticMeshActor.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(WvCommonUtils)
 
@@ -449,6 +450,50 @@ void UWvCommonUtils::OrderByDistance(AActor* Owner, TArray<AActor*>& OutArray, c
 		const float DistanceB = B.GetDistanceTo(Owner);
 		return bIsShortest ? DistanceA > DistanceB : DistanceA < DistanceB;
 	});
+}
+
+/// <summary>
+/// バウンディングボックスの中心を考慮した座標取得
+/// メッシュ全体の中央位置を基準に処理を行いたい場合に使用
+/// 当たり判定や範囲内判定でメッシュの全体位置を扱いたい場合
+/// メッシュを基準にエフェクトを配置する場合
+/// </summary>
+/// <param name="MeshActor"></param>
+/// <returns></returns>
+const FVector UWvCommonUtils::GetAdjustedLocationConsideringOffset(const AStaticMeshActor* MeshActor)
+{
+	if (MeshActor && MeshActor->GetStaticMeshComponent())
+	{
+		UStaticMeshComponent* MeshComponent = MeshActor->GetStaticMeshComponent();
+		// メッシュのバウンディングボックスの情報を取得
+		FVector ActorOrigin, ActorExtent;
+		MeshComponent->GetLocalBounds(ActorOrigin, ActorExtent);
+		// ActorLocationにバウンディングボックス中心のオフセットを加味した座標を計算
+		FVector AdjustedLocation = MeshActor->GetActorLocation() + ActorOrigin;
+		return AdjustedLocation;
+	}
+	return FVector::ZeroVector;
+}
+
+/// <summary>
+/// メッシュの原点位置に基づく座標の取得
+/// 用途
+/// メッシュのインポート位置や基準点を使用した処理
+/// ローカル座標を基準とした計算が必要な場合
+/// 他のコンポーネントやオブジェクトとの座標合わせ
+/// </summary>
+/// <param name="MeshActor"></param>
+/// <returns></returns>
+const FVector UWvCommonUtils::GetWorldPositionOfMeshOrigin(const AStaticMeshActor* MeshActor)
+{
+	if (MeshActor && MeshActor->GetStaticMeshComponent())
+	{
+		UStaticMeshComponent* MeshComponent = MeshActor->GetStaticMeshComponent();
+		// メッシュのローカル原点をワールド座標に変換
+		FVector MeshOriginInWorld = MeshComponent->GetComponentLocation();
+		return MeshOriginInWorld;
+	}
+	return FVector::ZeroVector;
 }
 
 

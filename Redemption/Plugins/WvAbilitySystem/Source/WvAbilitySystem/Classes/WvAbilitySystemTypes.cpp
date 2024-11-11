@@ -667,7 +667,7 @@ UAnimMontage* FCloseCombatAnimation::GetComboMatchMontage(const FGameplayTag Com
 
 FCloseCombatAnimation UCloseCombatAnimationDataAsset::GetChooseCombatAnimation(const EBodyShapeType BodyShape, const int32 Index) const
 {
-	const auto Container = FindContainer(BodyShape);
+	const FCloseCombatAnimationContainer Container = FindContainer(BodyShape);
 	if (Container.ComboAnimations.IsValidIndex(Index))
 	{
 		return Container.ComboAnimations[Index];
@@ -686,7 +686,7 @@ FCloseCombatAnimationContainer UCloseCombatAnimationDataAsset::FindContainer(con
 
 int32 UCloseCombatAnimationDataAsset::GetCombatAnimationIndex(const EBodyShapeType BodyShape) const
 {
-	const auto Container = FindContainer(BodyShape);
+	const FCloseCombatAnimationContainer Container = FindContainer(BodyShape);
 	return FMath::RandRange(0, Container.ComboAnimations.Num() - 1);
 }
 

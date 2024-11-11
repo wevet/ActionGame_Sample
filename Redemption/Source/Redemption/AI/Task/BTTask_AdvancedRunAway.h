@@ -24,6 +24,9 @@ protected:
 
 private:
     UPROPERTY(EditAnywhere, Category = "AI")
+    float RotationInterp = 5.0f;
+
+    UPROPERTY(EditAnywhere, Category = "AI")
     float RunAwayDistance = 1200.0f;
 
     UPROPERTY(EditAnywhere, Category = "AI")

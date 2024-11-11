@@ -2272,7 +2272,7 @@ void ABaseCharacter::CancelAnimatingAbility()
 	if (IsValid(AnimAbility))
 	{
 		WvAbilitySystemComponent->CancelAbility(AnimAbility);
-		//UE_LOG(LogWvAI, Log, TEXT("Cancel Ability => %s"), *GetNameSafe(AnimAbility));
+		UE_LOG(LogWvAI, Log, TEXT("Cancel Ability => %s"), *GetNameSafe(AnimAbility));
 	}
 }
 
@@ -2283,6 +2283,7 @@ void ABaseCharacter::CancelAnimatingAbilityMontage()
 	{
 		constexpr float LocalInterval = 0.2f;
 		AnimInstance->Montage_Stop(LocalInterval, AnimMontage);
+		UE_LOG(LogWvAI, Log, TEXT("Cancel AnimMontage => %s"), *GetNameSafe(AnimMontage));
 	}
 }
 

@@ -111,3 +111,4 @@ FVector UBTTask_WvMoveTo::CalcMovement(const ABaseCharacter* Owner) const
 		return FVector::ZeroVector;
 	}
 }
+

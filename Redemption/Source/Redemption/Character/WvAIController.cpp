@@ -22,9 +22,7 @@
 
 //#include UE_INLINE_GENERATED_CPP_BY_NAME(WvAIController)
 
-#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
-static TAutoConsoleVariable<int32> CVarDebugCharacterBehaviorTree(TEXT("wv.DebugCharacterBehaviorTree"), 0, TEXT("CharacterBehaviorTree debug system\n") TEXT("<=0: Debug off\n") TEXT(">=1: Debug on\n"), ECVF_Default);
-#endif
+
 
 #define CLEAR_FRIENDLY_DATA 0
 
@@ -95,16 +93,6 @@ void AWvAIController::EndPlay(const EEndPlayReason::Type EndPlayReason)
 void AWvAIController::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-
-#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
-	if (CVarDebugCharacterBehaviorTree.GetValueOnGameThread() > 0)
-	{
-		if (BaseCharacter.IsValid())
-		{
-			BaseCharacter->DrawActionState();
-		}
-	}
-#endif
 }
 
 void AWvAIController::OnPossess(APawn* InPawn)
@@ -641,6 +629,7 @@ void AWvAIController::DoCombatEnemyState(AActor* Actor)
 		if (FriendlyTask.IsRunning())
 		{
 			FriendlyTask.End();
+			CancelFriendlyActionAbility();
 			UE_LOG(LogWvAI, Warning, TEXT("cancel friendy action task => [%s]"), *FString(__FUNCTION__));
 		}
 
@@ -1378,7 +1367,7 @@ void AWvAIController::FriendlyActionAbility()
 
 void AWvAIController::CancelFriendlyActionAbility()
 {
-	if (BaseCharacter.IsValid())
+	if (BaseCharacter.IsValid() && !BaseCharacter->IsDead())
 	{
 		//BaseCharacter->CancelFriendlyActionAbility();
 		BaseCharacter->CancelAnimatingAbility();
@@ -1410,4 +1399,23 @@ void AWvAIController::ApplyFriendlyCoolDown()
 	FriendlyParams.Begin();
 }
 #pragma endregion
+
+
+void AWvAIController::SmoothMoveToLocation(const FVector TargetLocation, const float RotationInterp)
+{
+	if (!BaseCharacter.IsValid())
+	{
+		return;
+	}
+
+	const auto Start = BaseCharacter->GetActorLocation();
+	const float DT = BaseCharacter->GetWorld()->GetDeltaSeconds();
+
+	const FRotator LookAtRotation = UKismetMathLibrary::FindLookAtRotation(Start, TargetLocation);
+	const FRotator Result = UKismetMathLibrary::RInterpTo(BaseCharacter->GetActorRotation(), LookAtRotation, DT, RotationInterp);
+
+	BaseCharacter->SetActorRotation(FRotator(0.f, Result.Yaw, 0.f));
+	BaseCharacter->AddMovementInput(BaseCharacter->GetActorForwardVector(), 1.0f, false);
+}
+
 

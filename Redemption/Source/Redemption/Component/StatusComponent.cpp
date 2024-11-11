@@ -16,7 +16,6 @@ UStatusComponent::UStatusComponent()
 {
 	PrimaryComponentTick.bCanEverTick = true;
 
-	GenderType = EGenderType::Male;
 }
 
 void UStatusComponent::BeginPlay()
@@ -42,6 +41,11 @@ void UStatusComponent::BeginPlay()
 	if (ASC.IsValid())
 	{
 		AAS = ASC->GetStatusAttributeSet(UWvAbilityAttributeSet::StaticClass());
+	}
+
+	if (IWvAbilitySystemAvatarInterface* Avatar = Cast<IWvAbilitySystemAvatarInterface>(GetOwner()))
+	{
+		CharacterInfo.Name = Avatar->GetAvatarName();
 	}
 }
 
@@ -234,36 +238,27 @@ void UStatusComponent::GetCharacterHealth(FVector& OutHealth)
 #pragma region CharacterInfo
 void UStatusComponent::SetGenderType(const EGenderType InGenderType)
 {
-	GenderType = InGenderType;
+	CharacterInfo.GenderType = InGenderType;
 }
 
 EGenderType UStatusComponent::GetGenderType() const
 {
-	return GenderType;
+	return CharacterInfo.GenderType;
 }
 
 void UStatusComponent::SetBodyShapeType(const EBodyShapeType InBodyShapeType)
 {
-	BodyShapeType = InBodyShapeType;
+	CharacterInfo.BodyShapeType = InBodyShapeType;
 }
 
 EBodyShapeType UStatusComponent::GetBodyShapeType() const
 {
-	return BodyShapeType;
+	return CharacterInfo.BodyShapeType;
 }
 
 FCharacterInfo UStatusComponent::GetCharacterInfo() const
 {
-	FCharacterInfo Info;
-	Info.GenderType = GenderType;
-	Info.BodyShapeType = BodyShapeType;
-
-	if (IWvAbilitySystemAvatarInterface* Avatar = Cast<IWvAbilitySystemAvatarInterface>(GetOwner()))
-	{
-		Info.Name = Avatar->GetAvatarName();
-	}
-
-	return Info;
+	return CharacterInfo;
 }
 #pragma endregion
 

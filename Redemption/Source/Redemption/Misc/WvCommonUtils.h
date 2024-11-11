@@ -15,6 +15,7 @@ class UFXSystemComponent;
 class UFXSystemAsset;
 class ABaseCharacter;
 class UMaterialInstanceDynamic;
+class AStaticMeshActor;
 struct FHitReactInfoRow;
 
 /**
@@ -130,6 +131,10 @@ public:
 	static const FVector ChangePositonByRotation(const float Rotation, FVector Position);
 
 	static void OrderByDistance(AActor* Owner, TArray<AActor*>& OutArray, const bool bIsShortest);
+
+	static const FVector GetAdjustedLocationConsideringOffset(const AStaticMeshActor* MeshActor);
+
+	static const FVector GetWorldPositionOfMeshOrigin(const AStaticMeshActor* MeshActor);
 
 
 	static void DrawDebugSphereTraceSingle(const UWorld* World, const FVector& Start, const FVector& End, const FCollisionShape& CollisionShape, const bool bHit, const FHitResult& OutHit, const FLinearColor TraceColor, const FLinearColor TraceHitColor, const float DrawTime);

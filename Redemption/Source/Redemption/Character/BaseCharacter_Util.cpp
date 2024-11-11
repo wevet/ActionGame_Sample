@@ -305,6 +305,10 @@ EBodyShapeType ABaseCharacter::GetBodyShapeType() const
 	return EBodyShapeType::Normal;
 }
 
+FCharacterInfo ABaseCharacter::GetCharacterInfo() const
+{
+	return StatusComponent->GetCharacterInfo();
+}
 
 void ABaseCharacter::GenerateRandomBodyShapeType()
 {
@@ -430,7 +434,7 @@ void ABaseCharacter::SetOverlayMaterials(const bool IsEnable, TArray<USkeletalMe
 	auto MID = CharacterVFXDA->OverlayMaterial;
 	if (IsValid(MID))
 	{
-		auto Components = Game::ComponentExtension::GetComponentsArray<USkeletalMeshComponent>(this);
+		TArray<USkeletalMeshComponent*> Components = GetBodyMeshComponents();
 
 		Components.RemoveAll([&](USkeletalMeshComponent* SkelMesh)
 		{
@@ -658,13 +662,6 @@ void ABaseCharacter::DisplayDrawDebug_Internal()
 	}
 
 	{
-		// draw gender
-		BasePos.Z += Step;
-		const FString DebugStr = *FString::Format(TEXT("Gender => {0}"), { *GETENUMSTRING("/Script/Redemption.EGenderType", GetGenderType()) });
-		DrawDebugString(GetWorld(), BasePos, DebugStr, nullptr, FColor::Red, 0.f, false, 1.2f);
-	}
-
-	{
 		// draw teamid
 		BasePos.Z += Step;
 		const int32 TeamID = GenericTeamIdToInteger(GetGenericTeamId());
@@ -681,40 +678,41 @@ void ABaseCharacter::DisplayDrawDebug_Internal()
 	}
 
 	{
-		// draw body shape
+		// draw gender
 		BasePos.Z += Step;
-		const FString DebugStr = *FString::Format(TEXT("BodyShape => {0}"), { *GETENUMSTRING("/Script/Redemption.EBodyShapeType", GetBodyShapeType()) });
+		const FString DebugStr = *FString::Format(TEXT("Gender => {0}"), { *GETENUMSTRING("/Script/WvAbilitySystem.EGenderType", GetGenderType()) });
 		DrawDebugString(GetWorld(), BasePos, DebugStr, nullptr, FColor::Red, 0.f, false, 1.2f);
 	}
-}
 
-void ABaseCharacter::DrawActionState()
-{
-	if (IsDead())
 	{
-		return;
+		// draw body shape
+		BasePos.Z += Step;
+		const FString DebugStr = *FString::Format(TEXT("BodyShape => {0}"), { *GETENUMSTRING("/Script/WvAbilitySystem.EBodyShapeType", GetBodyShapeType()) });
+		DrawDebugString(GetWorld(), BasePos, DebugStr, nullptr, FColor::Red, 0.f, false, 1.2f);
 	}
 
-	FColor Color = FColor::Red;
-	switch (AIActionState)
 	{
-	case EAIActionState::Friendly:
-		Color = FColor::Green;
-		break;
-	case EAIActionState::Patrol:
-		Color = FColor::Blue;
-		break;
-	case EAIActionState::Search:
-		Color = FColor::Yellow;
-		break;
+		// draw ai action state
+		FColor Color = FColor::Red;
+		switch (AIActionState)
+		{
+		case EAIActionState::Friendly:
+			Color = FColor::Green;
+			break;
+		case EAIActionState::Patrol:
+			Color = FColor::Blue;
+			break;
+		case EAIActionState::Search:
+			Color = FColor::Yellow;
+			break;
+		}
+
+		BasePos.Z += Step;
+		const FString DebugStr = *FString::Format(TEXT("AIActionState => {0}"), { *GETENUMSTRING("/Script/WvAbilitySystem.EAIActionState", AIActionState) });
+		UKismetSystemLibrary::DrawDebugString(GetWorld(), BasePos, DebugStr, nullptr, Color, 0.f);
 	}
-
-	const FString CurStateName = *FString::Format(TEXT("{0}"), { *GETENUMSTRING("/Script/WvAbilitySystem.EAIActionState", AIActionState) });
-	auto ActorLoc = GetActorLocation();
-	ActorLoc.Z += GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight();
-	UKismetSystemLibrary::DrawDebugString(GetWorld(), ActorLoc, CurStateName, nullptr, Color, 0.f);
-
 }
+
 #pragma endregion
 
 

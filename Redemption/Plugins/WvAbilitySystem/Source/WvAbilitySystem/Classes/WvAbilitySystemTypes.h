@@ -623,7 +623,7 @@ public:
 };
 
 
-USTRUCT()
+USTRUCT(BlueprintType)
 struct FCharacterInfo
 {
 	GENERATED_BODY()
@@ -639,7 +639,10 @@ public:
 	FName Name;
 
 	FCharacterInfo()
-	{}
+	{
+		BodyShapeType = EBodyShapeType::Normal;
+		GenderType = EGenderType::Male;
+	}
 
 };
 

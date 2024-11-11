@@ -50,8 +50,7 @@ EBTNodeResult::Type UBTTask_AdvancedRunAway::ExecuteTask(UBehaviorTreeComponent&
 	FNavLocation ValidLocation;
 	if (NavSys->ProjectPointToNavigation(RunAwayLocation, ValidLocation))
 	{
-		// @TODO
-		AIController->MoveToLocation(ValidLocation.Location);
+		AIController->SmoothMoveToLocation(ValidLocation.Location, RotationInterp);
 		return EBTNodeResult::Succeeded;
 	}
 

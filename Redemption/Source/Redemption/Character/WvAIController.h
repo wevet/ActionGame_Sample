@@ -226,6 +226,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = AI)
 	void CloseCombatActionEnd();
 
+	UFUNCTION(BlueprintCallable, Category = AI)
+	void SmoothMoveToLocation(const FVector TargetLocation, const float RotationInterp);
+
 	void CloseCombatAbort();
 	int32 GetComboTypeIndex() const;
 
