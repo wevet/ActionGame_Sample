@@ -64,6 +64,8 @@ public:
 	void AddInventory(class AItemBaseActor* NewItem);
 	void RemoveInventory(class AItemBaseActor* InItem);
 
+	void RemoveAllInventory();
+
 	AItemBaseActor* FindItem(const ELSOverlayState InLSOverlayState) const;
 	AWeaponBaseActor* FindWeaponItem(const ELSOverlayState InLSOverlayState) const;
 
@@ -80,6 +82,7 @@ public:
 	const bool ChangeAttackWeapon(const EAttackWeaponState InAttackWeaponState, int32 Index = 0);
 
 	bool CanAimingWeapon() const;
+	bool CanThrowableWeapon() const;
 
 protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Config")

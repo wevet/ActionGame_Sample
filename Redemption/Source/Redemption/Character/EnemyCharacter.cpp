@@ -12,6 +12,7 @@ AEnemyCharacter::AEnemyCharacter(const FObjectInitializer& ObjectInitializer)
 
 	// dont async load components
 	bIsAllowAsyncLoadComponentAssets = true;
+	bIsDiedRemoveInventory = true;
 
 	UWvSkeletalMeshComponent* WvMeshComp = CastChecked<UWvSkeletalMeshComponent>(GetMesh());
 	check(WvMeshComp);

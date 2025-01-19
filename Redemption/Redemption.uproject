@@ -120,6 +120,10 @@
 			"Enabled": true
 		},
 		{
+			"Name": "Chooser",
+			"Enabled": true
+		},
+		{
 			"Name": "HairStrands",
 			"Enabled": true
 		},
@@ -195,13 +199,6 @@
 			"Enabled": true
 		},
 		{
-			"Name": "MotoricaStudio",
-			"Enabled": false,
-			"SupportedTargetPlatforms": [
-				"Win64"
-			]
-		},
-		{
 			"Name": "MassAI",
 			"Enabled": true
 		},
@@ -275,6 +272,18 @@
 		},
 		{
 			"Name": "SkeletalMeshModelingTools",
+			"Enabled": true
+		},
+		{
+			"Name": "StateTree",
+			"Enabled": true
+		},
+		{
+			"Name": "SkeletalMerging",
+			"Enabled": true
+		},
+		{
+			"Name": "EditorScriptingUtilities",
 			"Enabled": true
 		}
 	]

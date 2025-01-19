@@ -722,7 +722,7 @@ void URopePhy::SetSplMLocTang(USplineComponent* ITargetSpline, USplineMeshCompon
 	FVector EndTangent;
 	FVector StartTangentClamped;
 	FVector EndTangentClamped;
-	FVector UpVector;
+	//FVector UpVector;
 	StartPoint = ITargetSpline->GetLocationAtSplinePoint(IEditPoint, ESplineCoordinateSpace::Local);
 	StartTangent = ITargetSpline->GetTangentAtSplinePoint(IEditPoint, ESplineCoordinateSpace::Local);
 	EndPoint = ITargetSpline->GetLocationAtSplinePoint((IEditPoint + 1.0f), ESplineCoordinateSpace::Local);

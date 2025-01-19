@@ -1321,6 +1321,8 @@ public:
 	TMap<FGameplayTag, UAnimMontage*> TagToComboMontageMap;
 
 	UAnimMontage* GetComboMatchMontage(const FGameplayTag ComboTag) const;
+
+	int32 GetTotalAnimationCount() const;
 };
 
 
@@ -1336,6 +1338,12 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	TArray<FCloseCombatAnimation> ComboAnimations;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	bool bIsRandomPlayRate = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (EditCondition = "bIsRandomPlayRate"))
+	FVector2D PlayRateRange{ 0.75f, 1.0f};
 };
 
 
@@ -1357,6 +1365,8 @@ public:
 	int32 CloseCombatMaxComboCount(const EBodyShapeType BodyShape, const int32 Index) const;
 
 	UAnimMontage* GetAnimMontage(const EBodyShapeType BodyShape, const int32 Index, const FGameplayTag Tag) const;
+
+	float CalcurateBodyShapePlayRate(const EBodyShapeType BodyShape) const;
 };
 #pragma endregion
 

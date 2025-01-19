@@ -15,6 +15,15 @@ public:
 	ASkyActor();
 	virtual void Tick(float DeltaTime) override;
 
+	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "SkyActor")
+	void BP_SetAnimateTimeOfDay(const bool bIsEnable);
+
+	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "SkyActor")
+	void BP_ChangeToPostProcess(const bool bIsDay);
+
+	void ChangeToPostProcess(const bool bIsDay);
+
+
 protected:
 	virtual void BeginPlay() override;
 

@@ -42,7 +42,6 @@ public:
 	virtual void OnMovementModeChanged(EMovementMode PreviousMovementMode, uint8 PreviousCustomMode) override;
 
 	virtual FRotator GetDeltaRotation(float DeltaTime) const override;
-	virtual bool CheckLedgeDirection(const FVector& OldLocation, const FVector& SideStep, const FVector& GravDir) const override;
 	virtual bool StepUp(const FVector& GravDir, const FVector& Delta, const FHitResult& Hit, FStepDownResult* OutStepDownResult = NULL) override;
 	virtual void PhysWalking(float DeltaTime, int32 Iterations) override;
 	virtual void ComputeFloorDist(const FVector& CapsuleLocation, float LineDistance, float SweepDistance, FFindFloorResult& OutFloorResult, float SweepRadius, const FHitResult* DownwardSweepResult) const override;
@@ -65,6 +64,9 @@ public:
 	virtual void RequestAsyncLoad() override;
 
 public:
+	UFUNCTION(BlueprintCallable, Category = "Character|Components|CharacterMovement")
+	bool IsVaulting() const;
+
 	UFUNCTION(BlueprintCallable, Category = "Character|Components|CharacterMovement")
 	bool IsMantling() const;
 
@@ -91,13 +93,14 @@ public:
 
 	static FName MantleSyncPoint;
 	static FName ClimbSyncPoint;
+	static FName VaultUpSyncPoint;
+	static FName VaultThrowSyncPoint;
 
 	bool HasFallEdge() const { return bHasFallEdge; }
 	void UpdateCharacterMovementSettings(const bool bHasStanding);
 
 	// Mantling public
 	FMantleParams GetMantleParams() const;
-	const bool GroundMantling();
 	const bool FallingMantling();
 
 	UFUNCTION(BlueprintCallable)
@@ -117,6 +120,10 @@ public:
 	UAnimMontage* GetClimbUpLedgeMontage() const;
 
 	UAnimMontage* GetClimbUpLedgeMontage(const bool bIsFreeHang) const;
+
+	const bool DetectVaulting();
+	void FinishVaulting();
+	FVaultParams GetVaultParams() const;
 
 protected:
 	virtual void InitializeComponent() override;
@@ -158,6 +165,9 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Character Movement: Mantle")
 	TSoftObjectPtr<UMantleAnimationDataAsset> MantleDA;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Character Movement: Vaulting")
+	TSoftObjectPtr<UVaultAnimationDataAsset> VaultDA;
 
 	FTimeline* MantleTimeline;
 
@@ -218,18 +228,43 @@ private:
 #pragma region LedgeEnd
 	FVector GetLedgeInputVelocity() const;
 	void DetectLedgeEnd();
-	void DetectLedgeEndCompleted(const FTraceHandle& TraceHandle, FTraceDatum& TraceDatum);
-	void DetectLedgeDownCompleted(const FTraceHandle& TraceHandle, FTraceDatum& TraceDatum);
-	void DetectLedgeSideCompleted(const FTraceHandle& TraceHandle, FTraceDatum& TraceDatum);
+	void HandleEdgeDetectionCompleted(const FTraceHandle& TraceHandle, FTraceDatum& TraceDatum);
+
 	void DropToHoldingLedge();
 
 	bool bHasFallEdge = false;
 	bool bHasFallEdgeHitDown = false;
-	bool bHasFallEdgeHitSide = false;
 	FTraceDelegate TraceFootDelegate;
 	FVector FallEdgePoint = FVector::ZeroVector;
 	FVector FallEdgeNormal = FVector::ZeroVector;
 	FVector LastFallEdgeInput = FVector::ZeroVector;
+
+	void TriggerFallEdgePrediction();
+#pragma endregion
+
+
+#pragma region Vaulting
+	const bool TryEnterVault();
+
+	const bool CheckForwardObstacle(const float Distance, FHitResult& OutHit, const FHitResult* InHit = nullptr);
+	void GetObstacleHeight(const FVector& RefPoint, FHitResult& OutHit);
+	const bool TryVaultUp(const FHitResult* ForwardHit);
+	const bool TryVaultThrough(const FHitResult* ForwardHit);
+
+
+	void PhysVaulting(float deltaTime, int32 Iterations);
+	const bool TryVaultUpInternal(const FHitResult* ForwardHit, FHitResult& CurrentHit);
+	const bool TryEnterVaultCheckAngle() const;
+	const bool ValidVaultSpeedThreshold() const;
+	float GetVaultDistance() const;
+	void BeginVaulting();
+
+	const bool DetectVaultLandingPoint(const FHitResult& CurrentHit);
+
+	UPROPERTY()
+	FVaultParams VaultParams;
+	FTransform VaultingTarget;
+	FTransform VaultingThrowTarget;
 #pragma endregion
 
 
@@ -259,6 +294,7 @@ private:
 
 	// MantleCheck Details
 	void TraceForwardToFindWall(const FMantleTraceSettings InTraceSetting, FVector& OutInitialTraceImpactPoint, FVector& OutInitialTraceNormal, bool& OutHitResult);
+
 	void SphereTraceByMantleCheck(const FMantleTraceSettings TraceSetting, const FVector InitialTraceImpactPoint, const FVector InitialTraceNormal, bool& OutHitResult, FVector& OutDownTraceLocation, UPrimitiveComponent*& OutPrimitiveComponent);
 	void ConvertMantleHeight(const FVector DownTraceLocation, const FVector InitialTraceNormal, bool& OutRoomCheck, FTransform& OutTargetTransform, float& OutMantleHeight);
 	EMantleType GetMantleType(const float InMantleHeight) const;
@@ -341,4 +377,12 @@ private:
 	void OnWallClimbingAssetLoadComplete();
 	void OnLoadWallClimbingDA();
 	// ~End AsyncWallClimbing
+
+	// ~Start AsyncVault
+	UPROPERTY()
+	TObjectPtr<class UVaultAnimationDataAsset> VaultDAInstance;
+	TSharedPtr<FStreamableHandle> VaultStreamableHandle;
+	void OnVaultAssetLoadComplete();
+	void OnLoadVaultDA();
+	// ~End AsyncVault
 };

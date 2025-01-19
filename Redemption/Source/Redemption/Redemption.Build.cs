@@ -9,7 +9,7 @@ public class Redemption : ModuleRules
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 		bLegacyPublicIncludePaths = true;
 		bUseUnity = false;
-		bEnableUndefinedIdentifierWarnings = false;
+		UndefinedIdentifierWarningLevel = 0;
 		IncludeOrderVersion = EngineIncludeOrderVersion.Latest;
 
 		PublicDependencyModuleNames.AddRange(

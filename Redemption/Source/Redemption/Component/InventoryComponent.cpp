@@ -154,6 +154,33 @@ void UInventoryComponent::RemoveInventory(class AItemBaseActor* InItem)
 
 }
 
+void UInventoryComponent::RemoveAllInventory()
+{
+	for (TPair<EAttackWeaponState, TArray<AWeaponBaseActor*>>Pair : WeaponActorMap)
+	{
+		for (AWeaponBaseActor* Weapon : Pair.Value)
+		{
+			if (IsValid(Weapon))
+			{
+				Weapon->Destroy();
+			}
+		}
+		Pair.Value.Reset();
+	}
+	WeaponActorMap.Reset();
+
+	for (AItemBaseActor* Item : ItemArray)
+	{
+		if (IsValid(Item))
+		{
+			Item->Destroy();
+			Item = nullptr;
+		}
+
+	}
+	ItemArray.Reset();
+}
+
 AItemBaseActor* UInventoryComponent::FindItem(const ELSOverlayState InLSOverlayState) const
 {
 	auto Weapon = FindWeaponItem(InLSOverlayState);
@@ -234,6 +261,18 @@ bool UInventoryComponent::CanAimingWeapon() const
 	{
 	case EAttackWeaponState::Gun:
 	case EAttackWeaponState::Rifle:
+		return true;
+	}
+	return false;
+}
+
+bool UInventoryComponent::CanThrowableWeapon() const
+{
+	auto WeaponType = GetEquipWeaponType();
+
+	switch (WeaponType)
+	{
+	case EAttackWeaponState::Bomb:
 		return true;
 	}
 	return false;

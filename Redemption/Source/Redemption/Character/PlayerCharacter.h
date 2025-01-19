@@ -41,6 +41,8 @@ public:
 	virtual void OnReceiveKillTarget(AActor* Actor, const float Damage) override;
 	virtual void Freeze() override;
 	virtual void UnFreeze() override;
+
+	virtual void DoBulletAttack() override;
 #pragma endregion
 
 	bool IsInputKeyDisable() const;
@@ -114,6 +116,11 @@ private:
 	bool HasFinisherAction(const FGameplayTag Tag) const;
 
 	void HandleQTEAction(const bool bIsPress);
+
+
+	void DoBulletAttack_Callback();
+	void Clear_BulletTimer();
+	FTimerHandle Bullet_TimerHandle;
 
 	UFUNCTION()
 	void GameplayTagTrigger_Callback(const FGameplayTag Tag, const bool bIsPress);

@@ -9,35 +9,37 @@ public class WvAbilitySystem : ModuleRules
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 		bLegacyPublicIncludePaths = true;
 		bUseUnity = false;
-		bEnableUndefinedIdentifierWarnings = false;
+		UndefinedIdentifierWarningLevel = 0;
 		IncludeOrderVersion = EngineIncludeOrderVersion.Latest;
 
 		PublicIncludePaths.AddRange(
-			new string[] 
+			new string[]
 			{
-				"../../Engine/Plugins/Cameras/GameplayCameras/Source/GameplayCameras"
+				"../../Engine/Plugins/Cameras/GameplayCameras/Source/GameplayCameras",
+				"../../Engine/Plugins/Cameras/EngineCameras/Source/EngineCameras",
 			}
 		);
-				
-		
+
+
 		PrivateIncludePaths.AddRange(
-			new string[] 
+			new string[]
 			{
 				// ... add other private include paths required here ...
 			}
 		);
-					
+
 		PublicDependencyModuleNames.AddRange(
 			new string[]
 			{
 				// ... add other public dependencies that you statically link with here ...
 				"Core",
 				"GameplayTags",
-                "GameplayTasks",
-                "GameplayAbilities",
+				"GameplayTasks",
+				"GameplayAbilities",
 				"NetCore",
-				"GameplayCameras",
 				"AIModule",
+				"GameplayCameras",
+				"EngineCameras",
 			}
 		);
 
@@ -59,8 +61,8 @@ public class WvAbilitySystem : ModuleRules
 				"Slate",
 				"SlateCore",
 			}
-		);	
-		
+		);
+
 		DynamicallyLoadedModuleNames.AddRange(
 			new string[]
 			{

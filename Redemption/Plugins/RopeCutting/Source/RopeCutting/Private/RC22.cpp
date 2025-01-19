@@ -346,7 +346,7 @@ void URC22::SetSplMLocTang(USplineComponent* ITargetSpline, USplineMeshComponent
 	FVector EndTangent;
 	FVector StartTangentClamped;
 	FVector EndTangentClamped;
-	FVector UpVector;
+	//FVector UpVector;
 
 	//Grab Spline data for setting Spline Mesh "Start and End"
 	StartPoint = ITargetSpline->GetLocationAtSplinePoint(IEditPoint, ESplineCoordinateSpace::Local);
@@ -4593,11 +4593,11 @@ void URC22::ShrinkRopeMainFunction_RC()
 				//SplineMesh
 				if (SplineMeshArray_PR_RC[0] != nullptr)
 				{
-					SplineMeshArray_PR_RC.RemoveAt(0, 1, true);
+					SplineMeshArray_PR_RC.RemoveAt(0, 1, EAllowShrinking::Yes);
 				}
 				if (FirstTracker_PR_RC->SplineMeshArray_RC22T[0] != nullptr)
 				{
-					FirstTracker_PR_RC->SplineMeshArray_RC22T.RemoveAt(0, 1, true);
+					FirstTracker_PR_RC->SplineMeshArray_RC22T.RemoveAt(0, 1, EAllowShrinking::Yes);
 					if (GrowSplineMesh_PR_RC != nullptr)
 					{
 						GrowSplineMesh_PR_RC->DestroyComponent();
@@ -4649,11 +4649,11 @@ void URC22::ShrinkRopeMainFunction_RC()
 				//Constraint
 				if (FirstTracker_PR_RC->PhysicsConstraintArray_RC22T[0] != nullptr)
 				{
-					FirstTracker_PR_RC->PhysicsConstraintArray_RC22T.RemoveAt(0, 1, true);
+					FirstTracker_PR_RC->PhysicsConstraintArray_RC22T.RemoveAt(0, 1, EAllowShrinking::Yes);
 				}
 				if (PhysicsConstraintArray_PR_RC[0] != nullptr)
 				{
-					PhysicsConstraintArray_PR_RC.RemoveAt(0, 1, true);
+					PhysicsConstraintArray_PR_RC.RemoveAt(0, 1, EAllowShrinking::Yes);
 					if (GrowPhyConstraint_PR_RC != nullptr)
 					{
 						GrowPhyConstraint_PR_RC->BreakConstraint();
@@ -4664,11 +4664,11 @@ void URC22::ShrinkRopeMainFunction_RC()
 				//Collision Sphere
 				if (CollisionSphereArray_PR_RC[0] != nullptr)
 				{
-					CollisionSphereArray_PR_RC.RemoveAt(0, 1, true);
+					CollisionSphereArray_PR_RC.RemoveAt(0, 1, EAllowShrinking::Yes);
 				}
 				if (FirstTracker_PR_RC->CollisionArray_RC22T[0] != nullptr)
 				{
-					FirstTracker_PR_RC->CollisionArray_RC22T.RemoveAt(0, 1, true);
+					FirstTracker_PR_RC->CollisionArray_RC22T.RemoveAt(0, 1, EAllowShrinking::Yes);
 					if (GrowCollision_PR_RC != nullptr)
 					{
 						GrowCollision_PR_RC->DestroyComponent();

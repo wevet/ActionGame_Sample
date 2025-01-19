@@ -1510,7 +1510,7 @@ void FAnimNode_CustomFeetSolver::InitializeBoneReferences(const FBoneContainer& 
 		{
 			if (SpineFeetPair[Index].FeetArray.Num() == 0)
 			{
-				SpineFeetPair.RemoveAt(Index, 1, true);
+				SpineFeetPair.RemoveAt(Index, 1, EAllowShrinking::Yes);
 			}
 		}
 

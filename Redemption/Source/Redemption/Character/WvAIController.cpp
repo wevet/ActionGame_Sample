@@ -24,7 +24,7 @@
 
 
 
-#define CLEAR_FRIENDLY_DATA 0
+#define CLEAR_FRIENDLY_DATA 1
 
 AWvAIController::AWvAIController(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
@@ -140,7 +140,12 @@ void AWvAIController::InitPlayerState()
 {
 	Super::InitPlayerState();
 
-	OverrideSquadID = FMath::Clamp(OverrideSquadID, 1, 255);
+	OnChangeGenericTeamIdFromInt(OverrideSquadID);
+}
+
+void AWvAIController::OnChangeGenericTeamIdFromInt(const int32 NewTeamID)
+{
+	OverrideSquadID = FMath::Clamp(NewTeamID, 1, 255);
 	auto PS = Cast<ABasePlayerState>(PlayerState);
 	if (PS)
 	{
@@ -150,7 +155,7 @@ void AWvAIController::InitPlayerState()
 
 	if (GetPawn())
 	{
-		if(IWvAbilityTargetInterface * TeamAgent = Cast<IWvAbilityTargetInterface>(GetPawn()))
+		if (IWvAbilityTargetInterface* TeamAgent = Cast<IWvAbilityTargetInterface>(GetPawn()))
 		{
 			TeamAgent->SetGenericTeamId(FGenericTeamId(OverrideSquadID));
 		}
@@ -264,6 +269,11 @@ void AWvAIController::OnReceiveKillTarget(AActor* Actor, const float Damage)
 	ClearFollowTarget();
 
 	SetBlackboardDead(true);
+
+	if (FriendlyParams.IsRunning())
+	{
+		FriendlyParams.ClearTask();
+	}
 	UE_LOG(LogWvAI, Warning, TEXT("Pawn is neutralized and AIPerception is stopped. => %s, Pawn => %s"), *FString(__FUNCTION__), *GetNameSafe(GetPawn()));
 }
 
@@ -1147,6 +1157,7 @@ void AWvAIController::ClearFriendlyTarget()
 		if (AIC)
 		{
 			AIC->SetBlackboardFriend(nullptr);
+			AIC->SetBlackboardFriendLocation(FVector::ZeroVector);
 		}
 	}
 #endif
@@ -1246,17 +1257,11 @@ void AWvAIController::CloseCombatActionBegin()
 {
 	if (BaseCharacter.IsValid())
 	{
-		BaseCharacter->ResetNearlestTarget(false);
+		BaseCharacter->ResetNearlestTarget();
 
 		const int32 ComboType = BaseCharacter->GetCombatAnimationIndex();
 		const int32 ComboCountMax = BaseCharacter->CloseCombatMaxComboCount(ComboType);
 		AICloseCombatData.Initialize(ComboType, ComboCountMax);
-
-		// @TODO
-		//if (UKismetMathLibrary::RandomBool())
-		//{
-		//	ModifyCloseCombatNearlestTarget();
-		//}
 
 		if (ABaseCharacter* TargetCharacter = GetBlackboardTargetAsCharacter())
 		{
@@ -1290,6 +1295,8 @@ void AWvAIController::NotifyCloseCombatBegin()
 		const auto Weapon = BaseCharacter->GetInventoryComponent()->GetEquipWeapon();
 		if (Weapon && Weapon->IsAvailable())
 		{
+			//UE_LOG(LogTemp, Error, TEXT("[%s]"), *FString(__FUNCTION__));
+
 			auto TriggerTag = Weapon->GetPluralInputTriggerTag();
 			OnInputEventGameplayTagTrigger.Broadcast(TriggerTag, true);
 		}
@@ -1350,43 +1357,39 @@ void AWvAIController::FriendlyActionAbility()
 	if (BaseCharacter.IsValid())
 	{
 		BaseCharacter->FriendlyActionAbility();
+	}
 
 #if CLEAR_FRIENDLY_DATA
-		if (ABaseCharacter* FriendCharacter = GetBlackboardFriendAsCharacter())
-		{
-			FriendCharacter->FriendlyActionAbility();
-		}
-		else
-		{
-			UE_LOG(LogWvAI, Error, TEXT("nullptr FriendCharacter => [%s]"), *FString(__FUNCTION__));
-		}
-#endif
-
+	if (ABaseCharacter* FriendCharacter = GetBlackboardFriendAsCharacter())
+	{
+		FriendCharacter->FriendlyActionAbility();
 	}
+	else
+	{
+		UE_LOG(LogWvAI, Error, TEXT("nullptr FriendCharacter => [%s]"), *FString(__FUNCTION__));
+	}
+#endif
 }
 
 void AWvAIController::CancelFriendlyActionAbility()
 {
 	if (BaseCharacter.IsValid() && !BaseCharacter->IsDead())
 	{
-		//BaseCharacter->CancelFriendlyActionAbility();
 		BaseCharacter->CancelAnimatingAbility();
 		BaseCharacter->CancelAnimatingAbilityMontage();
+	}
 
 #if CLEAR_FRIENDLY_DATA
-		if (ABaseCharacter* FriendCharacter = GetBlackboardFriendAsCharacter())
-		{
-			//FriendCharacter->CancelFriendlyActionAbility();
-			FriendCharacter->CancelAnimatingAbility();
-			FriendCharacter->CancelAnimatingAbilityMontage();
-		}
-		else
-		{
-			UE_LOG(LogWvAI, Error, TEXT("nullptr FriendCharacter => [%s]"), *FString(__FUNCTION__));
-		}
-#endif
-
+	if (ABaseCharacter* FriendCharacter = GetBlackboardFriendAsCharacter())
+	{
+		FriendCharacter->CancelAnimatingAbility();
+		FriendCharacter->CancelAnimatingAbilityMontage();
 	}
+	else
+	{
+		UE_LOG(LogWvAI, Error, TEXT("nullptr FriendCharacter => [%s]"), *FString(__FUNCTION__));
+	}
+#endif
 }
 
 bool AWvAIController::IsFriendlyActionPlaying() const

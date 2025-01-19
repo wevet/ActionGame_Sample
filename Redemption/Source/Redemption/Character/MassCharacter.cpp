@@ -39,6 +39,7 @@ AMassCharacter::AMassCharacter(const FObjectInitializer& ObjectInitializer) : Su
 
 	// dont async load components
 	bIsAllowAsyncLoadComponentAssets = false;
+	bIsDiedRemoveInventory = true;
 
 	SetReplicateMovement(false);
 }

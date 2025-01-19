@@ -210,8 +210,6 @@ void FAILeaderTask::Notify()
 
 
 #pragma region CloseCombat
-#define MAX_COMBO_CNT 3
-
 
 FAICloseCombatData::FAICloseCombatData()
 {
@@ -224,19 +222,23 @@ void FAICloseCombatData::Initialize(const int32 InComboTypeIndex, const int32 Ma
 {
 	bIsPlaying = true;
 	CurAttackComboCount = 0;
-	AttackComboCount = FMath::RandRange(0, MaxComboCount - 1);
+	AttackComboCount = FMath::RandRange(0, MaxComboCount);
 	ComboTypeIndex = InComboTypeIndex;
+
+	const FVector2D SeedsRange { 0.1f, 0.3f};
 
 	for (const float Seed : BaseRandomSeeds)
 	{
 		const float ModifySeed = FMath::FRandRange(0.f, Seed);
 		ModifySeeds.Add(ModifySeed);
 
-		const float IntervalSeed = FMath::FRandRange(0.1f, 0.2f);
+		const float IntervalSeed = FMath::FRandRange(SeedsRange.X, SeedsRange.Y);
 		IntervalSeeds.Add(IntervalSeed);
 	}
 
 	UE_LOG(LogWvAI, Warning, TEXT("[%s]"), *FString(__FUNCTION__));
+	UE_LOG(LogWvAI, Warning, TEXT("AttackComboCount => %d"), AttackComboCount);
+	UE_LOG(LogWvAI, Warning, TEXT("MaxComboCount => %d"), MaxComboCount);
 }
 
 void FAICloseCombatData::Deinitialize()
@@ -247,7 +249,7 @@ void FAICloseCombatData::Deinitialize()
 
 bool FAICloseCombatData::IsOverAttack() const
 {
-	return CurAttackComboCount >= AttackComboCount;
+	return CurAttackComboCount > AttackComboCount;
 }
 
 void FAICloseCombatData::ComboSeedBegin(TFunction<void(void)> InFinishDelegate)
@@ -302,18 +304,15 @@ void FAICloseCombatData::Internal_Update()
 		++CurAttackComboCount;
 	}
 
-	//CurAttackComboCount = FMath::Clamp(CurAttackComboCount, 0, AttackComboCount);
-	//UE_LOG(LogWvAI, Verbose, TEXT("CurAttackComboCount => %d, AttackComboCount => %d"), CurAttackComboCount, AttackComboCount);
-	UE_LOG(LogWvAI, Log, TEXT("[%s] => %d/%d"), *FString(__FUNCTION__), CurAttackComboCount, AttackComboCount);
-
 	CurInterval = 0.f;
+	UE_LOG(LogWvAI, Log, TEXT("[%s] => %d/%d"), *FString(__FUNCTION__), CurAttackComboCount, AttackComboCount);
 }
 
 void FAICloseCombatData::ComboSeedEnd()
 {
 	if (!bIsComboCheckEnded)
 	{
-		UE_LOG(LogWvAI, Log, TEXT("[%s]"), *FString(__FUNCTION__));
+		//UE_LOG(LogWvAI, Log, TEXT("[%s]"), *FString(__FUNCTION__));
 		Deinitialize();
 	}
 
@@ -342,6 +341,14 @@ void FFriendlyParams::Begin()
 bool FFriendlyParams::IsRunning() const
 {
 	return bIsFriendlyCoolDownPlaying;
+}
+
+void FFriendlyParams::ClearTask()
+{
+	if (TaskInstance.IsValid())
+	{
+		//
+	}
 }
 
 void FFriendlyParams::Reset()

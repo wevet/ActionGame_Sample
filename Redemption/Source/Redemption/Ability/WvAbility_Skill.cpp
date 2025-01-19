@@ -61,11 +61,11 @@ void UWvAbility_Skill::ActivateAbility(const FGameplayAbilitySpecHandle Handle, 
 		{
 			// default weight
 			constexpr float Weight = 1.0f;
-			Character->CalcurateNearlestTarget(Weight, true);
+			Character->CalcurateNearlestTarget(Weight);
 		}
 		else
 		{
-			Character->ResetNearlestTarget(true);
+			Character->ResetNearlestTarget();
 		}
 	}
 

@@ -2,11 +2,14 @@
 
 
 #include "Level/FieldInstanceSubsystem.h"
+#include "Level/SkyActor.h"
 #include "Game/WvGameInstance.h"
 #include "Game/CharacterInstanceSubsystem.h"
 
+
 #include "Redemption.h"
 #include "Kismet/GameplayStatics.h"
+
 //#include "SaveGameSystem.h"
 
 #define NIGHT_TIME 19
@@ -99,6 +102,11 @@ void UFieldInstanceSubsystem::StartNight()
 		}
 	}
 
+	if (IsValid(SkyActor))
+	{
+		SkyActor->ChangeToPostProcess(false);
+	}
+
 	UE_LOG(LogTemp, Log, TEXT("%s"), *FString(__FUNCTION__));
 }
 
@@ -122,6 +130,11 @@ void UFieldInstanceSubsystem::StartDay()
 		}
 	}
 
+	if (IsValid(SkyActor))
+	{
+		SkyActor->ChangeToPostProcess(true);
+	}
+
 	UE_LOG(LogTemp, Log, TEXT("%s"), *FString(__FUNCTION__));
 }
 
@@ -138,5 +151,14 @@ bool UFieldInstanceSubsystem::IsInNight() const
 bool UFieldInstanceSubsystem::IsInDay() const
 {
 	return DayNightPhase == EDayNightPhase::Day;
+}
+
+void UFieldInstanceSubsystem::SetSkyActor(ASkyActor* NewSkyActor)
+{
+	if (SkyActor != NewSkyActor)
+	{
+		SkyActor = NewSkyActor;
+		UE_LOG(LogTemp, Warning, TEXT("[%s]: Modify SkyActor. [%s]"), *FString(__FUNCTION__), *GetNameSafe(SkyActor));
+	}
 }
 

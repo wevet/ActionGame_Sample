@@ -79,7 +79,7 @@ Content/MetaHumans/*
 Content/CitySampleCrowd/*
 Content/CitySampleBuildings/*
 Content/CitySampleVehicles/*
-Content/Main_City/*
+Content/Ignore_Assets/*
 Content/Assets/Environment_Set/*
 
 .vsconfig

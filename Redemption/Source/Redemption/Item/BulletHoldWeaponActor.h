@@ -33,6 +33,9 @@ public:
 	void Notify_ReloadOwner();
 	void Notify_AmmoReplenishment();
 
+	UFUNCTION(BlueprintCallable, Category = "BulletHoldWeaponActor|Config")
+	float GetBulletInterval() const;
+
 protected:
 	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "Event")
 	void DoFireReceived();
@@ -51,6 +54,9 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "BulletHoldWeaponActor|Config")
 	FGameplayTag AmmoEmptyTag;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "BulletHoldWeaponActor|Config")
+	float BulletInterval{0.12f};
 
 private:
 	FVector TraceNoise;

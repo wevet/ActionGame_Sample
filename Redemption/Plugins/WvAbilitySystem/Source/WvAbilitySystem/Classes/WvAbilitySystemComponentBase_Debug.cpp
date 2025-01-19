@@ -369,7 +369,7 @@ void UWvAbilitySystemComponentBase::Debug_Internal(struct FAbilitySystemComponen
 				StatusText = TEXT(" (InputBlocked)");
 				AbilityTextColor = FColor::Red;
 			}
-			else if (InstancedAbility->AbilityTags.HasAny(BlockedAbilityTags.GetExplicitGameplayTags()))
+			else if (InstancedAbility->GetAssetTags().HasAny(BlockedAbilityTags.GetExplicitGameplayTags()))
 			{
 				StatusText = TEXT(" (TagBlocked)");
 				AbilityTextColor = FColor::Red;
@@ -387,7 +387,10 @@ void UWvAbilitySystemComponentBase::Debug_Internal(struct FAbilitySystemComponen
 			}
 
 			FString InputPressedStr = AbilitySpec.InputPressed ? TEXT("(InputPressed)") : TEXT("");
-			FString ActivationModeStr = AbilitySpec.IsActive() ? UEnum::GetValueAsString(TEXT("GameplayAbilities.EGameplayAbilityActivationMode"), AbilitySpec.ActivationInfo.ActivationMode) : TEXT("");
+
+			const auto InstActivationInfo = InstancedAbility->GetCurrentActivationInfo();
+			FString ActivationModeStr = AbilitySpec.IsActive() ? 
+				UEnum::GetValueAsString(TEXT("GameplayAbilities.EGameplayAbilityActivationMode"), InstActivationInfo.ActivationMode) : TEXT("");
 
 			if (Info.Canvas)
 			{

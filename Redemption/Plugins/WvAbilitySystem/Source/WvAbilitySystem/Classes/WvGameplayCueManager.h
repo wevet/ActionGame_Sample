@@ -41,7 +41,7 @@ public:
 
 public:
 	// @TODO
-	TMap<FGCNotifyActorKey, TSet<AGameplayCueNotify_Actor*> > NotifyMapActorList;
+	// TMap<FGCNotifyActorKey, TSet<AGameplayCueNotify_Actor*> > NotifyMapActorList;
 
 	// wip
 	TSet<AGameplayCueNotify_Actor*> NotifyMapActorHash;

@@ -102,9 +102,10 @@ protected:
 #define ASC_GLOBAL() UWvAbilitySystemGlobals::Get()
 
 #define GAMEPLAYTAG_SCOPE_VALUE(ClassName,TagName) \
-	FORCEINLINE const FGameplayTag GetGameplayTag_##TagName##() const\
+	FORCEINLINE const FGameplayTag GetGameplayTag_##TagName() const\
 	{ \
-		return UWvAbilitySystemGlobals::Get()->FindScopeTagByNameToGameplayTagRefTable(ClassName::StaticClass()->GetName(),TagName); \
+		static const FGameplayTag Tag = UWvAbilitySystemGlobals::Get()->FindScopeTagByNameToGameplayTagRefTable(ClassName::StaticClass()->GetName(), TEXT(#TagName)); \
+		return Tag; \
 	}
 
 #define GAMEPLAYTAG_GLOBAL_VALUE(TagName) \

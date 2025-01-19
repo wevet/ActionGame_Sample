@@ -16,6 +16,7 @@ class UFXSystemAsset;
 class ABaseCharacter;
 class UMaterialInstanceDynamic;
 class AStaticMeshActor;
+class ARedemptionGameMode;
 struct FHitReactInfoRow;
 
 /**
@@ -138,6 +139,11 @@ public:
 
 
 	static void DrawDebugSphereTraceSingle(const UWorld* World, const FVector& Start, const FVector& End, const FCollisionShape& CollisionShape, const bool bHit, const FHitResult& OutHit, const FLinearColor TraceColor, const FLinearColor TraceHitColor, const float DrawTime);
+
+
+	static const ARedemptionGameMode* GetMainGameMode(const UWorld* World);
+
+	static void ControllTrailInteractionComponents(APawn* Owner, const bool bIsEnable);
 };
 
 

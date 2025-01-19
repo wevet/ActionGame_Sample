@@ -34,6 +34,7 @@ public:
 	float GetSkillToWidget() const;
 	bool IsHealthHalf() const;
 	bool IsMaxSkll() const;
+	bool IsMaxVigilance() const;
 
 	void DoAlive();
 	void DoKill();
@@ -63,10 +64,12 @@ private:
 	FDelegateHandle HPChangeDelegateHandle;
 	FDelegateHandle DamageChangeDelegateHandle;
 	FDelegateHandle SkillChangeDelegateHandle;
+	FDelegateHandle VigilanceChangeDelegateHandle;
 
 	void HealthChange_Callback(const FOnAttributeChangeData& Data);
 	void DamageChange_Callback(const FOnAttributeChangeData& Data);
 	void SkillChange_Callback(const FOnAttributeChangeData& Data);
+	void Vigilance_Callback(const FOnAttributeChangeData& Data);
 
 	UWvInheritanceAttributeSet* GetInheritanceAttributeSet() const;
 

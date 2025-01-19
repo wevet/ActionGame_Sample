@@ -2,6 +2,7 @@
 
 
 #include "Level/SkyActor.h"
+#include "Level/FieldInstanceSubsystem.h"
 
 ASkyActor::ASkyActor()
 {
@@ -13,6 +14,7 @@ void ASkyActor::BeginPlay()
 {
 	Super::BeginPlay();
 
+	UFieldInstanceSubsystem::Get()->SetSkyActor(this);
 }
 
 void ASkyActor::Tick(float DeltaTime)
@@ -20,4 +22,10 @@ void ASkyActor::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 
 }
+
+void ASkyActor::ChangeToPostProcess(const bool bIsDay)
+{
+	BP_ChangeToPostProcess(bIsDay);
+}
+
 

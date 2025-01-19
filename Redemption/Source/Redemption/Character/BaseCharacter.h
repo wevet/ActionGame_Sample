@@ -86,6 +86,10 @@ public:
 
 	virtual void MoveBlockedBy(const FHitResult& Impact) override;
 
+#if WITH_EDITOR
+	virtual void PostEditChangeProperty(struct FPropertyChangedEvent& PropertyChangedEvent) override;
+#endif
+
 protected:
 	virtual void BeginPlay() override;
 	virtual void PossessedBy(AController* NewController) override;
@@ -137,6 +141,9 @@ public:
 	virtual void DoAttack() override;
 	virtual void DoResumeAttack() override;
 	virtual void DoStopAttack() override;
+
+	virtual void DoBulletAttack() override;
+	virtual void DoThrowAttack() override;
 
 	virtual void DoStartCinematic() override;
 	virtual void DoStopCinematic() override;
@@ -389,6 +396,7 @@ public:
 	int32 GetCombatAnimationIndex() const;
 	int32 CloseCombatMaxComboCount(const int32 Index) const;
 	UAnimMontage* GetCloseCombatAnimMontage(const int32 Index, const FGameplayTag Tag) const;
+	float CalcurateBodyShapePlayRate() const;
 
 	void CancelAnimatingAbility();
 	void CancelAnimatingAbilityMontage();
@@ -482,11 +490,12 @@ public:
 	void SetIsDespawnCheck(const bool NewIsDespawnCheck);
 	bool GetIsDespawnCheck() const;
 
+
 #pragma region NearlestAction
-	void CalcurateNearlestTarget(const float SyncPointWeight, bool bIsPlayer = false);
-	void ResetNearlestTarget(bool bIsPlayer = false);
-	void FindNearlestTarget(AActor* Target, const float SyncPointWeight, bool bIsPlayer = false);
-	void FindNearlestTarget(const FVector TargetPosition, const float SyncPointWeight, bool bIsPlayer = false);
+	void CalcurateNearlestTarget(const float SyncPointWeight);
+	void ResetNearlestTarget();
+	void FindNearlestTarget(AActor* Target, const float SyncPointWeight);
+	void FindNearlestTarget(const FVector TargetPosition, const float SyncPointWeight);
 
 	void FindNearlestTarget(const FAttackMotionWarpingData AttackMotionWarpingData);
 	void BuildFinisherAbility(const FGameplayTag RequireTag);
@@ -588,6 +597,9 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "BaseCharacter|Config")
 	class UBehaviorTree* BehaviorTree;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "BaseCharacter|Config")
+	bool bIsDiedRemoveInventory = false;
 
 	UPROPERTY(Transient, ReplicatedUsing = OnRep_ReplicatedAcceleration)
 	FWvReplicatedAcceleration ReplicatedAcceleration;

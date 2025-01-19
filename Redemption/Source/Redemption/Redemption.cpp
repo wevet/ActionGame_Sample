@@ -81,6 +81,7 @@ UE_DEFINE_GAMEPLAY_TAG(TAG_Locomotion_ClimbingAbort, "Locomotion.Climbing.Abort"
 
 // Mantling
 UE_DEFINE_GAMEPLAY_TAG(TAG_Locomotion_Mantling, "Locomotion.Mantling");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Locomotion_Vaulting, "Locomotion.Vaulting");
 
 // Forbid
 UE_DEFINE_GAMEPLAY_TAG(TAG_Locomotion_ForbidClimbing, "Locomotion.Forbid.Climbing");
@@ -88,6 +89,7 @@ UE_DEFINE_GAMEPLAY_TAG(TAG_Locomotion_ForbidMantling, "Locomotion.Forbid.Mantlin
 UE_DEFINE_GAMEPLAY_TAG(TAG_Locomotion_ForbidMovement, "Locomotion.Forbid.Movement");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Locomotion_ForbidJump, "Locomotion.Forbid.Jump");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Locomotion_ForbidRagdoll, "Locomotion.Forbid.Ragdoll");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Locomotion_ForbidVaulting, "Locomotion.Forbid.Vaulting");
 
 
 // vehicle

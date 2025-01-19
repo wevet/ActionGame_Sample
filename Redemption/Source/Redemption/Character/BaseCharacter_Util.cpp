@@ -198,8 +198,10 @@ void ABaseCharacter::HairStrandsLODSetUp()
 
 void ABaseCharacter::OnMobDeath()
 {
-	Face->SetLeaderPoseComponent(GetMesh(), true, true);
-	Face->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	if (IsBotCharacter())
+	{
+		Face->SetLeaderPoseComponent(GetMesh(), true, true);
+	}
 
 	RecalcurateBounds();
 
@@ -215,6 +217,9 @@ void ABaseCharacter::OnMobDeath()
 			AccessoryObjectRoot->SetForcedLodModel(NumLods);
 		}
 	}
+
+	// disable groom collision
+	SetGroomSimulation(false);
 
 #if false
 	{
@@ -465,17 +470,16 @@ void ABaseCharacter::SetGroomSimulation(const bool IsEnable)
 
 	for (UGroomComponent* Component : Components)
 	{
-		//Component->ReleaseHairSimulation();
 		Component->SetCollisionEnabled(IsEnable ? ECollisionEnabled::QueryAndPhysics : ECollisionEnabled::NoCollision);
-		Component->SetEnableSimulation(IsEnable);
 
 		const FName ProfileName = IsEnable ? FName(TEXT("PhysicsActor")) : FName(TEXT("Ragdoll"));
 		Component->SetCollisionProfileName(ProfileName);
 
 		if (Component->GroomCache)
 		{
-
+			//
 		}
+
 	}
 }
 
@@ -564,6 +568,11 @@ void ABaseCharacter::OnLoadAndSetMeshes_Callback()
 	// 3 Top
 	// 4 BottomMesh
 	// 5 FeetMesh
+
+	if (!IsInGameThread())
+	{
+		return;
+	}
 
 	if (InitialBodyMeshesPath.IsValidIndex(0))
 	{

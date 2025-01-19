@@ -28,6 +28,8 @@ void UStatusComponent::BeginPlay()
 	HPChangeDelegateHandle = ASC->GetGameplayAttributeValueChangeDelegate(UWvAbilityAttributeSet::GetHPAttribute()).AddUObject(this, &UStatusComponent::HealthChange_Callback);
 	DamageChangeDelegateHandle = ASC->GetGameplayAttributeValueChangeDelegate(UWvAbilityAttributeSet::GetDamageAttribute()).AddUObject(this, &UStatusComponent::DamageChange_Callback);
 	SkillChangeDelegateHandle = ASC->GetGameplayAttributeValueChangeDelegate(UWvAbilityAttributeSet::GetSkillAttribute()).AddUObject(this, &UStatusComponent::SkillChange_Callback);
+	VigilanceChangeDelegateHandle = ASC->GetGameplayAttributeValueChangeDelegate(UWvAbilityAttributeSet::GetVigilanceAttribute()).AddUObject(this, &UStatusComponent::Vigilance_Callback);
+
 
 	if (Character.IsValid())
 	{
@@ -65,6 +67,7 @@ void UStatusComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 		ASC->GetGameplayAttributeValueChangeDelegate(UWvAbilityAttributeSet::GetHPAttribute()).Remove(HPChangeDelegateHandle);
 		ASC->GetGameplayAttributeValueChangeDelegate(UWvAbilityAttributeSet::GetDamageAttribute()).Remove(DamageChangeDelegateHandle);
 		ASC->GetGameplayAttributeValueChangeDelegate(UWvAbilityAttributeSet::GetSkillAttribute()).Remove(SkillChangeDelegateHandle);
+		ASC->GetGameplayAttributeValueChangeDelegate(UWvAbilityAttributeSet::GetVigilanceAttribute()).Remove(VigilanceChangeDelegateHandle);
 	}
 
 	ASC.Reset();
@@ -119,9 +122,23 @@ void UStatusComponent::SkillChange_Callback(const FOnAttributeChangeData& Data)
 
 }
 
-const bool UStatusComponent::SetFullSkill()
+void UStatusComponent::Vigilance_Callback(const FOnAttributeChangeData& Data)
 {
 	if (!AAS.IsValid())
+	{
+		return;
+	}
+
+	if (IsMaxVigilance())
+	{
+
+	}
+	UE_LOG(LogTemp, Log, TEXT("[%s]"), *FString(__FUNCTION__));
+}
+
+const bool UStatusComponent::SetFullSkill()
+{
+	if (!AAS.IsValid() || !Character.IsValid())
 	{
 		return false;
 	}
@@ -166,6 +183,15 @@ bool UStatusComponent::IsMaxSkll() const
 	return false;
 }
 
+bool UStatusComponent::IsMaxVigilance() const
+{
+	if (AAS.IsValid())
+	{
+		return (AAS->GetVigilance() >= AAS->GetVigilanceMax());
+	}
+	return false;
+}
+
 UWvInheritanceAttributeSet* UStatusComponent::GetInheritanceAttributeSet() const
 {
 	if (AAS.IsValid())
@@ -190,10 +216,9 @@ float UStatusComponent::GetKillDamage() const
 /// <returns></returns>
 float UStatusComponent::GetVigilance() const
 {
-	const auto Attribute = GetInheritanceAttributeSet();
-	if (IsValid(Attribute))
+	if (AAS.IsValid())
 	{
-		return Attribute->GetVigilance();
+		return AAS->GetVigilance();
 	}
 	return 0.f;
 }

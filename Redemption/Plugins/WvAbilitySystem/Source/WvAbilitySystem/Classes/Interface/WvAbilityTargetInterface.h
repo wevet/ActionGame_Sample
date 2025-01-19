@@ -49,7 +49,7 @@ class WVABILITYSYSTEM_API IWvAbilityTargetInterface : public IGenericTeamAgentIn
 	GENERATED_IINTERFACE_BODY()
 
 public:
-    virtual USceneComponent* GetOverlapBaseComponent();
+	virtual USceneComponent* GetOverlapBaseComponent();
 	virtual FGameplayTag GetAvatarTag() const;
 	virtual FGameplayEffectQuery GetHitEffectQuery();
 
@@ -78,11 +78,16 @@ public:
 	virtual void DoStopAttack() {};
 	virtual const bool CanAttack();
 
+	virtual void DoBulletAttack() {};
+	virtual void DoThrowAttack() {};
+
 	virtual void BuildRunAI() {};
 
 	virtual void DoStartCinematic() {};
 	virtual void DoStopCinematic() {};
 	virtual bool IsCinematic() const;
+
+	virtual void OnChangeGenericTeamIdFromInt(const int32 NewTeamID) {};
 
 	FAbilityDeadAnimProcessForEventDelegate OnDeadAnimBeginPlay;
 	FAbilityDeadAnimProcessForEventDelegate OnDeadAnimFinish;

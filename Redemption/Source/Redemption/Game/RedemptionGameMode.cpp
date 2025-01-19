@@ -9,11 +9,7 @@
 
 ARedemptionGameMode::ARedemptionGameMode()
 {
-	//static ConstructorHelpers::FClassFinder<APawn> PlayerPawnBPClass(TEXT("/Game/ThirdPerson/Blueprints/BP_PlayerCharacter"));
-	//if (PlayerPawnBPClass.Class != nullptr)
-	//{
-	//	DefaultPawnClass = PlayerPawnBPClass.Class;
-	//}
+
 }
 
 void ARedemptionGameMode::StartPlay()
@@ -27,7 +23,23 @@ void ARedemptionGameMode::StartPlay()
 
 	UE_LOG(LogTemp, Log, TEXT("end %s"), *FString(__FUNCTION__));
 
+#if false
+	auto PC = Game::ControllerExtension::GetPlayer(GetWorld());
 
+	// apply to custom lensflare
+	if (IsValid(PC))
+	{
+		PC->ConsoleCommand("r.LensFlareMethod 1");
+		PC->ConsoleCommand("r.LensFlare.RenderFlare 1");
+		PC->ConsoleCommand("r.LensFlare.RenderGlare 0");
+		PC->ConsoleCommand("r.LensFlare.RenderBloom 1");
+	}
+#endif
+
+}
+
+void ARedemptionGameMode::EnableCustomLensFlare()
+{
 	auto PC = Game::ControllerExtension::GetPlayer(GetWorld());
 
 	// apply to custom lensflare
@@ -40,4 +52,17 @@ void ARedemptionGameMode::StartPlay()
 	}
 }
 
+void ARedemptionGameMode::DisableCustomLensFlare()
+{
+	auto PC = Game::ControllerExtension::GetPlayer(GetWorld());
+
+	// apply to custom lensflare
+	if (IsValid(PC))
+	{
+		PC->ConsoleCommand("r.LensFlareMethod 0");
+		PC->ConsoleCommand("r.LensFlare.RenderFlare 1");
+		PC->ConsoleCommand("r.LensFlare.RenderGlare 0");
+		PC->ConsoleCommand("r.LensFlare.RenderBloom 1");
+	}
+}
 

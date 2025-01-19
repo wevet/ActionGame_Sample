@@ -5,7 +5,9 @@
 #include "Character/BaseCharacter.h"
 #include "Component/CombatComponent.h"
 #include "Component/InventoryComponent.h"
+#include "Component/TrailInteractionComponent.h"
 #include "GameExtension.h"
+#include "Game/RedemptionGameMode.h"
 
 #include "Kismet/KismetMathLibrary.h"
 #include "Kismet/KismetSystemLibrary.h"
@@ -526,3 +528,25 @@ void UWvCommonUtils::DrawDebugSphereTraceSingle(const UWorld* World, const FVect
 	}
 }
 
+const ARedemptionGameMode* UWvCommonUtils::GetMainGameMode(const UWorld* World)
+{
+	return Cast<ARedemptionGameMode>(World->GetAuthGameMode());
+}
+
+void UWvCommonUtils::ControllTrailInteractionComponents(APawn* Owner, const bool bIsEnable)
+{
+	if (!IsValid(Owner))
+	{
+		return;
+	}
+
+	auto Components = Game::ComponentExtension::GetComponentsArray<UTrailInteractionComponent>(Owner);
+	for (auto Component : Components)
+	{
+		if (Component)
+		{
+			Component->SetActive(bIsEnable);
+			Component->SetComponentTickEnabled(bIsEnable);
+		}
+	}
+}

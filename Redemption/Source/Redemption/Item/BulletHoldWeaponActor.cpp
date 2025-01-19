@@ -124,6 +124,8 @@ void ABulletHoldWeaponActor::DoReload()
 }
 
 
+float ABulletHoldWeaponActor::GetBulletInterval() const { return BulletInterval; }
+
 #pragma region Fire
 float ABulletHoldWeaponActor::GetGunFireAnimationLength() const
 {

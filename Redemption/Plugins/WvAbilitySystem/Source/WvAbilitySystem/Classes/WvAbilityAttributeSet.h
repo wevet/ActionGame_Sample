@@ -85,6 +85,14 @@ public:
 	FGameplayAttributeData RecoverStamina;
 	ATTRIBUTE_ACCESSORS(UWvAbilityAttributeSet, RecoverStamina)
 
+	UPROPERTY(BlueprintReadOnly)
+	FGameplayAttributeData Vigilance;
+	ATTRIBUTE_ACCESSORS(UWvAbilityAttributeSet, Vigilance)
+
+	UPROPERTY(BlueprintReadOnly)
+	FGameplayAttributeData VigilanceMax;
+	ATTRIBUTE_ACCESSORS(UWvAbilityAttributeSet, VigilanceMax)
+
 	const FName PassiveAbilityTrigger_KillTarget = "PassiveAbilityTrigger_KillTarget";
 	GAMEPLAYTAG_SCOPE_VALUE(UWvAbilityAttributeSet, PassiveAbilityTrigger_KillTarget)
 };

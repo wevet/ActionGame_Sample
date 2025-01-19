@@ -7,6 +7,8 @@
 #include "DayNightBaseActor.h"
 #include "FieldInstanceSubsystem.generated.h"
 
+class ASkyActor;
+
 UENUM(BlueprintType)
 enum class EDayNightPhase : uint8
 {
@@ -45,11 +47,17 @@ public:
 	bool IsInNight() const;
 	bool IsInDay() const;
 
+	UFUNCTION(BlueprintCallable, Category = Level)
+	void SetSkyActor(ASkyActor* NewSkyActor);
+
 private:
 	static UFieldInstanceSubsystem* Instance;
 
 	UPROPERTY()
 	TArray<ADayNightBaseActor*> DayNightActors;
+
+	UPROPERTY()
+	TObjectPtr<class ASkyActor> SkyActor;
 
 	EDayNightPhase DayNightPhase = EDayNightPhase::Day;
 

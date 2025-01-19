@@ -1598,7 +1598,7 @@ void URope_Cutting::SetSplMLocTang(USplineComponent* ITargetSpline, USplineMeshC
 	FVector EndTangent;
 	FVector StartTangentClamped;
 	FVector EndTangentClamped;
-	FVector UpVector;
+	//FVector UpVector;
 
 	//Grab Spline data for setting Spline Mesh "Start and End"
 	StartPoint = ITargetSpline->GetLocationAtSplinePoint(IEditPoint, ESplineCoordinateSpace::Local);

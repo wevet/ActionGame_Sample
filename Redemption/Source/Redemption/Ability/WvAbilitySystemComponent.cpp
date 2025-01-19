@@ -92,10 +92,11 @@ const bool UWvAbilitySystemComponent::TryActivateAbilityByClassPressing(TSubclas
 
 	if (Spec->IsActive())
 	{
-		InvokeReplicatedEvent(EAbilityGenericReplicatedEvent::InputPressed, Spec->Handle, Spec->ActivationInfo.GetActivationPredictionKey());
+		const auto InstActivationInfo = Spec->Ability->GetCurrentActivationInfo();
+		InvokeReplicatedEvent(EAbilityGenericReplicatedEvent::InputPressed, Spec->Handle, InstActivationInfo.GetActivationPredictionKey());
 	}
 
-	UE_LOG(LogTemp, Log, TEXT("%s"), *FString(__FUNCTION__));
+	//UE_LOG(LogTemp, Log, TEXT("%s"), *FString(__FUNCTION__));
 	const bool bIsSucceed = TryActivateAbilityByClass(InAbilityToActivate, bAllowRemoteActivation);
 	return bIsSucceed;
 }

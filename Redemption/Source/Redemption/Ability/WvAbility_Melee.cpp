@@ -42,11 +42,11 @@ void UWvAbility_Melee::ActivateAbility(const FGameplayAbilitySpecHandle Handle, 
 		{
 			// default weight
 			constexpr float Weight = 1.0f;
-			Character->CalcurateNearlestTarget(Weight, true);
+			Character->CalcurateNearlestTarget(Weight);
 		}
 		else
 		{
-			Character->ResetNearlestTarget(true);
+			Character->ResetNearlestTarget();
 		}
 
 		if (HasComboTrigger())
@@ -67,6 +67,8 @@ void UWvAbility_Melee::ActivateAbility(const FGameplayAbilitySpecHandle Handle, 
 
 	const auto LocomotionEssencialVariables = Character->GetLocomotionComponent()->GetLocomotionEssencialVariables();
 	UAnimMontage* CurAnimMontage = (IsValid(SprintToMontage) && LocomotionEssencialVariables.LSGait == ELSGait::Sprinting) ? SprintToMontage : Montage;
+
+	float PlayRate = 1.0f;
 
 	if (UWvCommonUtils::IsBotPawn(Character))
 	{
@@ -95,9 +97,12 @@ void UWvAbility_Melee::ActivateAbility(const FGameplayAbilitySpecHandle Handle, 
 			if (OverrideMontage)
 			{
 				CurAnimMontage = OverrideMontage;
-				//UE_LOG(LogWvAI, Verbose, TEXT("Montage Override => %s"), *GetNameSafe(OverrideMontage));
+				UE_LOG(LogWvAI, Verbose, TEXT("Montage Override => %s"), *GetNameSafe(OverrideMontage));
 			}
 		}
+
+		// if body shape over calcurate playrate
+		PlayRate = Character->CalcurateBodyShapePlayRate();
 	}
 
 	if (MontageTask)
@@ -108,12 +113,9 @@ void UWvAbility_Melee::ActivateAbility(const FGameplayAbilitySpecHandle Handle, 
 		MontageTask->EndTask();
 	}
 
-	MontageTask = UWvAT_PlayMontageAndWaitForEvent::PlayMontageAndWaitForEvent(
-		this,
-		FName("Melee"),
-		CurAnimMontage,
-		FGameplayTagContainer(),
-		1.0, 0.f, FName("Default"), true, 1.0f);
+
+	MontageTask = UWvAT_PlayMontageAndWaitForEvent::PlayMontageAndWaitForEvent(this, FName("Melee"), CurAnimMontage, 
+		FGameplayTagContainer(), PlayRate, 0.f, FName("Default"), true, 1.0f);
 
 	MontageTask->OnCancelled.AddDynamic(this, &UWvAbility_Melee::OnPlayMontageCompleted_Event);
 	MontageTask->OnInterrupted.AddDynamic(this, &UWvAbility_Melee::OnPlayMontageCompleted_Event);

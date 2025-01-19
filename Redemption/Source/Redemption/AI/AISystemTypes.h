@@ -133,7 +133,7 @@ private:
 	int32 AttackComboCount = INDEX_NONE;
 	int32 CurAttackComboCount = INDEX_NONE;
 
-	TArray<float> BaseRandomSeeds = { 80.0f, 60.0f, 30.0f, 10.0f, 5.0f };
+	TArray<float> BaseRandomSeeds = { 80.0f, 60.0f, 30.0f, 10.0f, 8.0f, 5.0f, 2.0f };
 	TArray<float> ModifySeeds;
 
 	TArray<float> IntervalSeeds;
@@ -159,6 +159,7 @@ struct FFriendlyParams
 public:
 	void Begin();
 	bool IsRunning() const;
+	void ClearTask();
 
 	void Reset();
 	void AddCache(AActor* Actor);

@@ -679,6 +679,25 @@ FCloseCombatAnimation UCloseCombatAnimationDataAsset::GetChooseCombatAnimation(c
 	return Container.ComboAnimations[0];
 }
 
+int32 FCloseCombatAnimation::GetTotalAnimationCount() const
+{
+	int32 Count = 0;
+
+	if (IsValid(DefaultComboMontage))
+	{
+		++Count;
+	}
+	for (TPair<FGameplayTag, UAnimMontage*> Pair : TagToComboMontageMap)
+	{
+		if (Pair.Key.IsValid())
+		{
+			++Count;
+		}
+	}
+
+	return Count;
+}
+
 FCloseCombatAnimationContainer UCloseCombatAnimationDataAsset::FindContainer(const EBodyShapeType BodyShape) const
 {
 	return ComboAnimationContainer.FindRef(BodyShape);
@@ -693,7 +712,8 @@ int32 UCloseCombatAnimationDataAsset::GetCombatAnimationIndex(const EBodyShapeTy
 int32 UCloseCombatAnimationDataAsset::CloseCombatMaxComboCount(const EBodyShapeType BodyShape, const int32 Index) const
 {
 	const FCloseCombatAnimation AnimData = GetChooseCombatAnimation(BodyShape, Index);
-	return AnimData.TagToComboMontageMap.Num();
+	//return AnimData.TagToComboMontageMap.Num();
+	return AnimData.GetTotalAnimationCount();
 }
 
 UAnimMontage* UCloseCombatAnimationDataAsset::GetAnimMontage(const EBodyShapeType BodyShape, const int32 Index, const FGameplayTag Tag) const
@@ -701,5 +721,35 @@ UAnimMontage* UCloseCombatAnimationDataAsset::GetAnimMontage(const EBodyShapeTyp
 	const FCloseCombatAnimation AnimData = GetChooseCombatAnimation(BodyShape, Index);
 	return AnimData.GetComboMatchMontage(Tag);
 }
+
+float UCloseCombatAnimationDataAsset::CalcurateBodyShapePlayRate(const EBodyShapeType BodyShape) const
+{
+	const FCloseCombatAnimationContainer Container = FindContainer(BodyShape);
+
+	constexpr float DefaultValue = 1.0f;
+
+	if (!Container.bIsRandomPlayRate)
+	{
+		return DefaultValue;
+	}
+
+	//switch (BodyShape)
+	//{
+	//case EBodyShapeType::Normal:
+	//case EBodyShapeType::Under:
+	//	return DefaultValue;
+	//}
+
+	/*
+	* RandomValue * 10 = 4.78562
+	* FMath::FloorToFloat
+	* 4 / 10.0f = 0.4
+	*/
+	const float RandomValue = FMath::Clamp(FMath::RandRange(Container.PlayRateRange.X, Container.PlayRateRange.Y), 0.f, 1.0f);
+	const float TruncatedValue = FMath::FloorToFloat(RandomValue * 10) / 10.0f;
+	return TruncatedValue;
+}
 #pragma endregion
+
+
 

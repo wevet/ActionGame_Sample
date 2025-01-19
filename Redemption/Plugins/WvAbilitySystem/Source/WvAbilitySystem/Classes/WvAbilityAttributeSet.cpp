@@ -25,6 +25,9 @@ UWvAbilityAttributeSet::UWvAbilityAttributeSet(const FObjectInitializer& ObjectI
 
 	Skill = 0.f;
 	SkillMax = 100.0f;
+
+	Vigilance = 0.f;
+	VigilanceMax = 100.0f;
 }
 
 void UWvAbilityAttributeSet::AdjustAttributeForMaxChange(const FGameplayAttributeData& AffectedAttribute, const FGameplayAttributeData& MaxAttribute, float NewMaxValue, const FGameplayAttribute& AffectedAttributeProperty)
@@ -94,6 +97,12 @@ void UWvAbilityAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModC
 	PostGameplayEffectExecute_HP(Data);
 	PostGameplayEffectExecute_Stamina(Data);
 	PostGameplayEffectExecute_Skill(Data);
+
+	if (Data.EvaluatedData.Attribute == GetVigilanceAttribute())
+	{
+		SetVigilance(FMath::Clamp(GetVigilance(), 0.f, GetVigilanceMax()));
+	}
+
 }
 
 #pragma region HP

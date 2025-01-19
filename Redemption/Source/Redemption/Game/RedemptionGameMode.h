@@ -15,6 +15,10 @@ public:
 	ARedemptionGameMode();
 
 	virtual void StartPlay() override;
+
+	void EnableCustomLensFlare();
+
+	void DisableCustomLensFlare();
 };
 
 

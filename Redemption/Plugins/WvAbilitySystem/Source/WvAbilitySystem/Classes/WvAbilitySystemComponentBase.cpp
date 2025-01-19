@@ -170,7 +170,9 @@ int32 UWvAbilitySystemComponentBase::PressTriggerInputEvent(FGameplayTag Tag, bo
 					ServerSetInputPressed(Spec.Handle);
 				}
 				AbilitySpecInputPressed(Spec);
-				InvokeReplicatedEvent(EAbilityGenericReplicatedEvent::InputPressed, Spec.Handle, Spec.ActivationInfo.GetActivationPredictionKey());
+
+				const auto InstActivationInfo = Spec.Ability->GetCurrentActivationInfo();
+				InvokeReplicatedEvent(EAbilityGenericReplicatedEvent::InputPressed, Spec.Handle, InstActivationInfo.GetActivationPredictionKey());
 			}
 		}
 		else
@@ -214,14 +216,16 @@ void UWvAbilitySystemComponentBase::ReleasedTriggerInputEvent(FGameplayTag Tag)
 		}
 
 		Spec.InputPressed = false;
-		if (Spec.Ability && Spec.IsActive())
+		if (Spec.IsActive())
 		{
 			if (Spec.Ability->bReplicateInputDirectly && IsOwnerActorAuthoritative() == false)
 			{
 				ServerSetInputReleased(Spec.Handle);
 			}
 			AbilitySpecInputReleased(Spec);
-			InvokeReplicatedEvent(EAbilityGenericReplicatedEvent::InputReleased, Spec.Handle, Spec.ActivationInfo.GetActivationPredictionKey());
+
+			const auto InstActivationInfo = Spec.Ability->GetCurrentActivationInfo();
+			InvokeReplicatedEvent(EAbilityGenericReplicatedEvent::InputReleased, Spec.Handle, InstActivationInfo.GetActivationPredictionKey());
 		}
 	}
 }
@@ -261,13 +265,13 @@ UGameplayAbility* UWvAbilitySystemComponentBase::CreateNewInstanceOfAbility(FGam
 	if (AbilityData)
 	{
 		AbilityInstance->DamageMotion = AbilityData->DamageMotion;
-		AbilityInstance->AbilityTags = AbilityData->AbilityTags;
 		AbilityInstance->ActivationOwnedTags = AbilityData->ActivationOwnedTags;
 		AbilityInstance->ActivationRequiredTags = AbilityData->ActivationRequiredTags;
 		AbilityInstance->ActivationBlockedTags = AbilityData->ActivationBlockedTags;
 		AbilityInstance->CancelAbilitiesWithTag = AbilityData->CancelAbilitiesWithTag;
 		AbilityInstance->BlockAbilitiesWithTag = AbilityData->BlockAbilitiesWithTag;
 		AbilityInstance->AbilityTriggers += AbilityData->AbilityTriggers;
+		AbilityInstance->SetAssetTags(AbilityData->AbilityTags);
 
 		const int32 LastIndex = (AbilityInstance->AbilityTriggers.Num() - 1);
 		for (int32 Index = LastIndex; Index >= 0; Index--)
@@ -280,10 +284,16 @@ UGameplayAbility* UWvAbilitySystemComponentBase::CreateNewInstanceOfAbility(FGam
 
 		TArray<FGameplayTag> AbilityTypeTags;
 		AbilityData->AbilityTypeTag.GetGameplayTagArray(AbilityTypeTags);
+
+		auto NewTagContainer = AbilityInstance->GetAssetTags();
 		for (const FGameplayTag& OtherTag : AbilityTypeTags)
 		{
-			AbilityInstance->AbilityTags.AddTag(OtherTag);
+			if (OtherTag.IsValid())
+			{
+				NewTagContainer.AddTag(OtherTag);
+			}
 		}
+		AbilityInstance->SetAssetTags(NewTagContainer);
 	}
 
 	// Add it to one of our instance lists so that it doesn't GC.
@@ -606,7 +616,6 @@ TArray<FActiveGameplayEffectHandle> UWvAbilitySystemComponentBase::MakeEffectToT
 		}
 	}
 
-	UE_LOG(LogWvAbility, Log, TEXT("function => %s, MakeEffectHandleList => %d"), *FString(__FUNCTION__), MakeEffectHandleList.Num());
 	return MakeEffectHandleList;
 }
 
@@ -687,8 +696,6 @@ void UWvAbilitySystemComponentBase::ApplyEffectToSelf(UWvAbilitySystemComponentB
 
 	FGameplayEffectContextHandle EffectContextHandle = InstigatorASC->MakeEffectContext();
 	UWvAbilitySystemBlueprintFunctionLibrary::EffectContextSetEffectDataAsset(EffectContextHandle, EffectData, EffectGroupIndex);
-
-	UE_LOG(LogWvAbility, Log, TEXT("%s"), *FString(__FUNCTION__));
 	MakeEffectToTargetData(EffectContextHandle, TargetDataHandle, FGameplayEffectQuery());
 }
 
@@ -790,7 +797,7 @@ bool UWvAbilitySystemComponentBase::HasActivatingAbilitiesWithTag(const FGamepla
 			continue;
 		}
 
-		const bool WithTagPass = Ability->AbilityTags.HasAny(Container);
+		const bool WithTagPass = Ability->GetAssetTags().HasAny(Container);
 		if (WithTagPass)
 		{
 			return true;

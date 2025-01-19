@@ -67,6 +67,7 @@ public:
 	virtual bool IsAttackAllowed() const override;
 	virtual void BuildRunAI() override;
 	virtual void OnReceiveAbilityAttack(AActor* Actor, const FWvBattleDamageAttackSourceInfo SourceInfo, const float Damage) override;
+	virtual void OnChangeGenericTeamIdFromInt(const int32 NewTeamID) override;
 
 #pragma endregion
 

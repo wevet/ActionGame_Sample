@@ -114,7 +114,7 @@ bool UWvGameplayAbility::DoesAbilitySatisfyTagRequirements(const UAbilitySystemC
 	do
 	{
 		// Check if any of this ability's tags are currently blocked
-		if (AbilitySystemComponent.AreAbilityTagsBlocked(AbilityTags))
+		if (AbilitySystemComponent.AreAbilityTagsBlocked(GetAssetTags()))
 		{
 			bBlocked = true;
 			break;

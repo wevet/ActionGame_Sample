@@ -14,6 +14,8 @@
 #include "Animation/WvAnimInstance.h"
 #include "GameExtension.h"
 
+#include "Item/BulletHoldWeaponActor.h"
+
 // built in
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
@@ -55,6 +57,9 @@ APlayerCharacter::APlayerCharacter(const FObjectInitializer& ObjectInitializer) 
 	QTEActionComponent = CreateDefaultSubobject<UQTEActionComponent>(TEXT("QTEActionComponent"));
 	QTEActionComponent->bAutoActivate = 1;
 
+	// https://forums.unrealengine.com/t/world-partion-current-pawn-vanishes-when-reaching-cell-loading-range-limit/255655/7
+	bIsSpatiallyLoaded = false;
+
 }
 
 void APlayerCharacter::BeginPlay()
@@ -88,6 +93,8 @@ void APlayerCharacter::BeginPlay()
 
 void APlayerCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
+	Clear_BulletTimer();
+
 	if (P_Controller.IsValid())
 	{
 		P_Controller->OnInputEventGameplayTagTrigger_Game.RemoveDynamic(this, &ThisClass::GameplayTagTrigger_Callback);
@@ -413,9 +420,10 @@ void APlayerCharacter::HandleSprinting(const bool bIsPress)
 
 void APlayerCharacter::HandleMeleeAction(const bool bIsPress)
 {
+	auto Inventory = GetInventoryComponent();
+
 	if (bIsPress)
 	{
-		auto Inventory = GetInventoryComponent();
 		if (Super::IsMeleePlaying() && !Inventory->CanAimingWeapon())
 		{
 			//const auto Tag = TAG_Character_StateMelee.GetTag().GetTagName();
@@ -423,7 +431,20 @@ void APlayerCharacter::HandleMeleeAction(const bool bIsPress)
 			return;
 		}
 
+		if (Inventory->CanAimingWeapon())
+		{
+			DoBulletAttack();
+			return;
+		}
+
 		Super::DoAttack();
+	}
+	else
+	{
+		if (Inventory->CanAimingWeapon())
+		{
+			Clear_BulletTimer();
+		}
 	}
 }
 
@@ -599,6 +620,40 @@ bool APlayerCharacter::IsQTEActionPlaying() const
 	return WvAbilitySystemComponent->HasMatchingGameplayTag(TAG_Character_Action_QTE);
 }
 
+void APlayerCharacter::DoBulletAttack()
+{
+	// @TODO
+	// TimerHandle LoopAction
+	const ABulletHoldWeaponActor* BulletWeapon = Cast<ABulletHoldWeaponActor>(GetInventoryComponent()->GetEquipWeapon());
+	if (!IsValid(BulletWeapon))
+	{
+		return;
+	}
+
+	GetWorld()->GetTimerManager().SetTimer(Bullet_TimerHandle, this, 
+		&ThisClass::DoBulletAttack_Callback, BulletWeapon->GetBulletInterval(), true);
+}
+
+void APlayerCharacter::DoBulletAttack_Callback()
+{
+	const ABulletHoldWeaponActor* BulletWeapon = Cast<ABulletHoldWeaponActor>(GetInventoryComponent()->GetEquipWeapon());
+	if (!BulletWeapon->IsAvailable())
+	{
+		Clear_BulletTimer();
+		return;
+	}
+	Super::DoBulletAttack();
+}
+
+void APlayerCharacter::Clear_BulletTimer()
+{
+	FTimerManager& TM = GetWorld()->GetTimerManager();
+	if (TM.IsTimerActive(Bullet_TimerHandle))
+	{
+		TM.ClearTimer(Bullet_TimerHandle);
+	}
+
+}
 
 FVector APlayerCharacter::GetFollowCameraLocation() const
 {

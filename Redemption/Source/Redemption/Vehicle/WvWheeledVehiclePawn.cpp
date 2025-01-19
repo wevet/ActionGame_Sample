@@ -7,6 +7,7 @@
 #include "Redemption.h"
 #include "Character/BaseCharacter.h"
 #include "Character/WvPlayerController.h"
+#include "Misc/WvCommonUtils.h"
 
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
@@ -37,6 +38,9 @@ AWvWheeledVehiclePawn::AWvWheeledVehiclePawn(const FObjectInitializer& ObjectIni
 	// sets Damage
 	UWvSkeletalMeshComponent* SkelMesh = CastChecked<UWvSkeletalMeshComponent>(GetMesh());
 	SkelMesh->SetCollisionResponseToChannel(ECollisionChannel::ECC_GameTraceChannel3, ECollisionResponse::ECR_Block);
+
+
+	
 }
 
 void AWvWheeledVehiclePawn::PreInitializeComponents()
@@ -55,6 +59,14 @@ void AWvWheeledVehiclePawn::BeginPlay()
 
 	USkeletalMeshComponent* SkelMesh = GetMesh();
 	SkelMesh->AddTickPrerequisiteActor(this);
+
+	FTimerHandle TimerHandle;
+	GetWorld()->GetTimerManager().SetTimer(TimerHandle,	[this]() 
+	{
+		UWvCommonUtils::ControllTrailInteractionComponents(this, false);
+	},
+	InitialActionTimer, false);
+
 }
 
 void AWvWheeledVehiclePawn::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -109,6 +121,12 @@ void AWvWheeledVehiclePawn::SetDrivingByPawn(APawn* InPawn)
 	{
 		FAttachmentTransformRules Rules(EAttachmentRule::KeepWorld, false);
 		DrivingByPawn->AttachToActor(this, Rules);
+
+		// https://forums.unrealengine.com/t/world-partion-current-pawn-vanishes-when-reaching-cell-loading-range-limit/255655/7
+		bIsSpatiallyLoaded = false;
+
+		UWvCommonUtils::ControllTrailInteractionComponents(DrivingByPawn.Get(), false);
+		UWvCommonUtils::ControllTrailInteractionComponents(this, true);
 	}
 }
 
@@ -122,9 +140,14 @@ void AWvWheeledVehiclePawn::UnSetDrivingByPawn()
 		auto Transform = DriveOutRoot->GetComponentTransform();
 		const FRotator Rotation = GetActorRotation();
 		DrivingByPawn->SetActorLocationAndRotation(Transform.GetLocation(), FRotator(0.f, Rotation.Yaw, 0.f), true, nullptr, ETeleportType::TeleportPhysics);
+
+		UWvCommonUtils::ControllTrailInteractionComponents(DrivingByPawn.Get(), true);
+		UWvCommonUtils::ControllTrailInteractionComponents(this, false);
 	}
 
 	DrivingByPawn.Reset();
+
+	bIsSpatiallyLoaded = true;
 }
 
 

@@ -62,6 +62,9 @@ protected:
 	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = Camera)
 	float BaseLookUpRate;
 
+	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = Config)
+	float InitialActionTimer{ 1.0f };
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Component, meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<class USceneComponent> DriveOutRoot;
 

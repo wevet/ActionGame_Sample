@@ -12,6 +12,7 @@
 #include "Component/CombatComponent.h"
 #include "Component/StatusComponent.h"
 #include "Component/WeaknessComponent.h"
+#include "Component/TrailInteractionComponent.h"
 #include "WvPlayerController.h"
 #include "WvAIController.h"
 #include "Animation/WvAnimInstance.h"
@@ -73,7 +74,7 @@ ABaseCharacter::ABaseCharacter(const FObjectInitializer& ObjectInitializer)
 {
 	PrimaryActorTick.bCanEverTick = true;
 
-	NetCullDistanceSquared = 900000000.0f;
+	SetNetCullDistanceSquared(900000000.0f);
 
 	GetCapsuleComponent()->InitCapsuleSize(42.f, 96.0f);
 
@@ -223,19 +224,20 @@ ABaseCharacter::ABaseCharacter(const FObjectInitializer& ObjectInitializer)
 	Face->SetCollisionResponseToChannel(ECollisionChannel::ECC_GameTraceChannel2, ECollisionResponse::ECR_Ignore);
 	// sets Damage
 	Face->SetCollisionResponseToChannel(ECollisionChannel::ECC_GameTraceChannel3, ECollisionResponse::ECR_Block);
-	Face->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
-	// custom collision preset
+
 	Face->SetCollisionProfileName(K_CHARACTER_COLLISION_PRESET);
+	Face->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 
-
-	//Body->SetCollisionProfileName(K_CHARACTER_COLLISION_PRESET);
-	//Bottom->SetCollisionProfileName(K_CHARACTER_COLLISION_PRESET);
-	//Top->SetCollisionProfileName(K_CHARACTER_COLLISION_PRESET);
-	//Feet->SetCollisionProfileName(K_CHARACTER_COLLISION_PRESET);
-
+	Body->SetCollisionProfileName(K_CHARACTER_COLLISION_PRESET);
 	Body->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+	Bottom->SetCollisionProfileName(K_CHARACTER_COLLISION_PRESET);
 	Bottom->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+	Top->SetCollisionProfileName(K_CHARACTER_COLLISION_PRESET);
 	Top->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+	Feet->SetCollisionProfileName(K_CHARACTER_COLLISION_PRESET);
 	Feet->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
 	WvMeshComp->VisibilityBasedAnimTickOption = EVisibilityBasedAnimTickOption::OnlyTickPoseWhenRendered;
@@ -393,15 +395,30 @@ void ABaseCharacter::Tick(float DeltaTime)
 		}
 	}
 
+	// Stopped due to adverse effect on ragdoll animation
+#if false
 	if (LocomotionComponent->IsInRagdolling())
 	{
 		LocomotionComponent->DoWhileRagdolling();
 	}
+#endif
 
 	DrawDebug();
 
 }
 
+#if WITH_EDITOR
+void ABaseCharacter::PostEditChangeProperty(struct FPropertyChangedEvent& PropertyChangedEvent)
+{
+	Super::PostEditChangeProperty(PropertyChangedEvent);
+
+	static const FName SpatiallyLoadedName = GET_MEMBER_NAME_CHECKED(ABaseCharacter, bIsSpatiallyLoaded);
+	if (PropertyChangedEvent.Property && PropertyChangedEvent.Property->GetFName() == SpatiallyLoadedName)
+	{
+		//bIsSpatiallyLoaded = false;
+	}
+}
+#endif
 
 void ABaseCharacter::OnStartCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust)
 {
@@ -492,11 +509,17 @@ void ABaseCharacter::OnRep_MyTeamID(FGenericTeamId OldTeamID)
 	ConditionalBroadcastTeamChanged(this, OldTeamID, MyTeamID);
 }
 
+/// <summary>
+/// change to team id
+/// </summary>
+/// <param name="TeamAgent"></param>
+/// <param name="OldTeam"></param>
+/// <param name="NewTeam"></param>
 void ABaseCharacter::OnControllerChangedTeam(UObject* TeamAgent, int32 OldTeam, int32 NewTeam)
 {
-	const FGenericTeamId MyOldTeamID = MyTeamID;
+	const FGenericTeamId OldTeamID = MyTeamID;
 	MyTeamID = IntegerToGenericTeamId(NewTeam);
-	ConditionalBroadcastTeamChanged(this, MyOldTeamID, MyTeamID);
+	ConditionalBroadcastTeamChanged(this, OldTeamID, MyTeamID);
 }
 
 void ABaseCharacter::NotifyControllerChanged()
@@ -666,6 +689,12 @@ void ABaseCharacter::OnReceiveKillTarget(AActor* Actor, const float Damage)
 	{
 		Interface->OnReceiveKillTarget(Actor, Damage);
 	}
+
+	if (bIsDiedRemoveInventory)
+	{
+		GetInventoryComponent()->RemoveAllInventory();
+	}
+
 	OnTeamHandleReceiveKillDelegate.Broadcast(Actor, Damage);
 
 	OnReceiveKillTarget_Callback();
@@ -706,6 +735,8 @@ void ABaseCharacter::Freeze()
 	WvAbilitySystemComponent->AddGameplayTag(TAG_Locomotion_ForbidClimbing, 1);
 	WvAbilitySystemComponent->AddGameplayTag(TAG_Locomotion_ForbidMantling, 1);
 	WvAbilitySystemComponent->AddGameplayTag(TAG_Locomotion_ForbidJump, 1);
+	WvAbilitySystemComponent->AddGameplayTag(TAG_Locomotion_ForbidVaulting, 1);
+
 	WvAbilitySystemComponent->AddGameplayTag(TAG_Character_ActionMelee_Forbid, 1);
 	WvAbilitySystemComponent->AddGameplayTag(TAG_Character_ActionJump_Forbid, 1);
 	WvAbilitySystemComponent->AddGameplayTag(TAG_Character_ActionDash_Forbid, 1);
@@ -724,6 +755,8 @@ void ABaseCharacter::UnFreeze()
 	WvAbilitySystemComponent->RemoveGameplayTag(TAG_Locomotion_ForbidClimbing, 1);
 	WvAbilitySystemComponent->RemoveGameplayTag(TAG_Locomotion_ForbidMantling, 1);
 	WvAbilitySystemComponent->RemoveGameplayTag(TAG_Locomotion_ForbidJump, 1);
+	WvAbilitySystemComponent->RemoveGameplayTag(TAG_Locomotion_ForbidVaulting, 1);
+
 	WvAbilitySystemComponent->RemoveGameplayTag(TAG_Character_ActionMelee_Forbid, 1);
 	WvAbilitySystemComponent->RemoveGameplayTag(TAG_Character_ActionJump_Forbid, 1);
 	WvAbilitySystemComponent->RemoveGameplayTag(TAG_Character_ActionDash_Forbid, 1);
@@ -740,11 +773,14 @@ bool ABaseCharacter::IsFreezing() const
 		Container.AddTag(TAG_Locomotion_ForbidClimbing);
 		Container.AddTag(TAG_Locomotion_ForbidMantling);
 		Container.AddTag(TAG_Locomotion_ForbidJump);
+		Container.AddTag(TAG_Locomotion_ForbidVaulting);
+
 		Container.AddTag(TAG_Character_ActionMelee_Forbid);
 		Container.AddTag(TAG_Character_ActionJump_Forbid);
 		Container.AddTag(TAG_Character_ActionDash_Forbid);
 		Container.AddTag(TAG_Character_ActionCrouch_Forbid);
 		Container.AddTag(TAG_Character_TargetLock_Forbid);
+
 		return WvAbilitySystemComponent->HasAllMatchingGameplayTags(Container);
 	}
 	return false;
@@ -758,6 +794,9 @@ bool ABaseCharacter::IsSprintingMovement() const
 	return bResult || LocomotionComponent->GetLSGaitMode_Implementation() == ELSGait::Sprinting;
 }
 
+/// <summary>
+/// Default Melee Attack
+/// </summary>
 void ABaseCharacter::DoAttack()
 {
 	if (WvAbilitySystemComponent->HasMatchingGameplayTag(TAG_Character_ActionMelee_Forbid))
@@ -785,6 +824,50 @@ void ABaseCharacter::DoResumeAttack()
 void ABaseCharacter::DoStopAttack()
 {
 	WvAbilitySystemComponent->AddGameplayTag(TAG_Character_ActionMelee_Forbid, 1);
+}
+
+/// <summary>
+/// Pistol or Rifle Attack
+/// </summary>
+void ABaseCharacter::DoBulletAttack()
+{
+	if (WvAbilitySystemComponent->HasMatchingGameplayTag(TAG_Character_ActionMelee_Forbid))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("has tag TAG_Character_StateMelee_Forbid => %s"), *FString(__FUNCTION__));
+		return;
+	}
+
+	if (ItemInventoryComponent->CanAimingWeapon())
+	{
+		const auto Weapon = ItemInventoryComponent->GetEquipWeapon();
+		if (Weapon && Weapon->IsAvailable())
+		{
+			const FGameplayTag TriggerTag = Weapon->GetPluralInputTriggerTag();
+			WvAbilitySystemComponent->TryActivateAbilityByTag(TriggerTag);
+		}
+	}
+}
+
+/// <summary>
+/// Bomb Attack
+/// </summary>
+void ABaseCharacter::DoThrowAttack()
+{
+	if (WvAbilitySystemComponent->HasMatchingGameplayTag(TAG_Character_ActionMelee_Forbid))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("has tag TAG_Character_StateMelee_Forbid => %s"), *FString(__FUNCTION__));
+		return;
+	}
+
+	if (ItemInventoryComponent->CanThrowableWeapon())
+	{
+		const auto Weapon = ItemInventoryComponent->GetEquipWeapon();
+		if (Weapon && Weapon->IsAvailable())
+		{
+			const FGameplayTag TriggerTag = Weapon->GetPluralInputTriggerTag();
+			WvAbilitySystemComponent->TryActivateAbilityByTag(TriggerTag);
+		}
+	}
 }
 
 bool ABaseCharacter::IsAttackAllowed() const
@@ -967,18 +1050,12 @@ void ABaseCharacter::Jump()
 			case MOVE_Walking:
 			case MOVE_NavWalking:
 			{
-				if (bHasMovementInput)
-				{
-					const bool bResult = CMC->GroundMantling();
-					if (!bResult)
-					{
-						Super::Jump();
-					}
-				}
-				else
+				const bool bIsVaultingResult = CMC->DetectVaulting();
+				if (!bIsVaultingResult)
 				{
 					Super::Jump();
 				}
+
 			}
 			break;
 			case MOVE_Falling:
@@ -1272,7 +1349,6 @@ void ABaseCharacter::BeginDeathAction()
 		WvAbilitySystemComponent->AddGameplayTag(TAG_Character_StateDead, 1);
 		WvAbilitySystemComponent->AddGameplayTag(TAG_Locomotion_ForbidMovement, 1);
 
-		//Face->SetLeaderPoseComponent(GetMesh(), true, true);
 		Face->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	}
 }
@@ -1301,7 +1377,7 @@ void ABaseCharacter::BeginAliveAction()
 		StatusComponent->DoAlive();
 		LocomotionComponent->StopRagdollAction([this]() 
 		{
-			//WvAbilitySystemComponent->TryActivateAbilityByTag(TAG_Character_StateAlive_Action);
+			//
 		});
 
 		WvAbilitySystemComponent->TryActivateAbilityByTag(TAG_Character_StateAlive_Action);
@@ -1310,8 +1386,6 @@ void ABaseCharacter::BeginAliveAction()
 
 void ABaseCharacter::EndAliveAction()
 {
-	//DoStartCrouch();
-
 	Face->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 	SetGroomSimulation(true);
 
@@ -1333,8 +1407,6 @@ void ABaseCharacter::WakeUpPoseSnapShot()
 
 void ABaseCharacter::DoForceKill()
 {
-	//auto Pawn = Game::ControllerExtension::GetPlayerPawn(GetWorld(), 0);
-
 	const float KillDamage = StatusComponent->GetKillDamage();
 	StatusComponent->DoKill();
 
@@ -1360,7 +1432,6 @@ void ABaseCharacter::OverlayStateChange(const ELSOverlayState CurrentOverlay)
 		auto AnimInstanceClass = OverlayAnimDA->FindAnimInstance(CurrentOverlay);
 		if (AnimInstanceClass)
 		{
-			//AnimInstance->LinkAnimClassLayers(AnimInstanceClass);
 			GetMesh()->LinkAnimClassLayers(AnimInstanceClass);
 			OverlayChangeDelegate.Broadcast(CurrentOverlay);
 		}
@@ -1625,37 +1696,37 @@ bool ABaseCharacter::HasComboTrigger() const
 /// call to melee ability
 /// </summary>
 /// <param name="SyncPointWeight"></param>
-void ABaseCharacter::CalcurateNearlestTarget(const float SyncPointWeight, bool bIsPlayer/* = false*/)
+void ABaseCharacter::CalcurateNearlestTarget(const float SyncPointWeight)
 {
 	const FLocomotionEssencialVariables LocomotionEssencial = LocomotionComponent->GetLocomotionEssencialVariables();
 	if (LocomotionEssencial.LookAtTarget.IsValid())
 	{
-		FindNearlestTarget(LocomotionEssencial.LookAtTarget.Get(), SyncPointWeight, bIsPlayer);
+		FindNearlestTarget(LocomotionEssencial.LookAtTarget.Get(), SyncPointWeight);
 	}
 }
 
-void ABaseCharacter::ResetNearlestTarget(bool bIsPlayer/* = false*/)
+void ABaseCharacter::ResetNearlestTarget()
 {
-	MotionWarpingComponent->RemoveWarpTarget(bIsPlayer ? NEARLEST_TARGET_SYNC_POINT : AI_NEARLEST_TARGET_SYNC_POINT);
+	MotionWarpingComponent->RemoveWarpTarget(NEARLEST_TARGET_SYNC_POINT);
 }
 
-void ABaseCharacter::FindNearlestTarget(AActor* Target, const float SyncPointWeight, bool bIsPlayer/* = false*/)
+void ABaseCharacter::FindNearlestTarget(AActor* Target, const float SyncPointWeight)
 {
 	const FVector To = Target->GetActorLocation();
-	FindNearlestTarget(To, SyncPointWeight, bIsPlayer);
+	FindNearlestTarget(To, SyncPointWeight);
 }
 
-void ABaseCharacter::FindNearlestTarget(const FVector TargetPosition, const float SyncPointWeight, bool bIsPlayer/* = false*/)
+void ABaseCharacter::FindNearlestTarget(const FVector TargetPosition, const float SyncPointWeight)
 {
 	const FVector From = GetActorLocation();
 	const FVector To = TargetPosition;
 	const float Weight = SyncPointWeight;
-	ResetNearlestTarget(bIsPlayer);
+	ResetNearlestTarget();
 	const FRotator TargetLookAt = UKismetMathLibrary::FindLookAtRotation(From, To);
 
 	const FRotator Rotation = UKismetMathLibrary::RLerp(GetActorRotation(), TargetLookAt, Weight, true);
 	FMotionWarpingTarget WarpingTarget;
-	WarpingTarget.Name = bIsPlayer ? NEARLEST_TARGET_SYNC_POINT : AI_NEARLEST_TARGET_SYNC_POINT;
+	WarpingTarget.Name = NEARLEST_TARGET_SYNC_POINT;
 	WarpingTarget.Location = UKismetMathLibrary::VLerp(From, To, Weight);
 	WarpingTarget.Rotation = FRotator(0.f, Rotation.Yaw, 0.f);
 	MotionWarpingComponent->AddOrUpdateWarpTarget(WarpingTarget);
@@ -2143,7 +2214,6 @@ void ABaseCharacter::BeginVehicleAction()
 	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	GetMesh()->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 	Face->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
-	//GetMesh()->SetVisibility(false);
 
 	GetCombatComponent()->VisibilityCurrentWeapon(true);
 	WvAbilitySystemComponent->AddGameplayTag(TAG_Vehicle_State_Drive, 1);
@@ -2262,6 +2332,16 @@ UAnimMontage* ABaseCharacter::GetCloseCombatAnimMontage(const int32 Index, const
 		return CloseCombatDA->GetAnimMontage(BodyShape, Index, Tag);
 	}
 	return nullptr;
+}
+
+float ABaseCharacter::CalcurateBodyShapePlayRate() const
+{
+	if (IsValid(CloseCombatDA))
+	{
+		auto BodyShape = GetBodyShapeType();
+		return CloseCombatDA->CalcurateBodyShapePlayRate(BodyShape);
+	}
+	return 1.0f;
 }
 #pragma endregion
 
@@ -2477,5 +2557,7 @@ bool ABaseCharacter::GetIsDespawnCheck() const
 {
 	return bIsDespawnCheck;
 }
+
+
 
 
