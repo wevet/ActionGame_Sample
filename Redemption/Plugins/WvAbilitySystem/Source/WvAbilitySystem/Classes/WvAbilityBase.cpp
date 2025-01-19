@@ -51,13 +51,14 @@ bool UWvAbilityBase::CheckCost(const FGameplayAbilitySpecHandle Handle, const FG
 	{
 		return true;
 	}
-	UAbilitySystemComponent* ASC = ActorInfo->AbilitySystemComponent.Get();
+
+	UWvAbilitySystemComponentBase* ASC = Cast<UWvAbilitySystemComponentBase>(ActorInfo->AbilitySystemComponent.Get());
 	UWvAbilityDataAsset* AbilityData = GetWvAbilityDataNoChecked();
 	bool bSuccess = Super::CheckCost(Handle, ActorInfo, OptionalRelevantTags);
 
 	if (bSuccess && ASC && AbilityData)
 	{
-		if (AbilityData && AbilityData->CostAttribute.IsValid() && AbilityData->CostAttributeMagnitude > 0)
+		if (AbilityData->CostAttribute.GetUProperty() && AbilityData->CostAttributeMagnitude > 0)
 		{
 			const float Value = ASC->GetNumericAttribute(AbilityData->CostAttribute);
 			bSuccess = Value >= AbilityData->CostAttributeMagnitude;

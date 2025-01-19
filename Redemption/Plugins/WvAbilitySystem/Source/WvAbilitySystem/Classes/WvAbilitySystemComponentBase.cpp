@@ -226,6 +226,7 @@ void UWvAbilitySystemComponentBase::ReleasedTriggerInputEvent(FGameplayTag Tag)
 
 			const auto InstActivationInfo = Spec.Ability->GetCurrentActivationInfo();
 			InvokeReplicatedEvent(EAbilityGenericReplicatedEvent::InputReleased, Spec.Handle, InstActivationInfo.GetActivationPredictionKey());
+
 		}
 	}
 }
@@ -271,7 +272,7 @@ UGameplayAbility* UWvAbilitySystemComponentBase::CreateNewInstanceOfAbility(FGam
 		AbilityInstance->CancelAbilitiesWithTag = AbilityData->CancelAbilitiesWithTag;
 		AbilityInstance->BlockAbilitiesWithTag = AbilityData->BlockAbilitiesWithTag;
 		AbilityInstance->AbilityTriggers += AbilityData->AbilityTriggers;
-		AbilityInstance->SetAssetTags(AbilityData->AbilityTags);
+		//AbilityInstance->SetAssetTags(AbilityData->AbilityTags);
 
 		const int32 LastIndex = (AbilityInstance->AbilityTriggers.Num() - 1);
 		for (int32 Index = LastIndex; Index >= 0; Index--)
@@ -293,7 +294,21 @@ UGameplayAbility* UWvAbilitySystemComponentBase::CreateNewInstanceOfAbility(FGam
 				NewTagContainer.AddTag(OtherTag);
 			}
 		}
-		AbilityInstance->SetAssetTags(NewTagContainer);
+
+		for (const FGameplayTag& OtherTag : AbilityData->AbilityTags)
+		{
+			if (OtherTag.IsValid())
+			{
+				NewTagContainer.AddTag(OtherTag);
+			}
+		}
+
+		//AbilityInstance->SetAssetTags(NewTagContainer);
+PRAGMA_DISABLE_DEPRECATION_WARNINGS
+		AbilityInstance->AbilityTags = NewTagContainer;
+PRAGMA_ENABLE_DEPRECATION_WARNINGS
+
+
 	}
 
 	// Add it to one of our instance lists so that it doesn't GC.

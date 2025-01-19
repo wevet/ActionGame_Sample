@@ -324,15 +324,16 @@ void UWvAbilitySystemComponentBase::Debug_Internal(struct FAbilitySystemComponen
 
 			for (TFieldIterator<FProperty> It(Set->GetClass()); It; ++It)
 			{
-				FGameplayAttribute	Attribute(*It);
+				FGameplayAttribute Attribute(*It);
 
 				if (DrawAttributes.Contains(Attribute))
+				{
 					continue;
+				}
 
 				if (Attribute.IsValid())
 				{
-					float Value = GetNumericAttribute(Attribute);
-
+					const float Value = GetNumericAttribute(Attribute);
 					DebugLine(Info, FString::Printf(TEXT("%s %.2f"), *Attribute.GetName(), Value), 4.f, 0.f);
 				}
 			}
