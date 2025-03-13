@@ -64,3 +64,29 @@ public:
 };
 
 
+USTRUCT(BlueprintType)
+struct FChooserOutputs
+{
+	GENERATED_BODY()
+
+public:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Chooser Outputs")
+	float StartTime = 0.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Chooser Outputs")
+	bool UseMM = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Chooser Outputs")
+	float MMCostLimit = 0.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Chooser Outputs")
+	float BlendTime = 0.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Chooser Outputs")
+	FName BlendProfile;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Chooser Outputs")
+	TArray<FName> Tags;
+};
+
+

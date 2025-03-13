@@ -5,6 +5,7 @@
 #include "Redemption.h"
 #include "Misc/WvCommonUtils.h"
 #include "Component/WvCharacterMovementComponent.h"
+#include "Component/CharacterMovementHelperComponent.h"
 #include "Component/WvSkeletalMeshComponent.h"
 #include "Locomotion/LocomotionComponent.h"
 #include "PredictionFootIKComponent.h"
@@ -131,6 +132,12 @@ ABaseCharacter::ABaseCharacter(const FObjectInitializer& ObjectInitializer)
 	WvMoveComp->AirControl = 0.35f;
 	WvMoveComp->MinAnalogWalkSpeed = 20.f;
 
+
+	// motion matching prop
+	//WvMoveComp->RotationRate = FRotator(0.0f, 0.0f, -1.0f);
+	//WvMoveComp->BrakingFriction = 0.0f;
+	//WvMoveComp->bUseSeparateBrakingFriction = true;
+
 	SetReplicateMovement(true);
 
 	// @NOTE
@@ -197,6 +204,9 @@ ABaseCharacter::ABaseCharacter(const FObjectInitializer& ObjectInitializer)
 	AccessoryObjectRoot = ObjectInitializer.CreateDefaultSubobject<UStaticMeshComponent>(this, TEXT("AccessoryObjectRoot"));
 	AccessoryObjectRoot->bAutoActivate = 1;
 	AccessoryObjectRoot->SetupAttachment(WvMeshComp);
+
+	CharacterMovementHelperComponent = ObjectInitializer.CreateDefaultSubobject<UCharacterMovementHelperComponent>(this, TEXT("CharacterMovementHelperComponent"));
+	CharacterMovementHelperComponent->bAutoActivate = 1;
 
 	MyTeamID = FGenericTeamId(0);
 	CharacterTag = FGameplayTag::RequestGameplayTag(TAG_Character_Default.GetTag().GetTagName());
@@ -284,11 +294,14 @@ void ABaseCharacter::BeginPlay()
 	MotionWarpingComponent->AddTickPrerequisiteActor(this);
 	CharacterTrajectoryComponent->AddTickPrerequisiteActor(this);
 
+
 	// @TODO
 	// async function
 	UWvCharacterMovementComponent* CMC = GetWvCharacterMovementComponent();
 	CMC->OnWallClimbingBeginDelegate.AddDynamic(this, &ThisClass::OnWallClimbingBegin_Callback);
 	CMC->OnWallClimbingEndDelegate.AddDynamic(this, &ThisClass::OnWallClimbingEnd_Callback);
+
+	CMC->AddTickPrerequisiteComponent(CharacterMovementHelperComponent);
 
 	LocomotionComponent->OnRotationModeChangeDelegate.AddDynamic(this, &ThisClass::OnRoationChange_Callback);
 	LocomotionComponent->OnGaitChangeDelegate.AddDynamic(this, &ThisClass::OnGaitChange_Callback);
@@ -314,8 +327,8 @@ void ABaseCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	TM.ClearTimer(Ragdoll_TimerHandle);
 
 	UWvCharacterMovementComponent* CMC = GetWvCharacterMovementComponent();
-	CMC->OnWallClimbingBeginDelegate.RemoveDynamic(this, &ABaseCharacter::OnWallClimbingBegin_Callback);
-	CMC->OnWallClimbingEndDelegate.RemoveDynamic(this, &ABaseCharacter::OnWallClimbingEnd_Callback);
+	CMC->OnWallClimbingBeginDelegate.RemoveDynamic(this, &ThisClass::OnWallClimbingBegin_Callback);
+	CMC->OnWallClimbingEndDelegate.RemoveDynamic(this, &ThisClass::OnWallClimbingEnd_Callback);
 
 	LocomotionComponent->OnRotationModeChangeDelegate.RemoveDynamic(this, &ThisClass::OnRoationChange_Callback);
 	LocomotionComponent->OnGaitChangeDelegate.RemoveDynamic(this, &ThisClass::OnGaitChange_Callback);
@@ -393,6 +406,8 @@ void ABaseCharacter::Tick(float DeltaTime)
 		{
 			CMC->FallingMantling();
 		}
+
+
 	}
 
 	// Stopped due to adverse effect on ragdoll animation
@@ -1217,7 +1232,6 @@ void ABaseCharacter::DoStopCrouch()
 void ABaseCharacter::DoStartAiming()
 {
 	StrafeMovement();
-	DoWalking();
 	LocomotionComponent->SetLSAiming(true);
 	AimingChangeDelegate.Broadcast(true);
 }
@@ -1225,7 +1239,6 @@ void ABaseCharacter::DoStartAiming()
 void ABaseCharacter::DoStopAiming()
 {
 	//StrafeMovement();
-	DoStopWalking();
 	LocomotionComponent->SetLSAiming(false);
 	AimingChangeDelegate.Broadcast(false);
 }
@@ -1342,6 +1355,16 @@ FTransform ABaseCharacter::GetChestTransform(const FName BoneName) const
 }
 
 #pragma region Ragdoll
+void ABaseCharacter::Test_StartRagdoll()
+{
+	DoForceKill();
+}
+
+void ABaseCharacter::Test_StopRagdoll()
+{
+	BeginAliveAction();
+}
+
 void ABaseCharacter::BeginDeathAction()
 {
 	if (!IsDead())
@@ -1422,10 +1445,17 @@ void ABaseCharacter::DoForceKill()
 
 void ABaseCharacter::OverlayStateChange(const ELSOverlayState CurrentOverlay)
 {
+	if (SelectableOverlayState == CurrentOverlay)
+	{
+		return;
+	}
+
 	if (!IsValid(OverlayAnimDA))
 	{
 		OverlayAnimDA = OnAsyncLoadDataAsset<UOverlayAnimInstanceDataAsset>(TAG_Game_Asset_AnimationBlueprint);
 	}
+
+	SelectableOverlayState = CurrentOverlay;
 
 	if (IsValid(OverlayAnimDA))
 	{
@@ -2003,11 +2033,12 @@ void ABaseCharacter::BuildFinisherAnimationSender(const FGameplayTag RequireTag,
 		return;
 	}
 
-	FFinisherAnimationContainer AnimationContainer = FinisherSenderDA->FindContainer(RequireTag);
+	const FFinisherAnimationContainer AnimationContainer = FinisherSenderDA->FindContainer(RequireTag);
 	if (AnimationContainer.Montages.Num() <= 0)
 	{
 		return;
 	}
+
 	const int32 LastIndex = (AnimationContainer.Montages.Num() - 1);
 	const int32 Index = FMath::RandRange(0, LastIndex);
 	if (AnimationContainer.Montages.IsValidIndex(Index))
@@ -2078,24 +2109,6 @@ void ABaseCharacter::RequestAsyncLoad()
 	});
 
 	RequestComponentsAsyncLoad();
-}
-
-void ABaseCharacter::RequestAsyncLoadByTag(const FGameplayTag Tag)
-{
-	if (!GameDataAssets.Contains(Tag))
-	{
-		UE_LOG(LogTemp, Error, TEXT("Can't Find Contains Tag => %s, function => %s"), *Tag.GetTagName().ToString(), *FString(__FUNCTION__));
-		return;
-	}
-
-	FStreamableManager& StreamableManager = UWvGameInstance::GetStreamableManager();
-	const FSoftObjectPath TempPath = GameDataAssets.FindRef(Tag).ToSoftObjectPath();
-	AsyncLoadStreamer = StreamableManager.RequestAsyncLoad(TempPath, [this]
-	{
-		this->OnAsyncLoadCompleteHandler();
-	});
-
-	//RequestComponentsAsyncLoad();
 }
 
 void ABaseCharacter::RequestComponentsAsyncLoad()
@@ -2559,5 +2572,46 @@ bool ABaseCharacter::GetIsDespawnCheck() const
 }
 
 
+bool ABaseCharacter::IsMotionMatchingEnable() const
+{
+	if (GetLocomotionComponent())
+	{
+		return GetLocomotionComponent()->bIsMotionMatchingEnable;
+	}
+	return false;
+}
 
+
+void ABaseCharacter::PreTickLocomotion()
+{
+	if (!IsMotionMatchingEnable())
+	{
+		return;
+	}
+
+	auto CMC = GetWvCharacterMovementComponent();
+
+	if (!IsValid(CMC) || !IsValid(LocomotionComponent))
+	{
+		return;
+	}
+
+	if (CMC->IsFalling())
+	{
+		CMC->RotationRate = FRotator(0.f, 200.f, 0.0f);
+	}
+	else
+	{
+		CMC->RotationRate = FRotator(0.f, -1.f, 0.0f);
+	}
+
+
+	CMC->MaxAcceleration = LocomotionComponent->ChooseMaxAcceleration();
+	CMC->BrakingDecelerationWalking = LocomotionComponent->ChooseBrakingDeceleration();
+	CMC->GroundFriction = LocomotionComponent->ChooseGroundFriction();
+
+	CMC->MaxWalkSpeed = LocomotionComponent->ChooseMaxWalkSpeed();
+	CMC->MaxWalkSpeedCrouched = LocomotionComponent->ChooseMaxWalkSpeedCrouched();
+
+}
 

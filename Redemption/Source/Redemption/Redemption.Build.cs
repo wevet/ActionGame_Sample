@@ -34,7 +34,9 @@ public class Redemption : ModuleRules
 				"SignificanceManager", // budget
 				"ChaosVehicles", // vehicle system
 				"PoseSearch",
+				"AnimGraphRuntime",
 				"ControlRig",
+				"Chooser",
 				"MotionWarping",
 				"MotionTrajectory",
 				"ChaosVehiclesCore",
@@ -59,7 +61,7 @@ public class Redemption : ModuleRules
 				"Niagara",
 				"WvAbilitySystem",
 				"QuadrupedIK",
-				"RopeCutting",		
+				"RopeCutting",
 			}
 		);
 

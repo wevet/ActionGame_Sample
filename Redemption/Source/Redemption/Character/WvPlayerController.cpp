@@ -195,23 +195,27 @@ void AWvPlayerController::OnDefaultPossess(APawn* InPawn)
 
 void AWvPlayerController::OnMainUILoadComplete(APawn* InPawn)
 {
-	UObject* LoadedObj = MainUIStreamableHandle.Get()->GetLoadedAsset();
-	if (LoadedObj)
+	if (MainUIStreamableHandle.Get())
 	{
-		UClass* WidgetClass = Cast<UClass>(LoadedObj);
-		if (WidgetClass)
+		UObject* LoadedObj = MainUIStreamableHandle.Get()->GetLoadedAsset();
+		if (LoadedObj)
 		{
-			UMGManager = Cast<UUMGManager>(CreateWidget<UUserWidget>(this, WidgetClass));
-			if (IsValid(UMGManager))
+			UClass* WidgetClass = Cast<UClass>(LoadedObj);
+			if (WidgetClass)
 			{
-				UMGManager->Initializer(PC);
-				UMGManager->AddToViewport();
+				UMGManager = Cast<UUMGManager>(CreateWidget<UUserWidget>(this, WidgetClass));
+				if (IsValid(UMGManager))
+				{
+					UMGManager->Initializer(PC);
+					UMGManager->AddToViewport();
 
-				BP_DefaultPossess(InPawn);
-				MainUIStreamableHandle.Reset();
+					BP_DefaultPossess(InPawn);
+					MainUIStreamableHandle.Reset();
+				}
 			}
 		}
 	}
+
 }
 
 void AWvPlayerController::OnDefaultUnPossess()
@@ -245,23 +249,27 @@ void AWvPlayerController::OnVehilcePossess(APawn* InPawn)
 
 void AWvPlayerController::OnVehilceUILoadComplete(APawn* InPawn)
 {
-	UObject* LoadedObj = VehicleUIStreamableHandle.Get()->GetLoadedAsset();
-	if (LoadedObj)
+	if (VehicleUIStreamableHandle.Get())
 	{
-		UClass* WidgetClass = Cast<UClass>(LoadedObj);
-		if (WidgetClass)
+		UObject* LoadedObj = VehicleUIStreamableHandle.Get()->GetLoadedAsset();
+		if (LoadedObj)
 		{
-			VehicleUIController = Cast<UVehicleUIController>(CreateWidget<UUserWidget>(this, WidgetClass));
-			if (IsValid(VehicleUIController))
+			UClass* WidgetClass = Cast<UClass>(LoadedObj);
+			if (WidgetClass)
 			{
-				VehicleUIController->Initializer(VPC);
-				VehicleUIController->AddToViewport();
+				VehicleUIController = Cast<UVehicleUIController>(CreateWidget<UUserWidget>(this, WidgetClass));
+				if (IsValid(VehicleUIController))
+				{
+					VehicleUIController->Initializer(VPC);
+					VehicleUIController->AddToViewport();
 
-				BP_VehilcePossess(InPawn);
-				VehicleUIStreamableHandle.Reset();
+					BP_VehilcePossess(InPawn);
+					VehicleUIStreamableHandle.Reset();
+				}
 			}
 		}
 	}
+
 }
 
 void AWvPlayerController::OnVehicleUnPossess()

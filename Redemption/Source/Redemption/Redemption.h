@@ -10,6 +10,8 @@
 #define GETENUMSTRING(etype, evalue)\
 	 ((FindObject<UEnum>(nullptr, TEXT(etype), true) != nullptr) ? FindObject<UEnum>(nullptr, TEXT(etype), true)->GetNameStringByIndex((int32)evalue) : FString("Invalid - UENUM() macro?"))
 
+#define WEVET_COMMENT(Comment)
+
 // Input
 REDEMPTION_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Game_Input_Disable);
 
@@ -61,6 +63,10 @@ REDEMPTION_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Character_ActionJump_Forbid);
 // Dash
 REDEMPTION_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Character_ActionDash);
 REDEMPTION_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Character_ActionDash_Forbid);
+
+// Walk
+REDEMPTION_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Character_ActionWalk);
+REDEMPTION_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Character_ActionWalk_Forbid);
 
 // Crouch
 REDEMPTION_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Character_ActionCrouch);

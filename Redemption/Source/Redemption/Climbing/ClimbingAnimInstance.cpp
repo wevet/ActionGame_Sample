@@ -44,6 +44,8 @@ UClimbingAnimInstance::UClimbingAnimInstance(const FObjectInitializer& ObjectIni
 void UClimbingAnimInstance::NativeInitializeAnimation()
 {
 	Super::NativeInitializeAnimation();
+
+	SetCharacterReferences();
 }
 
 void UClimbingAnimInstance::NativeUpdateAnimation(float DeltaTimeX)
@@ -55,8 +57,6 @@ void UClimbingAnimInstance::NativeThreadSafeUpdateAnimation(float DeltaTimeX)
 {
 	Super::NativeThreadSafeUpdateAnimation(DeltaTimeX);
 
-	SetCharacterReferences();
-
 #if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
 	static const IConsoleVariable* CVar = IConsoleManager::Get().FindConsoleVariable(TEXT("wv.WallClimbingSystem.Debug"));
 	const int32 ConsoleValue = CVar->GetInt();
@@ -64,6 +64,15 @@ void UClimbingAnimInstance::NativeThreadSafeUpdateAnimation(float DeltaTimeX)
 #else
 	bDebugTrace = false;
 #endif
+
+	if (!IsValid(CharacterMovementComponent))
+	{
+		return;
+	}
+
+
+	bIsWallClimbing = CharacterMovementComponent->IsWallClimbing();
+	bIsWallClimbingJumping = CharacterMovementComponent->IsClimbJumping();
 
 	if (IsValid(LocomotionComponent))
 	{
@@ -76,12 +85,6 @@ void UClimbingAnimInstance::NativeThreadSafeUpdateAnimation(float DeltaTimeX)
 		PrepareAnimTypeIndex = ClimbingComponent->GetPrepareToClimbEvent();
 		bIsClimbing = ClimbingComponent->IsClimbingState();
 		bIsStartMantling = ClimbingComponent->IsMantlingState();
-	}
-
-	if (IsValid(CharacterMovementComponent))
-	{
-		bIsWallClimbing = CharacterMovementComponent->IsWallClimbing();
-		bIsWallClimbingJumping = CharacterMovementComponent->IsClimbJumping();
 	}
 
 	if (IsValid(LadderComponent))

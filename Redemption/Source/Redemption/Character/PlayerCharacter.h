@@ -103,11 +103,11 @@ private:
 	void HandleStanceMode();
 	void HandleTargetLock();
 	void HandleRotationMode();
-	void HandleAimMode();
 
 	
 	void HandleJump(const bool bIsPress);
 	void HandleSprinting(const bool bIsPress);
+	void HandleWalking(const bool bIsPress);
 	void HandleMeleeAction(const bool bIsPress);
 	void HandleDriveAction(const bool bIsPress);
 	void HandleAliveAction(const bool bIsPress);

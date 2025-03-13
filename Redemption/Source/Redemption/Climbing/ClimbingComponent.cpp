@@ -567,7 +567,11 @@ bool UClimbingComponent::IsClimbingState() const
 	if (IsWallClimbingState())
 		return false;
 
-	return CharacterMovementComponent->IsClimbing() && bIsClimbing;
+	if (CharacterMovementComponent)
+	{
+		return CharacterMovementComponent->IsClimbing() && bIsClimbing;
+	}
+	return false;
 }
 
 int32 UClimbingComponent::GetPrepareToClimbEvent() const
@@ -866,8 +870,15 @@ bool UClimbingComponent::HasChildClimbingObject(UPrimitiveComponent* HitComponen
 	if (!IsValid(HitComponent))
 		return false;
 
-	if (UChildActorComponent* Component = Cast<UChildActorComponent>(HitComponent))
-		return CanClimbingObject(Component->GetChildActor());
+	if (AActor* OwnerActor = HitComponent->GetOwner())
+	{
+		UChildActorComponent* ChildActorComp = OwnerActor->FindComponentByClass<UChildActorComponent>();
+		if (ChildActorComp)
+		{
+			return CanClimbingObject(ChildActorComp->GetChildActor());
+		}
+	}
+
 	return false;
 }
 
@@ -884,8 +895,14 @@ AActor* UClimbingComponent::GetClimbingDetectActor(const FHitResult& HitResult) 
 	}
 	else
 	{
-		if (UChildActorComponent* Component = Cast<UChildActorComponent>(HitResult.Component))
-			return Component->GetChildActor();
+		if (AActor* OwnerActor = HitResult.GetActor())
+		{
+			UChildActorComponent* ChildActorComp = OwnerActor->FindComponentByClass<UChildActorComponent>();
+			if (ChildActorComp)
+			{
+				return ChildActorComp->GetChildActor();
+			}
+		}
 	}
 	return nullptr;
 }

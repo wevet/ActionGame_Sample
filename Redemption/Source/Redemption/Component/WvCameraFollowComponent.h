@@ -85,12 +85,11 @@ public:
 	UWvCameraFollowComponent();
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+	virtual void RequestAsyncLoad() override;
 
 protected:
 	virtual void BeginPlay() override;
 
-public:
-	virtual void RequestAsyncLoad() override; 
 
 protected:
 	UPROPERTY(BlueprintReadOnly)
@@ -294,8 +293,8 @@ private:
 
 	UFUNCTION()
 	void LerpUpdateCameraTimerCallback();
-	bool LerpCameraSettings(float LerpAlpha);
-	bool ChooseCameraSettings(FCameraSettings& CameraSettings);
+	const bool LerpCameraSettings(float LerpAlpha);
+	const bool ChooseCameraSettings(FCameraSettings& CameraSettings);
 
 	UFUNCTION()
 	void LocomotionMoveStateChangeCallback();

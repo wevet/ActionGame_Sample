@@ -51,6 +51,7 @@ class UMotionWarpingComponent;
 class UPawnNoiseEmitterComponent;
 
 class UWvCharacterMovementComponent;
+class UCharacterMovementHelperComponent;
 class UWvSkeletalMeshComponent;
 class ULocomotionComponent;
 class UInventoryComponent;
@@ -324,7 +325,6 @@ public:
 	FVector GetPredictionStopLocation(const FVector CurrentLocation) const;
 
 	virtual void RequestAsyncLoad();
-	virtual void RequestAsyncLoadByTag(const FGameplayTag Tag);
 	virtual void RequestComponentsAsyncLoad();
 
 	// leader setting
@@ -490,6 +490,16 @@ public:
 	void SetIsDespawnCheck(const bool NewIsDespawnCheck);
 	bool GetIsDespawnCheck() const;
 
+	void PreTickLocomotion();
+
+
+	UFUNCTION(BlueprintCallable, Category = "Locomotion|Ragdoll")
+	void Test_StartRagdoll();
+
+	UFUNCTION(BlueprintCallable, Category = "Locomotion|Ragdoll")
+	void Test_StopRagdoll();
+
+	bool IsMotionMatchingEnable() const;
 
 #pragma region NearlestAction
 	void CalcurateNearlestTarget(const float SyncPointWeight);
@@ -578,6 +588,9 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Component, meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<class ULODSyncComponent> LODSyncComponent;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Component, meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<class UCharacterMovementHelperComponent> CharacterMovementHelperComponent;
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "BaseCharacter|Config")
 	FCustomWvAbilitySystemAvatarData AbilitySystemData;
 
@@ -609,6 +622,10 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AI")
 	EAIActionState AIActionState;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Character|Overlay")
+	ELSOverlayState SelectableOverlayState;
+
 
 	UFUNCTION()
 	void OnRep_MyTeamID(FGenericTeamId OldTeamID);

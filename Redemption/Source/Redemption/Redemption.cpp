@@ -55,6 +55,10 @@ UE_DEFINE_GAMEPLAY_TAG(TAG_Character_ActionJump_Forbid, "Character.Action.Jump.F
 UE_DEFINE_GAMEPLAY_TAG(TAG_Character_ActionDash, "Character.Action.Dash");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Character_ActionDash_Forbid, "Character.Action.Dash.Forbid");
 
+// Walk
+UE_DEFINE_GAMEPLAY_TAG(TAG_Character_ActionWalk, "Character.Action.Walk");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Character_ActionWalk_Forbid, "Character.Action.Walk.Forbid");
+
 // Crouch
 UE_DEFINE_GAMEPLAY_TAG(TAG_Character_ActionCrouch, "Character.Action.Crouch");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Character_ActionCrouch_Forbid, "Character.Action.Crouch.Forbid");

@@ -113,7 +113,7 @@ void AWvAIController::OnPossess(APawn* InPawn)
 		BaseCharacter->StartRVOAvoidance();
 	}
 
-	// @TODO 
+	WEVET_COMMENT("Async Load")
 	// In case of asyncload, ai is executed first, so BuildRunAI should be called after back-reading is completed.
 	BuildRunAI();
 
@@ -1067,8 +1067,7 @@ void AWvAIController::OnSightPerceptionUpdatedRecieve(AActor* Actor)
 	}
 	else if (IsInNeutralAgent(*Actor))
 	{
-		// @TODO
-		// neutral
+		WEVET_COMMENT("AI neutral")
 	}
 
 }

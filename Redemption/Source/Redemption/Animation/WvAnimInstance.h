@@ -61,6 +61,12 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	float Arm_R_MS = 0.0f;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	float Enable_HandIK_L = 0.f;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	float Enable_HandIK_R = 0.f;
+
 	void ChooseStanceMode(const bool bIsStanding);
 	void ModifyAnimCurveValue(const UAnimInstance* AnimInstance);
 };
@@ -130,6 +136,21 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "BaseAnimInstance")
 	void ApplyJumpSequence(const bool bIsStartSeq, const float NormalizeTime, const FJumpProjection JumpProjection, const FJumpProjection JumpSeqAnimsValues);
 
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Locomotion", meta = (BlueprintThreadSafe))
+	ELSGait GetLSGait() const;
+
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Locomotion", meta = (BlueprintThreadSafe))
+	bool IsSprinting() const;
+
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Locomotion", meta = (BlueprintThreadSafe))
+	bool IsWalking() const;
+
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Locomotion", meta = (BlueprintThreadSafe))
+	bool IsAcceleration() const;
+
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Locomotion|MotionMatching", meta = (BlueprintThreadSafe))
+	FVector2D GetAimSweepTimeToVector() const;
+
 protected:
 	UPROPERTY()
 	TWeakObjectPtr<class ABaseCharacter> Character;
@@ -160,6 +181,33 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
 	ELSRotationMode LSRotationMode;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion|MotionMatching")
+	ELSMovementMode LSMovementMode_LastFrame;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion|MotionMatching")
+	ELSGait LSGait_LastFrame;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion|MotionMatching")
+	ELSStance LSStance_LastFrame;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion|MotionMatching")
+	ELSRotationMode LSRotationMode_LastFrame;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion|MotionMatching")
+	bool bIsInRagdolling = false;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion|MotionMatching")
+	float RagdollFlailRate = 0.f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion|MotionMatching")
+	FVector Trj_PastVelocity {0.f, 0.f, 0.f};
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion|MotionMatching")
+	FVector Trj_CurrentVelocity{ 0.f, 0.f, 0.f };
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion|MotionMatching")
+	FVector Trj_FutureVelocity{ 0.f, 0.f, 0.f };
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
 	FRotator CharacterRotation;
@@ -293,6 +341,21 @@ protected:
 	//UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "MotionMatching")
 	//FMotionMatchingSettings MotionMatchingSettings;
 
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "MotionMatching")
+	FVector LandingVelocity;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "MotionMatching")
+	bool bWasJustLanded;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "MotionMatching")
+	FTransform RootTransform;
+
+	//UPROPERTY()
+	//FTransform CharacterTransformLastFrame;
+
+	//UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "MotionMatching")
+	//FTransform CharacterTransform;
 
 	virtual void TagChangeEvent(const FGameplayTag CallBackTag, int32 NewCount);
 

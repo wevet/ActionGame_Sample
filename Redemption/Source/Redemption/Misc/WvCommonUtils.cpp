@@ -273,24 +273,18 @@ float UWvCommonUtils::GetAngleBetween3DVector(FVector Vec1, FVector Vec2, FVecto
 
 UFXSystemComponent* UWvCommonUtils::SpawnParticleAtLocation(const UObject* WorldContextObject, UFXSystemAsset* Particle, FVector Location, FRotator Rotation, FVector Scale)
 {
-	if (Particle)
+	if (Particle && Particle->IsA(UNiagaraSystem::StaticClass()))
 	{
-		if (Particle->IsA(UNiagaraSystem::StaticClass()))
-		{
-			return UNiagaraFunctionLibrary::SpawnSystemAtLocation(WorldContextObject, Cast<UNiagaraSystem>(Particle), Location, Rotation, Scale);
-		}
+		return UNiagaraFunctionLibrary::SpawnSystemAtLocation(WorldContextObject, Cast<UNiagaraSystem>(Particle), Location, Rotation, Scale);
 	}
 	return nullptr;
 }
 
 UFXSystemComponent* UWvCommonUtils::SpawnParticleAttached(UFXSystemAsset* Particle, USceneComponent* Component, FName BoneName, FVector Location, FRotator Rotation, FVector Scale, EAttachLocation::Type LocationType)
 {
-	if (Particle)
+	if (Particle && Particle->IsA(UNiagaraSystem::StaticClass()))
 	{
-		if (Particle->IsA(UNiagaraSystem::StaticClass()))
-		{
-			return UNiagaraFunctionLibrary::SpawnSystemAttached(Cast<UNiagaraSystem>(Particle), Component, BoneName, Location, Rotation, Scale, LocationType, true, ENCPoolMethod::None);
-		}
+		return UNiagaraFunctionLibrary::SpawnSystemAttached(Cast<UNiagaraSystem>(Particle), Component, BoneName, Location, Rotation, Scale, LocationType, true, ENCPoolMethod::None);
 	}
 	return nullptr;
 }

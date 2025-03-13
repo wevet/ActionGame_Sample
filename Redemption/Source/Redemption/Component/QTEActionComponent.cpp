@@ -221,7 +221,8 @@ void UQTEActionComponent::RequestAsyncLoad()
 		FindWidgetComponent();
 	}
 
-	if (!QTEWidgetClass.IsNull())
+
+	if (!QTEWidgetClass.IsNull() && QTEWidgetComponent.IsValid())
 	{
 		FStreamableManager& StreamableManager = UWvGameInstance::GetStreamableManager();
 		const FSoftObjectPath ObjectPath = QTEWidgetClass.ToSoftObjectPath();
@@ -231,7 +232,12 @@ void UQTEActionComponent::RequestAsyncLoad()
 			this->OnLoadWidgetComplete();
 		});
 	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Not Valid QTEWidgetClass or QTEWidgetComponent: [%s]"), *FString(__FUNCTION__));
+	}
 }
+
 
 void UQTEActionComponent::OnLoadWidgetComplete()
 {
@@ -243,14 +249,14 @@ void UQTEActionComponent::OnLoadWidgetComplete()
 		{
 			auto UIInstnce = CreateWidget<UUserWidget>(GetWorld(), WidgetClass);
 
-			if (UIInstnce->GetClass()->ImplementsInterface(UWvWidgetInterface::StaticClass()))
+			if (UIInstnce && UIInstnce->GetClass()->ImplementsInterface(UWvWidgetInterface::StaticClass()))
 			{
 				IWvWidgetInterface::Execute_Initialize(UIInstnce, Cast<ABaseCharacter>(GetOwner()));
 				UE_LOG(LogTemp, Log, TEXT("Complete %s => [%s]"), *GetNameSafe(UIInstnce), *FString(__FUNCTION__));
-			}
 
-			QTEWidgetComponent->SetWidget(UIInstnce);
-			ShowQTEWidgetComponent(false);
+				QTEWidgetComponent->SetWidget(UIInstnce);
+				ShowQTEWidgetComponent(false);
+			}
 
 		}
 	}

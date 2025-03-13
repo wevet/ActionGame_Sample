@@ -60,6 +60,12 @@ void FCharacterOverlayInfo::ModifyAnimCurveValue(const UAnimInstance* AnimInstan
 	Arm_R_LS = AnimInstance->GetCurveValue(FName(TEXT("Layering_Arm_R_LS")));
 	Arm_L_MS = FMath::Clamp((1.0f - Arm_L_LS), 0.0f, 1.0f);
 	Arm_R_MS = FMath::Clamp((1.0f - Arm_R_LS), 0.0f, 1.0f);
+
+	auto Value_L = AnimInstance->GetCurveValue(FName(TEXT("Enable_HandIK_L")));
+	Enable_HandIK_L = FMath::Lerp(0.f, Value_L, AnimInstance->GetCurveValue(FName(TEXT("Layering_Arm_L"))));
+
+	auto Value_R = AnimInstance->GetCurveValue(FName(TEXT("Enable_HandIK_R")));
+	Enable_HandIK_R = FMath::Lerp(0.f, Value_R, AnimInstance->GetCurveValue(FName(TEXT("Layering_Arm_R"))));
 }
 #pragma endregion
 
@@ -162,6 +168,8 @@ void UWvAnimInstance::NativeThreadSafeUpdateAnimation(float DeltaSeconds)
 		bWasTargetLock = bIsInjured ? false : Character->IsTargetLock() && !bWasBulletWeaponEquip;//!bIsStateMelee && 
 
 
+		//CharacterTransformLastFrame = CharacterTransform;
+		//CharacterTransform = Character->GetActorTransform();
 	}
 
 	if (IsValid(CharacterMovementComponent))
@@ -190,9 +198,17 @@ void UWvAnimInstance::NativeThreadSafeUpdateAnimation(float DeltaSeconds)
 		CharacterRotation = LocomotionEssencialVariables.CharacterRotation;
 		LookingRotation = LocomotionEssencialVariables.LookingRotation;
 		bWasAiming = LocomotionEssencialVariables.bAiming;
+
+
+		LSMovementMode_LastFrame = LSMovementMode;
+		LSGait_LastFrame = LSGait;
+		LSStance_LastFrame = LSStance;
+		LSRotationMode_LastFrame = LSRotationMode;
+
 		LSRotationMode = LocomotionEssencialVariables.LSRotationMode;
 		LSGait = LocomotionEssencialVariables.LSGait;
 		LSStance = LocomotionEssencialVariables.LSStance;
+
 		const ELSMovementMode CurMovementMode = LocomotionEssencialVariables.LSMovementMode;
 		if (LSMovementMode != CurMovementMode)
 		{
@@ -203,6 +219,19 @@ void UWvAnimInstance::NativeThreadSafeUpdateAnimation(float DeltaSeconds)
 		WalkingSpeed = LocomotionComponent->GetWalkingSpeed();
 		RunningSpeed = LocomotionComponent->GetRunningSpeed();
 		SprintingSpeed = LocomotionComponent->GetSprintingSpeed();
+
+
+		LandingVelocity = LocomotionComponent->GetLandingVelocity();
+		bWasJustLanded = LocomotionComponent->IsJustLanded();
+
+		bIsInRagdolling = LocomotionComponent->IsInRagdolling();
+	}
+
+	if (GetOwningComponent())
+	{
+		const FName RootBone = TEXT("root");
+		RagdollFlailRate = UKismetMathLibrary::MapRangeClamped(GetOwningComponent()->GetPhysicsLinearVelocity(RootBone).Size(), 
+			0.f, 1000.0f, 0.f, 1.0);
 	}
 
 	switch (LSMovementMode)
@@ -290,12 +319,15 @@ void UWvAnimInstance::CalculateAimOffset()
 	};
 
 
-	if (bIsLookAtAcion)
+	if (bIsLookAtAcion || bWasAiming)
 	{
 		_AimRotateFunction();
 	}
 	else
 	{
+		_AimVelocityFunction();
+
+#if false
 		switch (LSRotationMode)
 		{
 			case ELSRotationMode::VelocityDirection:
@@ -305,9 +337,24 @@ void UWvAnimInstance::CalculateAimOffset()
 			_AimRotateFunction();
 			break;
 		}
+#endif
+
 	}
 
 	AimSweepTime = UKismetMathLibrary::MapRangeClamped(AimOffset.Y, -90.0f, 90.f, 1.0f, 0.0f);
+}
+
+FVector2D UWvAnimInstance::GetAimSweepTimeToVector() const
+{
+	if (Character.IsValid())
+	{
+		const auto Rot = Character->IsLocallyControlled() ? Character->GetControlRotation() : Character->GetBaseAimRotation();
+		const auto Alpha = GetCurveValue(FName(TEXT("Disable_AO")));
+		const auto DeltaRot = UKismetMathLibrary::NormalizedDeltaRotator(Rot, FRotator(RootTransform.GetRotation()));
+		const auto Result = UKismetMathLibrary::VLerp(FVector(DeltaRot.Yaw, DeltaRot.Pitch, 0.f), FVector::ZeroVector, Alpha);
+		return FVector2D(Result.X, Result.Y);
+	}
+	return FVector2D::ZeroVector;
 }
 
 void UWvAnimInstance::CalculateGroundedLeaningValues()
@@ -557,16 +604,6 @@ void UWvAnimInstance::RenderAnimTickRecords(const TArray<FAnimTickRecord>& Recor
 	}
 }
 
-UPredictionAnimInstance* UWvAnimInstance::GetPredictionAnimInstance() const
-{
-	static FName TagName = FName(TEXT("FootIK"));
-	return Cast<UPredictionAnimInstance>(this->GetLinkedAnimGraphInstanceByTag(TagName));
-}
-
-void UWvAnimInstance::WakeUpPoseSnapShot()
-{
-	SavePoseSnapshot(RagdollPoseSnapshot);
-}
 #pragma endregion
 
 
@@ -597,9 +634,44 @@ void UWvAnimInstance::ApplyJumpSequence(const bool bIsStartSeq, const float Norm
 #pragma endregion
 
 
+#pragma region MotionMathing_Complex_Base
+ELSGait UWvAnimInstance::GetLSGait() const
+{
+	return LSGait;
+}
+
+bool UWvAnimInstance::IsSprinting() const
+{
+	return LSGait == ELSGait::Sprinting;
+}
+
+bool UWvAnimInstance::IsWalking() const
+{
+	return LSGait == ELSGait::Walking;
+}
+
+bool UWvAnimInstance::IsAcceleration() const
+{
+	return bHasAcceleration;
+}
+#pragma endregion
+
+
 void UWvAnimInstance::TagChangeEvent(const FGameplayTag CallBackTag, int32 NewCount)
 {
 	UE_LOG(LogTemp, Log, TEXT("TagChangeEvent %s %d"), *CallBackTag.GetTagName().ToString(), NewCount);
+}
+
+
+UPredictionAnimInstance* UWvAnimInstance::GetPredictionAnimInstance() const
+{
+	const static FName TagName = FName(TEXT("FootIK"));
+	return Cast<UPredictionAnimInstance>(this->GetLinkedAnimGraphInstanceByTag(TagName));
+}
+
+void UWvAnimInstance::WakeUpPoseSnapShot()
+{
+	SavePoseSnapshot(RagdollPoseSnapshot);
 }
 
 

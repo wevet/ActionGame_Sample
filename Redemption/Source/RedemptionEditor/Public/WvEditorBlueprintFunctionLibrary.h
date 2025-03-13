@@ -25,5 +25,13 @@ public:
 
 	static void LoadAssetsByAnimation(const TArray<FName> PackagePaths, TArray<UAnimSequenceBase*>& OutAnimations);
 
+	UFUNCTION(BlueprintCallable)
+	static void CopyBlendProfiles(USkeleton* SourceSkeleton, TArray<USkeleton*> TargetSkeletons);
+
+	UFUNCTION(BlueprintCallable)
+	static void CopySkeletalSockets(USkeleton* SourceSkeleton, TArray<USkeleton*> TargetSkeletons);
+
+	UFUNCTION(BlueprintCallable)
+	static void CopySkeletalSlots(USkeleton* SourceSkeleton, TArray<USkeleton*> TargetSkeletons);
 };
 

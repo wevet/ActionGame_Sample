@@ -82,7 +82,7 @@ void UWvCameraFollowComponent::BeginPlay()
 	LocomotionComponent->OnGaitChangeDelegate.AddDynamic(this, &UWvCameraFollowComponent::LocomotionMoveStateChangeCallback);
 	LocomotionComponent->OnStanceChangeDelegate.AddDynamic(this, &UWvCameraFollowComponent::LocomotionMoveStateChangeCallback);
 	LocomotionComponent->OnRotationModeChangeDelegate.AddDynamic(this, &UWvCameraFollowComponent::LocomotionMoveStateChangeCallback);
-	//LocomotionComponent->OnAimingChangeDelegate.AddDynamic(this, &UWvCameraFollowComponent::LocomotionAimChangeCallback);
+	LocomotionComponent->OnAimingChangeDelegate.AddDynamic(this, &UWvCameraFollowComponent::LocomotionAimChangeCallback);
 
 	//RequestAsyncLoad();
 
@@ -98,7 +98,7 @@ void UWvCameraFollowComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 		LocomotionComponent->OnGaitChangeDelegate.RemoveDynamic(this, &UWvCameraFollowComponent::LocomotionMoveStateChangeCallback);
 		LocomotionComponent->OnStanceChangeDelegate.RemoveDynamic(this, &UWvCameraFollowComponent::LocomotionMoveStateChangeCallback);
 		LocomotionComponent->OnRotationModeChangeDelegate.RemoveDynamic(this, &UWvCameraFollowComponent::LocomotionMoveStateChangeCallback);
-		//LocomotionComponent->OnAimingChangeDelegate.RemoveDynamic(this, &UWvCameraFollowComponent::LocomotionAimChangeCallback);
+		LocomotionComponent->OnAimingChangeDelegate.RemoveDynamic(this, &UWvCameraFollowComponent::LocomotionAimChangeCallback);
 	}
 
 	FTimerManager& TM = GetWorld()->GetTimerManager();
@@ -133,6 +133,7 @@ void UWvCameraFollowComponent::TickComponent(float DeltaTime, ELevelTick TickTyp
 	DoTick(DeltaTime);
 }
 
+
 #pragma region LocomotionCamera
 void UWvCameraFollowComponent::OnCameraChange()
 {
@@ -148,7 +149,6 @@ void UWvCameraFollowComponent::UpdateCamera(UCurveFloat* LerpCurve)
 
 	if (!IsInGameThread())
 	{
-		UE_LOG(LogTemp, Warning, TEXT("failed Any thread => %s"), *FString(__FUNCTION__));
 		return;
 	}
 
@@ -185,11 +185,10 @@ void UWvCameraFollowComponent::LerpUpdateCameraTimerCallback()
 	{
 		FTimerManager& TM = GetWorld()->GetTimerManager();
 		TM.ClearTimer(CameraLerpTimerHandle);
-		//CameraLerpTimerHandle.Invalidate();
 	}
 }
 
-bool UWvCameraFollowComponent::LerpCameraSettings(float LerpAlpha)
+const bool UWvCameraFollowComponent::LerpCameraSettings(float LerpAlpha)
 {
 	FCameraSettings CameraSettings;
 	if (!ChooseCameraSettings(CameraSettings))
@@ -210,7 +209,7 @@ bool UWvCameraFollowComponent::LerpCameraSettings(float LerpAlpha)
 	return true;
 }
 
-bool UWvCameraFollowComponent::ChooseCameraSettings(FCameraSettings& CameraSettings)
+const bool UWvCameraFollowComponent::ChooseCameraSettings(FCameraSettings& CameraSettings)
 {
 	if (!IsValid(CameraTargetDAInstance))
 	{
@@ -224,19 +223,12 @@ bool UWvCameraFollowComponent::ChooseCameraSettings(FCameraSettings& CameraSetti
 	const ELSRotationMode LSRotationMode = LocomotionEssencialVariables.LSRotationMode;
 	const ELSMovementMode LSMovementMode = LocomotionEssencialVariables.LSMovementMode;
 
-	if (LSMovementMode == ELSMovementMode::Grounded || LSMovementMode == ELSMovementMode::Falling || LSMovementMode == ELSMovementMode::Swimming)
+	if (LocomotionEssencialVariables.bAiming)
 	{
-
-#if false
-		if (LocomotionEssencialVariables.bAiming)
-		{
-			CameraSettings = CameraTargetSettingsDA->CameraSettings.Aiming;
-		}
-		else
-		{
-		}
-#endif
-
+		CameraSettings = CameraTargetDAInstance->CameraSettings.Aiming;
+	}
+	else
+	{
 		if (LSRotationMode == ELSRotationMode::VelocityDirection)
 		{
 			if (LSStance == ELSStance::Standing)
@@ -252,18 +244,6 @@ bool UWvCameraFollowComponent::ChooseCameraSettings(FCameraSettings& CameraSetti
 				else if (LSGait == ELSGait::Sprinting)
 				{
 					CameraSettings = CameraTargetDAInstance->CameraSettings.VelocityDirection.Standing.Run;
-
-#if false
-					if (LocomotionEssencialVariables.bWasMoving)
-					{
-						CameraSettings = CameraLerpTimerLerpInfo.CurCameraSettings;
-					}
-					else
-					{
-						CameraSettings = CameraTargetSettingsDAInstance->CameraSettings.VelocityDirection.Standing.Run;
-					}
-#endif
-
 				}
 				else
 				{
@@ -314,21 +294,7 @@ bool UWvCameraFollowComponent::ChooseCameraSettings(FCameraSettings& CameraSetti
 			return false;
 		}
 
-	}
-	else
-	{
-		if (LSRotationMode == ELSRotationMode::VelocityDirection)
-		{
-			CameraSettings = CameraTargetDAInstance->CameraSettings.VelocityDirection.Standing.Walk;
-		}
-		else if (LSRotationMode == ELSRotationMode::LookingDirection)
-		{
-			CameraSettings = CameraTargetDAInstance->CameraSettings.LookingDirection.Standing.Walk;
-		}
-		else
-		{
-			return false;
-		}
+
 	}
 
 	return true;

@@ -120,11 +120,14 @@ public:
 	const FTransform GetPivotOverlayTansform();
 	virtual const FTransform GetPivotOverlayTansform_Implementation() override;
 
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Component|LocomotionInterface")
+	bool HasAiming() const;
+	virtual bool HasAiming_Implementation() const override;
+
+
 	virtual void SetLSAiming(const bool NewLSAiming) override;
 	virtual bool HasMovementInput() const override;
 	virtual bool HasMoving() const override;
-	virtual bool HasAiming() const override;
-
 
 	virtual void SetWalkingSpeed(const float InWalkingSpeed) override;
 	virtual void SetRunningSpeed(const float InRunningSpeed) override;
@@ -258,9 +261,27 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion")
 	ULocomotionStateDataAsset* LocomotionStateDataAsset;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion|MotionMatching")
+	UCurveFloat* StafeSpeedCurve = nullptr;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion|MotionMatching")
+	FVector WalkSpeeds{ 200.0f, 180.0f, 150.0f };
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion|MotionMatching")
+	FVector RunSpeeds{ 500.0f, 350.0f, 300.0f };
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion|MotionMatching")
+	FVector SprintSpeeds{ 700.0f, 700.0f, 700.0f };
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion|MotionMatching")
+	FVector CrouchSpeeds{ 225.0f, 200.0f, 180.0f };
+
 #pragma endregion
 
 public:
+	bool bIsMotionMatchingEnable = false;
+
 	void DoTick();
 	void DoTick(const float DeltaTime);
 
@@ -277,7 +298,6 @@ public:
 	void SetSprintPressed(const bool NewSprintPressed);
 	bool GetSprintPressed() const;
 
-	FVector GetLandingLocation() const;
 	void ToggleRightShoulder();
 	FVector ChooseVelocity() const;
 
@@ -285,13 +305,12 @@ public:
 	void LimitRotation(const float AimYawLimit);
 	ELSMovementMode GetPawnMovementModeChanged(const EMovementMode PrevMovementMode, const uint8 PrevCustomMode) const;
 
-	float ChooseMaxWalkSpeed() const;
-	float ChooseMaxWalkSpeedCrouched() const;
+	const float ChooseMaxWalkSpeed();
+	const float ChooseMaxWalkSpeedCrouched();
 	float ChooseMaxAcceleration() const;
 	float ChooseBrakingDeceleration() const;
 	float ChooseGroundFriction() const;
 	float ChooseBrakingFrictionFactor() const;
-	ELSGait GetGaitModeFromVelocity() const;
 
 	FLocomotionEssencialVariables GetLocomotionEssencialVariables() const { return LocomotionEssencialVariables; }
 
@@ -307,6 +326,10 @@ public:
 	void UpdateCharacterMovementSettings();
 
 	void DrawLocomotionDebug();
+
+
+	FVector GetLandingVelocity() const;
+	bool IsJustLanded() const;
 
 private:
 
@@ -369,7 +392,8 @@ private:
 	UPROPERTY()
 	TWeakObjectPtr<class UCapsuleComponent> CapsuleComponent;
 
-	FVector LandingLocation = FVector::ZeroVector;
+	FVector LandingVelocity = FVector::ZeroVector;
+	bool bWasJustLanded = false;
 	bool bDoSprint;
 	bool bDoRunning;
 	bool bShouldSprint;
@@ -383,6 +407,8 @@ private:
 
 	FTimerHandle Landing_CallbackHandle;
 	FGraphEventRef AsyncWork;
+
+
 };
 
 /**

@@ -8,6 +8,7 @@
 #include "Component/InventoryComponent.h"
 #include "Component/HitTargetComponent.h"
 #include "Component/WvCharacterMovementComponent.h"
+#include "Component/WvSkeletalMeshComponent.h"
 #include "Component/QTEActionComponent.h"
 #include "Locomotion/LocomotionComponent.h"
 #include "Climbing/ClimbingComponent.h"
@@ -60,6 +61,9 @@ APlayerCharacter::APlayerCharacter(const FObjectInitializer& ObjectInitializer) 
 	// https://forums.unrealengine.com/t/world-partion-current-pawn-vanishes-when-reaching-cell-loading-range-limit/255655/7
 	bIsSpatiallyLoaded = false;
 
+
+	UWvSkeletalMeshComponent* WvMeshComp = CastChecked<UWvSkeletalMeshComponent>(GetMesh());
+	WvMeshComp->VisibilityBasedAnimTickOption = EVisibilityBasedAnimTickOption::AlwaysTickPoseAndRefreshBones;
 }
 
 void APlayerCharacter::BeginPlay()
@@ -69,6 +73,8 @@ void APlayerCharacter::BeginPlay()
 	CameraBoom->AddTickPrerequisiteActor(this);
 	WvCameraFollowComponent->AddTickPrerequisiteActor(this);
 	QTEActionComponent->AddTickPrerequisiteActor(this);
+
+	LocomotionComponent->bIsMotionMatchingEnable = true;
 
 	P_Controller = Cast<AWvPlayerController>(Controller);
 
@@ -146,9 +152,6 @@ void APlayerCharacter::UnPossessed()
 void APlayerCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent)
 {
 	check(PlayerInputComponent);
-
-	//PlayerInputComponent->BindAxis("MoveForward", this, &ThisClass::InputAxis_MoveForward);
-	//PlayerInputComponent->BindAxis("MoveRight", this, &ThisClass::InputAxis_MoveRight);
 
 	if (UEnhancedInputComponent* EnhancedInputComponent = CastChecked<UEnhancedInputComponent>(PlayerInputComponent))
 	{
@@ -294,6 +297,10 @@ void APlayerCharacter::GameplayTagTrigger_Callback(const FGameplayTag Tag, const
 	{
 		HandleSprinting(bIsPress);
 	}
+	else if (Tag == TAG_Character_ActionWalk)
+	{
+		HandleWalking(bIsPress);
+	}
 	else if (Tag == TAG_Character_ActionDrive)
 	{
 		HandleDriveAction(bIsPress);
@@ -305,6 +312,10 @@ void APlayerCharacter::GameplayTagTrigger_Callback(const FGameplayTag Tag, const
 	else if (Tag == TAG_Character_StateAlive_Trigger)
 	{
 		HandleAliveAction(bIsPress);
+	}
+	else if (Tag == TAG_Character_ActionAimChange)
+	{
+		HandleHoldAimAction(bIsPress);
 	}
 }
 
@@ -335,7 +346,7 @@ void APlayerCharacter::OnPluralInputEventTrigger_Callback(const FGameplayTag Tag
 	{
 		HandleFinisherAction(Tag, bIsPress);
 	}
-	//UE_LOG(LogTemp, Log, TEXT("Tag => %s, Pressed => %s"), *Tag.ToString(), bIsPress ? TEXT("true") : TEXT("false"));
+
 }
 
 void APlayerCharacter::OnHoldingInputEventTrigger_Callback(const FGameplayTag Tag, const bool bIsPress)
@@ -345,10 +356,7 @@ void APlayerCharacter::OnHoldingInputEventTrigger_Callback(const FGameplayTag Ta
 		return;
 	}
 
-	if (Tag == TAG_Character_ActionAimChange)
-	{
-		HandleHoldAimAction(bIsPress);
-	}
+	UE_LOG(LogTemp, Warning, TEXT("[%s]"), *FString(__FUNCTION__));
 }
 
 void APlayerCharacter::OnDoubleClickInputEventTrigger_Callback(const FGameplayTag Tag, const bool bIsPress)
@@ -418,6 +426,21 @@ void APlayerCharacter::HandleSprinting(const bool bIsPress)
 	}
 }
 
+void APlayerCharacter::HandleWalking(const bool bIsPress)
+{
+	if (bIsPress)
+	{
+		const auto LocomotionEssencialVariables = LocomotionComponent->GetLocomotionEssencialVariables();
+
+		if (LocomotionEssencialVariables.LSGait == ELSGait::Walking)
+		{
+			Super::DoStopWalking();
+			return;
+		}
+		Super::DoWalking();
+	}
+}
+
 void APlayerCharacter::HandleMeleeAction(const bool bIsPress)
 {
 	auto Inventory = GetInventoryComponent();
@@ -468,7 +491,13 @@ void APlayerCharacter::HandleHoldAimAction(const bool bIsPress)
 {
 	if (bIsPress)
 	{
-		HandleAimMode();
+		DoStartAiming();
+		//UE_LOG(LogTemp, Log, TEXT("DoStartAiming"));
+	}
+	else
+	{
+		DoStopAiming();
+		//UE_LOG(LogTemp, Log, TEXT("DoStopAiming"));
 	}
 }
 
@@ -498,22 +527,6 @@ void APlayerCharacter::HandleFinisherAction(const FGameplayTag Tag, const bool b
 
 		BuildFinisherAbility(Tag);
 	}
-}
-
-void APlayerCharacter::HandleAimMode()
-{
-	//float HoldValue = Value.Get<float>();
-	const auto LocomotionEssencialVariables = LocomotionComponent->GetLocomotionEssencialVariables();
-
-	if (!LocomotionEssencialVariables.bAiming)
-	{
-		DoStartAiming();
-	}
-	else
-	{
-		DoStopAiming();
-	}
-
 }
 
 void APlayerCharacter::HandleStanceMode()
@@ -622,8 +635,8 @@ bool APlayerCharacter::IsQTEActionPlaying() const
 
 void APlayerCharacter::DoBulletAttack()
 {
-	// @TODO
-	// TimerHandle LoopAction
+WEVET_COMMENT("TimerHandle LoopAction")
+
 	const ABulletHoldWeaponActor* BulletWeapon = Cast<ABulletHoldWeaponActor>(GetInventoryComponent()->GetEquipWeapon());
 	if (!IsValid(BulletWeapon))
 	{
@@ -632,6 +645,8 @@ void APlayerCharacter::DoBulletAttack()
 
 	GetWorld()->GetTimerManager().SetTimer(Bullet_TimerHandle, this, 
 		&ThisClass::DoBulletAttack_Callback, BulletWeapon->GetBulletInterval(), true);
+
+
 }
 
 void APlayerCharacter::DoBulletAttack_Callback()
@@ -674,6 +689,14 @@ void APlayerCharacter::OverlayStateChange_Callback(const ELSOverlayState PrevOve
 
 	if (bResult)
 	{
+		WEVET_COMMENT("Temp Weapon")
+
+		auto Weapon = ItemInventoryComponent->GetEquipWeapon();
+		if (Weapon)
+		{
+			Weapon->SetActorHiddenInGame(true);
+		}
+
 		Super::OverlayStateChange(CurrentOverlay);
 	}
 

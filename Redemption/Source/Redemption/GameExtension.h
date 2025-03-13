@@ -78,6 +78,12 @@ namespace Game
 		{
 			return (Array.Num() <= 0);
 		}
+
+		template<typename T>
+		static FORCEINLINE bool NullOrEmpty(const TArray<TObjectPtr<T>> Array)
+		{
+			return (Array.Num() <= 0);
+		}
 	};
 
 	class REDEMPTION_API ComponentExtension

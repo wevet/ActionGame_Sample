@@ -436,10 +436,16 @@ void UInventoryComponent::CreateWeaponInstances()
 				AItemBaseActor* ItemPtr = GetWorld()->SpawnActorDeferred<AItemBaseActor>(SpawnInfo.ActorToSpawn, FTransform::Identity, Character.Get());
 				ItemPtr->FinishSpawning(FTransform::Identity, /*bIsDefaultTransform=*/ true);
 				ItemPtr->SetActorRelativeTransform(SpawnInfo.AttachTransform);
-				ItemPtr->AttachToComponent(Character->GetMesh(), FAttachmentTransformRules::KeepRelativeTransform, SpawnInfo.AttachSocket);
 
+				ItemPtr->AttachToComponent(Character->GetMesh(), FAttachmentTransformRules::KeepRelativeTransform, SpawnInfo.AttachSocket);
 				ItemPtr->SetActorHiddenInGame(true);
+
+				if (!Character->GetMesh()->DoesSocketExist(SpawnInfo.AttachSocket))
+				{
+					UE_LOG(LogTemp, Warning, TEXT("GetMesh DoesNotSocket => %s, [%s]"), *SpawnInfo.AttachSocket.ToString(), *FString(__FUNCTION__));
+				}
 				AddInventory(ItemPtr);
+
 			}
 		}
 	}
