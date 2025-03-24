@@ -2,6 +2,13 @@
 
 #include "Redemption.h"
 #include "Modules/ModuleManager.h"
+#include "Game/WvProjectSetting.h"
+
+#if WITH_EDITOR
+#include "ISettingsModule.h"
+#endif // WITH_EDITOR
+
+
 
 // Input
 UE_DEFINE_GAMEPLAY_TAG(TAG_Game_Input_Disable, "Game.Input.Disable");
@@ -113,5 +120,51 @@ UE_DEFINE_GAMEPLAY_TAG(TAG_Game_Asset_CloseCombat, "Game.Asset.CloseCombat");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Game_Asset_CharacterVFX, "Game.Asset.CharacterVFX");
 //
 
-IMPLEMENT_PRIMARY_GAME_MODULE( FDefaultGameModuleImpl, Redemption, "Redemption" );
+
+FRedemptionModule* FRedemptionModule::GameModuleInstance = nullptr;
+
+#define LOCTEXT_NAMESPACE ""
+
+void FRedemptionModule::StartupModule()
+{
+	GameModuleInstance = this;
+
+
+#if WITH_EDITOR
+	ISettingsModule* SettingsModule = FModuleManager::GetModulePtr<ISettingsModule>("Settings");
+	if (SettingsModule != nullptr)
+	{
+		SettingsModule->RegisterSettings(
+			"Project",
+			"Game",
+			"WvSetting",
+			LOCTEXT("MySettingName", "Wv Settings"),
+			LOCTEXT("MySettingDescription", "Wv project settings."),
+			GetMutableDefault<UWvProjectSetting>()
+		);
+	}
+#endif // WITH_EDITOR
+}
+
+void FRedemptionModule::ShutdownModule()
+{
+	GameModuleInstance = nullptr;
+
+#if WITH_EDITOR
+	ISettingsModule* SettingsModule = FModuleManager::GetModulePtr<ISettingsModule>("Settings");
+	if (SettingsModule != nullptr)
+	{
+		SettingsModule->UnregisterSettings(
+			"Project",
+			"Game",
+			"WvSetting"
+		);
+	}
+#endif // WITH_EDITOR
+}
+
+
+IMPLEMENT_PRIMARY_GAME_MODULE(FRedemptionModule, Redemption, "Redemption");
+
+#undef LOCTEXT_NAMESPACE
 

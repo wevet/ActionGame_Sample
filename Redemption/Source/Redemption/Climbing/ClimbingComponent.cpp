@@ -32,9 +32,8 @@
 
 #define CLIMBING_DEV 1
 
-#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
-static TAutoConsoleVariable<int32> CVarDebugClimbingSystem(TEXT("wv.ClimbingSystem.Debug"), 0, TEXT("ClimbingSystem Debug .\n") TEXT("<=0: off\n") TEXT("  1: on\n"), ECVF_Default);
-#endif
+using namespace CharacterDebug;
+
 
 UClimbingComponent::UClimbingComponent(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
@@ -187,11 +186,7 @@ void UClimbingComponent::OnClimbingBegin()
 	ClimbingBeginDelegate.Broadcast();
 
 	// strafe’†‚Ìê‡‚Ívelocity mode‚ÉØ‚è‘Ö‚¦‚éAinterface‚ÍŒÄ‚Ño‚³‚È‚¢
-	if (bIsStrafingMode)
-	{
-		CharacterMovementComponent->bUseControllerDesiredRotation = false;
-		CharacterMovementComponent->bOrientRotationToMovement = true;
-	}
+	Character->VelocityMovement();
 
 	bIsClimbing = true;
 	AxisScale = 0.0f;
@@ -200,11 +195,6 @@ void UClimbingComponent::OnClimbingBegin()
 void UClimbingComponent::OnClimbingEnd()
 {
 	// climbing‘O‚Éstrafe’†‚¾‚Á‚½ê‡‚Ístrafe‚É–ß‚·
-	if (bIsStrafingMode)
-	{
-		CharacterMovementComponent->bUseControllerDesiredRotation = true;
-		CharacterMovementComponent->bOrientRotationToMovement = false;
-	}
 	ClimbingEndDelegate.Broadcast();
 }
 
@@ -812,12 +802,12 @@ void UClimbingComponent::CreateSmoothAxisInterpolation()
 void UClimbingComponent::UpdateActorLocationWhenClimbing()
 {
 	const FTransform ConvertTransform = ConvertTransformYaw(CapsuleTargetPositionWS);
-	if (Character)
-	{
-		Character->SetActorLocation(ConvertTransform.GetLocation());
-	}
-	UpdateTargetRotation(FRotator(ConvertTransform.GetRotation()));
-	//CharacterSmoothInterpTransform(ConvertTransform);
+	CharacterSmoothInterpTransform(ConvertTransform);
+	//if (Character)
+	//{
+	//	Character->SetActorLocation(ConvertTransform.GetLocation());
+	//}
+	//UpdateTargetRotation(FRotator(ConvertTransform.GetRotation()));
 }
 
 const EClimbActionType UClimbingComponent::ClearAllMovementActionsVariables()
@@ -915,7 +905,8 @@ void UClimbingComponent::UpdateTargetRotation(const FRotator NewRotation)
 {
 	if (LocomotionComponent)
 	{
-		LocomotionComponent->ApplyCharacterRotation(NewRotation, false, 10.0f, true);
+		constexpr float InterpSpeed = 10.0f;
+		LocomotionComponent->ApplyCharacterRotation(NewRotation, false, InterpSpeed, true);
 	}
 }
 
@@ -932,7 +923,6 @@ void UClimbingComponent::CharacterSmoothInterpTransform(const FTransform NewTran
 {
 	if (Character)
 	{
-		//Character->SetActorLocation(NewTransform.GetLocation());
 		Character->SetActorLocationAndRotation(NewTransform.GetLocation(), FRotator(NewTransform.GetRotation()));
 	}
 
@@ -1340,7 +1330,7 @@ bool UClimbingComponent::LadderConditionToStartFinding() const
 
 	if (IsValid(LadderComponent.Get()))
 	{
-		const float HandReachThreshold = 0.2f;
+		constexpr float HandReachThreshold = 0.2f;
 
 		float Total = LadderComponent->HandReachDirection.R;
 		Total += LadderComponent->HandReachDirection.B;
@@ -1409,12 +1399,7 @@ void UClimbingComponent::ClearVerticalMovement()
 /// <param name="CapsuleScale"></param>
 /// <param name="CustomComponent"></param>
 /// <returns></returns>
-const bool UClimbingComponent::NormalizeCapsuleTransformToLedge(
-	const bool Valid,
-	const FTwoVectors& LWS,
-	const FTwoVectors& RWS,
-	const float CapsuleScale,
-	UPrimitiveComponent* CustomComponent)
+const bool UClimbingComponent::NormalizeCapsuleTransformToLedge(const bool Valid, const FTwoVectors& LWS, const FTwoVectors& RWS, const float CapsuleScale, UPrimitiveComponent* CustomComponent)
 {
 	if (!Valid || !TargetActorPoint)
 	{
@@ -1512,21 +1497,16 @@ TArray<AActor*> UClimbingComponent::MakeIgnoreActorsArray(const float Radius) co
 	return ResultArray;
 }
 
-TArray<AActor*> UClimbingComponent::MakeIgnoreActorsArrayWithCustomPoint(
-	const FVector Center,
-	const float Radius,
-	const TArray<AActor*> IgnoreActors) const
-{
 
+TArray<AActor*> UClimbingComponent::MakeIgnoreActorsArrayWithCustomPoint(const FVector Center, const float Radius, const TArray<AActor*> IgnoreActors) const
+{
 	TArray<AActor*> ResultArray;
 	TArray<TEnumAsByte<EObjectTypeQuery>> ObjectTypes;
 	// WorldStatic
 	ObjectTypes.Add(EObjectTypeQuery::ObjectTypeQuery1);
 	// WorldDynamic
 	ObjectTypes.Add(EObjectTypeQuery::ObjectTypeQuery2);
-
 	UKismetSystemLibrary::SphereOverlapActors(GetWorld(), Center, Radius, ObjectTypes, AClimbingObject::StaticClass(), IgnoreActors, ResultArray);
-
 	return ResultArray;
 }
 
@@ -1620,7 +1600,9 @@ void UClimbingComponent::SelectMovementFunctionType(bool& OutNormal)
 	if (IsVerticalClimbingObject(TargetActorPoint))
 	{
 		if (bUseOnlyVerticalMovementFunctions)
+		{
 			OutNormal = false;
+		}
 	}
 }
 
@@ -1704,16 +1686,11 @@ const bool UClimbingComponent::StartMoveRightOrLeft(const bool bCanMove)
 		ClimbActionType = EClimbActionType::ShortMove;
 		OnClimbingBegin();
 	}
-
 	return true;
 }
 
-const bool UClimbingComponent::TryFindLedgeEnds(
-	const FVector Origin,
-	const FTwoVectors Direction,
-	FTwoVectors& LeftLedgePointWS,
-	FTwoVectors& RightLedgePointsWS,
-	int32 Accuracy)
+
+const bool UClimbingComponent::TryFindLedgeEnds(const FVector Origin, const FTwoVectors Direction, FTwoVectors& LeftLedgePointWS, FTwoVectors& RightLedgePointsWS, int32 Accuracy)
 {
 	FVector LocalNormal = UKismetMathLibrary::NotEqual_VectorVector(Direction.v1, FVector::ZeroVector, 0.1f) ? Direction.v1 : GeneralizedLedgePointWS.v2;
 	const TArray<AActor*> IgnoreActors = MakeIgnoreActorsArray(IgnoreBaseRadius);
@@ -5440,8 +5417,7 @@ void UClimbingComponent::HandleTickWhileEvent(const bool bIsFinished)
 
 const float UClimbingComponent::GetClimbingActionRemainingTime()
 {
-	FTimerManager& TimerManager = GetOwner()->GetWorldTimerManager();
-	const float RemainingTimer = TimerManager.GetTimerRemaining(ClimbingActionTimer);
+	const float RemainingTimer = GetOwner()->GetWorldTimerManager().GetTimerRemaining(ClimbingActionTimer);
 	return RemainingTimer;
 }
 

@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "NativeGameplayTags.h"
+#include "Modules/ModuleManager.h"
 
 // using
 // *GETENUMSTRING("/Script/ProjectName.EnumName")
@@ -188,3 +189,15 @@ REDEMPTION_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Game_Asset_CharacterVFX);
 #define K_SIGNIGICANCE_ACTOR FName(TEXT("Significance"))
 
 
+
+class FRedemptionModule : public IModuleInterface
+{
+public:
+	static FRedemptionModule* GameModuleInstance;
+
+	/** IModuleInterface implementation */
+	virtual void StartupModule() override;
+	virtual void ShutdownModule() override;
+
+protected:
+};

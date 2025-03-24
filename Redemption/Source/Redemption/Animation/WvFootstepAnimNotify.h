@@ -8,9 +8,16 @@
 #include "Sound/SoundBase.h"
 #include "GameplayTagContainer.h"
 #include "Engine/DataTable.h"
+#include "Redemption.h"
 #include "Locomotion/LocomotionSystemTypes.h"
 #include "WvFootstepAnimNotify.generated.h"
 
+
+WEVET_COMMENT("FHitReactEnvironmentRow Same parameters")
+/// <summary>
+/// FHitReactEnvironmentRow
+/// same paramaters
+/// </summary>
 USTRUCT(BlueprintType)
 struct FFootStepTableRow : public FTableRowBase
 {
@@ -18,10 +25,10 @@ struct FFootStepTableRow : public FTableRowBase
 
 public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
-	class UNiagaraSystem* NiagaraSystems;
+	class UNiagaraSystem* NiagaraSystems{ nullptr };
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
-	class USoundBase* FootStepSound;
+	class USoundBase* FootStepSound{ nullptr };
 };
 
 /**

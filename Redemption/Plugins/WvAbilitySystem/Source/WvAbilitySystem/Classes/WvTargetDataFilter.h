@@ -39,7 +39,7 @@ public:
 	FGameplayTagContainer FilterTagContainer;
 
 	UPROPERTY(EditDefaultsOnly, Category = Filter)
-	bool bReverseFilter;
+	bool bReverseFilter{false};
 
 	/** Filter functions */
 	bool FilterPassesForActor(class IWvAbilityTargetInterface* Self, const AActor* ActorToBeFiltered, bool bConsiderTeamRelationOnly = false) const;

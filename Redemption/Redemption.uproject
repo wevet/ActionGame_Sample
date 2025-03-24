@@ -14,7 +14,8 @@
 				"WvAbilitySystem",
 				"AIModule",
 				"ChaosVehicles",
-				"UMG"
+				"UMG",
+				"CoreUObject"
 			]
 		},
 		{

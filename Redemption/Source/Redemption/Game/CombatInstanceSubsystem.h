@@ -15,10 +15,10 @@ struct FHitReactEnvironmentRow : public FTableRowBase
 
 public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
-	class UNiagaraSystem* HitEffect;
+	class UNiagaraSystem* HitEffect{nullptr};
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
-	class USoundBase* HitSound;
+	class USoundBase* HitSound{ nullptr };
 };
 
 /**

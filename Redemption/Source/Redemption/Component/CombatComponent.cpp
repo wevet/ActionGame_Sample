@@ -32,11 +32,11 @@
 
 #define K_CHAIN_COMPONENT_TAG FName(TEXT("Chain"))
 
-#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
-static TAutoConsoleVariable<int32> CVarDebugCharacterCombatTrace(TEXT("wv.CharacterCombatDebugTrace"), 0, TEXT("Charactermovement ledge end\n") TEXT("<=0: Debug off\n") TEXT(">=1: Debug on\n"), ECVF_Default);
-#endif // !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(CombatComponent)
+
+using namespace CharacterDebug;
+
 
 UCombatComponent::UCombatComponent(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
@@ -211,7 +211,7 @@ void UCombatComponent::BoxTraceMulti(TArray<FWvBattleDamageAttackTargetInfo>& Hi
 	TArray<FHitResult> HitResults;
 
 #if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
-	bIsDebugTrace = (CVarDebugCharacterCombatTrace.GetValueOnGameThread() > 0);
+	bIsDebugTrace = (CVarDebugCombatSystem.GetValueOnGameThread() > 0);
 #else
 	bIsDebugTrace = false;
 #endif // !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
@@ -237,7 +237,7 @@ void UCombatComponent::CapsuleTraceMulti(TArray<FWvBattleDamageAttackTargetInfo>
 	GetWorld()->SweepMultiByChannel(HitResults, Start, End, CapsuleFquat, CollisionChannel, FCollisionShape::MakeCapsule(Radius, HalfHeight), Params);
 
 #if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
-	bIsDebugTrace = (CVarDebugCharacterCombatTrace.GetValueOnGameThread() > 0);
+	bIsDebugTrace = (CVarDebugCombatSystem.GetValueOnGameThread() > 0);
 #else
 	bIsDebugTrace = false;
 #endif // !(UE_BUILD_SHIPPING || UE_BUILD_TEST)

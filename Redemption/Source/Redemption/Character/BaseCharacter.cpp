@@ -67,7 +67,32 @@
 #include "WvAIController.h"
 #include "Level/FieldInstanceSubsystem.h"
 
+#include "Significance/SignificanceComponent.h"
+#include "IAnimationBudgetAllocator.h"
+#include "SignificanceManager.h"
+
 #include UE_INLINE_GENERATED_CPP_BY_NAME(BaseCharacter)
+
+
+
+namespace CharacterDebug
+{
+#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
+
+	TAutoConsoleVariable<int32> CVarDebugCharacterStatus(TEXT("wv.CharacterStatus.Debug"), 0, TEXT("CharacterStatus Debug .\n") TEXT("<=0: off\n") TEXT("  1: on\n"), ECVF_Default);
+
+	TAutoConsoleVariable<int32> CVarDebugFallEdgeSystem(TEXT("wv.FallEdgeSystem.Debug"), 0, TEXT("FallEdgeSystem Debug .\n") TEXT("<=0: off\n") TEXT("  1: on\n"), ECVF_Default);
+	TAutoConsoleVariable<int32> CVarDebugMantlingSystem(TEXT("wv.MantlingSystem.Debug"), 0, TEXT("MantlingSystem Debug .\n") TEXT("<=0: off\n") TEXT("  1: on\n"), ECVF_Default);
+	TAutoConsoleVariable<int32> CVarDebugWallClimbingSystem(TEXT("wv.WallClimbingSystem.Debug"), 0, TEXT("WallClimbingSystem Debug .\n") TEXT("<=0: off\n") TEXT("  1: on\n"), ECVF_Default);
+
+	TAutoConsoleVariable<int32> CVarDebugVaultingSystem(TEXT("wv.VaultingSystem.Debug"), 0, TEXT("VaultingSystem Debug .\n") TEXT("<=0: off\n") TEXT("  1: on\n"), ECVF_Default);
+	TAutoConsoleVariable<int32> CVarDebugCombatSystem(TEXT("wv.CombatSystem.Debug"), 0, TEXT("CombatSystem Debug .\n") TEXT("<=0: off\n") TEXT("  1: on\n"), ECVF_Default);
+	TAutoConsoleVariable<int32> CVarDebugLadderSystem(TEXT("wv.LadderSystem.Debug"), 0, TEXT("LadderSystem Debug .\n") TEXT("<=0: off\n") TEXT("  1: on\n"), ECVF_Default);
+	TAutoConsoleVariable<int32> CVarDebugClimbingSystem(TEXT("wv.ClimbingSystem.Debug"), 0, TEXT("ClimbingSystem Debug .\n") TEXT("<=0: off\n") TEXT("  1: on\n"), ECVF_Default);
+#endif
+}
+
+
 
 ABaseCharacter::ABaseCharacter(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer.SetDefaultSubobjectClass<UWvCharacterMovementComponent>(ACharacter::CharacterMovementComponentName) 
@@ -110,6 +135,10 @@ ABaseCharacter::ABaseCharacter(const FObjectInitializer& ObjectInitializer)
 	Feet = ObjectInitializer.CreateDefaultSubobject<UWvSkeletalMeshComponent>(this, TEXT("Feet"));
 	Feet->SetupAttachment(WvMeshComp);
 	Feet->SetReceivesDecals(true);
+
+	Other1 = ObjectInitializer.CreateDefaultSubobject<UWvSkeletalMeshComponent>(this, TEXT("Other1"));
+	Other1->SetupAttachment(WvMeshComp);
+	Other1->SetReceivesDecals(true);
 
 	// @TODO
 	// create sk comp Bottom Top Feet Body
@@ -208,6 +237,9 @@ ABaseCharacter::ABaseCharacter(const FObjectInitializer& ObjectInitializer)
 	CharacterMovementHelperComponent = ObjectInitializer.CreateDefaultSubobject<UCharacterMovementHelperComponent>(this, TEXT("CharacterMovementHelperComponent"));
 	CharacterMovementHelperComponent->bAutoActivate = 1;
 
+	SignificanceComponent = ObjectInitializer.CreateDefaultSubobject<USignificanceComponent>(this, TEXT("SignificanceComponent"));
+	SignificanceComponent->bAutoActivate = 1;
+
 	MyTeamID = FGenericTeamId(0);
 	CharacterTag = FGameplayTag::RequestGameplayTag(TAG_Character_Default.GetTag().GetTagName());
 
@@ -249,6 +281,9 @@ ABaseCharacter::ABaseCharacter(const FObjectInitializer& ObjectInitializer)
 
 	Feet->SetCollisionProfileName(K_CHARACTER_COLLISION_PRESET);
 	Feet->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+	Other1->SetCollisionProfileName(K_CHARACTER_COLLISION_PRESET);
+	Other1->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
 	WvMeshComp->VisibilityBasedAnimTickOption = EVisibilityBasedAnimTickOption::OnlyTickPoseWhenRendered;
 	Face->VisibilityBasedAnimTickOption = EVisibilityBasedAnimTickOption::OnlyTickPoseWhenRendered;
@@ -294,6 +329,11 @@ void ABaseCharacter::BeginPlay()
 	MotionWarpingComponent->AddTickPrerequisiteActor(this);
 	CharacterTrajectoryComponent->AddTickPrerequisiteActor(this);
 
+
+	if (Other1->GetSkeletalMeshAsset() == nullptr)
+	{
+		Other1->SetVisibility(false);
+	}
 
 	// @TODO
 	// async function
@@ -968,6 +1008,102 @@ EAIActionState ABaseCharacter::GetAIActionState() const
 	return AIActionState;
 }
 #pragma endregion
+
+
+const int32 ABaseCharacter::SIGNIFICANCE_LEVEL_LOWEST(5);
+
+void ABaseCharacter::OnSignificanceLevelChanged_Implementation(int32 SignificanceLevel)
+{
+
+	if (ManuallySignificanceLevel != -1)
+	{
+		// SignificanceLevel が手動で設定されている場合は、設定値が使用される。
+		SignificanceLevel = ManuallySignificanceLevel;
+	}
+	else if ((Controller != nullptr && Controller->IsLocalPlayerController()))
+	{
+		// シーケンサが操作するキャラクターやプレイヤーが操作するキャラクターはレベル 0 に固定
+		SignificanceLevel = 0;
+	}
+
+
+	// 最大値を超えてはならない
+	if (SignificanceLevel > MaxSignificanceLevel)
+	{
+		SignificanceLevel = MaxSignificanceLevel;
+	}
+
+	// 変更があった場合のみ更新
+	if (SignificanceComponent->SignificanceLevel != SignificanceLevel)
+	{
+		int32 LastSingificanceLevel = SignificanceComponent->SignificanceLevel;
+		SignificanceComponent->SignificanceLevel = SignificanceLevel;
+
+		const FSignificanceConfigType2& SignificanceConfig = SignificanceComponent->SignificanceConfigArray[SignificanceComponent->SignificanceLevel];
+
+		TArray<UActorComponent*> IgnoreComponents;
+		IgnoreComponents.Add(GetMesh());
+
+		UWvCommonUtils::SetActorAndComponentTickIntervalWithIgnore(this, SignificanceConfig.TickInterval, IgnoreComponents);
+		UWvCommonUtils::UpdateMinLODBySignificanceLevel(this, SignificanceConfig.MinLOD);
+		UWvCommonUtils::SetAIControllerTickInterval(this, SignificanceConfig.TickInterval);
+
+		int32 FilterLevel = SignificanceComponent->Significance_CharacterBaseAIUnlockLevel;
+		if (LastSingificanceLevel <= FilterLevel && SignificanceLevel > FilterLevel)
+		{
+			// avoid repeatedly set
+			//TemporaryLockAIOverstack(true, true);
+		}
+		else if (LastSingificanceLevel > FilterLevel && SignificanceLevel <= FilterLevel)
+		{
+			//TemporaryLockAIOverstack(false, true);
+		}
+
+		FilterLevel = SignificanceComponent->Significance_CharacterBaseMeshVisibleLevel;
+		if (LastSingificanceLevel <= FilterLevel && SignificanceLevel > FilterLevel)
+		{
+			// avoid repeatedly set
+			GetMesh()->SetVisibility(false, true);
+		}
+		else if (LastSingificanceLevel > FilterLevel && SignificanceLevel <= FilterLevel)
+		{
+			GetMesh()->SetVisibility(true, true);
+		}
+
+		SetMeshBudgetLevel((float)(SIGNIFICANCE_LEVEL_LOWEST - SignificanceLevel));
+	}
+
+}
+
+void ABaseCharacter::GetSignificanceBounds_Implementation(FVector& Origin, FVector& BoxExtent, float& SphereRadius)
+{
+	USkeletalMeshComponent* MeshComp = GetMesh();
+	if (MeshComp == nullptr)
+	{
+		Origin = GetActorLocation();
+		UCapsuleComponent* CapsuleComp = GetCapsuleComponent();
+		float ScaledCapsuleRadius = CapsuleComp->GetScaledCapsuleRadius();
+		BoxExtent.X = ScaledCapsuleRadius;
+		BoxExtent.Y = ScaledCapsuleRadius;
+		BoxExtent.Z = CapsuleComp->GetScaledCapsuleHalfHeight();
+		SphereRadius = ScaledCapsuleRadius;
+	}
+	else
+	{
+		UKismetSystemLibrary::GetComponentBounds(MeshComp, Origin, BoxExtent, SphereRadius);
+	}
+}
+
+void ABaseCharacter::SetMeshBudgetLevel(const float NewLevel)
+{
+	if (IAnimationBudgetAllocator* AnimationBudgetAllocator = IAnimationBudgetAllocator::Get(GetWorld()))
+	{
+		if (AnimationBudgetAllocator->GetEnabled())
+		{
+			AnimationBudgetAllocator->SetComponentSignificance(CastChecked<UWvSkeletalMeshComponent>(GetMesh()), NewLevel, NewLevel > 4.9f);
+		}
+	}
+}
 
 #pragma region Components
 UAbilitySystemComponent* ABaseCharacter::GetAbilitySystemComponent() const

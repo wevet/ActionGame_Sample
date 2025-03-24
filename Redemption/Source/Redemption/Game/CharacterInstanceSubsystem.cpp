@@ -44,12 +44,14 @@ void MyPostSignificanceFunction(USignificanceManager::FManagedObjectInfo* Obj, f
 		// @TODO tempolaly function
 		if (Significance > 0.f)
 		{
-			Actor->SetActorTickEnabled(true);
+			//Actor->SetActorTickEnabled(true);
 		}
 		else
 		{
-			Actor->SetActorTickEnabled(false);
+			//Actor->SetActorTickEnabled(false);
 		}
+
+		UE_LOG(LogTemp, Log, TEXT("[%s]"), *FString(__FUNCTION__));
 	}
 }
 

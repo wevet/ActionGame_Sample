@@ -29,13 +29,13 @@ struct REDEMPTION_API FClimbingDetectPoints
 
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	FVector Left;
+	FVector Left{FVector::ZeroVector};
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	FVector Right;
+	FVector Right{ FVector::ZeroVector };
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	FVector Center;
+	FVector Center{ FVector::ZeroVector };
 };
 
 USTRUCT(BlueprintType)
@@ -48,40 +48,40 @@ public:
 	bool bIsMoving = false;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	EClimbMovementDirectionType MovingDirection;
+	EClimbMovementDirectionType MovingDirection{ EClimbMovementDirectionType::Forward};
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	FVector2D MoveDirectionWithStride;
+	FVector2D MoveDirectionWithStride{FVector2D::ZeroVector};
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	FVector2D JumpDirection;
+	FVector2D JumpDirection{ FVector2D::ZeroVector };
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	float AnimTime;
+	float AnimTime{0.f};
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	float JumpLength;
+	float JumpLength{ 0.f };
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	FVector HandDirection;
+	FVector HandDirection{ FVector::ZeroVector };
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	FVector Velocity;
+	FVector Velocity{ FVector::ZeroVector };
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	FTransform CapsulePosition;
+	FTransform CapsulePosition{FTransform::Identity};
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	bool bOnVerticalObject;
+	bool bOnVerticalObject{false};
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	FVector2D VerticalMovementDirection;
+	FVector2D VerticalMovementDirection{ FVector2D::ZeroVector };
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	bool bUseInterpolationMethod;
+	bool bUseInterpolationMethod{false};
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	EClimbActionType ClimbActionType;
+	EClimbActionType ClimbActionType{ EClimbActionType::None};
 };
 
 UCLASS(BlueprintType)
@@ -91,28 +91,28 @@ class REDEMPTION_API UClimbingCurveDataAsset : public UDataAsset
 
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	UCurveVector* ShortMoveInterpCurve;
+	UCurveVector* ShortMoveInterpCurve{nullptr};
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	UCurveVector* CornerOuterCurve;
+	UCurveVector* CornerOuterCurve{ nullptr };
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	UCurveVector* CornerInnerCurve;
+	UCurveVector* CornerInnerCurve{ nullptr };
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	UCurveVector* CornerOuterFH_Curve;
+	UCurveVector* CornerOuterFH_Curve{ nullptr };
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	UCurveVector* Turn180TransitionCurve;
+	UCurveVector* Turn180TransitionCurve{ nullptr };
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	UCurveVector* RotationCurves;
+	UCurveVector* RotationCurves{ nullptr };
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	UCurveVector* ForwardMoveCurve;
+	UCurveVector* ForwardMoveCurve{ nullptr };
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	UCurveVector* MantleCurve;
+	UCurveVector* MantleCurve{ nullptr };
 };
 
 

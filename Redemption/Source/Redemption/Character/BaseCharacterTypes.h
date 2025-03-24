@@ -16,7 +16,7 @@ struct FOverlayAnimInstance
 
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	ELSOverlayState OverlayState;
+	ELSOverlayState OverlayState{ELSOverlayState::None};
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	TSubclassOf<UAnimInstance> AnimInstanceClass;

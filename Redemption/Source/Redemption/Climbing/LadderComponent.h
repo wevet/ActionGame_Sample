@@ -49,7 +49,8 @@ public:
 	{
 		Name = NAME_None;
 		Montage = nullptr;
-		PlayRate, StartAt = 0.0f;
+		PlayRate = 1.0f;
+		StartAt = 0.0f;
 		bStopAllMontages = true;
 	}
 };
@@ -61,40 +62,40 @@ class REDEMPTION_API ULadderAnimationDataAsset : public UDataAsset
 
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	UAnimMontage* EnterLadderDownMontage2;
+	UAnimMontage* EnterLadderDownMontage2{nullptr};
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	UAnimMontage* EnterLadderDownMontage1;
+	UAnimMontage* EnterLadderDownMontage1{ nullptr };
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	UAnimMontage* LadderMovementDownMontage;
+	UAnimMontage* LadderMovementDownMontage{ nullptr };
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	UAnimMontage* LadderMovementUpMontage;
+	UAnimMontage* LadderMovementUpMontage{ nullptr };
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	UAnimMontage* ExitLadderUpMontage;
+	UAnimMontage* ExitLadderUpMontage{ nullptr };
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	UAnimMontage* ExitLadderTransitionMontage;
+	UAnimMontage* ExitLadderTransitionMontage{ nullptr };
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	UAnimMontage* LadderShortMoveRight;
+	UAnimMontage* LadderShortMoveRight{ nullptr };
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	UAnimMontage* LadderShortMoveLeft;
+	UAnimMontage* LadderShortMoveLeft{ nullptr };
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	TArray<FAnimMontageAndConfig> BeginAnimArray;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Curve")
-	UCurveVector* MovementDownCurve;
+	UCurveVector* MovementDownCurve{ nullptr };
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Curve")
-	UCurveVector* MovementUpCurve;
+	UCurveVector* MovementUpCurve{ nullptr };
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Curve")
-	UCurveVector* LadderMovementExit;
+	UCurveVector* LadderMovementExit{ nullptr };
 };
 
 USTRUCT(BlueprintType)
@@ -113,7 +114,7 @@ public:
 	FVelocityBlend LadderHandReachOffset;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	FVector LadderLeftFootIK;
+	FVector LadderLeftFootIK{FVector::ZeroVector};
 };
 
 USTRUCT(BlueprintType)
@@ -123,13 +124,13 @@ struct REDEMPTION_API FJumpSeqAnimsValues
 
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	FName SequenceName;
+	FName SequenceName{NAME_None};
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	float XY_Distance;
+	float XY_Distance{0.f};
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	float Z_Distance;
+	float Z_Distance{ 0.f };
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float TimelinePlayRate = 1.2f;
@@ -150,10 +151,10 @@ public:
 	bool PlayLandAnimation = true;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	UCurveVector* MotionCurve;
+	UCurveVector* MotionCurve{nullptr};
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	UCurveVector* LocationInterCurve;
+	UCurveVector* LocationInterCurve{ nullptr };
 };
 
 USTRUCT(BlueprintType)
@@ -182,10 +183,10 @@ public:
 	bool IsValid = false;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	ALadderObject* LadderActor;
+	ALadderObject* LadderActor{ nullptr };
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	UPrimitiveComponent* BestLadderRung;
+	UPrimitiveComponent* BestLadderRung{ nullptr };
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FTwoVectors TraceImpactPoint;
@@ -198,13 +199,13 @@ struct REDEMPTION_API FMatchedMontageTwoPoints
 
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	ABaseCharacter* Character;
+	ABaseCharacter* Character{ nullptr };
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	UAnimInstance* AnimInstance;
+	UAnimInstance* AnimInstance{ nullptr };
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	UAnimMontage* AnimMontage;
+	UAnimMontage* AnimMontage{ nullptr };
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	bool NormalizeTimeToAnimLength = false;
@@ -234,10 +235,10 @@ public:
 	bool UseMotionCurvesFromAnimation = false;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	UCurveVector* CustomCurve;
+	UCurveVector* CustomCurve{ nullptr };
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	UCurveFloat* RotationCurve;
+	UCurveFloat* RotationCurve{ nullptr };
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	bool RemapCurves = true;
@@ -271,13 +272,13 @@ struct REDEMPTION_API FMatchedMontageThirdPoints
 
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	ABaseCharacter* Character;
+	ABaseCharacter* Character{ nullptr };
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	UAnimInstance* AnimInstance;
+	UAnimInstance* AnimInstance{ nullptr };
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	UAnimMontage* AnimMontage;
+	UAnimMontage* AnimMontage{ nullptr };
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	bool NormalizeTimeToAnimLength = false;
@@ -310,10 +311,10 @@ public:
 	bool UseMotionCurvesFromAnimation = false;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	UCurveVector* CustomCurve;
+	UCurveVector* CustomCurve{ nullptr };
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	UCurveFloat* RotationCurve;
+	UCurveFloat* RotationCurve{ nullptr };
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	bool RemapCurves = true;

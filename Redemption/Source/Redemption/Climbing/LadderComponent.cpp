@@ -20,9 +20,7 @@
 
 #define TIMELINE_EVENT_NAME TEXT("Timeline_01")
 
-#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
-static TAutoConsoleVariable<int32> CVarDebugLadderSystem(TEXT("wv.LadderSystem.Debug"), 0, TEXT("LadderSystem Debug .\n") TEXT("<=0: off\n") TEXT("  1: on\n"), ECVF_Default);
-#endif
+using namespace CharacterDebug;
 
 // convert BP to c++ 
 //#include UE_INLINE_GENERATED_CPP_BY_NAME(LadderComponent)

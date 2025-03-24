@@ -318,10 +318,10 @@ struct FVaultAnimation
 	GENERATED_BODY()
 
 	UPROPERTY(EditDefaultsOnly)
-	class UAnimMontage* LeftAnimMontage;
+	class UAnimMontage* LeftAnimMontage{nullptr};
 
 	UPROPERTY(EditDefaultsOnly)
-	class UAnimMontage* RightAnimMontage;
+	class UAnimMontage* RightAnimMontage{ nullptr };
 };
 
 USTRUCT(BlueprintType)
@@ -397,6 +397,7 @@ struct FVaultParamsBase
 
 	FVaultParamsBase()
 	{
+		MaxHeight = 200.0f;
 		MaxDepth = 250.0f;
 		MovementSpeedThreshold = 500.0f;
 		AnimPlayRateRange = FVector2D(1.0f, 1.0f);
@@ -427,7 +428,7 @@ struct FVaultParams : public FVaultParamsBase
 	float AnimPlayRate = 1.0f;
 
 	UPROPERTY()
-	class UAnimMontage* AnimMontage;
+	class UAnimMontage* AnimMontage{nullptr};
 
 	UPROPERTY()
 	TWeakObjectPtr<UPrimitiveComponent> Component;

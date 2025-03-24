@@ -14,6 +14,7 @@
 #include "BaseCharacterTypes.h"
 #include "Climbing/ClimbingComponent.h"
 #include "Mission/MissionSystemTypes.h"
+#include "Significance/SignificanceInterface.h"
 
 // builtin
 #include "BehaviorTree/BehaviorTree.h"
@@ -32,12 +33,21 @@
 #include "UObject/UObjectGlobals.h"
 #include "BaseCharacter.generated.h"
 
-namespace
+namespace CharacterDebug
 {
 #if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
-	static TAutoConsoleVariable<int32> CVarDebugCharacterStatus(TEXT("wv.CharacterStatus.Debug"), 0, TEXT("CharacterStatus Debug .\n") TEXT("<=0: off\n") TEXT("  1: on\n"), ECVF_Default);
-#endif
 
+	extern TAutoConsoleVariable<int32> CVarDebugCharacterStatus;
+
+	extern TAutoConsoleVariable<int32> CVarDebugFallEdgeSystem;
+	extern TAutoConsoleVariable<int32> CVarDebugMantlingSystem;
+	extern TAutoConsoleVariable<int32> CVarDebugWallClimbingSystem;
+
+	extern TAutoConsoleVariable<int32> CVarDebugVaultingSystem;
+	extern TAutoConsoleVariable<int32> CVarDebugCombatSystem;
+	extern TAutoConsoleVariable<int32> CVarDebugLadderSystem;
+	extern TAutoConsoleVariable<int32> CVarDebugClimbingSystem;
+#endif
 }
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FActionStateChangeDelegate, EAIActionState, NewAIActionState, EAIActionState, PrevAIActionState);
@@ -62,6 +72,7 @@ class UWvAnimInstance;
 class UWvFaceAnimInstance;
 class UStaticMeshComponent;
 class ULODSyncComponent;
+class USignificanceComponent;
 
 
 UCLASS(Abstract)
@@ -70,7 +81,8 @@ class REDEMPTION_API ABaseCharacter : public ACharacter,
 	public IAISightTargetInterface, 
 	public IWvAbilitySystemAvatarInterface, 
 	public IWvAbilityTargetInterface,
-	public IWvAIActionStateInterface
+	public IWvAIActionStateInterface,
+	public ISignificanceInterface
 {
 	GENERATED_BODY()
 
@@ -175,6 +187,15 @@ public:
 	*/
 	virtual bool CanBeSeenFrom(const FVector& ObserverLocation, FVector& OutSeenLocation, int32& NumberOfLoSChecksPerformed, float& OutSightStrength, const AActor* IgnoreActor = nullptr, const bool* bWasVisible = nullptr, int32* UserData = nullptr) const;
 #pragma endregion
+
+
+	/* SignificanceLevel 最低 5 */
+	static const int32 SIGNIFICANCE_LEVEL_LOWEST; /* = 5 */
+
+	virtual void OnSignificanceLevelChanged_Implementation(int32 SignificanceLevel) override;
+
+	virtual void GetSignificanceBounds_Implementation(FVector& Origin, FVector& BoxExtent, float& SphereRadius) override;
+
 
 public:
 	UFUNCTION(BlueprintCallable, Category = Components)
@@ -586,10 +607,16 @@ protected:
 	TObjectPtr<class UWvSkeletalMeshComponent> Top;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Component, meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<class UWvSkeletalMeshComponent> Other1;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Component, meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<class ULODSyncComponent> LODSyncComponent;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Component, meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<class UCharacterMovementHelperComponent> CharacterMovementHelperComponent;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Component, meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<class USignificanceComponent> SignificanceComponent;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "BaseCharacter|Config")
 	FCustomWvAbilitySystemAvatarData AbilitySystemData;
@@ -708,6 +735,18 @@ protected:
 
 	UPROPERTY()
 	FAccessoryData Accessory;
+
+
+#pragma region SignificanceManager
+	/** SignificanceLevel を手動で設定、-1 の場合はシステム計算値を使用 */
+	int32 ManuallySignificanceLevel = -1;
+
+	/** Max SignificanceLevel */
+	int32 MaxSignificanceLevel = SIGNIFICANCE_LEVEL_LOWEST;
+	int32 LasMaxSignificanceLevel;
+
+	void SetMeshBudgetLevel(const float NewLevel);
+#pragma endregion
 
 
 #pragma region NearlestAction

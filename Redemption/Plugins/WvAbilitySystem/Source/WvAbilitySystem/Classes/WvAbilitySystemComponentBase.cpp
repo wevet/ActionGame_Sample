@@ -171,8 +171,18 @@ int32 UWvAbilitySystemComponentBase::PressTriggerInputEvent(FGameplayTag Tag, bo
 				}
 				AbilitySpecInputPressed(Spec);
 
-				const auto InstActivationInfo = Spec.Ability->GetCurrentActivationInfo();
-				InvokeReplicatedEvent(EAbilityGenericReplicatedEvent::InputPressed, Spec.Handle, InstActivationInfo.GetActivationPredictionKey());
+
+				// **CDO ではなく、実際のインスタンスを取得**
+				UGameplayAbility* AbilityInstance = Spec.GetPrimaryInstance();
+				if (AbilityInstance && !AbilityInstance->HasAnyFlags(RF_ClassDefaultObject))
+				{
+					const auto InstActivationInfo = AbilityInstance->GetCurrentActivationInfo();
+					InvokeReplicatedEvent(EAbilityGenericReplicatedEvent::InputReleased, Spec.Handle, InstActivationInfo.GetActivationPredictionKey());
+				}
+				else
+				{
+					UE_LOG(LogWvAbility, Error, TEXT("ReleasedTriggerInputEvent: Spec does not have a valid ability instance! Ability: %s"), *Spec.Ability->GetName());
+				}
 			}
 		}
 		else
@@ -224,8 +234,17 @@ void UWvAbilitySystemComponentBase::ReleasedTriggerInputEvent(FGameplayTag Tag)
 			}
 			AbilitySpecInputReleased(Spec);
 
-			const auto InstActivationInfo = Spec.Ability->GetCurrentActivationInfo();
-			InvokeReplicatedEvent(EAbilityGenericReplicatedEvent::InputReleased, Spec.Handle, InstActivationInfo.GetActivationPredictionKey());
+			// **CDO ではなく、実際のインスタンスを取得**
+			UGameplayAbility* AbilityInstance = Spec.GetPrimaryInstance();
+			if (AbilityInstance && !AbilityInstance->HasAnyFlags(RF_ClassDefaultObject))
+			{
+				const auto InstActivationInfo = AbilityInstance->GetCurrentActivationInfo();
+				InvokeReplicatedEvent(EAbilityGenericReplicatedEvent::InputReleased, Spec.Handle, InstActivationInfo.GetActivationPredictionKey());
+			}
+			else
+			{
+				UE_LOG(LogWvAbility, Error, TEXT("ReleasedTriggerInputEvent: Spec does not have a valid ability instance! Ability: %s"), *Spec.Ability->GetName());
+			}
 
 		}
 	}
@@ -258,21 +277,28 @@ UGameplayAbility* UWvAbilitySystemComponentBase::CreateNewInstanceOfAbility(FGam
 	AActor* Owner = GetOwner();
 	check(Owner);
 
+
 	UWvAbilityBase* AbilityInstance = NewObject<UWvAbilityBase>(Owner, Ability->GetClass());
 	check(AbilityInstance);
-	
+
 	//set tag
 	UWvAbilityDataAsset* AbilityData = CastChecked<UWvAbilityDataAsset>(Spec.SourceObject);
 	if (AbilityData)
 	{
 		AbilityInstance->DamageMotion = AbilityData->DamageMotion;
+
+
+PRAGMA_DISABLE_DEPRECATION_WARNINGS
+		AbilityInstance->AbilityTags = AbilityData->AbilityTags;
+PRAGMA_ENABLE_DEPRECATION_WARNINGS
+
+
 		AbilityInstance->ActivationOwnedTags = AbilityData->ActivationOwnedTags;
 		AbilityInstance->ActivationRequiredTags = AbilityData->ActivationRequiredTags;
 		AbilityInstance->ActivationBlockedTags = AbilityData->ActivationBlockedTags;
 		AbilityInstance->CancelAbilitiesWithTag = AbilityData->CancelAbilitiesWithTag;
 		AbilityInstance->BlockAbilitiesWithTag = AbilityData->BlockAbilitiesWithTag;
 		AbilityInstance->AbilityTriggers += AbilityData->AbilityTriggers;
-		//AbilityInstance->SetAssetTags(AbilityData->AbilityTags);
 
 		const int32 LastIndex = (AbilityInstance->AbilityTriggers.Num() - 1);
 		for (int32 Index = LastIndex; Index >= 0; Index--)
@@ -283,29 +309,13 @@ UGameplayAbility* UWvAbilitySystemComponentBase::CreateNewInstanceOfAbility(FGam
 			}
 		}
 
+PRAGMA_DISABLE_DEPRECATION_WARNINGS
 		TArray<FGameplayTag> AbilityTypeTags;
 		AbilityData->AbilityTypeTag.GetGameplayTagArray(AbilityTypeTags);
-
-		auto NewTagContainer = AbilityInstance->GetAssetTags();
 		for (const FGameplayTag& OtherTag : AbilityTypeTags)
 		{
-			if (OtherTag.IsValid())
-			{
-				NewTagContainer.AddTag(OtherTag);
-			}
+			AbilityInstance->AbilityTags.AddTag(OtherTag);
 		}
-
-		for (const FGameplayTag& OtherTag : AbilityData->AbilityTags)
-		{
-			if (OtherTag.IsValid())
-			{
-				NewTagContainer.AddTag(OtherTag);
-			}
-		}
-
-		//AbilityInstance->SetAssetTags(NewTagContainer);
-PRAGMA_DISABLE_DEPRECATION_WARNINGS
-		AbilityInstance->AbilityTags = NewTagContainer;
 PRAGMA_ENABLE_DEPRECATION_WARNINGS
 
 

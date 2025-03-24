@@ -144,6 +144,11 @@ public:
 	static const ARedemptionGameMode* GetMainGameMode(const UWorld* World);
 
 	static void ControllTrailInteractionComponents(APawn* Owner, const bool bIsEnable);
+
+
+	static void SetActorAndComponentTickIntervalWithIgnore(AActor* Actor, const float TickInterval, const TArray<UActorComponent*>& IgnoreComponents);
+	static void UpdateMinLODBySignificanceLevel(AActor* Actor, const int32 MinLOD);
+	static void SetAIControllerTickInterval(APawn* Actor, const float TickInterval);
 };
 
 

@@ -190,7 +190,7 @@ void UWvGameplayCueManager::ActInitializeRuntimeObjectLibrary()
 	{
 		UE_LOG(LogWvAbility, Log, TEXT("Path => %s"), *Path);
 	}
-	UE_LOG(LogWvAbility, Error, TEXT("%s"), *FString(__FUNCTION__));
+	//UE_LOG(LogWvAbility, Error, TEXT("%s"), *FString(__FUNCTION__));
 
 }
 

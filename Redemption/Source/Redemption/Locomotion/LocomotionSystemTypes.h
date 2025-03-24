@@ -315,11 +315,9 @@ public:
 	TWeakObjectPtr<AActor> LookAtTarget;
 
 public:
-	FRequestAbilityAnimationData()
+	FRequestAbilityAnimationData() : PlayRate(1.0f), TimeToStartMontageAt(0.f),
+		AnimMontage(nullptr), LookAtTarget(nullptr)
 	{
-		PlayRate = 1.0f;
-		TimeToStartMontageAt = 0.f;
-		AnimMontage = nullptr;
 	}
 };
 
@@ -330,114 +328,114 @@ struct REDEMPTION_API FLocomotionEssencialVariables
 
 public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
-	FVector MovementInput;
+	FVector MovementInput{ FVector::ZeroVector };
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
-	FVector RagdollLocation;
+	FVector RagdollLocation{ FVector::ZeroVector };
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
-	FVector Velocity;
+	FVector Velocity{ FVector::ZeroVector };
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
-	FRotator CharacterRotation;
+	FRotator CharacterRotation{FRotator::ZeroRotator};
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
-	FRotator LookingRotation;
+	FRotator LookingRotation{ FRotator::ZeroRotator };
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
-	FRotator LastVelocityRotation;
+	FRotator LastVelocityRotation{ FRotator::ZeroRotator };
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
-	FRotator LastMovementInputRotation;
+	FRotator LastMovementInputRotation{ FRotator::ZeroRotator };
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
-	bool bWasMoving;
+	bool bWasMoving{ false };
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
-	bool bWasMovementInput;
+	bool bWasMovementInput{false};
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
-	bool bRagdollOnGround;
+	bool bRagdollOnGround{ false };
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
-	bool bAiming;
+	bool bAiming{ false };
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion|AimOffset")
-	bool bLookAtAimOffset;
+	bool bLookAtAimOffset{ false };
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion|AimOffset")
-	TWeakObjectPtr<AActor> LookAtTarget;
+	TWeakObjectPtr<AActor> LookAtTarget{ nullptr };
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion|AimOffset")
-	TWeakObjectPtr<USceneComponent> LookAtTargetComponent;
+	TWeakObjectPtr<USceneComponent> LookAtTargetComponent{ nullptr };
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion|AimOffset")
-	float AimYawDelta;
+	float AimYawDelta{0.f};
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion|AimOffset")
-	float AimYawRate;
+	float AimYawRate{ 0.f };
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
-	float RotationRateMultiplier;
+	float RotationRateMultiplier{ 0.f };
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
-	float RotationOffset;
+	float RotationOffset{ 0.f };
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
-	float VelocityDifference;
+	float VelocityDifference{ 0.f };
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
-	float RotationDifference;
+	float RotationDifference{ 0.f };
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
-	float Direction;
+	float Direction{ 0.f };
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
-	FVector RagdollVelocity;
+	FVector RagdollVelocity{ FVector::ZeroVector };
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
-	FRotator RagdollRotation;
+	FRotator RagdollRotation{ FRotator::ZeroRotator };
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
-	FRotator JumpRotation;
+	FRotator JumpRotation{ FRotator::ZeroRotator };
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
-	FRotator TargetRotation;
+	FRotator TargetRotation{ FRotator::ZeroRotator };
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion")
-	ELSMovementMode LSMovementMode;
+	ELSMovementMode LSMovementMode = ELSMovementMode::Grounded;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion")
-	ELSGait LSGait;
+	ELSGait LSGait = ELSGait::Running;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion")
-	ELSStance LSStance;
+	ELSStance LSStance = ELSStance::Standing;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion")
-	ELSRotationMode LSRotationMode;
+	ELSRotationMode LSRotationMode = ELSRotationMode::VelocityDirection;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
-	ELSCardinalDirection CardinalDirection;
+	ELSCardinalDirection CardinalDirection = ELSCardinalDirection::East;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
-	ELSOverlayState OverlayState;
+	ELSOverlayState OverlayState = ELSOverlayState::None;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
-	FVector WorldAcceleration2D;
+	FVector WorldAcceleration2D{ FVector::ZeroVector };
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
-	FVector LocalAcceleration2D;
+	FVector LocalAcceleration2D{ FVector::ZeroVector };
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
-	FVector LocalVelocity2D;
+	FVector LocalVelocity2D{ FVector::ZeroVector };
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
-	bool HasAcceleration = false;
+	bool HasAcceleration{ false };
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
-	bool bIsMassAgent = false;
+	bool bIsMassAgent{ false };
 
-	ELSMovementMode LSPrevMovementMode;
+	ELSMovementMode LSPrevMovementMode = ELSMovementMode::Grounded;
 
 public:
 	FLocomotionEssencialVariables()
@@ -453,46 +451,46 @@ struct REDEMPTION_API FPawnAttackParam
 
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	FName WeaponName;
+	FName WeaponName = NAME_None;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float BaseDamage = 10.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	EAttackWeaponState AttackWeaponState;
+	EAttackWeaponState AttackWeaponState = EAttackWeaponState::EmptyWeapon;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	bool bHasAmmo = false;
+	bool bHasAmmo{ false };
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	float Loudness = 1000.0f;
+	float Loudness{ 1000.0f };
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	float Volume = 1.0f;
+	float Volume{ 1.0f };
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (EditCondition = "bHasAmmo"))
 	FName MuzzleSocketName = FName("MuzzleFlash");
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (EditCondition = "bHasAmmo"))
-	int32 MaxAmmo;
+	int32 MaxAmmo{0};
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (EditCondition = "bHasAmmo"))
-	int32 ClipType;
+	int32 ClipType{ 0 };
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (EditCondition = "bHasAmmo"))
 	float TraceRange = 2000.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	class UTexture2D* Texture;
+	class UTexture2D* Texture{nullptr};
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FVector2D AttackRange{0.f, 300.0f};
 
 	UPROPERTY()
-	int32 NeededAmmo;
+	int32 NeededAmmo{0};
 
 	UPROPERTY()
-	int32 CurrentAmmo;
+	int32 CurrentAmmo{ 0 };
 
 	FPawnAttackParam();
 
@@ -571,7 +569,8 @@ public:
 public:
 	FSwimmingTraceSettings()
 	{
-		AddedOffset, Torso = FVector::ZeroVector;
+		AddedOffset = FVector::ZeroVector;
+		Torso = FVector::ZeroVector;
 		Bobber = FVector(0.0f, 0.0f, 180.0f);
 		HeadBone = FName(TEXT("head"));
 		ChestBone = FName(TEXT("spine_03"));
@@ -624,10 +623,10 @@ public:
 	bool FeetInWater;
 
 public:
-	FSwimmingTraceInfo()
+	FSwimmingTraceInfo() : IsSwimming(false), WaterNegation(false), IgnoreWater(false), InWaterVolume(false), V_BobberUnderwater(false), 
+		Submerged(false), V_TorsoInWater(false), ChestInWater(false), PelvisInWater(false), LegsInWater(false), FeetInWater(false)
 	{
-		IsSwimming, WaterNegation, IgnoreWater, InWaterVolume, V_BobberUnderwater, Submerged = false;
-		V_TorsoInWater, ChestInWater, PelvisInWater, LegsInWater, FeetInWater = false;
+
 	}
 };
 
@@ -653,9 +652,8 @@ public:
 	float UpOrDown;
 
 public:
-	FSwimmingControlInfo()
+	FSwimmingControlInfo() : bManualSwimLockActivated(false), bDownHeld(false), bSwimSpringing(false), bUpHeld(false)
 	{
-		bManualSwimLockActivated, bDownHeld, bSwimSpringing, bUpHeld = false;
 		UpOrDown = 0.0f;
 	}
 };
@@ -667,34 +665,34 @@ struct REDEMPTION_API FSwimSettings
 
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	bool bSurfaceSwimOnly;
+	bool bSurfaceSwimOnly{false};
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	bool bUseComponentsPostProcess;
+	bool bUseComponentsPostProcess{ false };
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	bool bSinkWhenStopMovement;
+	bool bSinkWhenStopMovement{ false };
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	int32 TimeBeforeDrowning;
+	int32 TimeBeforeDrowning{ 0 };
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	float SwimSpeed;
+	float SwimSpeed{0.f};
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	float SwimSprintSpeed;
+	float SwimSprintSpeed{ 0.f };
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	float SwimDeceleration;
+	float SwimDeceleration{ 0.f };
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	float FallInDeceleration;
+	float FallInDeceleration{ 0.f };
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	float MinWaterDepthToJumpIn;
+	float MinWaterDepthToJumpIn{ 0.f };
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	float MinHeightAboveWaterToJumpIn;
+	float MinHeightAboveWaterToJumpIn{ 0.f };
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	TArray<TEnumAsByte<EObjectTypeQuery>> SwimmableCollision;
@@ -703,10 +701,10 @@ public:
 	TArray<TEnumAsByte<EObjectTypeQuery>> NegationCollision;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	FName SwimmableCollisionProfile;
+	FName SwimmableCollisionProfile{NAME_None};
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	float CameraOffset;
+	float CameraOffset{ 0.f };
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FSwimmingTraceSettings SwimmingTraceSettings;
@@ -714,8 +712,6 @@ public:
 public:
 	FSwimSettings()
 	{
-		SwimSpeed = 300.0f;
-		bSurfaceSwimOnly, bUseComponentsPostProcess, bSinkWhenStopMovement = false;
 	}
 };
 #pragma endregion
@@ -729,10 +725,10 @@ struct REDEMPTION_API FQTEData
 
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	float Timer;
+	float Timer{0.f};
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	float RequirePressCount;
+	float RequirePressCount{0.f};
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	bool bIsGameControlTimer = false;
@@ -776,12 +772,14 @@ public:
 	FTransform Origin;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	UPrimitiveComponent* Component;
+	UPrimitiveComponent* Component{nullptr};
 
 public:
-	FClimbingLedge()
+	FClimbingLedge() : LeftPoint(FTransform::Identity),
+		RightPoint(FTransform::Identity),
+		Origin(FTransform::Identity)
 	{
-		LeftPoint, RightPoint, Origin = FTransform::Identity;
+		//
 	}
 };
 
@@ -792,21 +790,20 @@ struct REDEMPTION_API FVelocityBlend
 
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	float F;
+	float F{0.f};
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	float B;
+	float B{ 0.f };
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	float L;
+	float L{ 0.f };
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	float R;
+	float R{ 0.f };
 
 public:
 	FVelocityBlend()
 	{
-		F, B, L, R = 0.0f;
 	}
 };
 
@@ -817,29 +814,26 @@ struct REDEMPTION_API FInteractionIKEffector
 
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	FTransform LeftHand_Effector;
+	FTransform LeftHand_Effector{ FTransform::Identity };
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	FVector LeftHandJointTarget;
+	FVector LeftHandJointTarget{ FVector::ZeroVector };
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	FTransform RightHand_Effector;
+	FTransform RightHand_Effector{ FTransform::Identity };
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	FVector RightHandJointTarget;
+	FVector RightHandJointTarget{ FVector::ZeroVector };
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	float LeftHandIKAlpha;
+	float LeftHandIKAlpha{1.0f};
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	float RightHandIKAlpha;
+	float RightHandIKAlpha{ 1.0f };
 
 public:
 	FInteractionIKEffector()
 	{
-		LeftHandIKAlpha, RightHandIKAlpha = 1.0f;
-		LeftHand_Effector, RightHand_Effector = FTransform::Identity;
-		LeftHandJointTarget, RightHandJointTarget = FVector::ZeroVector;
 	}
 };
 
@@ -850,10 +844,10 @@ struct REDEMPTION_API FClimbingIKData
 
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	float Alpha_L;
+	float Alpha_L{0.f};
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	float Alpha_R;
+	float Alpha_R{ 0.f };
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FTransform EffectorTransform;
@@ -864,7 +858,6 @@ public:
 public:
 	FClimbingIKData()
 	{
-		Alpha_L, Alpha_R = 0.0f;
 		EffectorTransform = FTransform::Identity;
 		JointLocation = FVector::ZeroVector;
 	}
@@ -877,13 +870,13 @@ struct REDEMPTION_API FClimbingJumpInfo
 
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	EClimbMovementDirectionType ClimbMovementDirection;
+	EClimbMovementDirectionType ClimbMovementDirection{EClimbMovementDirectionType::Forward};
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	FVector2D JumpDirection;
+	FVector2D JumpDirection{FVector2D::ZeroVector};
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	float JumpLength;
+	float JumpLength{0.f};
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FLSComponentAndTransform CapsulePosition;
@@ -905,19 +898,19 @@ struct REDEMPTION_API FDynamicMontageParams
 
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	UAnimSequenceBase* Animation;
+	UAnimSequenceBase* Animation{nullptr};
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	float BlendInTime;
+	float BlendInTime{0.f};
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	float BlendOutTime;
+	float BlendOutTime{ 0.f };
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	float PlayRate = 1.0f;
+	float PlayRate{ 1.0f };
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	float StartTime;
+	float StartTime{ 0.f };
 };
 
 USTRUCT(BlueprintType)
@@ -936,7 +929,7 @@ public:
 	FLSComponentAndTransform LandPostionLS;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	class UPrimitiveComponent* Component;
+	class UPrimitiveComponent* Component{nullptr};
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FLSComponentAndTransform StartPositionWS;
@@ -983,7 +976,7 @@ public:
 	float DownTimer = 30.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	FName HitBoneName;
+	FName HitBoneName{NAME_None};
 };
 
 USTRUCT(BlueprintType)
@@ -1000,7 +993,8 @@ public:
 	TArray<FCharacterWeaknessData> WeaknessArray;
 
 public:
-	FCharacterWeaknessContainer()
+	FCharacterWeaknessContainer() : 
+		WeaponState(EAttackWeaponState::EmptyWeapon)
 	{
 
 	}
@@ -1016,13 +1010,13 @@ struct REDEMPTION_API FWeaponCharacterAnimation
 
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	EAttackWeaponState WeaponState;
+	EAttackWeaponState WeaponState{EAttackWeaponState::EmptyWeapon};
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	UAnimMontage* ShotAnimation;
+	UAnimMontage* ShotAnimation{nullptr};
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	UAnimMontage* ReloadAnimation;
+	UAnimMontage* ReloadAnimation{ nullptr };
 
 	FWeaponCharacterAnimation() 
 	{
@@ -1068,13 +1062,13 @@ struct REDEMPTION_API FAccessoryData
 
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	EAccessoryType AccessoryType;
+	EAccessoryType AccessoryType{ EAccessoryType::None};
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	FName SocketName;
+	FName SocketName{NAME_None};
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	EWvDirectionType DirectionType;
+	EWvDirectionType DirectionType{EWvDirectionType::Center};
 };
 
 

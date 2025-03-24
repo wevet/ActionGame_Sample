@@ -544,3 +544,71 @@ void UWvCommonUtils::ControllTrailInteractionComponents(APawn* Owner, const bool
 		}
 	}
 }
+
+void UWvCommonUtils::SetActorAndComponentTickIntervalWithIgnore(AActor* Actor, const float TickInterval, const TArray<UActorComponent*>& IgnoreComponents)
+{
+	if (Actor == nullptr)
+	{
+		return;
+	}
+
+	Actor->SetActorTickInterval(TickInterval);
+	TInlineComponentArray<UActorComponent*> ActorComponentArray(Actor);
+	Actor->GetComponents<UActorComponent>(ActorComponentArray);
+	for (UActorComponent* ActorComponent : ActorComponentArray)
+	{
+		for (UActorComponent* IgnoreComp : IgnoreComponents)
+		{
+			if (ActorComponent != IgnoreComp)
+			{
+				ActorComponent->SetComponentTickInterval(TickInterval);
+			}
+		}
+	}
+}
+
+void UWvCommonUtils::UpdateMinLODBySignificanceLevel(AActor* Actor, const int32 MinLOD)
+{
+	if (Actor == nullptr)
+	{
+		return;
+	}
+
+	TInlineComponentArray<USkinnedMeshComponent*> SkinnedMeshComponentArray(Actor);
+	Actor->GetComponents<USkinnedMeshComponent>(SkinnedMeshComponentArray);
+	for (USkinnedMeshComponent* SkinnedMeshComponent : SkinnedMeshComponentArray)
+	{
+		SkinnedMeshComponent->bOverrideMinLod = MinLOD > 0;
+		SkinnedMeshComponent->SetMinLOD(MinLOD);
+	}
+
+	TInlineComponentArray<UStaticMeshComponent*> StaticMeshComponentArray(Actor);
+	Actor->GetComponents<UStaticMeshComponent>(StaticMeshComponentArray);
+	for (UStaticMeshComponent* StaticMeshComponent : StaticMeshComponentArray)
+	{
+		StaticMeshComponent->bOverrideMinLOD = MinLOD > 0;
+		StaticMeshComponent->MinLOD = MinLOD;
+	}
+}
+
+void UWvCommonUtils::SetAIControllerTickInterval(APawn* Actor, const float TickInterval)
+{
+	if (Actor == nullptr)
+	{
+		return;
+	}
+
+	AAIController* AIController = Cast<AAIController>(Actor->GetController());
+	if (AIController == nullptr)
+	{
+		return;
+	}
+
+	AIController->SetActorTickInterval(TickInterval);
+	TInlineComponentArray<UActorComponent*> ActorComponentArray(AIController);
+	AIController->GetComponents<UActorComponent>(ActorComponentArray);
+	for (UActorComponent* ActorComponent : ActorComponentArray)
+	{
+		ActorComponent->SetComponentTickInterval(TickInterval);
+	}
+}

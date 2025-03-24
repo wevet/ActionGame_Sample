@@ -43,13 +43,8 @@ DECLARE_CYCLE_STAT(TEXT("Char Update Acceleration"), STAT_CharUpdateAcceleration
 DECLARE_CYCLE_STAT(TEXT("Char StepUp"), STAT_CharStepUp, STATGROUP_Character);
 DECLARE_CYCLE_STAT(TEXT("Char PhysWalking"), STAT_CharPhysWalking, STATGROUP_Character);
 
-#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
 
-static TAutoConsoleVariable<int32> CVarDebugCharacterMovementFallEdge(TEXT("wv.DebugCharacterMovementFallEdge"), 0, TEXT("Charactermovement ledge end\n") TEXT("<=0: Debug off\n") TEXT(">=1: Debug on\n"), ECVF_Default);
-static TAutoConsoleVariable<int32> CVarDebugMantlingSystem(TEXT("wv.MantlingSystem.Debug"), 0, TEXT("MantlingSystem Debug .\n") TEXT("<=0: off\n") TEXT("  1: on\n"), ECVF_Default);
-static TAutoConsoleVariable<int32> CVarDebugWallClimbingSystem(TEXT("wv.WallClimbingSystem.Debug"), 0, TEXT("WallClimbingSystem Debug .\n") TEXT("<=0: off\n") TEXT("  1: on\n"), ECVF_Default);
-static TAutoConsoleVariable<int32> CVarDebugVaultingSystem(TEXT("wv.VaultingSystem.Debug"), 0, TEXT("VaultingSystem Debug .\n") TEXT("<=0: off\n") TEXT("  1: on\n"), ECVF_Default);
-#endif
+using namespace CharacterDebug;
 
 // Defines for build configs
 #if DO_CHECK && !UE_BUILD_SHIPPING // Disable even if checks in shipping are enabled.
@@ -1047,7 +1042,7 @@ void UWvCharacterMovementComponent::PhysWalking(float deltaTime, int32 Iteration
 			if (!CurrentFloor.IsWalkableFloor() && !CurrentFloor.HitResult.bStartPenetrating)
 			{
 #if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
-				if (CVarDebugCharacterMovementFallEdge.GetValueOnAnyThread() > 0)
+				if (CVarDebugFallEdgeSystem.GetValueOnAnyThread() > 0)
 				{
 					UE_LOG(LogTemp, Log, TEXT("not IsWalkableFloor"));
 				}
@@ -1368,7 +1363,7 @@ void UWvCharacterMovementComponent::DetectLedgeEnd()
 		&TraceFootDelegate);
 
 #if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
-	if (CVarDebugCharacterMovementFallEdge.GetValueOnAnyThread() > 0)
+	if (CVarDebugFallEdgeSystem.GetValueOnAnyThread() > 0)
 	{
 		DrawDebugLine(GetWorld(), TraceStartLocation, TraceEndLocation, FColor::Blue, false, 1.0f);
 		DrawDebugCapsule(GetWorld(), TraceStartLocation, BaseHeight, Radius, FQuat::Identity, FColor::Blue, false, 1.0f);
@@ -1402,7 +1397,7 @@ void UWvCharacterMovementComponent::HandleEdgeDetectionCompleted(const FTraceHan
 			bHasFallEdge = true;
 
 #if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
-			if (CVarDebugCharacterMovementFallEdge.GetValueOnAnyThread() > 0)
+			if (CVarDebugFallEdgeSystem.GetValueOnAnyThread() > 0)
 			{
 				DrawDebugSphere(GetWorld(), Hit.ImpactPoint, 10.0f, 12, FColor::Red, false, 1.0f);
 			}

@@ -40,10 +40,10 @@ public:
 	FGameplayAbilityTargetDataHandle GetTargetDataHandle();
 
 	UPROPERTY()
-	UWvAbilityEffectDataAsset* EffectDataAsset;
+	UWvAbilityEffectDataAsset* EffectDataAsset{nullptr};
 
 	UPROPERTY()
-	int32 EffectGroupIdx;
+	int32 EffectGroupIdx{0};
 
 	FGameplayAbilityTargetDataHandle TargetDataHandle;
 };

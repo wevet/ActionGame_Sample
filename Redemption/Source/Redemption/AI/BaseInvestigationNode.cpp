@@ -7,6 +7,8 @@
 #include "WvAbilitySystemTypes.h"
 #include "Character/BaseCharacter.h"
 
+//using namespace CharacterDebug;
+
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(BaseInvestigationNode)
 
@@ -25,7 +27,7 @@ void ABaseInvestigationNode::BeginPlay()
 
 #if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
 
-	const int32 ConsoleValue = CVarDebugCharacterStatus.GetValueOnGameThread();
+	const int32 ConsoleValue = CharacterDebug::CVarDebugCharacterStatus.GetValueOnGameThread();
 	TArray<UPrimitiveComponent*> Components;
 	GetComponents(UPrimitiveComponent::StaticClass(), Components);
 

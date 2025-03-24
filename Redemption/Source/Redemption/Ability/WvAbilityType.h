@@ -82,15 +82,13 @@ public:
 	class UNiagaraSystem* NiagaraSystem{ nullptr };
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
-	FVector PositionOffset;
+	FVector PositionOffset{ FVector::OneVector };
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
-	FRotator RotationOffset;
+	FRotator RotationOffset{FRotator::ZeroRotator};
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
-	FVector ParticleScale {
-		FVector::OneVector
-	};
+	FVector ParticleScale {FVector::OneVector};
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
 	bool IsAttachInBone{ false };
@@ -125,7 +123,9 @@ struct FWvDamageCueConfig
 	FParticleCueConfig Particle;
 
 	UPROPERTY(EditDefaultsOnly)
-	EParticleRotationMode RotationMode;
+	EParticleRotationMode RotationMode{
+		EParticleRotationMode::AttackerForward 
+	};
 
 	UPROPERTY(EditDefaultsOnly)
 	bool OnlyYaw{ true };

@@ -166,121 +166,6 @@ class UPrimitiveComponent;
 	GAMEPLAYATTRIBUTE_VALUE_INITTER(PropertyName)
 
 
-USTRUCT(BlueprintType)
-struct FWvOverlapResult
-{
-	GENERATED_BODY()
-
-	bool IsValid() const;
-
-	UPROPERTY()
-	TWeakObjectPtr<class AActor> Actor;
-
-	UPROPERTY()
-	TWeakObjectPtr<class UPrimitiveComponent> Component;
-
-	UPROPERTY()
-	int32 ItemIndex = -1;
-
-	FORCEINLINE AActor* GetActor() const
-	{
-		return Actor.Get();
-	}
-
-	FORCEINLINE UPrimitiveComponent* GetComponent() const
-	{
-		return Component.Get();
-	}
-
-	bool NetSerialize(FArchive& Ar, class UPackageMap* Map, bool& bOutSuccess);
-};
-
-// All members of FHitResult are PODs.
-template<> struct TIsPODType<FWvOverlapResult> { enum { Value = true }; };
-
-template<>
-struct TStructOpsTypeTraits<FWvOverlapResult> : public TStructOpsTypeTraitsBase2<FWvOverlapResult>
-{
-	enum
-	{
-		WithNetSerializer = true,
-	};
-};
-
-USTRUCT(BlueprintType)
-struct FWvApplyEffect
-{
-	GENERATED_BODY()
-
-	UPROPERTY(EditDefaultsOnly)
-	TSubclassOf<UGameplayEffect> EffectClass;
-
-	UPROPERTY(EditDefaultsOnly)
-	TMap<FGameplayTag, float> MagnitudeSet;
-};
-
-USTRUCT(BlueprintType)
-struct FWvAbilityTagConfig
-{
-	GENERATED_BODY()
-
-	UPROPERTY(EditDefaultsOnly)
-	FGameplayTagContainer AbilityTags;
-
-	UPROPERTY(EditDefaultsOnly)
-	FGameplayTagContainer ActivationOwnedTags;
-
-	UPROPERTY(EditDefaultsOnly)
-	FGameplayTagContainer ActivationRequiredTags;
-
-	UPROPERTY(EditDefaultsOnly)
-	FGameplayTagContainer ActivationBlockedTags;
-
-	UPROPERTY(EditDefaultsOnly)
-	FGameplayTagContainer CancelAbilitiesWithTag;
-};
-
-USTRUCT(BlueprintType)
-struct FWvAbilityConfig
-{
-	GENERATED_BODY()
-
-	UPROPERTY(EditDefaultsOnly)
-	FWvAbilityTagConfig TagConfig;
-
-	UPROPERTY(EditDefaultsOnly)
-	class UWvAbilityEffectDataAsset* EffectDataAsset;
-
-	UPROPERTY(EditDefaultsOnly)
-	FGameplayAttribute CostAttribute;
-
-	UPROPERTY(EditDefaultsOnly)
-	int32 CostAttributeMagnitude;
-
-	UPROPERTY(EditDefaultsOnly)
-	TSubclassOf<UGameplayEffect> CustomCooldownGE;
-
-	UPROPERTY(EditDefaultsOnly)
-	float InitialCD;
-
-	UPROPERTY(EditDefaultsOnly)
-	float CD;
-};
-
-// character common skill list
-USTRUCT(BlueprintType)
-struct FWvAbilityRow : public FTableRowBase
-{
-	GENERATED_BODY()
-
-	UPROPERTY(BlueprintReadWrite, EditAnywhere)
-	float DamageMotion = 1.0f;
-
-	UPROPERTY(BlueprintReadWrite, EditAnywhere)
-	class UWvAbilityDataAsset* AbilityData;
-};
-
-
 UENUM(BlueprintType)
 enum class EGenderType : uint8
 {
@@ -296,7 +181,6 @@ enum class EBodyShapeType : uint8
 	Under  UMETA(DisplayName = "Under"),
 };
 
-
 UENUM(BlueprintType)
 enum class EMagicAttackType : uint8
 {
@@ -307,7 +191,8 @@ enum class EMagicAttackType : uint8
 UENUM(BlueprintType)
 enum class EMagicType : uint8
 {
-	Buff = 0,
+	None = 0,
+	Buff,
 	DeBuff,
 	//Assist
 	Auxiliary,
@@ -335,7 +220,7 @@ enum class EMagicSubType : uint8
 UENUM(BlueprintType)
 enum class EMagicElementType : uint8
 {
-	Nothing = 0,
+	None = 0,
 	Drak,
 	Wind,
 	Bright,
@@ -391,6 +276,127 @@ enum class EAIActionState : uint8
 	Friendly UMETA(DisplayName = "Friendly"),
 };
 
+
+USTRUCT(BlueprintType)
+struct FWvOverlapResult
+{
+	GENERATED_BODY()
+
+	bool IsValid() const;
+
+	UPROPERTY()
+	TWeakObjectPtr<class AActor> Actor;
+
+	UPROPERTY()
+	TWeakObjectPtr<class UPrimitiveComponent> Component;
+
+	UPROPERTY()
+	int32 ItemIndex = -1;
+
+	FORCEINLINE AActor* GetActor() const
+	{
+		return Actor.Get();
+	}
+
+	FORCEINLINE UPrimitiveComponent* GetComponent() const
+	{
+		return Component.Get();
+	}
+
+	bool NetSerialize(FArchive& Ar, class UPackageMap* Map, bool& bOutSuccess);
+};
+
+// All members of FHitResult are PODs.
+template<> struct TIsPODType<FWvOverlapResult> { enum { Value = true }; };
+
+template<>
+struct TStructOpsTypeTraits<FWvOverlapResult> : public TStructOpsTypeTraitsBase2<FWvOverlapResult>
+{
+	enum
+	{
+		WithNetSerializer = true,
+	};
+};
+
+USTRUCT(BlueprintType)
+struct FWvApplyEffect
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditDefaultsOnly)
+	TSubclassOf<UGameplayEffect> EffectClass;
+
+	UPROPERTY(EditDefaultsOnly)
+	TMap<FGameplayTag, float> MagnitudeSet;
+
+	FWvApplyEffect() : EffectClass(nullptr)
+	{
+	}
+};
+
+USTRUCT(BlueprintType)
+struct FWvAbilityTagConfig
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditDefaultsOnly)
+	FGameplayTagContainer AbilityTags { FGameplayTagContainer::EmptyContainer };
+
+	UPROPERTY(EditDefaultsOnly)
+	FGameplayTagContainer ActivationOwnedTags{ FGameplayTagContainer::EmptyContainer };
+
+	UPROPERTY(EditDefaultsOnly)
+	FGameplayTagContainer ActivationRequiredTags{ FGameplayTagContainer::EmptyContainer };
+
+	UPROPERTY(EditDefaultsOnly)
+	FGameplayTagContainer ActivationBlockedTags{ FGameplayTagContainer::EmptyContainer };
+
+	UPROPERTY(EditDefaultsOnly)
+	FGameplayTagContainer CancelAbilitiesWithTag{ FGameplayTagContainer::EmptyContainer };
+};
+
+USTRUCT(BlueprintType)
+struct FWvAbilityConfig
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditDefaultsOnly)
+	FWvAbilityTagConfig TagConfig;
+
+	UPROPERTY(EditDefaultsOnly)
+	class UWvAbilityEffectDataAsset* EffectDataAsset{nullptr};
+
+	UPROPERTY(EditDefaultsOnly)
+	FGameplayAttribute CostAttribute;
+
+	UPROPERTY(EditDefaultsOnly)
+	int32 CostAttributeMagnitude{0};
+
+	UPROPERTY(EditDefaultsOnly)
+	TSubclassOf<UGameplayEffect> CustomCooldownGE{nullptr};
+
+	UPROPERTY(EditDefaultsOnly)
+	float InitialCD{0.f};
+
+	UPROPERTY(EditDefaultsOnly)
+	float CD{ 0.f };
+};
+
+// character common skill list
+USTRUCT(BlueprintType)
+struct FWvAbilityRow : public FTableRowBase
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+	float DamageMotion = 1.0f;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+	class UWvAbilityDataAsset* AbilityData{ nullptr };
+};
+
+
+
 USTRUCT(BlueprintType)
 struct FMagicAbilityRow : public FTableRowBase
 {
@@ -400,34 +406,34 @@ struct FMagicAbilityRow : public FTableRowBase
 	float DamageMotion = 1.0f;
 
 	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly)
-	EMagicAttackType AttackType;
+	EMagicAttackType AttackType{ EMagicAttackType::Magic};
 
 	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly)
-	EMagicType MagicType;
+	EMagicType MagicType{ EMagicType::None};
 
 	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly)
-	EMagicSubType MagicSubType;
+	EMagicSubType MagicSubType{ EMagicSubType::None};
 
 	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly)
-	EMagicElementType Type;
+	EMagicElementType Type{ EMagicElementType::None};
 
 	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly)
-	EMagicUseTargetPloy TargetPloy;
+	EMagicUseTargetPloy TargetPloy{EMagicUseTargetPloy::HostileCamp };
 
 	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly)
-	EMagicUseRangeType RangeType;
+	EMagicUseRangeType RangeType{EMagicUseRangeType::RangeOne };
 
 	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly)
-	EMagicUseRangeSize RangeSize;
+	EMagicUseRangeSize RangeSize{ EMagicUseRangeSize::SmallRange};
 
 	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly)
-	EMagicUseCondition UseCondition;
+	EMagicUseCondition UseCondition{ EMagicUseCondition::Any};
 
 	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly)
-	bool UseWhenDangling;
+	bool UseWhenDangling{false};
 
 	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly)
-	float SingDuration;
+	float SingDuration{0.f};
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere)
 	TArray<FName> EffectIdx;
@@ -436,13 +442,13 @@ struct FMagicAbilityRow : public FTableRowBase
 	FString MagicCostAttribute = TEXT("MP");
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere)
-	float MagicCostValue = 0.f;
+	float MagicCostValue{ 0.f };
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere)
-	bool bCanSwitchTarget = false;
+	bool bCanSwitchTarget{ false };
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere)
-	class UMagicAbilityDataAsset* AbilityData;
+	class UMagicAbilityDataAsset* AbilityData{nullptr};
 };
 
 USTRUCT(BlueprintType)
@@ -454,28 +460,28 @@ struct FWvAbilitySystemAvatarData
 	TSet<TSubclassOf<UAttributeSet>> AttributeSetClassList;
 
 	UPROPERTY(EditAnywhere, Category = "AbilitySystem")
-	TSubclassOf<UAttributeSet> StatusAttributeSetClass;
+	TSubclassOf<UAttributeSet> StatusAttributeSetClass{nullptr};
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "AbilitySystem")
-	UDataTable* GenericAbilityTable;
+	UDataTable* GenericAbilityTable{ nullptr };
 
 	UPROPERTY(EditAnywhere, Category = "AbilitySystem")
-	FGameplayTagContainer ExcludeGenericAbilityTags;
+	FGameplayTagContainer ExcludeGenericAbilityTags{FGameplayTagContainer::EmptyContainer};
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "AbilitySystem")
-	UDataTable* CustomAbilityTable;
+	UDataTable* CustomAbilityTable{ nullptr };
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "AbilitySystem")
-	UDataTable* AiStrategyTable;
+	UDataTable* AiStrategyTable{ nullptr };
 
 	UPROPERTY(EditAnywhere, Category = "AbilitySystem")
 	TArray<TSubclassOf<class UGameplayEffect>> StartupEffects;
 
 	UPROPERTY(EditAnywhere, Category = "AbilitySystem")
-	UDataTable* DebugAbilityTable;
+	UDataTable* DebugAbilityTable{ nullptr };
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "AbilitySystem")
-	UWvHitReactDataAsset* HitReactData;
+	UWvHitReactDataAsset* HitReactData{ nullptr };
 };
 
 USTRUCT(BlueprintType)
@@ -484,7 +490,7 @@ struct FHitOscillatorData
 	GENERATED_BODY()
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = VOscillator)
-	float OscillatorDuration;
+	float OscillatorDuration{0.f};
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = VOscillator)
 	bool bShakeBody = false;
@@ -523,7 +529,7 @@ struct FOnceApplyEffect
 	TArray<UWvHitFeedback*> SelfFeedback;
 
 	UPROPERTY(EditDefaultsOnly, Instanced, BlueprintReadWrite)
-	UApplyEffectExData* ExData;
+	UApplyEffectExData* ExData{nullptr};
 
 #if WITH_EDITORONLY_DATA
 	UPROPERTY(EditDefaultsOnly)
@@ -540,10 +546,10 @@ struct FWvGameplayEffectParamSet
 
 public:
 	UPROPERTY(EditDefaultsOnly)
-	FGameplayTag ParamTag;
+	FGameplayTag ParamTag{FGameplayTag::EmptyTag};
 
 	UPROPERTY(EditDefaultsOnly)
-	float ParamDefaultMagnitude;
+	float ParamDefaultMagnitude{0.f};
 };
 
 USTRUCT(BlueprintType)
@@ -553,7 +559,7 @@ struct FWvGameplayEffectParam : public FTableRowBase
 
 public:
 	UPROPERTY(EditDefaultsOnly)
-	TSubclassOf<UGameplayEffect> EffectClass;
+	TSubclassOf<UGameplayEffect> EffectClass{nullptr};
 
 	UPROPERTY(EditDefaultsOnly)
 	TArray<FWvGameplayEffectParamSet> ParamSet;
@@ -642,6 +648,7 @@ public:
 	{
 		BodyShapeType = EBodyShapeType::Normal;
 		GenderType = EGenderType::Male;
+		Name = NAME_None;
 	}
 
 };
@@ -652,16 +659,16 @@ struct FWvAbilityLocation
 	GENERATED_USTRUCT_BODY()
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
-	bool IsBaseAvatar;
+	bool IsBaseAvatar{false};
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta = (EditCondition = "IsBaseAvatar"))
 	TArray<FName> SocketNames;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
-	FVector Offset;
+	FVector Offset{FVector::ZeroVector};
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
-	FRotator Rotator;
+	FRotator Rotator{FRotator::ZeroRotator};
 
 	FTransform GetTransform(FName SocketName, AActor* Avatar = nullptr) const;
 };
@@ -704,10 +711,10 @@ struct FWvAbilityData
 	GENERATED_BODY()
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	FVector SourceCollisionCenter;
+	FVector SourceCollisionCenter{FVector::ZeroVector};
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	FRotator CollisionVelocity;
+	FRotator CollisionVelocity{FRotator::ZeroRotator};
 };
 
 
@@ -851,13 +858,13 @@ struct FWvBattleDamageAttackSourceInfo
 
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	EWvBattleDamageAttackSourceType SourceType;
+	EWvBattleDamageAttackSourceType SourceType{ EWvBattleDamageAttackSourceType::None};
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	class UWvAbilityBase* SourceAbility;
+	class UWvAbilityBase* SourceAbility{nullptr};
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	int32 WeaponID;
+	int32 WeaponID{0};
 
 };
 
@@ -868,7 +875,7 @@ struct FWvBattleDamageAttackTargetInfo
 
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	class AActor* Target;
+	class AActor* Target{nullptr};
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FHitResult HitResult;
@@ -927,7 +934,7 @@ struct FHitReactConditionInfo
 
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	EHitReactDirection HitDirection;
+	EHitReactDirection HitDirection{ EHitReactDirection::Forward};
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	class UAnimMontage* Montage = nullptr;
@@ -940,7 +947,7 @@ struct FHitReactVerticalConditionInfo
 
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	EHitVerticalDirection VerticalDirection;
+	EHitVerticalDirection VerticalDirection{ EHitVerticalDirection::Middle};
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	TArray<FHitReactConditionInfo> Montages;
@@ -980,16 +987,16 @@ class WVABILITYSYSTEM_API UWvHitReactDataAsset : public UDataAsset
 
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	class UDataTable* NormalHitReactTable;
+	class UDataTable* NormalHitReactTable{nullptr};
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	class UDataTable* SpecialHitReactTable;
+	class UDataTable* SpecialHitReactTable{ nullptr };
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	TMap<FName, class UDataTable*> WeaponHitReactTables;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	FGameplayTag BoneShakeTriggerTag;
+	FGameplayTag BoneShakeTriggerTag{ FGameplayTag::EmptyTag };
 
 public:
 	const FHitReactInfoRow* GetHitReactInfoRow_Normal(const UAbilitySystemComponent* ASC, const FGameplayTag& Tag);
@@ -1008,10 +1015,10 @@ struct FNearestShakableBone
 
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	FName Bone;
+	FName Bone{NAME_None};
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	float Weight;
+	float Weight{0.f};
 };
 
 USTRUCT(BlueprintType)
@@ -1034,10 +1041,10 @@ public:
 	float ShakeStrength = 5.f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	float ShakeDuration;
+	float ShakeDuration{1.0f};
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	UCurveFloat* DampingCurve;
+	UCurveFloat* DampingCurve{nullptr};
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FTransmitShakableBoneInfo Transmits;
@@ -1091,12 +1098,12 @@ class UBoneShakeExecuteData : public UObject
 
 public:
 	UPROPERTY(BlueprintReadOnly)
-	FName BoneName;
+	FName BoneName{NAME_None};
 
 	UPROPERTY(BlueprintReadOnly)
 	FVector ShakeOffsetLocation { FVector::ZeroVector };
 
-	FVector SourceLocation;
+	FVector SourceLocation{ FVector::ZeroVector };
 	float Strength = 0.f;
 	float TotalTime = 0.f;
 	float CurTime = 0.f;
@@ -1114,7 +1121,7 @@ class USkeletalMeshBoneShakeExecuteData : public UObject
 public:
 	UPROPERTY()
 	TArray<UBoneShakeExecuteData*> BoneShakeDatas;
-	FVector HitDirection;
+	FVector HitDirection{FVector::ZeroVector};
 };
 
 UCLASS(Blueprintable)
@@ -1161,7 +1168,7 @@ struct FAIActionStateData
 
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	EAIActionState AIActionState;
+	EAIActionState AIActionState{EAIActionState::None};
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FGameplayTag StateTag;
@@ -1213,7 +1220,7 @@ public:
 	bool IsTurnAround = true;
 
 	UPROPERTY(EditDefaultsOnly)
-	class UAnimMontage* Montage;
+	class UAnimMontage* Montage{nullptr};
 };
 
 USTRUCT(BlueprintType)
@@ -1379,10 +1386,10 @@ class WVABILITYSYSTEM_API UCharacterVFXDataAsset : public UDataAsset
 
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	UMaterialInterface* OverlayMaterial;
+	UMaterialInterface* OverlayMaterial{nullptr};
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	UMaterialInterface* FaceOverlayMaterial;
+	UMaterialInterface* FaceOverlayMaterial{ nullptr };
 };
 #pragma endregion
 
@@ -1394,7 +1401,7 @@ struct FWvWeaknessDataTableRow : public FTableRowBase
 
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	FName AttachBoneName;
+	FName AttachBoneName{NAME_None};
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	bool IsAutoActive = true;
@@ -1418,10 +1425,10 @@ public:
 	bool IsShowHitNiagara{ true };
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	FGameplayTag TriggerHitReactFeature;
+	FGameplayTag TriggerHitReactFeature{ FGameplayTag::EmptyTag};
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	float DamageAccumulation;
+	float DamageAccumulation{0.f};
 };
 
 USTRUCT(BlueprintType)
@@ -1431,7 +1438,7 @@ struct FWvWeaknessInfo
 
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	FName WeaknessName;
+	FName WeaknessName{NAME_None};
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	FWvWeaknessDataTableRow ConfigInfo;

@@ -42,6 +42,7 @@
 
 #define K_MATERIAL_DYNAMIC_INST_PREFIX TEXT("_DynInst")
 
+using namespace CharacterDebug;
 
 void ABaseCharacter::RecalcurateBounds()
 {
@@ -341,7 +342,7 @@ TArray<USkeletalMeshComponent*> ABaseCharacter::GetBodyMeshComponents() const
 	Result.Add(Top);
 	Result.Add(Bottom);
 	Result.Add(Feet);
-
+	Result.Add(Other1);
 	return Result;
 }
 
@@ -519,6 +520,8 @@ void ABaseCharacter::SetMasterPoseBody()
 	EnableMasterPose(Top);
 	EnableMasterPose(Bottom);
 	EnableMasterPose(Feet);
+
+	EnableMasterPose(Other1);
 }
 
 void ABaseCharacter::SetCrowdMasterPoseBody()
