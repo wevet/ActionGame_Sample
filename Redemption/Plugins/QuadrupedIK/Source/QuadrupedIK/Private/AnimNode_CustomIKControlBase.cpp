@@ -47,20 +47,26 @@ void FAnimNode_CustomIKControlBase::Update_AnyThread(const FAnimationUpdateConte
 		switch (AlphaInputType)
 		{
 			case EAnimAlphaInputType::Float:
-			ActualAlpha = AlphaScaleBias.ApplyTo(AlphaScaleBiasClamp.ApplyTo(Alpha, Context.GetDeltaTime()));
+			{
+				ActualAlpha = AlphaScaleBias.ApplyTo(AlphaScaleBiasClamp.ApplyTo(Alpha, Context.GetDeltaTime()));
+			}
 			break;
-#if false
 			case EAnimAlphaInputType::Bool:
-			ActualAlpha = AlphaBoolBlend.ApplyTo(bAlphaBoolEnabled, Context.GetDeltaTime());
+			{
+				ActualAlpha = AlphaBoolBlend.ApplyTo(bAlphaBoolEnabled, Context.GetDeltaTime());
+			}
 			break;
-#endif
 			case EAnimAlphaInputType::Curve:
-			if (UAnimInstance* AnimInstance = Cast<UAnimInstance>(Context.AnimInstanceProxy->GetAnimInstanceObject()))
-			ActualAlpha = AlphaScaleBiasClamp.ApplyTo(AnimInstance->GetCurveValue(AlphaCurveName), Context.GetDeltaTime());
+			{
+				if (UAnimInstance* AnimInstance = Cast<UAnimInstance>(Context.AnimInstanceProxy->GetAnimInstanceObject()))
+				{
+					ActualAlpha = AlphaScaleBiasClamp.ApplyTo(AnimInstance->GetCurveValue(AlphaCurveName), Context.GetDeltaTime());
+				}
+			}
 			break;
 		};
 
-		ActualAlpha = FMath::Clamp<float>(ActualAlpha, 0.0f, 1.0f);
+		ActualAlpha = FMath::Clamp(ActualAlpha, 0.0f, 1.0f);
 		if (FAnimWeight::IsRelevant(ActualAlpha) && IsValidToEvaluate(Context.AnimInstanceProxy->GetSkeleton(), Context.AnimInstanceProxy->GetRequiredBones()))
 		{
 			UpdateInternal(Context);

@@ -7,7 +7,11 @@
 #include "Kismet/GameplayStatics.h"
 #include "SaveGameSystem.h"
 
+#include UE_INLINE_GENERATED_CPP_BY_NAME(WvGameInstance)
+
 FStreamableManager UWvGameInstance::StreamableManager;
+
+int32 UWvGameInstance::SaveSlotID = 0;
 
 UWvGameInstance* UWvGameInstance::GetGameInstance()
 {
@@ -24,8 +28,6 @@ FStreamableManager& UWvGameInstance::GetStreamableManager()
 {
 	return StreamableManager;
 }
-
-int32 UWvGameInstance::SaveSlotID = 0;
 
 UWvSaveGame* UWvGameInstance::GetOrCreateWvSaveGame(const FString SlotName)
 {
@@ -76,13 +78,13 @@ void UWvGameInstance::CompleteMission(const int32 InMissionIndex)
 
 const bool UWvGameInstance::HasCompleteMission(const int32 InMissionIndex)
 {
-	UWvSaveGame* WvSaveGame = GetOrCreateWvSaveGame(K_PLAYER_SLOT_NAME);
+	const UWvSaveGame* WvSaveGame = GetOrCreateWvSaveGame(K_PLAYER_SLOT_NAME);
 	return WvSaveGame->HasCompleteMission(InMissionIndex);
 }
 
 const bool UWvGameInstance::HasProgressMission(const int32 InMissionIndex)
 {
-	UWvSaveGame* WvSaveGame = GetOrCreateWvSaveGame(K_PLAYER_SLOT_NAME);
+	const UWvSaveGame* WvSaveGame = GetOrCreateWvSaveGame(K_PLAYER_SLOT_NAME);
 	return WvSaveGame->HasProgressMission(InMissionIndex);
 }
 

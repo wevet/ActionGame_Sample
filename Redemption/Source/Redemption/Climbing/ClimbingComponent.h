@@ -592,10 +592,8 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Component, meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<class ULocomotionComponent> LocomotionComponent;
 
-	UPROPERTY()
 	TWeakObjectPtr<class ULadderComponent> LadderComponent;
 
-	UPROPERTY()
 	TWeakObjectPtr<class UQTEActionComponent> QTEActionComponent;
 
 	UPROPERTY()

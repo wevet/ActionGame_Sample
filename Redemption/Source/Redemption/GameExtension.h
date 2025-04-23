@@ -84,6 +84,60 @@ namespace Game
 		{
 			return (Array.Num() <= 0);
 		}
+
+		template <typename T, typename Predicate>
+		static FORCEINLINE void FilterArray(const TArray<T>& Source, TArray<T>& OutFiltered, Predicate Pred)
+		{
+			for (const T& Element : Source)
+			{
+				if (Pred(Element))
+				{
+					OutFiltered.Add(Element);
+				}
+			}
+		}
+
+		template <typename T>
+		static void WorldActorIterator(UWorld* World, TArray<T*>& OutArray)
+		{
+			if (!World)
+			{
+				return;
+			}
+
+			for (TActorIterator<T> It(World); It; ++It)
+			{
+				T* Actor = Cast<T>(*It);
+				if (IsValid(Actor))
+				{
+					OutArray.Add(Actor);
+				}
+			}
+		}
+
+		// usage
+		// TArray<ABaseCharacter*> Filtered;
+		// Game::ArrayExtension::WorldActorIteratorIf<ABaseCharacter>(GetWorld(), Filtered, [](const ABaseCharacter* Char)
+		// {
+		//		return !Char->IsDead();
+		// });
+		template <typename T, typename Predicate>
+		static void WorldActorIteratorIf(UWorld* World, TArray<T*>& OutArray, Predicate Pred)
+		{
+			if (!World)
+			{
+				return;
+			}
+
+			for (TActorIterator<T> It(World); It; ++It)
+			{
+				T* Actor = Cast<T>(*It);
+				if (IsValid(Actor) && Pred(Actor))
+				{
+					OutArray.Add(Actor);
+				}
+			}
+		}
 	};
 
 	class REDEMPTION_API ComponentExtension

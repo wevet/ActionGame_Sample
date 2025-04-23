@@ -21,7 +21,7 @@ void UPlayerSkill::NativeConstruct()
 
 void UPlayerSkill::Initializer(ABaseCharacter* InCharacter)
 {
-	CharacterPtr = MakeWeakObjectPtr<ABaseCharacter>(InCharacter);
+	CharacterPtr = InCharacter;
 }
 
 void UPlayerSkill::Renderer(const float DeltaTime)

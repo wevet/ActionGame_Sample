@@ -5,15 +5,18 @@
 #include "Level/SkyActor.h"
 #include "Game/WvGameInstance.h"
 #include "Game/CharacterInstanceSubsystem.h"
-
-
+#include "Mission/MinimapMarkerComponent.h"
 #include "Redemption.h"
+#include "GameExtension.h"
+
 #include "Kismet/GameplayStatics.h"
 
 //#include "SaveGameSystem.h"
 
 #define NIGHT_TIME 19
 #define DAY_TIME 7
+
+using namespace Game;
 
 UFieldInstanceSubsystem* UFieldInstanceSubsystem::Instance = nullptr;
 
@@ -36,6 +39,8 @@ void UFieldInstanceSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 void UFieldInstanceSubsystem::Deinitialize()
 {
 	UE_LOG(LogTemp, Log, TEXT("%s"), *FString(__FUNCTION__));
+
+	POIActors.Reset(0);
 
 }
 
@@ -160,5 +165,42 @@ void UFieldInstanceSubsystem::SetSkyActor(ASkyActor* NewSkyActor)
 		SkyActor = NewSkyActor;
 		UE_LOG(LogTemp, Warning, TEXT("[%s]: Modify SkyActor. [%s]"), *FString(__FUNCTION__), *GetNameSafe(SkyActor));
 	}
+}
+
+void UFieldInstanceSubsystem::AddPOIActor(AActor* NewActor)
+{
+	if (IsValid(NewActor))
+	{
+		if (!POIActors.Contains(NewActor))
+		{
+			POIActors.Add(NewActor);
+		}
+	}
+}
+
+void UFieldInstanceSubsystem::RemovePOIActor(AActor* NewActor)
+{
+	if (IsValid(NewActor))
+	{
+		if (POIActors.Contains(NewActor))
+		{
+			POIActors.Remove(NewActor);
+		}
+	}
+}
+
+TArray<AActor*> UFieldInstanceSubsystem::GetPOIActors() const
+{
+	TArray<AActor*> Filtered;
+	ArrayExtension::FilterArray(POIActors, Filtered, [](const AActor* Act)
+	{
+		if (const auto* Marker = Act->FindComponentByClass<UMinimapMarkerComponent>())
+		{
+			return Marker->IsVisibleMakerTag();
+		}
+		return false;
+	});
+
+	return Filtered;
 }
 

@@ -15,7 +15,7 @@ class AWeaponBaseActor;
 /**
  * 
  */
-UCLASS()
+UCLASS(meta = (DisableNativeTick))
 class REDEMPTION_API UWeaponWindow : public UUserWidget
 {
 	GENERATED_BODY()
@@ -28,7 +28,9 @@ public:
 protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "WeaponWindow|Variable")
 	FName ContainerKeyName;
-	class UVerticalBox* Container;
+
+	UPROPERTY()
+	TObjectPtr<class UVerticalBox> Container;
 
 	bool bWasVisibility;
 
@@ -42,8 +44,10 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "WeaponWindow|Variable")
 	FName DisplayKeyName;
 
-	class UTextBlock* DisplayName;
+	UPROPERTY()
+	TObjectPtr<class UTextBlock> DisplayName;
 #pragma endregion
+
 
 #pragma region Image
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "WeaponWindow|Variable")
@@ -52,8 +56,9 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "WeaponWindow|Variable")
 	FName WeaponImageKeyName;
 
-	class UImage* WeaponImage;
+	TWeakObjectPtr<class UImage> WeaponImage;
 #pragma endregion
+
 
 #pragma region Footer
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "WeaponWindow|Variable")
@@ -68,8 +73,11 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "WeaponWindow|Variable")
 	FName MaxAmmoKeyName;
 
-	class UTextBlock* CurrentAmmoText;
-	class UTextBlock* MaxAmmoText;
+	UPROPERTY()
+	TObjectPtr<class UTextBlock> CurrentAmmoText;
+
+	UPROPERTY()
+	TObjectPtr<class UTextBlock> MaxAmmoText;
 #pragma endregion
 
 public:

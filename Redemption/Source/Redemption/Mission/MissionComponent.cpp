@@ -1,6 +1,6 @@
 // Copyright 2022 wevet works All Rights Reserved.
 
-#include "Component/MissionComponent.h"
+#include "Mission/MissionComponent.h"
 #include "Game/WvGameInstance.h"
 
 UMissionComponent::UMissionComponent(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
@@ -27,18 +27,15 @@ void UMissionComponent::RegisterMission(const int32 MissionIndex)
 {
 	if (!IsValid(MissionDA))
 	{
+		UE_LOG(LogMission, Error, TEXT("Not Valid DA: [%s]"), *FString(__FUNCTION__));
 		return;
 	}
 
 	bool bIsValid = false;
-	auto MissionData = MissionDA->GetMissionGameData(MissionIndex, bIsValid);
+	auto MissionData = MissionDA->Find(MissionIndex, bIsValid);
 	if (bIsValid)
 	{
-		if (RegisterMissionDelegate.IsBound())
-		{
-			RegisterMissionDelegate.Broadcast(MissionIndex);
-		}
-
+		RegisterMissionDelegate.Broadcast(MissionIndex);
 		UWvGameInstance::GetGameInstance()->RegisterMission(MissionData);
 	}
 }

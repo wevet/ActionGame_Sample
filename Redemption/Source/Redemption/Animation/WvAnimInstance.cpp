@@ -675,3 +675,19 @@ void UWvAnimInstance::WakeUpPoseSnapShot()
 }
 
 
+
+void UWvAnimInstance::DrawDebugSkeleton(UAnimationAsset* AnimationAsset)
+{
+#if WITH_EDITOR
+	if (USkeleton* Skeleton = AnimationAsset->GetSkeleton())
+	{
+		auto CurSK = GetSkelMeshComponent()->GetSkeletalMeshAsset()->GetSkeleton();
+		if (CurSK != Skeleton)
+		{
+			UE_LOG(LogTemp, Error, TEXT("Diff Skeleton : [%s], Cur Anim :[%s], func :[%s]"),
+				*Skeleton->GetName(), *AnimationAsset->GetName(), *FString(__FUNCTION__));
+		}
+	}
+#endif
+}
+

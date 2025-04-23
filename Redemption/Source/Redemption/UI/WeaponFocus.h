@@ -10,7 +10,7 @@ class UCanvasPanel;
 /**
  * 
  */
-UCLASS()
+UCLASS(meta = (DisableNativeTick))
 class REDEMPTION_API UWeaponFocus : public UUserWidget
 {
 	GENERATED_BODY()
@@ -20,7 +20,8 @@ public:
 	virtual void NativeConstruct() override;
 
 protected:
-	class UCanvasPanel* FocusPanel;
+	UPROPERTY()
+	TObjectPtr<class UCanvasPanel> FocusPanel;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "WeaponFocus|Variable")
 	FName FocusPanelKeyName;

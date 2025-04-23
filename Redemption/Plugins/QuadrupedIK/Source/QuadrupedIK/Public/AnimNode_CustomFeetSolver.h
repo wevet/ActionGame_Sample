@@ -224,13 +224,13 @@ private:
 	FVector RotateAroundPoint(const FVector InputPoint, const FVector ForwardVector, const FVector Origin, const float Angle) const;
 
 	FCustomBoneStruct IKBoneData;
-	int32 FeetCounter = 0;
-	int32 FirstTimeCounter = 0;
-	float TargetFPS = -1.0f;
-	float ScaleMode = 1.0f;
-	float DTLocationSpeed = 0.0f;
-	float DTRotationSpeed = 0.0f;
-	float CharacterMovementSpeed = 0.0f;
+	int32 FeetCounter{ 0 };
+	int32 FirstTimeCounter{ 0 };
+	float TargetFPS{ -1.0f };
+	float ScaleMode{ 1.0f };
+	float DTLocationSpeed{ 0.0f };
+	float DTRotationSpeed{ 0.0f };
+	float CharacterMovementSpeed{ 0.0f };
 	bool bHasAtleastHit = false;
 	bool bSolveShouldFail = false;
 	bool bIsInitialized = false;

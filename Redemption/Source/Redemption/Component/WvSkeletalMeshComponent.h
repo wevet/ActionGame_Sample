@@ -34,10 +34,21 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Rendering|Material")
 	const FLinearColor GetVectorParameterValueContainer(const FName ParameterInfoName);
 
+	void UpdateRateOptimizations();
+	void RestoreUpdateRateOptimization();
+	bool IsHasRateOptimization() const;
+
 protected:
 	virtual bool ShouldRunClothTick() const override;
 
+private:
+	UPROPERTY()
+	TArray<float> CacheVisibleDistanceFactorThesholds;
 
+	int32 CacheMaxEvalRateForInterpolation{ 4 };
+	int32 CacheBaseNonRenderedUpdateRate{ 4 };
+
+	bool bHasRateOptimization{ false };
 
 };
 

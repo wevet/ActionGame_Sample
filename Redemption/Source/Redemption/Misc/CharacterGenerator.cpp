@@ -5,8 +5,11 @@
 #include "Misc/WvCommonUtils.h"
 #include "Game/CharacterInstanceSubsystem.h"
 #include "Character/BaseCharacter.h"
+#include "Redemption.h"
+
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(CharacterGenerator)
+
 
 ACharacterGenerator::ACharacterGenerator()
 {
@@ -102,8 +105,6 @@ void ACharacterGenerator::GeneratedBaseCharacter(AActor* SpawningObject)
 {
 	if (ABaseCharacter* Character = Cast<ABaseCharacter>(SpawningObject))
 	{
-		UCharacterInstanceSubsystem::Get()->AssignAICharacter(Character);
-
 		if (LeaderCount > CurrentLeaderCount)
 		{
 			if (UWvCommonUtils::Probability(LeaderSpawnPercent))

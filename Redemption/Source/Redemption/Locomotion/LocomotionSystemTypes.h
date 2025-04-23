@@ -73,11 +73,9 @@ enum class ELSOverlayState : uint8
 	None UMETA(DisplayName = "None"),
 	Injured UMETA(DisplayName = "Injured"), // not use
 	Rifle UMETA(DisplayName = "Rifle"),
-	Pistol UMETA(DisplayName = "Pistol"),
-	Torch UMETA(DisplayName = "Torch"),
+	Pistol1H UMETA(DisplayName = "Pistol1H"),
+	Pistol2H UMETA(DisplayName = "Pistol2H"),
 	Binoculars UMETA(DisplayName = "Binoculars"),
-	Box UMETA(DisplayName = "Box"),
-	Barrel UMETA(DisplayName = "Barrel"),
 	Knife UMETA(DisplayName = "Knife"),
 	Mass UMETA(DisplayName = "Mass"),
 	//ShotGun UMETA(DisplayName = "ShotGun"),

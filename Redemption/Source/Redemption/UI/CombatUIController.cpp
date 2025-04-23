@@ -15,9 +15,9 @@ UCombatUIController::UCombatUIController(const FObjectInitializer& ObjectInitial
 {
 	PrevWeaponIndex = INDEX_NONE;
 	CharacterOwner = nullptr;
-	BasePanel = nullptr;
-	PlayerHealth = nullptr;
-	WeaponFocus = nullptr;
+	BasePanelWidget = nullptr;
+	PlayerHealthWidget = nullptr;
+	WeaponFocusWidget = nullptr;
 
 	bTickEventWhenPaused = false;
 
@@ -42,12 +42,12 @@ void UCombatUIController::NativeConstruct()
 {
 	Super::NativeConstruct();
 
-	BasePanel = Cast<UCanvasPanel>(GetWidgetFromName(BasePanelKeyName));
-	WeaponFocus = Cast<UWeaponFocus>(GetWidgetFromName(WeaponFocusKeyName));
+	BasePanelWidget = Cast<UCanvasPanel>(GetWidgetFromName(BasePanelKeyName));
+	WeaponFocusWidget = Cast<UWeaponFocus>(GetWidgetFromName(WeaponFocusKeyName));
 
-	if (WeaponFocus)
+	if (WeaponFocusWidget)
 	{
-		WeaponFocus->Visibility(false);
+		WeaponFocusWidget->Visibility(false);
 	}
 }
 
@@ -75,18 +75,18 @@ void UCombatUIController::Initializer(ABaseCharacter* NewCharacter)
 		CharacterOwner->GetLocomotionComponent()->OnRotationModeChangeDelegate.AddDynamic(this, &ThisClass::OnRotationModeChange_Callback);
 	}
 
-	PlayerHealth = Cast<UPlayerHealth>(GetWidgetFromName(PlayerHealthKeyName));
+	PlayerHealthWidget = Cast<UPlayerHealth>(GetWidgetFromName(PlayerHealthKeyName));
 
-	if (PlayerHealth)
+	if (PlayerHealthWidget)
 	{
-		PlayerHealth->Initializer(CharacterOwner);
+		PlayerHealthWidget->Initializer(CharacterOwner);
 	}
 
-	PlayerSkill = Cast<UPlayerSkill>(GetWidgetFromName(PlayerSkillKeyName));
+	PlayerSkillWidget = Cast<UPlayerSkill>(GetWidgetFromName(PlayerSkillKeyName));
 
-	if (PlayerSkill)
+	if (PlayerSkillWidget)
 	{
-		PlayerSkill->Initializer(CharacterOwner);
+		PlayerSkillWidget->Initializer(CharacterOwner);
 	}
 }
 
@@ -98,14 +98,14 @@ void UCombatUIController::Renderer(const float DeltaTime)
 		return;
 	}
 
-	if (PlayerHealth)
+	if (PlayerHealthWidget)
 	{
-		PlayerHealth->Renderer(DeltaTime);
+		PlayerHealthWidget->Renderer(DeltaTime);
 	}
 
-	if (PlayerSkill)
+	if (PlayerSkillWidget)
 	{
-		PlayerSkill->Renderer(DeltaTime);
+		PlayerSkillWidget->Renderer(DeltaTime);
 	}
 
 	FocusWeaponWindowRenderer();
@@ -141,15 +141,13 @@ void UCombatUIController::OnOverlayChange_Callback(const ELSOverlayState Current
 
 	switch (CurrentOverlay)
 	{
-	case ELSOverlayState::Pistol:
+	case ELSOverlayState::Pistol1H:
+	case ELSOverlayState::Pistol2H:
 	case ELSOverlayState::Rifle:
 		bCanShowWeapon = true;
 		break;
 	case ELSOverlayState::Knife:
-	case ELSOverlayState::Barrel:
 	case ELSOverlayState::Binoculars:
-	case ELSOverlayState::Torch:
-	case ELSOverlayState::Box:
 		break;
 	}
 
@@ -158,7 +156,7 @@ void UCombatUIController::OnOverlayChange_Callback(const ELSOverlayState Current
 	if (bIsShowWeapon != bCanShowWeapon)
 	{
 		bIsShowWeapon = bCanShowWeapon;
-		WeaponWindow->Visibility(bIsShowWeapon);
+		WeaponWindowWidget->Visibility(bIsShowWeapon);
 	}
 }
 
@@ -172,7 +170,7 @@ void UCombatUIController::FocusWeaponWindowRenderer()
 	if (bCanFocusWeapon != bIsCurAimingWeapon)
 	{
 		bCanFocusWeapon = bIsCurAimingWeapon;
-		WeaponFocus->Visibility(bCanFocusWeapon);
+		WeaponFocusWidget->Visibility(bCanFocusWeapon);
 	}
 }
 
@@ -183,13 +181,13 @@ void UCombatUIController::WeaponWindowRenderer()
 		return;
 	}
 
-	if (WeaponWindow)
+	if (WeaponWindowWidget)
 	{
 		const AWeaponBaseActor* Weapon = CharacterOwner->GetInventoryComponent()->GetEquipWeapon();
 		if (Weapon)
 		{
-			WeaponWindow->RendererImage(Weapon);
-			WeaponWindow->RendererAmmos(Weapon);
+			WeaponWindowWidget->RendererImage(Weapon);
+			WeaponWindowWidget->RendererAmmos(Weapon);
 		}
 	}
 	else
@@ -214,9 +212,9 @@ void UCombatUIController::CreateWeaponWindow(UUniformGridPanel* GridPanel)
 {
 	if (WindowTemplate)
 	{
-		WeaponWindow = CreateWidget<UWeaponWindow>(this, WindowTemplate);
-		WeaponWindow->Visibility(false);
-		GridPanel->AddChildToUniformGrid(WeaponWindow);
+		WeaponWindowWidget = CreateWidget<UWeaponWindow>(this, WindowTemplate);
+		WeaponWindowWidget->Visibility(false);
+		GridPanel->AddChildToUniformGrid(WeaponWindowWidget);
 	}
 }
 

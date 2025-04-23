@@ -10,6 +10,7 @@
 #include "Component/WvCharacterMovementComponent.h"
 #include "Component/WvSkeletalMeshComponent.h"
 #include "Component/QTEActionComponent.h"
+#include "Mission/MinimapMarkerComponent.h"
 #include "Locomotion/LocomotionComponent.h"
 #include "Climbing/ClimbingComponent.h"
 #include "Animation/WvAnimInstance.h"
@@ -64,6 +65,10 @@ APlayerCharacter::APlayerCharacter(const FObjectInitializer& ObjectInitializer) 
 
 	UWvSkeletalMeshComponent* WvMeshComp = CastChecked<UWvSkeletalMeshComponent>(GetMesh());
 	WvMeshComp->VisibilityBasedAnimTickOption = EVisibilityBasedAnimTickOption::AlwaysTickPoseAndRefreshBones;
+
+	// set mini map tag
+	MinimapMarkerComponent->MiniMapMakerTag = TAG_Game_Minimap_Player;
+	MinimapMarkerComponent->SetVisibleMakerTag(false);
 }
 
 void APlayerCharacter::BeginPlay()

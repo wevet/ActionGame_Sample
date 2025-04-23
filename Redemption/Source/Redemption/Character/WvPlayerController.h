@@ -5,7 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameplayTagContainer.h"
 #include "Component/WvInputEventComponent.h"
-#include "Component/MissionComponent.h"
+#include "Mission/MissionComponent.h"
 #include "WvPlayerCameraManager.h"
 #include "GameFramework/PlayerController.h"
 #include "Interface/WvAbilityTargetInterface.h"
@@ -18,6 +18,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FInputEventGameplayTagExtendDelegat
 
 class APlayerCharacter;
 class AWvWheeledVehiclePawn;
+class AMinimapCaptureActor;
 class UUMGManager;
 class UVehicleUIController;
 
@@ -38,7 +39,6 @@ public:
 	virtual void SetGenericTeamId(const FGenericTeamId& NewTeamID) override;
 	virtual FGenericTeamId GetGenericTeamId() const override;
 	virtual FOnTeamIndexChangedDelegate* GetOnTeamIndexChangedDelegate() override;
-	//ETeamAttitude::Type GetTeamAttitudeTowards(const AActor& Other) const override;
 	virtual void OnReceiveKillTarget(AActor* Actor, const float Damage) override;
 	virtual void OnSendKillTarget(AActor* Actor, const float Damage) override;
 	virtual bool IsInBattled() const override;
@@ -54,7 +54,6 @@ protected:
 	virtual bool InputKey(const FInputKeyParams& Params) override;
 
 public:
-	class UWvInputEventComponent* GetInputEventComponent() const;
 	void PostASCInitialize(UAbilitySystemComponent* ASC);
 	void SetInputModeType(const EWvInputMode NewInputMode);
 	EWvInputMode GetInputModeType() const;
@@ -71,18 +70,20 @@ public:
 
 	FVector GetCameraForwardVector() const;
 
-	FORCEINLINE TObjectPtr<class UMissionComponent> GetMissionComponent() const { return MissionComponent; }
+	UWvInputEventComponent* GetInputEventComponent() const;
+	UMissionComponent* GetMissionComponent() const;
+
 
 public:
-	//All keys pressed will be notified
+	// All keys pressed will be notified
 	UPROPERTY(BlueprintAssignable)
 	FInputEventGameplayTagDelegate OnInputEventGameplayTagTrigger_All;
 
-	//In-game button press event notification
+	// In-game button press event notification
 	UPROPERTY(BlueprintAssignable)
 	FInputEventGameplayTagDelegate OnInputEventGameplayTagTrigger_Game;
 
-	//Event notification when the UI button is pressed
+	// Event notification when the UI button is pressed
 	UPROPERTY(BlueprintAssignable)
 	FInputEventGameplayTagDelegate OnInputEventGameplayTagTrigger_UI;
 
@@ -100,7 +101,7 @@ public:
 
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Component, meta = (AllowPrivateAccess = "true"))
-	class UWvInputEventComponent* InputEventComponent;
+	TObjectPtr<class UWvInputEventComponent> InputEventComponent;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Component, meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<class UMissionComponent> MissionComponent;
@@ -113,6 +114,9 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PlayerController|Config")
 	TSoftClassPtr<class UVehicleUIController> VehicleUIControllerTemplate;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PlayerController|Config")
+	TSoftClassPtr<class AMinimapCaptureActor> MinimapCaptureActorTemplate;
 
 	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "Vehicle")
 	void BP_DefaultPossess(APawn* InPawn);
@@ -133,6 +137,10 @@ private:
 	void OnMainUILoadComplete(APawn* InPawn);
 	void OnVehilceUILoadComplete(APawn* InPawn);
 
+
+	void AsyncLoadMinimapActor(APawn* InPawn);
+	void OnMinimapLoadComplete(APawn* InPawn);
+
 private:
 	UPROPERTY()
 	TObjectPtr<class APlayerCharacter> PC;
@@ -150,10 +158,14 @@ private:
 	TObjectPtr<class AWvPlayerCameraManager> Manager;
 
 	UPROPERTY()
+	TObjectPtr<class AMinimapCaptureActor> MinimapCaptureActor;
+
+	UPROPERTY()
 	FOnTeamIndexChangedDelegate OnTeamChangedDelegate;
 
 
 	TSharedPtr<FStreamableHandle>  VehicleUIStreamableHandle;
 	TSharedPtr<FStreamableHandle>  MainUIStreamableHandle;
+	TSharedPtr<FStreamableHandle>  MinimapStreamableHandle;
 };
 

@@ -46,5 +46,4 @@ public:
 	int32 Significance_CharacterBaseBattleMinLevel = 0;
 	int32 Significance_CharacterBaseAIUnlockLevel = 0;
 	int32 Significance_CharacterBaseMeshVisibleLevel = 0;
-	int32 Significance_EnvironmentCreatureBaseBattleMinLevel = 0;
 };

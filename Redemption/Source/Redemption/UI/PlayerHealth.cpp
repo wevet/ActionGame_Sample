@@ -21,7 +21,7 @@ void UPlayerHealth::NativeConstruct()
 
 void UPlayerHealth::Initializer(ABaseCharacter* InCharacter)
 {
-	CharacterPtr = MakeWeakObjectPtr<ABaseCharacter>(InCharacter);
+	CharacterPtr = InCharacter;
 }
 
 void UPlayerHealth::Renderer(const float DeltaTime)

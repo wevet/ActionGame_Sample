@@ -73,9 +73,10 @@ class UWvFaceAnimInstance;
 class UStaticMeshComponent;
 class ULODSyncComponent;
 class USignificanceComponent;
+class UMinimapMarkerComponent;
 
 
-UCLASS(Abstract)
+UCLASS()
 class REDEMPTION_API ABaseCharacter : public ACharacter, 
 	public IAbilitySystemInterface, 
 	public IAISightTargetInterface, 
@@ -236,6 +237,9 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = Components)
 	class USkeletalMeshComponent* GetFaceMeshComponent() const;
+
+	UFUNCTION(BlueprintCallable, Category = Components)
+	class UMinimapMarkerComponent* GetMinimapMarkerComponent() const;
 
 	UFUNCTION(BlueprintCallable, Category = Movement)
 	float GetDistanceFromToeToKnee(FName KneeL = TEXT("calf_l"), FName BallL = TEXT("ball_l"), FName KneeR = TEXT("calf_r"), FName BallR = TEXT("ball_r")) const;
@@ -500,8 +504,8 @@ public:
 	bool IsStrafeMovementMode() const;
 	virtual bool IsQTEActionPlaying() const;
 
-	virtual void BuildOptimization();
-	void BuildLODMesh(USkeletalMeshComponent* SkelMesh);
+	void BuildOptimization();
+	void BuildRestoreOptimization();
 	void HandleMeshUpdateRateOptimizations(const bool IsInEnableURO, USkeletalMeshComponent* SkelMesh);
 
 	virtual void SkillEnableAction(const bool IsEnable);
@@ -618,6 +622,9 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Component, meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<class USignificanceComponent> SignificanceComponent;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Component, meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<class UMinimapMarkerComponent> MinimapMarkerComponent;
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "BaseCharacter|Config")
 	FCustomWvAbilitySystemAvatarData AbilitySystemData;
 
@@ -718,7 +725,7 @@ protected:
 
 	// ai only mission property
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = Mission)
-	FSendMissionData SendMissionData;
+	int32 SendMissionIndex{INDEX_NONE};
 	
 	FVector2D InputAxis = FVector2D::ZeroVector;
 	bool bHasMovementInput = false;

@@ -12,7 +12,7 @@ class ABaseCharacter;
 /**
  * 
  */
-UCLASS()
+UCLASS(meta = (DisableNativeTick))
 class REDEMPTION_API UPlayerSkill : public UUserWidget
 {
 	GENERATED_BODY()
@@ -33,10 +33,10 @@ protected:
 	float CurrentSkill;
 
 	UPROPERTY()
-	class UImage* SourceImage;
+	TObjectPtr<class UImage> SourceImage;
 
 	UPROPERTY()
-	class UMaterialInstanceDynamic* MaterialInstance;
+	TObjectPtr<class UMaterialInstanceDynamic> MaterialInstance;
 
 	TWeakObjectPtr<ABaseCharacter> CharacterPtr;
 

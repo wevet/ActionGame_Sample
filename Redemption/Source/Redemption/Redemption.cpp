@@ -118,7 +118,11 @@ UE_DEFINE_GAMEPLAY_TAG(TAG_Game_Asset_FinisherSender, "Game.Asset.FinisherSender
 UE_DEFINE_GAMEPLAY_TAG(TAG_Game_Asset_FinisherReceiver, "Game.Asset.FinisherReceiver");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Game_Asset_CloseCombat, "Game.Asset.CloseCombat");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Game_Asset_CharacterVFX, "Game.Asset.CharacterVFX");
-//
+
+// minimap
+UE_DEFINE_GAMEPLAY_TAG(TAG_Game_Minimap_Player, "Game.MiniMap.Player");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Game_Minimap_KeyCharacter, "Game.MiniMap.KeyCharacter");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Game_Minimap_EventCheckPoint, "Game.MiniMap.EventCheckPoint");
 
 
 FRedemptionModule* FRedemptionModule::GameModuleInstance = nullptr;

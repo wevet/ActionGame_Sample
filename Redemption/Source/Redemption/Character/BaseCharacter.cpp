@@ -7,13 +7,15 @@
 #include "Component/WvCharacterMovementComponent.h"
 #include "Component/CharacterMovementHelperComponent.h"
 #include "Component/WvSkeletalMeshComponent.h"
-#include "Locomotion/LocomotionComponent.h"
-#include "PredictionFootIKComponent.h"
 #include "Component/InventoryComponent.h"
 #include "Component/CombatComponent.h"
 #include "Component/StatusComponent.h"
 #include "Component/WeaknessComponent.h"
 #include "Component/TrailInteractionComponent.h"
+#include "Mission/MinimapMarkerComponent.h"
+
+#include "Locomotion/LocomotionComponent.h"
+#include "PredictionFootIKComponent.h"
 #include "WvPlayerController.h"
 #include "WvAIController.h"
 #include "Animation/WvAnimInstance.h"
@@ -27,6 +29,7 @@
 #include "Climbing/LadderComponent.h"
 #include "Component/AsyncComponentInterface.h"
 #include "WvAbilitySystemBlueprintFunctionLibrary.h"
+#include "Game/CharacterInstanceSubsystem.h"
 
 
 #include "Components/LODSyncComponent.h"
@@ -240,6 +243,9 @@ ABaseCharacter::ABaseCharacter(const FObjectInitializer& ObjectInitializer)
 	SignificanceComponent = ObjectInitializer.CreateDefaultSubobject<USignificanceComponent>(this, TEXT("SignificanceComponent"));
 	SignificanceComponent->bAutoActivate = 1;
 
+	MinimapMarkerComponent = ObjectInitializer.CreateDefaultSubobject<UMinimapMarkerComponent>(this, TEXT("MinimapMarkerComponent"));
+	MinimapMarkerComponent->bAutoActivate = 1;
+
 	MyTeamID = FGenericTeamId(0);
 	CharacterTag = FGameplayTag::RequestGameplayTag(TAG_Character_Default.GetTag().GetTagName());
 
@@ -330,7 +336,7 @@ void ABaseCharacter::BeginPlay()
 	CharacterTrajectoryComponent->AddTickPrerequisiteActor(this);
 
 
-	if (Other1->GetSkeletalMeshAsset() == nullptr)
+	if (!IsValid(Other1->GetSkeletalMeshAsset()))
 	{
 		Other1->SetVisibility(false);
 	}
@@ -349,7 +355,7 @@ void ABaseCharacter::BeginPlay()
 
 	if (AWvAIController* AIC = Cast<AWvAIController>(GetController()))
 	{
-		AIC->GetMissionComponent()->SetSendMissionData(SendMissionData);
+		AIC->GetMissionComponent()->SetSendMissionData(SendMissionIndex);
 	}
 
 	CMC->MaxStepHeight = GetDistanceFromToeToKnee();
@@ -359,10 +365,16 @@ void ABaseCharacter::BeginPlay()
 	RequestAsyncLoad();
 
 	HairStrandsLODSetUp();
+
+	WEVET_COMMENT("CharacterInstanceSubsystem API")
+	UCharacterInstanceSubsystem::Get()->AssignAICharacter(this);
 }
 
 void ABaseCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
+	WEVET_COMMENT("CharacterInstanceSubsystem API")
+	UCharacterInstanceSubsystem::Get()->RemoveAICharacter(this);
+
 	FTimerManager& TM = GetWorld()->GetTimerManager();
 	TM.ClearTimer(Ragdoll_TimerHandle);
 
@@ -1174,6 +1186,11 @@ UStaticMeshComponent* ABaseCharacter::GetAccessoryObjectRoot() const
 USkeletalMeshComponent* ABaseCharacter::GetFaceMeshComponent() const
 {
 	return Face;
+}
+
+UMinimapMarkerComponent* ABaseCharacter::GetMinimapMarkerComponent() const
+{
+	return MinimapMarkerComponent;
 }
 #pragma endregion
 
@@ -2631,51 +2648,24 @@ void ABaseCharacter::BuildOptimization()
 		return;
 	}
 
-	auto Components = Game::ComponentExtension::GetComponentsArray<USkeletalMeshComponent>(this);
+	auto Components = Game::ComponentExtension::GetComponentsArray<UWvSkeletalMeshComponent>(this);
 
-	for (USkeletalMeshComponent* SkelMesh : Components)
+	for (UWvSkeletalMeshComponent* SkelMesh : Components)
 	{
 		HandleMeshUpdateRateOptimizations(true, SkelMesh);
-		BuildLODMesh(SkelMesh);
+		SkelMesh->UpdateRateOptimizations();
 	}
 }
 
-void ABaseCharacter::BuildLODMesh(USkeletalMeshComponent* SkelMesh)
+void ABaseCharacter::BuildRestoreOptimization()
 {
-	if (IsValid(SkelMesh))
+	auto Components = Game::ComponentExtension::GetComponentsArray<UWvSkeletalMeshComponent>(this);
+
+	for (UWvSkeletalMeshComponent* SkelMesh : Components)
 	{
-		// Check for valid optimization parameters
-		if (FAnimUpdateRateParameters* AnimUpdateRateParams = SkelMesh->AnimUpdateRateParams)
-		{
-			// Create threshold table for MaxDistanceFactor
-			static const float ThresholdTable[] = { 0.5f, 0.5f, 0.3f, 0.1f, 0.1f, 0.1f };
-			static const int32 TableNum = UE_ARRAY_COUNT(ThresholdTable);
-
-			// Set threshold tables as optimization parameters for skeletal mesh
-			TArray<float>& Thresholds = AnimUpdateRateParams->BaseVisibleDistanceFactorThesholds;
-			Thresholds.Empty(TableNum);
-			for (int32 Index = 0; Index < TableNum; ++Index)
-			{
-				Thresholds.Add(ThresholdTable[Index]);
-			}
-
-			// copy rendering threshold
-			AnimUpdateRateParams->BaseVisibleDistanceFactorThesholds.Empty();
-
-			for (const float Threshold : Thresholds)
-			{
-				AnimUpdateRateParams->BaseVisibleDistanceFactorThesholds.Add(Threshold);
-			}
-
-			// Number of frame skips where interpolation is applied
-			AnimUpdateRateParams->MaxEvalRateForInterpolation = 4;
-
-			// Specify the number of off-screen skipped frames
-			// Specify 6 to process 1 frame and skip 5 frames
-			AnimUpdateRateParams->BaseNonRenderedUpdateRate = 6;
-		}
+		HandleMeshUpdateRateOptimizations(false, SkelMesh);
+		SkelMesh->RestoreUpdateRateOptimization();
 	}
-
 }
 
 void ABaseCharacter::HandleMeshUpdateRateOptimizations(const bool IsInEnableURO, USkeletalMeshComponent* SkelMesh)

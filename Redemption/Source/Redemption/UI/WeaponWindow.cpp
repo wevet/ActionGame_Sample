@@ -66,7 +66,7 @@ void UWeaponWindow::RendererAmmos(const AWeaponBaseActor* InWeapon)
 
 void UWeaponWindow::RendererImage(const AWeaponBaseActor* InWeapon)
 {
-	if (!InWeapon || !WeaponImage || !DisplayName)
+	if (!InWeapon || !WeaponImage.IsValid() || !DisplayName)
 	{
 		return;
 	}

@@ -63,9 +63,9 @@ AWvAIController::AWvAIController(const FObjectInitializer& ObjectInitializer) : 
 	AIPerceptionComponent->SetDominantSense(SightConfig->GetSenseImplementation());
 	SetPerceptionComponent(*AIPerceptionComponent);
 
-
 	// ai mission component
 	MissionComponent = CreateDefaultSubobject<UAIMissionComponent>(TEXT("MissionComponent"));
+	MissionComponent->bAutoActivate = 1;
 }
 
 void AWvAIController::PreInitializeComponents()
@@ -80,6 +80,7 @@ void AWvAIController::BeginPlay()
 	AIPerceptionComponent->OnPerceptionUpdated.AddDynamic(this, &ThisClass::OnActorsPerceptionUpdatedRecieve);
 
 	MissionComponent->RegisterMissionDelegate.AddDynamic(this, &ThisClass::RegisterMission_Callback);
+	MissionComponent->MissionAllCompleteDelegate.AddDynamic(this, &ThisClass::MissionAllComplete_Callback);
 }
 
 void AWvAIController::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -87,6 +88,7 @@ void AWvAIController::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	HandleRemoveAIPerceptionDelegate();
 
 	MissionComponent->RegisterMissionDelegate.RemoveDynamic(this, &ThisClass::RegisterMission_Callback);
+	MissionComponent->MissionAllCompleteDelegate.RemoveDynamic(this, &ThisClass::MissionAllComplete_Callback);
 	Super::EndPlay(EndPlayReason);
 }
 
@@ -1207,6 +1209,11 @@ void AWvAIController::ClearFollowTarget()
 void AWvAIController::RegisterMission_Callback(const int32 MissionIndex)
 {
 	UE_LOG(LogWvAI, Log, TEXT("Send Order => %d, function => %s"), MissionIndex, *FString(__FUNCTION__));
+}
+
+void AWvAIController::MissionAllComplete_Callback(const bool bMissionAllCompleteCutScene)
+{
+	UE_LOG(LogWvAI, Log, TEXT("MissionAllComplete => %s"), *FString(__FUNCTION__));
 }
 
 void AWvAIController::HandleRemoveAIPerceptionDelegate()

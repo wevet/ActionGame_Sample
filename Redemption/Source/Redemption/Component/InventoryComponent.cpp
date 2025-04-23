@@ -48,16 +48,14 @@ const EAttackWeaponState UInventoryComponent::ConvertWeaponState(const ELSOverla
 	OutbCanAttack = true;
 	switch (InLSOverlayState)
 	{
-	case ELSOverlayState::Pistol:
+	case ELSOverlayState::Pistol2H:
+	case ELSOverlayState::Pistol1H:
 		return EAttackWeaponState::Gun;
 	case ELSOverlayState::Rifle:
 		return EAttackWeaponState::Rifle;
 	case ELSOverlayState::Knife:
 		return EAttackWeaponState::Knife;
-	case ELSOverlayState::Barrel:
 	case ELSOverlayState::Binoculars:
-	case ELSOverlayState::Torch:
-	case ELSOverlayState::Box:
 		OutbCanAttack = false;
 		break;
 	}

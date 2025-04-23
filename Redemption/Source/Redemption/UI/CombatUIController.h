@@ -56,17 +56,26 @@ protected:
 	TSubclassOf<class UWeaponWindow> WindowTemplate;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Tick", AdvancedDisplay)
-	bool bTickEventWhenPaused;
+	bool bTickEventWhenPaused{false};
 
 	UFUNCTION(BlueprintCallable, Category = "MainUI|Function")
 	void CreateWeaponWindow(UUniformGridPanel* GridPanel);
 
 private:
-	TObjectPtr<class UPlayerHealth> PlayerHealth;
-	TObjectPtr<class UPlayerSkill> PlayerSkill;
-	TObjectPtr<class UWeaponFocus> WeaponFocus;
-	TObjectPtr<class UWeaponWindow> WeaponWindow;
-	TObjectPtr<class UCanvasPanel> BasePanel;
+	UPROPERTY()
+	TObjectPtr<class UPlayerHealth> PlayerHealthWidget;
+
+	UPROPERTY()
+	TObjectPtr<class UPlayerSkill> PlayerSkillWidget;
+
+	UPROPERTY()
+	TObjectPtr<class UWeaponFocus> WeaponFocusWidget;
+
+	UPROPERTY()
+	TObjectPtr<class UWeaponWindow> WeaponWindowWidget;
+
+	UPROPERTY()
+	TObjectPtr<class UCanvasPanel> BasePanelWidget;
 
 	int32 PrevWeaponIndex;
 

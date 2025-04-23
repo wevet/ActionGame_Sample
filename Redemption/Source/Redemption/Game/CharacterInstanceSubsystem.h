@@ -48,6 +48,8 @@ public:
 
 	TArray<ABaseCharacter*> GetLeaderAgent() const;
 
+	TArray<ABaseCharacter*> GetPOIActors() const;
+
 	void StartCinematicCharacter(ABaseCharacter* InCharacter);
 	void StopCinematicCharacter(ABaseCharacter* InCharacter);
 

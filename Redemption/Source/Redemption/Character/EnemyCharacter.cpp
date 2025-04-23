@@ -5,7 +5,9 @@
 #include "GameExtension.h"
 #include "Component/InventoryComponent.h"
 #include "Component/WvSkeletalMeshComponent.h"
+#include "Redemption.h"
 
+#include UE_INLINE_GENERATED_CPP_BY_NAME(EnemyCharacter)
 
 AEnemyCharacter::AEnemyCharacter(const FObjectInitializer& ObjectInitializer)
 {
@@ -21,6 +23,24 @@ AEnemyCharacter::AEnemyCharacter(const FObjectInitializer& ObjectInitializer)
 	//WvMeshComp->SetCollisionResponseToChannel(ECollisionChannel::ECC_GameTraceChannel3, ECollisionResponse::ECR_Block);
 
 
+}
+
+void AEnemyCharacter::BeginPlay()
+{
+	Super::BeginPlay();
+}
+
+
+void AEnemyCharacter::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+}
+
+void AEnemyCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+
+
+	Super::EndPlay(EndPlayReason);
 }
 
 void AEnemyCharacter::MoveBlockedBy(const FHitResult& Impact)
@@ -70,4 +90,5 @@ void AEnemyCharacter::RequestComponentsAsyncLoad()
 	}
 
 }
+
 

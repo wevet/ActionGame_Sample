@@ -20,7 +20,7 @@
 #include "Blueprint/AIBlueprintHelperLibrary.h"
 
 #include "Interface/WvAbilityTargetInterface.h"
-#include "Component/AIMissionComponent.h"
+#include "Mission/AIMissionComponent.h"
 
 #include "WvAIController.generated.h"
 
@@ -299,6 +299,9 @@ private:
 
 	UFUNCTION()
 	void RegisterMission_Callback(const int32 MissionIndex);
+
+	UFUNCTION()
+	void MissionAllComplete_Callback(const bool bMissionAllCompleteCutScene);
 
 	bool IsPerceptionConfigsValid() const;
 	void OnSightPerceptionUpdatedRecieve(AActor* Actor);

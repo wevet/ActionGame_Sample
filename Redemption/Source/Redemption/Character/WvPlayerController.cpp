@@ -7,20 +7,27 @@
 #include "Component/WvCharacterMovementComponent.h"
 #include "Component/QTEActionComponent.h"
 #include "UI/UMGManager.h"
+#include "UI/MinimapUIController.h"
 #include "Game/WvGameInstance.h"
 #include "Game/CharacterInstanceSubsystem.h"
+#include "Game/MinimapCaptureActor.h"
 
 #include "Engine/World.h"
 #include "BasePlayerState.h"
 
+
 #include UE_INLINE_GENERATED_CPP_BY_NAME(WvPlayerController)
+
 
 AWvPlayerController::AWvPlayerController(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
-	InputEventComponent = CreateDefaultSubobject<UWvInputEventComponent>(TEXT("InputComponent"));
-	MissionComponent = CreateDefaultSubobject<UMissionComponent>(TEXT("MissionComponent"));
+	InputEventComponent = ObjectInitializer.CreateDefaultSubobject<UWvInputEventComponent>(this, TEXT("InputComponent"));
+	InputEventComponent->bAutoActivate = 1;
 
-	//bCanPossessWithoutAuthority = true;
+	MissionComponent = ObjectInitializer.CreateDefaultSubobject<UMissionComponent>(this, TEXT("MissionComponent"));
+	MissionComponent->bAutoActivate = 1;
+
+	bCanPossessWithoutAuthority = true;
 }
 
 void AWvPlayerController::BeginPlay()
@@ -28,12 +35,14 @@ void AWvPlayerController::BeginPlay()
 	Super::BeginPlay();
 
 	MissionComponent->RegisterMissionDelegate.AddDynamic(this, &ThisClass::RegisterMission_Callback);
-	//ConsoleCommand(TEXT("p.AsyncCharacterMovement 1"), true);
+
 }
 
 void AWvPlayerController::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	Manager = nullptr;
+	MinimapCaptureActor = nullptr;
+	UMGManager, VehicleUIController = nullptr;
 
 	MissionComponent->RegisterMissionDelegate.RemoveDynamic(this, &ThisClass::RegisterMission_Callback);
 
@@ -44,6 +53,11 @@ void AWvPlayerController::OnPossess(APawn* InPawn)
 {
 	Super::OnPossess(InPawn);
 
+	if (!IsValid(InPawn))
+	{
+		return;
+	}
+
 	OverrideSquadID = FMath::Clamp(OverrideSquadID, 1, 255);
 	auto PS = Cast<ABasePlayerState>(PlayerState);
 	if (PS)
@@ -52,28 +66,34 @@ void AWvPlayerController::OnPossess(APawn* InPawn)
 		PS->SetGenericTeamId(FGenericTeamId(OverrideSquadID));
 	}
 
+	if (IWvAbilityTargetInterface* TeamAgent = Cast<IWvAbilityTargetInterface>(InPawn))
+	{
+		TeamAgent->SetGenericTeamId(FGenericTeamId(OverrideSquadID));
+	}
+
 	if (!IsValid(Manager))
 	{
 		Manager = Cast<AWvPlayerCameraManager>(PlayerCameraManager);
 	}
 
-	if (InPawn)
+	if (InPawn->IsA(APlayerCharacter::StaticClass()))
 	{
-		if (IWvAbilityTargetInterface* TeamAgent = Cast<IWvAbilityTargetInterface>(InPawn))
-		{
-			TeamAgent->SetGenericTeamId(FGenericTeamId(OverrideSquadID));
-		}
+		PC = Cast<APlayerCharacter>(InPawn);
+		OnDefaultPossess(InPawn);
+	}
+	else if (InPawn->IsA(AWvWheeledVehiclePawn::StaticClass()))
+	{
+		VPC = Cast<AWvWheeledVehiclePawn>(InPawn);
+		OnVehilcePossess(InPawn);
+	}
 
-		if (InPawn->IsA(APlayerCharacter::StaticClass()))
-		{
-			PC = Cast<APlayerCharacter>(InPawn);
-			OnDefaultPossess(InPawn);
-		}
-		else if (InPawn->IsA(AWvWheeledVehiclePawn::StaticClass()))
-		{
-			VPC = Cast<AWvWheeledVehiclePawn>(InPawn);
-			OnVehilcePossess(InPawn);
-		}
+	if (!IsValid(MinimapCaptureActor))
+	{
+		AsyncLoadMinimapActor(InPawn);
+	}
+	else
+	{
+		MinimapCaptureActor->Initializer(InPawn);
 	}
 
 }
@@ -96,6 +116,11 @@ void AWvPlayerController::OnUnPossess()
 void AWvPlayerController::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+
+	if (MinimapCaptureActor)
+	{
+		MinimapCaptureActor->UpdateCapture(DeltaTime);
+	}
 }
 
 
@@ -116,11 +141,6 @@ bool AWvPlayerController::InputKey(const FInputKeyParams& Params)
 	return Super::InputKey(Params);
 }
 
-class UWvInputEventComponent* AWvPlayerController::GetInputEventComponent() const
-{
-	return InputEventComponent;
-}
-
 void AWvPlayerController::SetInputModeType(const EWvInputMode NewInputMode)
 {
 	InputEventComponent->SetInputModeType(NewInputMode);
@@ -130,6 +150,7 @@ EWvInputMode AWvPlayerController::GetInputModeType() const
 {
 	return InputEventComponent->GetInputModeType();
 }
+
 
 #pragma region IWvAbilityTargetInterface
 void AWvPlayerController::SetGenericTeamId(const FGenericTeamId& NewTeamID)
@@ -174,6 +195,59 @@ bool AWvPlayerController::IsInBattled() const
 }
 #pragma endregion
 
+
+void AWvPlayerController::AsyncLoadMinimapActor(APawn* InPawn)
+{
+
+	if (!MinimapCaptureActorTemplate.IsNull())
+	{
+
+		FStreamableManager& StreamableManager = UWvGameInstance::GetStreamableManager();
+		const FSoftObjectPath ObjectPath = MinimapCaptureActorTemplate.ToSoftObjectPath();
+		MinimapStreamableHandle = StreamableManager.RequestAsyncLoad(ObjectPath, [this, InPawn]
+		{
+			this->OnMinimapLoadComplete(InPawn);
+		});
+	}
+}
+
+void AWvPlayerController::OnMinimapLoadComplete(APawn* InPawn)
+{
+	if (!MinimapStreamableHandle.Get())
+	{
+		return;
+	}
+
+	UObject* LoadedObj = MinimapStreamableHandle.Get()->GetLoadedAsset();
+	if (LoadedObj)
+	{
+		UClass* ObjectClass = Cast<UClass>(LoadedObj);
+		if (ObjectClass)
+		{
+			FActorSpawnParameters SpawnParams;
+			SpawnParams.Owner = this;
+			SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+			const FTransform Transform = InPawn->GetActorTransform();
+
+			MinimapCaptureActor = GetWorld()->SpawnActor<AMinimapCaptureActor>(ObjectClass, Transform, SpawnParams);
+			if (MinimapCaptureActor)
+			{
+				MinimapCaptureActor->Initializer(InPawn);
+				MinimapStreamableHandle.Reset();
+			}
+		}
+		else
+		{
+			UE_LOG(LogTemp, Error, TEXT("cast failed ObjectClass => [%s]"), *FString(__FUNCTION__));
+		}
+	}
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT("not valid LoadedObj => [%s]"), *FString(__FUNCTION__));
+	}
+}
+
+
 #pragma region Possess
 /// <summary>
 /// async main ui load
@@ -181,16 +255,25 @@ bool AWvPlayerController::IsInBattled() const
 /// <param name="InPawn"></param>
 void AWvPlayerController::OnDefaultPossess(APawn* InPawn)
 {
-	FStreamableManager& StreamableManager = UWvGameInstance::GetStreamableManager();
+	if (IsValid(UMGManager))
+	{
+		UMGManager->VisibleCombatUI(true);
+		BP_DefaultPossess(InPawn);
+		return;
+	}
 
+	// @NOTE
+	// MinimapはUMGManagerの子供になるのでUMGManagerが初期化済みの場合は非同期処理を行う必要がない。
 	if (!UMGManagerTemplate.IsNull())
 	{
+		FStreamableManager& StreamableManager = UWvGameInstance::GetStreamableManager();
 		const FSoftObjectPath ObjectPath = UMGManagerTemplate.ToSoftObjectPath();
 		MainUIStreamableHandle = StreamableManager.RequestAsyncLoad(ObjectPath, [this, InPawn]
 		{
 			this->OnMainUILoadComplete(InPawn);
 		});
 	}
+
 }
 
 void AWvPlayerController::OnMainUILoadComplete(APawn* InPawn)
@@ -207,7 +290,7 @@ void AWvPlayerController::OnMainUILoadComplete(APawn* InPawn)
 				if (IsValid(UMGManager))
 				{
 					UMGManager->Initializer(PC);
-					UMGManager->AddToViewport();
+					UMGManager->AddToViewport((int32)EUMGLayerType::Default);
 
 					BP_DefaultPossess(InPawn);
 					MainUIStreamableHandle.Reset();
@@ -222,9 +305,8 @@ void AWvPlayerController::OnDefaultUnPossess()
 {
 	if (UMGManager)
 	{
-		UMGManager->RemoveFromParent();
+		UMGManager->VisibleCombatUI(false);
 	}
-	UMGManager = nullptr;
 	BP_DefaultUnPossess();
 }
 
@@ -234,10 +316,9 @@ void AWvPlayerController::OnDefaultUnPossess()
 /// <param name="InPawn"></param>
 void AWvPlayerController::OnVehilcePossess(APawn* InPawn)
 {
-	FStreamableManager& StreamableManager = UWvGameInstance::GetStreamableManager();
-
 	if (!VehicleUIControllerTemplate.IsNull())
 	{
+		FStreamableManager& StreamableManager = UWvGameInstance::GetStreamableManager();
 		const FSoftObjectPath ObjectPath = VehicleUIControllerTemplate.ToSoftObjectPath();
 		VehicleUIStreamableHandle = StreamableManager.RequestAsyncLoad(ObjectPath, [this, InPawn]
 		{
@@ -261,7 +342,7 @@ void AWvPlayerController::OnVehilceUILoadComplete(APawn* InPawn)
 				if (IsValid(VehicleUIController))
 				{
 					VehicleUIController->Initializer(VPC);
-					VehicleUIController->AddToViewport();
+					VehicleUIController->AddToViewport((int32)EUMGLayerType::Vehicle);
 
 					BP_VehilcePossess(InPawn);
 					VehicleUIStreamableHandle.Reset();
@@ -283,6 +364,16 @@ void AWvPlayerController::OnVehicleUnPossess()
 }
 #pragma endregion
 
+
+class UWvInputEventComponent* AWvPlayerController::GetInputEventComponent() const
+{
+	return InputEventComponent;
+}
+
+class UMissionComponent* AWvPlayerController::GetMissionComponent() const
+{
+	return MissionComponent;
+}
 
 FVector AWvPlayerController::GetCameraForwardVector() const
 {
@@ -321,4 +412,5 @@ void AWvPlayerController::EndQTE()
 		PC->GetQTEActionComponent()->End();
 	}
 }
+
 

@@ -151,6 +151,9 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Locomotion|MotionMatching", meta = (BlueprintThreadSafe))
 	FVector2D GetAimSweepTimeToVector() const;
 
+	UFUNCTION(BlueprintCallable, Category = "BaseAnimInstance")
+	void DrawDebugSkeleton(UAnimationAsset* AnimationAsset);
+
 protected:
 	UPROPERTY()
 	TWeakObjectPtr<class ABaseCharacter> Character;

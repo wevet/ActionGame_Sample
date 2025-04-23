@@ -9,16 +9,16 @@
 
 // UI ManagerLayer
 UENUM()
-enum class EUMGLayerType : int32
+enum class EUMGLayerType : uint8
 {
-	None = -1,
-	WorldScreen = 0,
-	Main = 1,
-	Overlay = 100,
+	Default = 0,
+	Vehicle = 1,
+	Overlay = 2
 };
 
 class ABaseCharacter;
 class UCombatUIController;
+class UMinimapUIController;
 /**
  * 
  */
@@ -40,13 +40,25 @@ protected:
 
 public:
 	void Initializer(ABaseCharacter* NewCharacter);
-
-private:
-	TObjectPtr<class UCombatUIController> CombatUIController;
-	void SetTickableWhenPaused();
+	void VisibleCombatUI(const bool bIsVisible);
+	void VisibleMinimapUI(const bool bIsVisible);
 
 protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = Controller)
 	TSubclassOf<class UCombatUIController> CombatUIControllerTemplate;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "UMGManager|Variable")
+	FName MinimapControllerKeyName;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Controller)
+	TObjectPtr<class UMinimapUIController> MinimapUIController;
+
+private:
+	UPROPERTY()
+	TObjectPtr<class UCombatUIController> CombatUIController;
+
+	void SetTickableWhenPaused();
+
+
 };
 

@@ -37,11 +37,8 @@ FVector FCustomFootSolverEditMode::GetWidgetLocation() const
 		{
 			if (RuntimeNode->SolverInputData.FeetBones.Num() > SpineIndex)
 			{
-				if (RuntimeNode->SolverInputData.FeetBones[SpineIndex].bFixedPole)
-					return (RuntimeNode->SolverInputData.FeetBones[SpineIndex].KneeDirectionOffset);
-				else
-					return (RuntimeNode->KneeAnimatedTransformArray[SpineIndex].GetLocation() + 
-						RuntimeNode->SolverInputData.FeetBones[SpineIndex].KneeDirectionOffset);
+				return (RuntimeNode->KneeAnimatedTransformArray[SpineIndex].GetLocation() + 
+					RuntimeNode->SolverInputData.FeetBones[SpineIndex].KneeDirectionOffset);
 			}
 		}
 	}
@@ -112,47 +109,43 @@ IMPLEMENT_HIT_PROXY(HFingerSolverHandleHitProxy, HHitProxy)
 void FCustomFootSolverEditMode::Render(const FSceneView* View, FViewport* Viewport, FPrimitiveDrawInterface* PDI)
 {
 	UDebugSkelMeshComponent* SkelComp = GetAnimPreviewScene().GetPreviewMeshComponent();
-	for (int32 i = 0; i < RuntimeNode->SolverInputData.FeetBones.Num(); i++)
+	for (int32 Index = 0; Index < RuntimeNode->SolverInputData.FeetBones.Num(); Index++)
 	{
 		UMaterialInstanceDynamic* KneeMaterial = UMaterialInstanceDynamic::Create(GEngine->ArrowMaterial, GEngine->ArrowMaterial);
 		KneeMaterial->SetVectorParameterValue("GizmoColor", FLinearColor(FColor::Cyan));
 		const FMaterialRenderProxy* SphereMaterialProxy = KneeMaterial->GetRenderProxy();
-		PDI->SetHitProxy(new HFootSolverHandleHitProxy(i, 0));
+		PDI->SetHitProxy(new HFootSolverHandleHitProxy(Index, 0));
 		FTransform StartTransform = FTransform::Identity;
-		if (RuntimeNode->KneeAnimatedTransformArray.Num() > i)
+		if (RuntimeNode->KneeAnimatedTransformArray.Num() > Index)
 		{
-			if (RuntimeNode->SolverInputData.FeetBones[i].bFixedPole)
-				StartTransform.SetLocation(RuntimeNode->SolverInputData.FeetBones[i].KneeDirectionOffset);
-			else
-				StartTransform = RuntimeNode->KneeAnimatedTransformArray[i];
-				StartTransform.AddToTranslation(RuntimeNode->SolverInputData.FeetBones[i].KneeDirectionOffset);
+			StartTransform = RuntimeNode->KneeAnimatedTransformArray[Index];
+			StartTransform.AddToTranslation(RuntimeNode->SolverInputData.FeetBones[Index].KneeDirectionOffset);
 
-			const float Scale = View->WorldToScreen(StartTransform.GetLocation()).W * 
-				(4.0f / View->UnscaledViewRect.Width() / View->ViewMatrices.GetProjectionMatrix().M[0][0]);
+			const float Scale = View->WorldToScreen(StartTransform.GetLocation()).W * (4.0f / View->UnscaledViewRect.Width() / View->ViewMatrices.GetProjectionMatrix().M[0][0]);
 			DrawSphere(PDI, StartTransform.GetLocation(), FRotator::ZeroRotator, FVector(8.0f) * Scale, 64, 64, SphereMaterialProxy, SDPG_Foreground);
-			DrawDashedLine(PDI, RuntimeNode->KneeAnimatedTransformArray[i].GetLocation(), StartTransform.GetLocation(), FLinearColor::Black, 2, 5);
+			DrawDashedLine(PDI, RuntimeNode->KneeAnimatedTransformArray[Index].GetLocation(), StartTransform.GetLocation(), FLinearColor::Black, 2, 5);
 		}
 	}
 
-	for (int32 i = 0; i < RuntimeNode->SpineHitPairs.Num(); i++)
+	for (int32 Index = 0; Index < RuntimeNode->SpineHitPairs.Num(); Index++)
 	{
-		if (i < RuntimeNode->SpineFeetPair.Num() && i < RuntimeNode->SpineTransformPairs.Num())
+		if (Index < RuntimeNode->SpineFeetPair.Num() && Index < RuntimeNode->SpineTransformPairs.Num())
 		{
-			for (int32 j = 0; j < RuntimeNode->SpineFeetPair[i].FeetArray.Num(); j++)
+			for (int32 JIndex = 0; JIndex < RuntimeNode->SpineFeetPair[Index].FeetArray.Num(); JIndex++)
 			{
 				UMaterialInstanceDynamic* FingerMaterial = UMaterialInstanceDynamic::Create(GEngine->ArrowMaterial, GEngine->ArrowMaterial);
 				FingerMaterial->SetVectorParameterValue("GizmoColor", FLinearColor(FColor::Green));
 				const FMaterialRenderProxy* FingerMaterialProxy = FingerMaterial->GetRenderProxy();
-				FTransform FingerTransform = RuntimeNode->KneeAnimatedTransformArray[i];
-				const int SpineOrderIndex = RuntimeNode->SpineFeetPair[i].OrderIndexArray[j];
+				FTransform FingerTransform = RuntimeNode->KneeAnimatedTransformArray[Index];
+				const int SpineOrderIndex = RuntimeNode->SpineFeetPair[Index].OrderIndexArray[JIndex];
 
 				if (RuntimeNode->AffectToesAlways)
 				{
-					for (int32 kFinger = 0; kFinger < RuntimeNode->SpineTransformPairs[i].AssociatedFingerArray[j].Num(); kFinger++)
+					for (int32 kFinger = 0; kFinger < RuntimeNode->SpineTransformPairs[Index].AssociatedFingerArray[JIndex].Num(); kFinger++)
 					{
-						PDI->SetHitProxy(new HFingerSolverHandleHitProxy(i, j, kFinger));
+						PDI->SetHitProxy(new HFingerSolverHandleHitProxy(Index, JIndex, kFinger));
 						const FVector TraceOffset = RuntimeNode->SolverInputData.FeetBones[SpineOrderIndex].FingerBoneArray[kFinger].TraceOffset;
-						FingerTransform.SetLocation(RuntimeNode->FeetFingerTransformArray[i][j][kFinger].GetLocation() + TraceOffset);
+						FingerTransform.SetLocation(RuntimeNode->FeetFingerTransformArray[Index][JIndex][kFinger].GetLocation() + TraceOffset);
 						const float Scale = View->WorldToScreen(FingerTransform.GetLocation()).W *
 							(4.0f / View->UnscaledViewRect.Width() / View->ViewMatrices.GetProjectionMatrix().M[0][0]);
 
@@ -164,7 +157,7 @@ void FCustomFootSolverEditMode::Render(const FSceneView* View, FViewport* Viewpo
 							FingerMaterialProxy, SDPG_Foreground);
 
 						DrawDashedLine(PDI, 
-							RuntimeNode->FeetFingerTransformArray[i][j][kFinger].GetLocation(), 
+							RuntimeNode->FeetFingerTransformArray[Index][JIndex][kFinger].GetLocation(), 
 							FingerTransform.GetLocation(), 
 							FLinearColor::Black, 2, 5);
 					}
@@ -175,8 +168,8 @@ void FCustomFootSolverEditMode::Render(const FSceneView* View, FViewport* Viewpo
 					UMaterialInstanceDynamic* FootMaterial = UMaterialInstanceDynamic::Create(GEngine->ArrowMaterial, GEngine->ArrowMaterial);
 					FootMaterial->SetVectorParameterValue("GizmoColor", FLinearColor(FColor::Yellow));
 					const FMaterialRenderProxy* FootMaterialProxy = FootMaterial->GetRenderProxy();
-					const FVector FootTipTransform = RuntimeNode->FeetTipLocations[i][j];
-					const FVector FootAnkleLocation = RuntimeNode->SpineTransformPairs[i].AssociatedFootArray[j].GetLocation();
+					const FVector FootTipTransform = RuntimeNode->FeetTipLocations[Index][JIndex];
+					const FVector FootAnkleLocation = RuntimeNode->SpineTransformPairs[Index].AssociatedFootArray[JIndex].GetLocation();
 					FTransform FootAnkleTransform = FingerTransform;
 					FootAnkleTransform.SetLocation(FootAnkleLocation);
 					FootAnkleTransform.SetRotation(FQuat::Identity);
@@ -184,7 +177,7 @@ void FCustomFootSolverEditMode::Render(const FSceneView* View, FViewport* Viewpo
 					FMatrix FootAnkleMatrix = FootAnkleTransform.ToMatrixNoScale();
 					const float FootAnkleTransformScale = View->WorldToScreen(FootAnkleLocation).W * 
 						(8.0f / View->UnscaledViewRect.Width() / View->ViewMatrices.GetProjectionMatrix().M[0][0]);
-					const float SideSizing = RuntimeNode->FeetWidthSpacing[i][j];
+					const float SideSizing = RuntimeNode->FeetWidthSpacing[Index][JIndex];
 					DrawCylinder(PDI, FootAnkleLocation, FootTipTransform, SideSizing, 6, FootMaterialProxy, 5);
 				}
 			}
@@ -206,21 +199,28 @@ bool FCustomFootSolverEditMode::HandleClick(FEditorViewportClient* InViewportCli
 	if (HitProxy && HitProxy->IsA(HFootSolverHandleHitProxy::StaticGetType()))
 	{
 		HFootSolverHandleHitProxy* HandleHitProxy = static_cast<HFootSolverHandleHitProxy*>(HitProxy);
-		SpineIndex = HandleHitProxy->SpineIndex;
-		FootIndex = HandleHitProxy->FootIndex;
-		bResult = true;
-		bKneeSelection = true;
-		bFingerSelection = false;
+		if (HandleHitProxy)
+		{
+			SpineIndex = HandleHitProxy->SpineIndex;
+			FootIndex = HandleHitProxy->FootIndex;
+			bResult = true;
+			bKneeSelection = true;
+			bFingerSelection = false;
+		}
+
 	}
 
 	if (HitProxy && HitProxy->IsA(HFingerSolverHandleHitProxy::StaticGetType()))
 	{
 		HFingerSolverHandleHitProxy* HandleHitProxy = static_cast<HFingerSolverHandleHitProxy*>(HitProxy);
-		SpineIndex = HandleHitProxy->SpineIndex;
-		FootIndex = HandleHitProxy->FootIndex;
-		FingerIndex = HandleHitProxy->FingerIndex;
-		bFingerSelection = true;
-		bKneeSelection = false;
+		if (HandleHitProxy)
+		{
+			SpineIndex = HandleHitProxy->SpineIndex;
+			FootIndex = HandleHitProxy->FootIndex;
+			FingerIndex = HandleHitProxy->FingerIndex;
+			bFingerSelection = true;
+			bKneeSelection = false;
+		}
 	}
 	return bResult;
 }
@@ -229,9 +229,10 @@ bool FCustomFootSolverEditMode::HandleClick(FEditorViewportClient* InViewportCli
 FName FCustomFootSolverEditMode::GetSelectedBone() const
 {
 	if ((GraphNode->Node.SolverInputData.FeetBones.Num() > SpineIndex))
+	{
 		return GraphNode->Node.SolverInputData.FeetBones[SpineIndex].FeetBoneName;
-	else
-		return NAME_None;
+	}
+	return NAME_None;
 }
 
 

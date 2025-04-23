@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
 #include "Game/WvSaveGame.h"
+#include "Mission/MissionSystemTypes.h"
 #include "MissionComponent.generated.h"
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FReceiveRegisterMissionDelegate, int32, InSendMissionIndex);

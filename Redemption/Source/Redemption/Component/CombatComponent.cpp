@@ -984,7 +984,7 @@ void UCombatComponent::UnEquipWeapon()
 
 void UCombatComponent::EquipPistol()
 {
-	Modify_Weapon(ELSOverlayState::Pistol);
+	Modify_Weapon(ELSOverlayState::Pistol2H);
 }
 
 void UCombatComponent::EquipRifle()

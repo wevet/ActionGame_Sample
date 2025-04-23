@@ -51,9 +51,6 @@ void AMassCharacter::Tick(float DeltaTime)
 
 void AMassCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-
-	UCharacterInstanceSubsystem::Get()->RemoveAICharacter(this);
-
 	Super::EndPlay(EndPlayReason);
 }
 
@@ -63,7 +60,6 @@ void AMassCharacter::BeginPlay()
 
 	// @NOTE
 	// disable ticking components
-	CharacterTrajectoryComponent->SetComponentTickEnabled(false);
 	PawnNoiseEmitterComponent->SetComponentTickEnabled(false);
 
 	// disable climbing mantling ragdolling
@@ -83,7 +79,6 @@ void AMassCharacter::BeginPlay()
 		AIC->HandleRemoveAIPerceptionDelegate();
 	}
 
-	UCharacterInstanceSubsystem::Get()->AssignAICharacter(this);
 }
 
 void AMassCharacter::MoveBlockedBy(const FHitResult& Impact)

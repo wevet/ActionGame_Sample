@@ -50,8 +50,20 @@ public:
 	UFUNCTION(BlueprintCallable, Category = Level)
 	void SetSkyActor(ASkyActor* NewSkyActor);
 
+	UFUNCTION(BlueprintCallable, Category = Level)
+	void AddPOIActor(AActor* NewActor);
+
+	UFUNCTION(BlueprintCallable, Category = Level)
+	void RemovePOIActor(AActor* NewActor);
+
+	UFUNCTION(BlueprintCallable, Category = Level)
+	TArray<AActor*> GetPOIActors() const;
+
 private:
 	static UFieldInstanceSubsystem* Instance;
+
+	UPROPERTY()
+	TArray<AActor*> POIActors;
 
 	UPROPERTY()
 	TArray<ADayNightBaseActor*> DayNightActors;

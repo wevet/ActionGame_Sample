@@ -69,7 +69,4 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, config, meta = (ToolTip = "CharacterBaseのMeshは、重要度を表示"), Category = "SignificanceManager")
 	int32 Significance_CharacterBaseMeshVisibleLevel = 5;
-
-	UPROPERTY(EditDefaultsOnly, config, meta = (ToolTip = "EnvironmentCreatureのバトル最低重要度評価"), Category = "SignificanceManager")
-	int32 Significance_EnvironmentCreatureBaseBattleMinLevel = 4;
 };

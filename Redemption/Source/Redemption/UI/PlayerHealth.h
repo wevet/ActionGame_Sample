@@ -12,7 +12,7 @@ class ABaseCharacter;
 /**
  * 
  */
-UCLASS()
+UCLASS(meta = (DisableNativeTick))
 class REDEMPTION_API UPlayerHealth : public UUserWidget
 {
 	GENERATED_BODY()

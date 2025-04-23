@@ -66,7 +66,6 @@ void USignificanceComponent::BeginPlay()
 	Significance_CharacterBaseBattleMinLevel = ProjectSettings->Significance_CharacterBaseBattleMinLevel;
 	Significance_CharacterBaseAIUnlockLevel = ProjectSettings->Significance_CharacterBaseAIUnlockLevel;
 	Significance_CharacterBaseMeshVisibleLevel = ProjectSettings->Significance_CharacterBaseMeshVisibleLevel;
-	Significance_EnvironmentCreatureBaseBattleMinLevel = ProjectSettings->Significance_EnvironmentCreatureBaseBattleMinLevel;
 
 
 	Super::SetComponentTickEnabled(false);

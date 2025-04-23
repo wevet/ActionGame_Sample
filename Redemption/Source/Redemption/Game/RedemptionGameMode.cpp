@@ -23,19 +23,6 @@ void ARedemptionGameMode::StartPlay()
 
 	UE_LOG(LogTemp, Log, TEXT("end %s"), *FString(__FUNCTION__));
 
-#if false
-	auto PC = Game::ControllerExtension::GetPlayer(GetWorld());
-
-	// apply to custom lensflare
-	if (IsValid(PC))
-	{
-		PC->ConsoleCommand("r.LensFlareMethod 1");
-		PC->ConsoleCommand("r.LensFlare.RenderFlare 1");
-		PC->ConsoleCommand("r.LensFlare.RenderGlare 0");
-		PC->ConsoleCommand("r.LensFlare.RenderBloom 1");
-	}
-#endif
-
 }
 
 void ARedemptionGameMode::EnableCustomLensFlare()

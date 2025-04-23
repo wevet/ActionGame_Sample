@@ -16,8 +16,12 @@ class REDEMPTION_API AEnemyCharacter : public ABaseCharacter
 	
 public:
 	AEnemyCharacter(const FObjectInitializer& ObjectInitializer);
+	virtual void Tick(float DeltaTime) override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	virtual void MoveBlockedBy(const FHitResult& Impact) override;
 
+
+public:
 #pragma region IWvAbilityTargetInterface
 	virtual void OnReceiveKillTarget(AActor* Actor, const float Damage) override;
 	virtual void Freeze() override;
@@ -27,6 +31,9 @@ public:
 	
 
 	virtual void RequestComponentsAsyncLoad() override;
+
+protected:
+	virtual void BeginPlay() override;
 
 protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "EnemyCharacter|Config")
