@@ -12,7 +12,6 @@ UUMGManager::UUMGManager(const FObjectInitializer& ObjectInitializer) : Super(Ob
 {
 	CombatUIController = nullptr;
 
-	MinimapControllerKeyName = FName(TEXT("WBP_MiniMap"));
 }
 
 void UUMGManager::NativeConstruct()
@@ -37,7 +36,6 @@ void UUMGManager::Initializer(ABaseCharacter* NewCharacter)
 		CombatUIController->AddToViewport();
 	}
 
-	MinimapUIController = Cast<UMinimapUIController>(GetWidgetFromName(MinimapControllerKeyName));
 	if (MinimapUIController)
 	{
 		MinimapUIController->Initializer(NewCharacter);

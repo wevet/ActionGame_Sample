@@ -2,151 +2,171 @@
 
 
 #include "UI/MinimapUIController.h"
+#include "UI/POIMarkerWidget.h"
 #include "Character/BaseCharacter.h"
+#include "Character/WvPlayerController.h"
 #include "Level/FieldInstanceSubsystem.h"
+#include "GameExtension.h"
+
 
 #include "Components/OverlaySlot.h"
+#include "Kismet/KismetMathLibrary.h"
+#include "Kismet/KismetSystemLibrary.h"
+
 
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(MinimapUIController)
 
 UMinimapUIController::UMinimapUIController(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
-
-	PlayerIconKeyName = FName(TEXT("WBP_PlayerIcon"));
 }
 
 void UMinimapUIController::NativeConstruct()
 {
 	Super::NativeConstruct();
 
-	PlayerIcon = Cast<UUserWidget>(GetWidgetFromName(PlayerIconKeyName));
 }
 
 void UMinimapUIController::Initializer(ABaseCharacter* NewCharacter)
 {
 	CharacterOwner = NewCharacter;
+
+	if (PlayerPOI)
+	{
+		PlayerPOI->Initializer(CharacterOwner);
+		PlayerPOI->ShowPawnIcon(true);
+		PlayerPOI->ShowPawnView(true);
+	}
+
 }
 
 void UMinimapUIController::RemoveFromParent()
 {
-	POIActorWidgets.Reset();
-
 	Super::RemoveFromParent();
 }
 
 void UMinimapUIController::Renderer(const float DeltaTime)
 {
 
-	DrawPlayerIcon(DeltaTime);
-	UpdateKeyCharactersIcon(DeltaTime);
-
 	KeyCharactersElapsedTime += DeltaTime;
 	if (KeyCharactersElapsedTime >= KeyCharactersUpdateInterval)
 	{
 		KeyCharactersElapsedTime = 0.f;
-		CreateKeyCharactersIcon(DeltaTime);
+		CreatePOIIconActors(DeltaTime);
 	}
 
+	if (PlayerPOI)
+	{
+		PlayerPOI->Renderer(DeltaTime);
+	}
+
+	UpdateTranslationPOIWidgets(DeltaTime);
 }
 
 
-void UMinimapUIController::DrawPlayerIcon(const float DeltaTime)
+void UMinimapUIController::CreatePOIIconActors(const float DeltaTime)
 {
-	if (IsValid(CharacterOwner))
+	if (!ActorPOITemplate || !IsValid(Main_Overlay))
 	{
-		if (PlayerIcon)
-		{
-			const auto Rotation = CharacterOwner->GetActorRotation();
-			float Yaw = Rotation.Yaw;
-			//if (Yaw < 0.0f)
-			//{
-			//	Yaw += 360.0f;
-			//}
-
-			CurrentYaw = FMath::FInterpTo(CurrentYaw, Yaw, DeltaTime, InterpSpeed);
-			if (bIsIconRotationEnable)
-			{
-				PlayerIcon->SetRenderTransformAngle(CurrentYaw);
-			}
-
-		}
-		else
-		{
-			UE_LOG(LogTemp, Error, TEXT("not player icon"));
-		}
+		return;
 	}
-	else
-	{
-		UE_LOG(LogTemp, Error, TEXT("not CharacterOwner"));
-	}
-}
 
-void UMinimapUIController::CreateKeyCharactersIcon(const float DeltaTime)
-{
 	TArray<AActor*> CurrentPOIActors = UFieldInstanceSubsystem::Get()->GetPOIActors();
-
-	CurrentPOIActors.RemoveAll([](AActor* Actor)
-	{
-		return Actor == nullptr;
-	});
 
 	for (AActor* Act : CurrentPOIActors)
 	{
-		if (!POIActorWidgets.Contains(Act))
+		if (!POIActors.Contains(Act))
 		{
-			if (IsValid(KeyCharacterIconTemplate) && IsValid(POIRoot))
-			{
-				UUserWidget* NewWidget = CreateWidget<UUserWidget>(this, KeyCharacterIconTemplate);
-				if (NewWidget)
-				{
-					//UOverlaySlot* POISlot = POIOverlay->AddChildToOverlay(NewWidget);
-					//POISlot->SetVerticalAlignment(EVerticalAlignment::VAlign_Center);
-					//POISlot->SetHorizontalAlignment(EHorizontalAlignment::HAlign_Center);
-					POIRoot->AddChild(NewWidget);
-
-					NewWidget->SetRenderTranslation(FVector2D::ZeroVector);
-
-					POIActorWidgets.Add(Act, NewWidget);
-
-					UE_LOG(LogTemp, Warning, TEXT("Added POI: [%s]"), *GetNameSafe(Act));
-				}
-			}
+			POIActors.Add(Act);
 		}
+	}
+
+	CreatePOIIconWidgets();
+
+}
+
+void UMinimapUIController::CreatePOIIconWidgets()
+{
+	auto PC = Cast<AWvPlayerController>(Game::ControllerExtension::GetPlayer(GetWorld()));
+
+	for (AActor* Act : POIActors)
+	{
+		if (PC)
+		{
+			PC->AddMinimapHiddenActor(Act);
+		}
+
+		if (POIActorWidgets.Contains(Act))
+		{
+			continue;
+		}
+
+		const bool bIsPawn = bool(Cast<APawn>(Act));
+		FSlateColor SlateColor(bIsPawn ? FLinearColor::Blue : FLinearColor::Red);
+
+		auto Widget = CreateWidget<UPOIMarkerWidget>(this, ActorPOITemplate);
+		if (!Widget)
+		{
+			continue;
+		}
+
+		//UE_LOG(LogTemp, Log, TEXT("Act => %s"), *GetNameSafe(Act));
+
+		Widget->Initializer(Act);
+		Widget->SetEnableAnimate(true);
+		Widget->SetImageColor(SlateColor);
+		Widget->ShowPawnIcon(bIsPawn);
+		Widget->ShowPawnView(false);
+		auto ChildSlot = Main_Overlay->AddChildToOverlay(Widget);
+		Widget->SetOverlaySlot(ChildSlot);
+		POIActorWidgets.Add(Act, Widget);
 	}
 }
 
-void UMinimapUIController::UpdateKeyCharactersIcon(const float DeltaTime)
+void UMinimapUIController::UpdateTranslationPOIWidgets(const float DeltaTime)
 {
-
 	if (!IsValid(CharacterOwner))
 	{
 		return;
 	}
 
+	// @NOTE
+	// SceneCapture2Dのキャプチャ範囲（Width）が4096
+	// ミニマップの一辺が260
+	constexpr float MinimapSize = 260.0f / 4096.0f;
+	// ミニマップ半径
+	constexpr float MiniMapRadius = 130.0f;
+
 	const FVector PlayerLocation = CharacterOwner->GetActorLocation();
-	const float PlayerYaw = CharacterOwner->GetActorRotation().Yaw;
-	const float YawRad = FMath::DegreesToRadians(PlayerYaw);
 
-	for (const TPair<AActor*, UUserWidget*>& Pair : POIActorWidgets)
+	for (TPair<AActor*, UPOIMarkerWidget*>Pair : POIActorWidgets)
 	{
-		const AActor* TargetActor = Pair.Key;
-		UUserWidget* Widget = Pair.Value;
-
-		if (!IsValid(TargetActor) || !IsValid(Widget))
+		if (!IsValid(Pair.Key) || !IsValid(Pair.Value))
 		{
 			continue;
 		}
 
-		const FVector TargetLocation = TargetActor->GetActorLocation();
-		const FVector Delta = TargetLocation - PlayerLocation;
+		const AActor* Act = Pair.Key;
+		auto Widget = Pair.Value;
+		Widget->Renderer(DeltaTime);
 
-		const FVector Pos = Delta * FMath::Clamp(Size.X / Size.Y, 0.0f, 160.0f);
+		const FVector ActorLocation = Act->GetActorLocation();
+		const FVector Location = (ActorLocation - PlayerLocation) * MinimapSize;
+		const FVector2D Result{ Location.Y, Location.X * -1.0f };
 
-		Widget->SetRenderTranslation(FVector2D(Pos.Y, Pos.X * -1.0f));
+		const float DistanceFromCenter = Result.Size();
 
-		const auto Rotation = TargetActor->GetActorRotation();
-		Widget->SetRenderTransformAngle(Rotation.Yaw);
+		if (DistanceFromCenter <= MiniMapRadius)
+		{
+			Widget->SetRenderTranslation(Result);
+		}
+		else
+		{
+			const FVector2D ClampedPos = Result.GetSafeNormal() * MiniMapRadius;
+			Widget->SetRenderTranslation(ClampedPos);
+		}
 	}
+
 }
+
 

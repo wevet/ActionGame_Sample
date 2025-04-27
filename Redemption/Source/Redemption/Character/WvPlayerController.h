@@ -74,6 +74,10 @@ public:
 	UMissionComponent* GetMissionComponent() const;
 
 
+	void AddMinimapHiddenActor(AActor* NewHiddenActor);
+	void RemoveMinimapHiddenActor(AActor* NewHiddenActor);
+
+
 public:
 	// All keys pressed will be notified
 	UPROPERTY(BlueprintAssignable)

@@ -94,6 +94,7 @@ void AWvPlayerController::OnPossess(APawn* InPawn)
 	else
 	{
 		MinimapCaptureActor->Initializer(InPawn);
+		AddMinimapHiddenActor(InPawn);
 	}
 
 }
@@ -196,6 +197,7 @@ bool AWvPlayerController::IsInBattled() const
 #pragma endregion
 
 
+#pragma region Minimap
 void AWvPlayerController::AsyncLoadMinimapActor(APawn* InPawn)
 {
 
@@ -233,6 +235,7 @@ void AWvPlayerController::OnMinimapLoadComplete(APawn* InPawn)
 			if (MinimapCaptureActor)
 			{
 				MinimapCaptureActor->Initializer(InPawn);
+				AddMinimapHiddenActor(InPawn);
 				MinimapStreamableHandle.Reset();
 			}
 		}
@@ -246,6 +249,31 @@ void AWvPlayerController::OnMinimapLoadComplete(APawn* InPawn)
 		UE_LOG(LogTemp, Error, TEXT("not valid LoadedObj => [%s]"), *FString(__FUNCTION__));
 	}
 }
+
+void AWvPlayerController::AddMinimapHiddenActor(AActor* NewHiddenActor)
+{
+	if (MinimapCaptureActor)
+	{
+		MinimapCaptureActor->AddMinimapHiddenActor(NewHiddenActor);
+	}
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT("nullptr MinimapCaptureActor async loading... => [%s]"), *FString(__FUNCTION__));
+	}
+}
+
+void AWvPlayerController::RemoveMinimapHiddenActor(AActor* NewHiddenActor)
+{
+	if (MinimapCaptureActor)
+	{
+		MinimapCaptureActor->RemoveMinimapHiddenActor(NewHiddenActor);
+	}
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT("nullptr MinimapCaptureActor async loading... => [%s]"), *FString(__FUNCTION__));
+	}
+}
+#pragma endregion
 
 
 #pragma region Possess
@@ -412,5 +440,8 @@ void AWvPlayerController::EndQTE()
 		PC->GetQTEActionComponent()->End();
 	}
 }
+
+
+
 
 

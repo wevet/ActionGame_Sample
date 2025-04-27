@@ -47,11 +47,8 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = Controller)
 	TSubclassOf<class UCombatUIController> CombatUIControllerTemplate;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "UMGManager|Variable")
-	FName MinimapControllerKeyName;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Controller)
-	TObjectPtr<class UMinimapUIController> MinimapUIController;
+	UPROPERTY(meta = (BindWidget))
+	UMinimapUIController* MinimapUIController;
 
 private:
 	UPROPERTY()

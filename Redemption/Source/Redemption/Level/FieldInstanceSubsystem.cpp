@@ -201,6 +201,11 @@ TArray<AActor*> UFieldInstanceSubsystem::GetPOIActors() const
 		return false;
 	});
 
+	Filtered.RemoveAll([](AActor* Actor)
+	{
+		return Actor == nullptr;
+	});
+
 	return Filtered;
 }
 

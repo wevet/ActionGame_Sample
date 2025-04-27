@@ -37,7 +37,7 @@ AMinimapCaptureActor::AMinimapCaptureActor()
 	SceneCaptureComponent->ShowFlags.SetBloom(false);
 	SceneCaptureComponent->ShowFlags.SetLumenReflections(false);
 	SceneCaptureComponent->PostProcessBlendWeight = 0.f;
-	SceneCaptureComponent->CaptureSource = SCS_SceneDepth;
+	//SceneCaptureComponent->CaptureSource = SCS_SceneDepth;
 	SceneCaptureComponent->SetRelativeLocation(FVector::ZeroVector);
 }
 
@@ -138,3 +138,27 @@ bool AMinimapCaptureActor::IsEnableMapRotation() const
 	}
 	return false;
 }
+
+void AMinimapCaptureActor::AddMinimapHiddenActor(AActor* NewHiddenActor)
+{
+	if (SceneCaptureComponent && IsValid(NewHiddenActor))
+	{
+		if (!SceneCaptureComponent->HiddenActors.Contains(NewHiddenActor))
+		{
+			SceneCaptureComponent->HiddenActors.Add(NewHiddenActor);
+		}
+	}
+}
+
+void AMinimapCaptureActor::RemoveMinimapHiddenActor(AActor* NewHiddenActor)
+{
+	if (SceneCaptureComponent && IsValid(NewHiddenActor))
+	{
+		if (SceneCaptureComponent->HiddenActors.Contains(NewHiddenActor))
+		{
+			SceneCaptureComponent->HiddenActors.Remove(NewHiddenActor);
+		}
+	}
+}
+
+

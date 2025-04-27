@@ -10,11 +10,12 @@
 #include "MinimapUIController.generated.h"
 
 class ABaseCharacter;
+class UPOIMarkerWidget;
 
 /**
  * 
  */
-UCLASS(meta = (DisableNativeTick))
+UCLASS() //meta = (DisableNativeTick)
 class REDEMPTION_API UMinimapUIController : public UUserWidget
 {
 	GENERATED_BODY()
@@ -33,48 +34,30 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "MinimapUI|Variable")
 	TObjectPtr<class ABaseCharacter> CharacterOwner;
 
-	/// <summary>
-	/// override BP from MPC
-	/// </summary>
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "MinimapUI|Variable")
-	bool bIsIconRotationEnable{false};
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "MinimapUI|Variable")
+	TMap<AActor*, UPOIMarkerWidget*> POIActorWidgets;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "MinimapUI|Variable")
-	FName PlayerIconKeyName;
+	float KeyCharactersUpdateInterval{5.0f};
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "MinimapUI|Variable")
-	float InterpSpeed{ 4.0f };
+	TSubclassOf<class UPOIMarkerWidget> ActorPOITemplate;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "MinimapUI|Variable")
-	float KeyCharactersUpdateInterval{1.0f};
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (BindWidget))
+	UPOIMarkerWidget* PlayerPOI;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "MinimapUI|Variable")
-	TSubclassOf<class UUserWidget> KeyCharacterIconTemplate;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (BindWidget))
+	UOverlay* Main_Overlay;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "MinimapUI|Variable")
-	FVector2D Size {600.f, 1000.0f};
+	UPROPERTY()
+	TArray<AActor*> POIActors;
 
-	UPROPERTY(meta = (BindWidget))
-	UCanvasPanel* POIRoot;
-
-	UPROPERTY(meta = (BindWidget))
-	UOverlay* POIOverlay;
 
 private:
-	void DrawPlayerIcon(const float DeltaTime);
-	void CreateKeyCharactersIcon(const float DeltaTime);
+	void CreatePOIIconActors(const float DeltaTime);
+	void CreatePOIIconWidgets();
 
-	void UpdateKeyCharactersIcon(const float DeltaTime);
+	void UpdateTranslationPOIWidgets(const float DeltaTime);
 
-	UPROPERTY()
-	TObjectPtr<class UUserWidget> PlayerIcon;
-
-	UPROPERTY()
-	TMap<AActor*, UUserWidget*> POIActorWidgets;
-
-	float CurrentYaw{ 0.f };
-
-	float KeyCharactersElapsedTime{0.f};
-
-
+	float KeyCharactersElapsedTime{ 0.f };
 };

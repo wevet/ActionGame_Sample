@@ -374,6 +374,7 @@ void APlayerCharacter::OnDoubleClickInputEventTrigger_Callback(const FGameplayTa
 	UE_LOG(LogTemp, Warning, TEXT("[%s]"), *FString(__FUNCTION__));
 }
 
+
 #pragma region HandleEvent
 void APlayerCharacter::HandleJump(const bool bIsPress)
 {
@@ -600,6 +601,7 @@ void APlayerCharacter::HandleRotationMode()
 }
 #pragma endregion
 
+
 #pragma region Input
 void APlayerCharacter::SetKeyInputEnable()
 {
@@ -616,6 +618,7 @@ bool APlayerCharacter::IsInputKeyDisable() const
 	return WvAbilitySystemComponent->HasMatchingGameplayTag(TAG_Game_Input_Disable);
 }
 #pragma endregion
+
 
 bool APlayerCharacter::HasFinisherAction(const FGameplayTag Tag) const
 {
@@ -772,6 +775,5 @@ void APlayerCharacter::OnAsyncLoadCompleteHandler()
 	//CharacterVFXDA = Super::OnAsyncLoadDataAsset<UCharacterVFXDataAsset>(TAG_Game_Asset_CharacterVFX);
 }
 #pragma endregion
-
 
 

@@ -32,6 +32,9 @@ public:
 
 	bool IsEnableMapRotation() const;
 
+	void AddMinimapHiddenActor(AActor* NewHiddenActor);
+	void RemoveMinimapHiddenActor(AActor* NewHiddenActor);
+
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Component, meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<class USceneComponent> SceneComponent;
