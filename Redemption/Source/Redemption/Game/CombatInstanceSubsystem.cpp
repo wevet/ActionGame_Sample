@@ -32,15 +32,11 @@ UCombatInstanceSubsystem* UCombatInstanceSubsystem::Get()
 
 void UCombatInstanceSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
-	UE_LOG(LogTemp, Log, TEXT("%s"), *FString(__FUNCTION__));
-
 	BeginHitImpactAssetsLoad();
 }
 
 void UCombatInstanceSubsystem::Deinitialize()
 {
-	UE_LOG(LogTemp, Log, TEXT("%s"), *FString(__FUNCTION__));
-
 	HitEffectDTRawPtr.Reset();
 }
 
@@ -57,13 +53,7 @@ void UCombatInstanceSubsystem::OnHitImpactAssetsLoadCompleted()
 	HitEffectDTInstance = HitEffectDTRawPtr.Get();
 
 	StreamableHandle.Reset();
-
-	//bool bResult = false;
-	//do 
-	//{
-	//	HitEffectDTInstance = HitEffectDTRawPtr.LoadSynchronous();
-	//	bResult = IsValid(HitEffectDTInstance.Get());
-	//} while (!bResult);
+	UE_LOG(LogTemp, Log, TEXT("Success Async load HitEffectDTInstance: [%s]"), *FString(__FUNCTION__));
 
 }
 

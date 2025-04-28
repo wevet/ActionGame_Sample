@@ -36,6 +36,7 @@ void UAIMissionComponent::SetSendMissionData(const int32 InSendMissionIndex)
 	if (bIsValid)
 	{
 		SendMissionData = CurSendMissionData;
+		UE_LOG(LogMission, Log, TEXT("Asign Mission Data:[%d], functio: [%s]"), InSendMissionIndex, *FString(__FUNCTION__));
 	}
 }
 

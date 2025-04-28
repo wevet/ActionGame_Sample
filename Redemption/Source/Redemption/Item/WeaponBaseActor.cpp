@@ -6,6 +6,10 @@
 #include "Ability/WvAbilitySystemComponent.h"
 #include "Locomotion/LocomotionSystemTypes.h"
 
+// plugin
+#include "WvAbilitySystemTypes.h"
+
+
 #include UE_INLINE_GENERATED_CPP_BY_NAME(WeaponBaseActor)
 
 FPawnAttackParam UWeaponParameterDataAsset::Find(const FName WeaponKeyName) const
@@ -47,6 +51,15 @@ AWeaponBaseActor::AWeaponBaseActor(const FObjectInitializer& ObjectInitializer) 
 	SkeletalMeshComponent->SetCollisionResponseToChannel(ECollisionChannel::ECC_GameTraceChannel3, ECollisionResponse::ECR_Overlap);
 
 	Priority = 0;
+
+	EquipGASTag = TAG_Weapon_Action_Equip;
+	UnEquipGASTag = TAG_Weapon_Action_UnEquip;
+}
+
+void AWeaponBaseActor::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	Character.Reset();
+	Super::EndPlay(EndPlayReason);
 }
 
 void AWeaponBaseActor::BeginPlay()
@@ -99,20 +112,89 @@ void AWeaponBaseActor::SetOwner(AActor* NewOwner)
 
 void AWeaponBaseActor::Notify_Equip()
 {
-	if (Character.IsValid())
+	if (!Character.IsValid())
+	{
+		return;
+	}
+
+
+	if (bIsNotifyEquipGAS)
+	{
+		Character->GetWvAbilitySystemComponent()->TryActivateAbilityByTag(EquipGASTag);
+	}
+	else
 	{
 		Character->GetWvAbilitySystemComponent()->AddGameplayTag(Itemtag, 1);
+		Super::Notify_Equip();
 	}
-	Super::Notify_Equip();
 }
 
 void AWeaponBaseActor::Notify_UnEquip()
 {
-	if (Character.IsValid())
+	if (!Character.IsValid())
+	{
+		return;
+	}
+
+	if (bIsNotifyUnEquipGAS)
+	{
+		Character->GetWvAbilitySystemComponent()->TryActivateAbilityByTag(UnEquipGASTag);
+	}
+	else
 	{
 		Character->GetWvAbilitySystemComponent()->RemoveGameplayTag(Itemtag, 1);
+		Super::Notify_UnEquip();
 	}
-	Super::Notify_UnEquip();
 }
+
+
+FGameplayTag AWeaponBaseActor::GetPluralInputTriggerTag() const
+{
+	return PluralInputTriggerTag;
+}
+
+
+const bool AWeaponBaseActor::HandleAttackPrepare()
+{
+	return true;
+}
+
+bool AWeaponBaseActor::IsCurrentAmmosEmpty() const
+{
+	return false;
+}
+
+
+#pragma region Props
+EAttackWeaponState AWeaponBaseActor::GetAttackWeaponState() const
+{
+	return PawnAttackParam.AttackWeaponState;
+}
+
+FGameplayTag AWeaponBaseActor::GetItemtag() const
+{
+	return Itemtag;
+}
+
+FName AWeaponBaseActor::GetWeaponName() const
+{
+	return PawnAttackParam.WeaponName;
+}
+
+int32 AWeaponBaseActor::GetPriority() const
+{
+	return Priority;
+}
+
+FVector2D AWeaponBaseActor::GetAttackRange() const
+{
+	return PawnAttackParam.AttackRange;
+}
+
+FPawnAttackParam AWeaponBaseActor::GetWeaponAttackInfo() const
+{
+	return PawnAttackParam;
+}
+#pragma endregion
 
 

@@ -26,9 +26,6 @@ public:
 	virtual void NativeConstruct() override;
 	virtual void RemoveFromParent() override;
 
-protected:
-	virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
-
 
 public:
 	void Initializer(AActor* NewOwner);

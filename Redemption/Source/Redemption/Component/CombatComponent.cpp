@@ -233,7 +233,14 @@ void UCombatComponent::CapsuleTraceMulti(TArray<FWvBattleDamageAttackTargetInfo>
 	TArray<FHitResult> HitResults;
 	ECollisionChannel CollisionChannel = UEngineTypes::ConvertToCollisionChannel(ASC_GLOBAL()->WeaponTraceChannel);
 	static const FName CapsuleTraceMultiName(TEXT("CapsuleTraceMulti"));
-	const FCollisionQueryParams Params = UWvAbilitySystemBlueprintFunctionLibrary::ConfigureCollisionParams(CapsuleTraceMultiName, false, ActorsToIgnore, true, GetOwner());
+
+	const FCollisionQueryParams Params = UWvAbilitySystemBlueprintFunctionLibrary::ConfigureCollisionParams(
+		CapsuleTraceMultiName, 
+		false,
+		ActorsToIgnore,
+		true, 
+		GetOwner());
+
 	GetWorld()->SweepMultiByChannel(HitResults, Start, End, CapsuleFquat, CollisionChannel, FCollisionShape::MakeCapsule(Radius, HalfHeight), Params);
 
 #if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)

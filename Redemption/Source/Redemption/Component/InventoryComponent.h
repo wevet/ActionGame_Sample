@@ -95,10 +95,8 @@ private:
 	UPROPERTY()
 	TArray<class AItemBaseActor*> ItemArray;
 
-	UPROPERTY()
 	TWeakObjectPtr<class ABaseCharacter> Character;
 
-	UPROPERTY()
 	TWeakObjectPtr<AWeaponBaseActor> CurrentWeaponActor;
 
 	UPROPERTY()

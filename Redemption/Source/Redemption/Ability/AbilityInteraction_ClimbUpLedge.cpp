@@ -30,6 +30,7 @@ void UAbilityInteraction_ClimbUpLedge::ActivateAbility(const FGameplayAbilitySpe
 		UE_LOG(LogTemp, Warning, TEXT("[%s : Character is null.]"), *FString(__FUNCTION__));
 		CancelAbility(Handle, ActorInfo, ActivationInfo, false);
 		return;
+
 	}
 
 	MovementComponent = Character->GetWvCharacterMovementComponent();
@@ -95,46 +96,27 @@ void UAbilityInteraction_ClimbUpLedge::ActivateAbility(const FGameplayAbilitySpe
 	MontageTask->ReadyForActivation();
 }
 
+
 void UAbilityInteraction_ClimbUpLedge::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled)
 {
 	ABaseCharacter* Character = GetBaseCharacter();
 
-	const EMovementMode MovementMode = MovementComponent->MovementMode;
-	switch (MovementMode)
+	if (!IsValid(Character) || !IsValid(MovementComponent) || !IsValid(Character->GetClimbingComponent()))
 	{
-	case MOVE_None:
-	case MOVE_Walking:
-	case MOVE_NavWalking:
-	case MOVE_Falling:
-	case MOVE_Flying:
-	case MOVE_Swimming:
-		break;
-	case MOVE_Custom:
-	{
-		const ECustomMovementMode CustomMovementMode = (ECustomMovementMode)MovementComponent->CustomMovementMode;
-		switch (CustomMovementMode)
-		{
-		case CUSTOM_MOVE_Climbing:
-		{
-			auto ClimbingComponent = Character->GetClimbingComponent();
-			ClimbingComponent->Notify_StopMantling();
-		}
-		break;
-		case CUSTOM_MOVE_WallClimbing:
-		{
-			MovementComponent->MantleEnd();
-		}
-		break;
-		case CUSTOM_MOVE_Mantling:
-		break;
-		case CUSTOM_MOVE_Ladder:
-		break;
-		}
-	}
-	break;
+		UE_LOG(LogTemp, Error, TEXT("not valid any pointers Character || MovementComponent || ClimbingComponent: [%s]"), *FString(__FUNCTION__));
+		Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
+		return;
 	}
 
-	
+	if (MovementComponent->IsWallClimbing())
+	{
+		MovementComponent->MantleEnd();
+	}
+	else if (MovementComponent->IsClimbing())
+	{
+		auto ClimbingComponent = Character->GetClimbingComponent();
+		ClimbingComponent->Notify_StopMantling();
+	}
 
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
 }

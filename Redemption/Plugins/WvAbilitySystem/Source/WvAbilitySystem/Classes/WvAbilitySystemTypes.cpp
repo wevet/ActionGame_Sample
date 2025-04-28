@@ -119,6 +119,9 @@ UE_DEFINE_GAMEPLAY_TAG(TAG_Weapon_Melee_Rifle_AmmoEmpty, "Weapon.Melee.Rifle.Amm
 UE_DEFINE_GAMEPLAY_TAG(TAG_Weapon_Gun_Reload, "Weapon.Gun.Reload");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Weapon_Gun_Fire, "Weapon.Gun.Fire");
 
+// equip unequip action
+UE_DEFINE_GAMEPLAY_TAG(TAG_Weapon_Action_Equip, "Weapon.Action.Equip");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Weapon_Action_UnEquip, "Weapon.Action.UnEquip");
 
 // GameplayCue
 UE_DEFINE_GAMEPLAY_TAG(TAG_GameplayCue_HitImpact, "GameplayCue.HitImpact");

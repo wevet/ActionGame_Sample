@@ -83,7 +83,7 @@ void UWvAT_BulletDamage::LineOfSightTraceExecute()
 		return;
 	}
 
-	auto Weapon = Character->GetInventoryComponent()->GetEquipWeapon();
+	AWeaponBaseActor* Weapon = Character->GetInventoryComponent()->GetEquipWeapon();
 	ABulletHoldWeaponActor* HoldWeapon = Cast<ABulletHoldWeaponActor>(Weapon);
 	if (!IsValid(HoldWeapon))
 	{
@@ -93,13 +93,13 @@ void UWvAT_BulletDamage::LineOfSightTraceExecute()
 	HoldWeapon->SetGunFirePrepareParameters(Randomize);
 	HoldWeapon->DoFire();
 
-	auto WeaponLoc = HoldWeapon->GetActorLocation();
+	const FVector WeaponLocation = HoldWeapon->GetActorLocation();
 
 	TArray<FHitResult> HitResults;
 	HoldWeapon->LineOfSightOuterMulti(HitResults);
 
 	const EAttackWeaponState WeaponType = HoldWeapon->GetAttackWeaponState();
-	CombatComponent->LineOfSightTraceOuter(WvAbility, (int32)WeaponType, EffectGroupIndex, HitResults, WeaponLoc);
+	CombatComponent->LineOfSightTraceOuter(WvAbility, (int32)WeaponType, EffectGroupIndex, HitResults, WeaponLocation);
 
 }
 

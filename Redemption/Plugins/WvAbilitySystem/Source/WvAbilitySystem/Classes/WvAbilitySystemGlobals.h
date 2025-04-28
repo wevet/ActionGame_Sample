@@ -83,9 +83,6 @@ public:
 	UPROPERTY(EditDefaultsOnly)
 	TArray<UClass*> BulletHitFilterClasses;
 
-	UPROPERTY(EditDefaultsOnly)
-	bool bWeaponTraceDebug = false;
-
 public:
 	FGameplayTag FindScopeTagByNameToGameplayTagRefTable(FString Scope, const FName Name);
 	FGameplayTag FindGlobalTagByNameToGameplayTagRefTable(const FName Name);

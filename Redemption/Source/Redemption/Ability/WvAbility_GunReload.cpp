@@ -38,7 +38,7 @@ void UWvAbility_GunReload::ActivateAbility(const FGameplayAbilitySpecHandle Hand
 		return;
 	}
 
-	ABaseCharacter* Character = GetBaseCharacter();
+	const ABaseCharacter* Character = GetBaseCharacter();
 	if (!Character)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("[%s : Character is null.]"), *FString(__FUNCTION__));

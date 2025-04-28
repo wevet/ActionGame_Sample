@@ -44,7 +44,8 @@ void UWvAbility_Death::ActivateAbility(const FGameplayAbilitySpecHandle Handle, 
 
 	const FVector AttackDirection = UWvAbilitySystemBlueprintFunctionLibrary::GetAttackDirection(TriggerEventData->ContextHandle, Character->GetActorLocation());
 	const FVector HitDirection = -AttackDirection;
-	const FVector Forward = Character->GetActorRotation().Quaternion().GetForwardVector();
+	//const FVector Forward = Character->GetActorRotation().Quaternion().GetForwardVector();
+	const FVector Forward = Character->GetActorForwardVector();
 
 	UAnimMontage* TargetMontage = nullptr;
 	FHitReactInfoRow* HitReactInfo = UWvCommonUtils::FindHitReactInfoRow(Character);
@@ -117,15 +118,7 @@ void UWvAbility_Death::PlayHitReactMontage(UAnimMontage* Montage)
 	}
 
 	MontageTask = UWvAT_PlayMontageAndWaitForEvent::PlayMontageAndWaitForEvent(
-		this,
-		FName("Death"),
-		Montage,
-		FGameplayTagContainer(),
-		1.0,
-		0.f,
-		FName("Default"),
-		true,
-		1.0f);
+		this, FName("Death"), Montage, FGameplayTagContainer(), 1.0, 0.f, FName("Default"), true, 1.0f);
 
 	MontageTask->OnCancelled.AddDynamic(this, &UWvAbility_Death::OnPlayMontageCompleted_Event);
 	MontageTask->OnInterrupted.AddDynamic(this, &UWvAbility_Death::OnPlayMontageCompleted_Event);

@@ -32,6 +32,5 @@ private:
 	UPROPERTY()
 	class UWvAT_PlayMontageAndWaitForEvent* MontageTask;
 
-	UPROPERTY()
 	TWeakObjectPtr<AWeaponBaseActor> WeaponBaseActor;
 };

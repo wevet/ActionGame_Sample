@@ -14,7 +14,7 @@ UCLASS()
 class REDEMPTION_API ABulletHoldWeaponActor : public AWeaponBaseActor
 {
 	GENERATED_BODY()
-	
+
 public:
 	ABulletHoldWeaponActor(const FObjectInitializer& ObjectInitializer);
 
@@ -33,7 +33,7 @@ public:
 	void Notify_ReloadOwner();
 	void Notify_AmmoReplenishment();
 
-	UFUNCTION(BlueprintCallable, Category = "BulletHoldWeaponActor|Config")
+	UFUNCTION(BlueprintCallable, Category = "Weapon")
 	float GetBulletInterval() const;
 
 protected:
@@ -43,27 +43,26 @@ protected:
 	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "Event")
 	void DoReloadReceived();
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "BulletHoldWeaponActor|Config")
-	UAnimSequence* FireAnimation;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Weapon")
+	TObjectPtr<class UAnimSequence> FireAnimation;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "BulletHoldWeaponActor|Config")
-	UAnimSequence* ReloadAnimation;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Weapon")
+	TObjectPtr<class UAnimSequence> ReloadAnimation;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "BulletHoldWeaponActor|Config")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Weapon")
 	float FireAnimationOffset = 0.f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "BulletHoldWeaponActor|Config")
-	FGameplayTag AmmoEmptyTag;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Weapon")
+	FGameplayTag AmmoEmptyTag { FGameplayTag::EmptyTag };
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "BulletHoldWeaponActor|Config")
-	float BulletInterval{0.12f};
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Weapon")
+	float BulletInterval { 0.12f };
 
 private:
 	FVector TraceNoise;
 	float Randmize = 0.f;
 
 	const bool LineOfSight(const FVector TraceStart, const FVector TraceEnd, FHitResult& OutHitResult);
-	const bool LineOfSightMulti(const FVector TraceStart, const FVector TraceEnd, TArray<FHitResult>& OutHitResults);
 	const FVector CalcTraceEndPosition();
 	void Notify_AmmoEmpty();
 };

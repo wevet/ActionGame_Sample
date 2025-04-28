@@ -4,6 +4,8 @@
 #include "UI/POIMarkerWidget.h"
 #include "Character/BaseCharacter.h"
 
+#include UE_INLINE_GENERATED_CPP_BY_NAME(POIMarkerWidget)
+
 UPOIMarkerWidget::UPOIMarkerWidget(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
 
@@ -23,10 +25,6 @@ void UPOIMarkerWidget::RemoveFromParent()
 	Super::RemoveFromParent();
 }
 
-void UPOIMarkerWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
-{
-	Super::NativeTick(MyGeometry, InDeltaTime);
-}
 
 
 void UPOIMarkerWidget::Initializer(AActor* NewOwner)
