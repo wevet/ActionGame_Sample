@@ -20,6 +20,16 @@ class UCapsuleComponent;
 class UHitTargetComponent;
 
 
+namespace LocomotionDebug
+{
+#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
+
+	extern TAutoConsoleVariable<int32> CVarDebugLocomotionSystem;
+
+#endif
+}
+
+
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FLocomotionStateChangeDelegate);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FLocomotionOverlayChangeDelegate, const ELSOverlayState, PrevOverlay, const ELSOverlayState, CurrentOverlay);
 
@@ -302,7 +312,6 @@ public:
 	FVector ChooseVelocity() const;
 
 	void OnLanded();
-	void LimitRotation(const float AimYawLimit);
 	ELSMovementMode GetPawnMovementModeChanged(const EMovementMode PrevMovementMode, const uint8 PrevCustomMode) const;
 
 	const float ChooseMaxWalkSpeed();
@@ -359,9 +368,6 @@ private:
 
 	// aim target moving
 	void TargetMovementInput(const bool bForwardAxis);
-
-	// climbing moving
-	void ClimbingMovementInput(const bool bForwardAxis);
 
 	void RagdollMovementInput();
 	const FTransform CalculateActorTransformRagdoll();

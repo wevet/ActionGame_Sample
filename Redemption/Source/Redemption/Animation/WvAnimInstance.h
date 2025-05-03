@@ -71,6 +71,27 @@ public:
 	void ModifyAnimCurveValue(const UAnimInstance* AnimInstance);
 };
 
+USTRUCT(BlueprintType)
+struct FMovementDirectionThresholds
+{
+	GENERATED_BODY()
+
+public:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float FL = 0.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float FR = 0.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float BL = 0.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float BR = 0.0f;
+	
+};
+
+
 USTRUCT()
 struct REDEMPTION_API FBaseAnimInstanceProxy : public FAnimInstanceProxy
 {
@@ -148,7 +169,7 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Locomotion", meta = (BlueprintThreadSafe))
 	bool IsAcceleration() const;
 
-	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Locomotion|MotionMatching", meta = (BlueprintThreadSafe))
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "MotionMatching", meta = (BlueprintThreadSafe))
 	FVector2D GetAimSweepTimeToVector() const;
 
 	UFUNCTION(BlueprintCallable, Category = "BaseAnimInstance")
@@ -185,31 +206,31 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
 	ELSRotationMode LSRotationMode;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion|MotionMatching")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "MotionMatching")
 	ELSMovementMode LSMovementMode_LastFrame;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion|MotionMatching")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "MotionMatching")
 	ELSGait LSGait_LastFrame;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion|MotionMatching")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "MotionMatching")
 	ELSStance LSStance_LastFrame;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion|MotionMatching")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "MotionMatching")
 	ELSRotationMode LSRotationMode_LastFrame;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion|MotionMatching")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "MotionMatching")
 	bool bIsInRagdolling = false;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion|MotionMatching")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "MotionMatching")
 	float RagdollFlailRate = 0.f;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion|MotionMatching")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "MotionMatching")
 	FVector Trj_PastVelocity {0.f, 0.f, 0.f};
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion|MotionMatching")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "MotionMatching")
 	FVector Trj_CurrentVelocity{ 0.f, 0.f, 0.f };
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion|MotionMatching")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "MotionMatching")
 	FVector Trj_FutureVelocity{ 0.f, 0.f, 0.f };
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
@@ -330,19 +351,10 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Climbing")
 	bool bIsClimbing;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Climbing|Wall")
-	bool bIsWallClimbing;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Climbing|Wall")
-	bool bIsWallClimbingJumping;
-
 	// GameplayTags that can be mapped to Blueprint variables; when a Tag is added or removed, the // variable is automatically updated.
 	// Instead of querying the GameplayTag manually, these should be used.
 	UPROPERTY(EditDefaultsOnly, Category = "GameplayTags")
 	FGameplayTagBlueprintPropertyMap GameplayTagPropertyMap;
-
-	//UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "MotionMatching")
-	//FMotionMatchingSettings MotionMatchingSettings;
 
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "MotionMatching")
@@ -353,6 +365,9 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "MotionMatching")
 	FTransform RootTransform;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "MotionMatching")
+	FMovementDirectionThresholds MovementDirectionThresholds;
 
 	//UPROPERTY()
 	//FTransform CharacterTransformLastFrame;

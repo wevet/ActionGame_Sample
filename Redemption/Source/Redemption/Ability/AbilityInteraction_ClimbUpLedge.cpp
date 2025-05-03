@@ -42,13 +42,13 @@ void UAbilityInteraction_ClimbUpLedge::ActivateAbility(const FGameplayAbilitySpe
 	}
 
 
-	UAnimMontage* Montage = MovementComponent->GetClimbUpLedgeMontage();
+	UAnimMontage* Montage = nullptr;
 	if (TriggerEventData)
 	{
 		auto ClimbingData = Cast<UClimbingData>(TriggerEventData->OptionalObject);
 		if (ClimbingData)
 		{
-			Montage = MovementComponent->GetClimbUpLedgeMontage(ClimbingData->bIsFreeHang);
+			Montage = ClimbingData->bIsFreeHang ? ClimbToStandingFreeHangMontage : ClimbToStandingMontage;
 		}
 	}
 
@@ -108,11 +108,7 @@ void UAbilityInteraction_ClimbUpLedge::EndAbility(const FGameplayAbilitySpecHand
 		return;
 	}
 
-	if (MovementComponent->IsWallClimbing())
-	{
-		MovementComponent->MantleEnd();
-	}
-	else if (MovementComponent->IsClimbing())
+	if (MovementComponent->IsClimbing())
 	{
 		auto ClimbingComponent = Character->GetClimbingComponent();
 		ClimbingComponent->Notify_StopMantling();

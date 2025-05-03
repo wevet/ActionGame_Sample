@@ -5,7 +5,7 @@
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(LadderObject)
 
-ALadderObject::ALadderObject()
+ALadderObject::ALadderObject(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
 	PrimaryActorTick.bCanEverTick = true;
 	SpacingBetweenRungs = 20.0f;
@@ -16,7 +16,6 @@ ALadderObject::ALadderObject()
 void ALadderObject::BeginPlay()
 {
 	Super::BeginPlay();
-	Super::SetActorTickEnabled(false);
 }
 
 void ALadderObject::Tick(float DeltaTime)

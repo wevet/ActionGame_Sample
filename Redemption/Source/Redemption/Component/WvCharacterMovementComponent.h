@@ -30,7 +30,7 @@ UCLASS()
 class REDEMPTION_API UWvCharacterMovementComponent : public UCharacterMovementComponent, public IAsyncComponentInterface
 {
 	GENERATED_BODY()
-	
+
 public:
 
 	UWvCharacterMovementComponent(const FObjectInitializer& ObjectInitializer);
@@ -71,9 +71,6 @@ public:
 	bool IsMantling() const;
 
 	UFUNCTION(BlueprintCallable, Category = "Character|Components|CharacterMovement")
-	bool IsWallClimbing() const;
-
-	UFUNCTION(BlueprintCallable, Category = "Character|Components|CharacterMovement")
 	bool IsClimbing() const;
 
 	UFUNCTION(BlueprintCallable, Category = "Character|Components|CharacterMovement")
@@ -106,24 +103,20 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void MantleEnd();
 
-	// WallClimbing public
-	bool IsClimbJumping() const;
-	bool IsForbidClimbing() const;
-	FVector GetClimbSurfaceNormal() const;
-	FVector GetClimbDashDirection() const;
-	void TryClimbJumping();
-	void AbortClimbing();
-	void ForbidClimbing(const bool bIsTagAdd);
-	const bool TryClimbUpLedge();
-
-	// Apply UAbilityInteraction_ClimbUpLedge
-	UAnimMontage* GetClimbUpLedgeMontage() const;
-
-	UAnimMontage* GetClimbUpLedgeMontage(const bool bIsFreeHang) const;
 
 	const bool DetectVaulting();
 	void FinishVaulting();
 	FVaultParams GetVaultParams() const;
+
+	// traversal
+	UFUNCTION(BlueprintCallable)
+	FTraversalDataCheckInputs GetTraversalDataCheckInputs() const;
+
+	UFUNCTION(BlueprintCallable)
+	void TryTraversalAction(bool& OutTraversalCheckFailed, bool& OutMontageSelectionFailed);
+
+	void OnTraversalStart();
+	void OnTraversalEnd();
 
 protected:
 	virtual void InitializeComponent() override;
@@ -163,19 +156,32 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Character Movement: State", Transient)
 	bool bPrePenetrationAdjustmentVelocityValid;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Character Movement: Mantle")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Character Movement: Mantle")
 	TSoftObjectPtr<UMantleAnimationDataAsset> MantleDA;
 
-	UPROPERTY(EditDefaultsOnly, Category = "Character Movement: Vaulting")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Character Movement: Vaulting")
 	TSoftObjectPtr<UVaultAnimationDataAsset> VaultDA;
 
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Character Movement: Traversal")
+	float MinLedgeWidth{70.0f};
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Character Movement: Traversal")
+	float MaxLedgeSidewaysDepth{ 70.0f };
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Character Movement: Traversal")
+	float MinFrontLedgeDepth{ 37.522631f };
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Character Movement: Traversal")
+	bool bIsRespectPlayersFacingDir{true};
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Character Movement: Traversal")
+	bool bIsTraversalTraceComplex{ true };
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Character Movement: Falling")
+	bool bIsDrawGroundTrace{ false };
+
 	FTimeline* MantleTimeline;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Character Movement: WallClimbing")
-	TSoftObjectPtr<UClimbingDataAsset> WallClimbingDA;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Character Movement: Falling")
-	bool bIsDrawGroundTrace = false;
 
 #pragma region LedgeEndParameters
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Character Movement: Ledge")
@@ -315,51 +321,6 @@ private:
 #pragma endregion
 
 
-#pragma region WallClimbing
-	void PhysWallClimbing(float deltaTime, int32 Iterations);
-	void TryWallClimbingMovement();
-	void TryClimbing();
-	void UpdateClimbSprintState(const float DeltaTime);
-	void GetEyeHeightTraceData(FHitResult& OutHitResult, const float TraceDistance);
-	bool EyeHeightTrace(const float TraceDistance) const;
-	bool ShouldStopClimbing() const;
-	bool ClimbDownToFloor() const;
-	bool CheckFloor(FHitResult& FloorHit) const;
-	void SetRotationToStand() const;
-
-	bool HasReachedEdge() const;
-	const bool IsLocationWalkable(const FVector& CheckLocation, FHitResult& OutHitResult);
-	const bool CanMoveToLedgeClimbLocation(FHitResult& OutHitResult);
-	bool CanStartClimbing();
-	const bool GetWallWidth(FHitResult& HitResult);
-	bool IsFacingSurface(float Steepness) const;
-	bool IsPlayerStickInputUp() const;
-	FQuat GetClimbingRotation(const float DeltaTime) const;
-	void StopClimbing(const float DeltaTime, int32 Iterations);
-	void AlignClimbDashDirection();
-	void StoreClimbDashDirection();
-	void StopClimbJumping();
-	void ComputeClimbingVelocity(const float DeltaTime);
-	void MoveAlongClimbingSurface(const float DeltaTime);
-	void SnapToClimbingSurface(const float DeltaTime) const;
-	const bool ComputeSurfaceInfo();
-	void SweepAndStoreWallHits();
-	void ShrinkCapsuleSize();
-	void ResetShrinkCapsuleSize();
-	void CheckGroundOrFalling(const float DeltaTime, int32 Iterations);
-	void StopClimbing_Action();
-
-	FCollisionQueryParams ClimbQueryParams;
-	TArray<FHitResult> CurrentWallHits;
-	FVector ClimbDashDirection;
-	FVector CurrentClimbingNormal;
-	FVector CurrentClimbingPosition;
-	FLSComponentAndTransform ClimbUpLedgeLS;
-	float CurrentClimbDashTime;
-	bool bPrepareStrafeMovement = false;
-#pragma endregion
-
-
 	void PhysLaddering(float deltaTime, int32 Iterations);
 
 	// ~Start AsyncLoadMantle
@@ -370,14 +331,6 @@ private:
 	void OnLoadMantleDA();
 	// ~End AsyncLoadMantle
 
-	// ~Start AsyncWallClimbing
-	UPROPERTY()
-	TObjectPtr<class UClimbingDataAsset> WallClimbingDAInstance;
-	TSharedPtr<FStreamableHandle> WallClimbingStreamableHandle;
-	void OnWallClimbingAssetLoadComplete();
-	void OnLoadWallClimbingDA();
-	// ~End AsyncWallClimbing
-
 	// ~Start AsyncVault
 	UPROPERTY()
 	TObjectPtr<class UVaultAnimationDataAsset> VaultDAInstance;
@@ -385,4 +338,11 @@ private:
 	void OnVaultAssetLoadComplete();
 	void OnLoadVaultDA();
 	// ~End AsyncVault
+
+
+	// ~Start Traversal
+	const bool TraceWidth(const FHitResult& Hit, const FVector Direction);
+
+
+	// ~End Traversal
 };

@@ -17,6 +17,8 @@
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(WvAbility_Repel)
 
+using namespace CharacterDebug;
+
 UWvAbility_Repel::UWvAbility_Repel(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
 	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
@@ -46,19 +48,17 @@ void UWvAbility_Repel::ActivateAbility(const FGameplayAbilitySpecHandle Handle, 
 		return;
 	}
 
-	const FVector ActorLocation = Character->GetActorLocation();
-	const FVector AttackDirection = UWvAbilitySystemBlueprintFunctionLibrary::GetAttackDirection(TriggerEventData->ContextHandle, ActorLocation);
+	const FVector AttackDirection = UWvAbilitySystemBlueprintFunctionLibrary::GetAttackDirection(TriggerEventData->ContextHandle, Character->GetActorLocation());
 	const FVector HitDirection = -AttackDirection;
-	const FVector Forward = UKismetMathLibrary::GetForwardVector(Character->GetActorRotation());
+	//const FVector Forward = Character->GetActorRotation().Quaternion().GetForwardVector();
+	const FVector Forward = Character->GetActorForwardVector();
 
 	UAnimMontage* TargetMontage = nullptr;
 	EHitReactDirection HitReactDirectionType = EHitReactDirection::Forward;
 	FHitReactInfoRow* HitReactInfo = UWvCommonUtils::FindHitReactInfoRow(Character);
 
 #if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
-	static const IConsoleVariable* TraceCVar = IConsoleManager::Get().FindConsoleVariable(TEXT("wv.CharacterCombatDebugTrace"));
-	const int32 TraceCVarValue = TraceCVar->GetInt();
-	bDebugTrace = (TraceCVarValue > 0);
+	bDebugTrace = (CVarDebugCombatSystem.GetValueOnGameThread() > 0);
 #else
 	bDebugTrace = false;
 #endif

@@ -5,11 +5,12 @@
 #include "Animation/WvAnimInstance.h"
 #include "Climbing/ClimbingUtils.h"
 #include "Climbing/LadderObject.h"
-
 #include "Component/WvCharacterMovementComponent.h"
 #include "Character/BaseCharacter.h"
 #include "Ability/WvAbilitySystemComponent.h"
 #include "Game/WvGameInstance.h"
+#include "Redemption.h"
+
 
 #include "Components/SkeletalMeshComponent.h"
 #include "Components/CapsuleComponent.h"
@@ -497,7 +498,13 @@ void ULadderComponent::UpdateTargetRotation(const FRotator NewRotation)
 {
 	if (LocomotionComponent)
 	{
-		LocomotionComponent->ApplyCharacterRotation(NewRotation, false, 10.0f, true);
+		constexpr float InterpSpeed = 10.0f;
+		LocomotionComponent->ApplyCharacterRotation(NewRotation, false, InterpSpeed, true);
+
+		const auto& LocomotionEssencialVariables = LocomotionComponent->GetLocomotionEssencialVariables();
+
+		WEVET_COMMENT("Laddering Bug")
+		Character->SetActorRotation(LocomotionEssencialVariables.CharacterRotation);
 	}
 }
 

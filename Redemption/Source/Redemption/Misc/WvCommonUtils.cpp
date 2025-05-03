@@ -579,7 +579,7 @@ void UWvCommonUtils::UpdateMinLODBySignificanceLevel(AActor* Actor, const int32 
 	for (USkinnedMeshComponent* SkinnedMeshComponent : SkinnedMeshComponentArray)
 	{
 		SkinnedMeshComponent->bOverrideMinLod = MinLOD > 0;
-		SkinnedMeshComponent->SetMinLOD(MinLOD);
+		SkinnedMeshComponent->OverrideMinLOD(MinLOD);
 	}
 
 	TInlineComponentArray<UStaticMeshComponent*> StaticMeshComponentArray(Actor);
@@ -612,3 +612,4 @@ void UWvCommonUtils::SetAIControllerTickInterval(APawn* Actor, const float TickI
 		ActorComponent->SetComponentTickInterval(TickInterval);
 	}
 }
+

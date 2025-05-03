@@ -142,7 +142,6 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "ClimbSystem")
 	FClimbingBaseDelegate ClimbingEndDelegate;
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem")
 	ACharacter* GetCharacterOwner() const;
 
 	void OnClimbingBegin();
@@ -193,136 +192,89 @@ protected:
 	UAnimInstance* GetClimbingAnimInstance() const;
 	UClimbingAnimInstance* GetClimbingAnimInstanceToCast() const;
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem")
 	bool GetCachedFreeHang() const;
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem")
 	void RestartAxisScale(const EClimbActionType ReturnActionType);
 	void ResetAxisScale();
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem")
 	bool CanClimbingObject(AActor* HitActor) const;
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem")
 	bool IsHorizontalClimbingObject(AActor* HitActor) const;
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem")
 	bool IsVerticalClimbingObject(AActor* HitActor) const;
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem")
 	void UpdateClimbingObject(AActor* NewTargetActorPoint);
 
-	UFUNCTION(BlueprintPure, Category = "ClimbSystem")
 	float ConvertCapsuleSize(const float Scale, float& OutHalfHeight) const;
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem")
 	bool IsWalkable(const FHitResult& InHit) const;
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem")
 	FTransform ConvertTransformYaw(const FTransform& InTransform) const;
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem")
 	bool SwitchSmoothMovementDirection() const;
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem")
 	const bool UpdateTargetBroken();
 
 	void StopClimbingInternal(const bool bUseTimelineCondition);
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem")
 	void FixShortStateMoveUpdate();
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem")
 	bool ConditionToStartFindingActor(const bool bIgnoreInAir) const;
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem")
 	FTransform SelectBaseLedgeTransform(const bool UseCachedAsDefault) const;
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem")
 	FTransform SelectBaseVerticalLedgeTransform() const;
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem")
 	FVector2D GetCharacterInputAxis(const bool bWithOutScale) const;
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem")
 	bool ShouldAxisPressed() const;
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem")
 	void ClearVerticalMovementParams();
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem|Others")
 	FVector LedgeGeneratedOriginWhenClimbing() const;
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem")
 	bool CheckCapsuleHaveRoom(const FVector TargetLocation, const float RadiusScale, const float HeightScale) const;
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem")
 	void CreateSmoothAxisInterpolation();
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem")
 	void UpdateActorLocationWhenClimbing();
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem")
 	const EClimbActionType ClearAllMovementActionsVariables();
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem")
 	const bool CheckCanMoveRightOrLeftAndStartWhen(const bool bLedgeValid);
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem")
 	FClimbingCurveData FindClimbingCurve(const FName CurveName) const;
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem")
 	bool DoesNotClimbing() const;
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem")
 	const bool MantleCheck();
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem")
 	void MantleStart();
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem")
 	void MantleStop();
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem")
 	void UpdateTargetRotation(const FRotator NewRotation);
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem")
-	bool HasChildClimbingObject(UPrimitiveComponent* HitComponent) const;
-
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem")
-	AActor* GetClimbingDetectActor(const FHitResult& HitResult) const;
-
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem")
 	bool CanEarlyStart() const;
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem")
 	void CharacterSmoothInterpTransform(const FTransform NewTransform);
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem")
 	void ModifyFirstClimbingContact(const float Alpha, const float Threshold);
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem")
 	void PrepareToHoldingLedge();
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem")
 	const bool PrepareMoreValueWhenIsOnOtherClimbingMode();
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem")
 	bool LadderConditionToStartFinding() const;
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem")
 	FClimbingLedge GetCornerLedgeInput() const;
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem|Update When Climbing")
 	void CharacterWhenClimbing();
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem|Update When Climbing")
 	void ClearVerticalMovement();
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem|Update When Climbing")
 	void TryEarlyStartFunctions(bool& OutbCanEarlyStart);
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem|VectorsOperation")
 	const bool NormalizeCapsuleTransformToLedge(
 		const bool Valid,
 		const FTwoVectors& LWS,
@@ -330,7 +282,6 @@ protected:
 		const float CapsuleScale,
 		UPrimitiveComponent* CustomComponent);
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem|VectorsOperation")
 	void FindForwardNormal(
 		const FVector LedgeVector,
 		const FVector LedgeForward,
@@ -339,13 +290,10 @@ protected:
 		FVector& OutImpactPoint,
 		FVector& OutForwardVector);
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem|Others")
 	TArray<AActor*> MakeIgnoreActorsArray(const float Radius) const;
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem|Others")
 	TArray<AActor*> MakeIgnoreActorsArrayWithCustomPoint(const FVector Center, const float Radius, const TArray<AActor*> IgnoreActors) const;
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem|Others")
 	FTransform ExtractedTransformInterpolation(
 		const FTransform A,
 		const FTransform B,
@@ -358,221 +306,142 @@ protected:
 		const bool UseRotationInterpFor180,
 		const float RotDirection) const;
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem|Others")
 	FClimbingLedge ConvertLedgeToWorld(const FClimbingLedge Local) const;
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem|Others")
 	void SelectMovementFunctionType(bool& OutNormal);
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem|Others")
 	FTransform ConvertLedgeOrginToCapsulePosition(const FTransform LedgeOrgin, float OffsetScale) const;
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem|Update When Climbing")
 	void UpdateWhenOnVerticalObject();
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem|Update When Climbing")
 	const bool StartMoveRightOrLeft(const bool bCanMove);
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem|Vectors Operation")
 	const bool TryFindLedgeEnds(const FVector Origin, const FTwoVectors Direction, FTwoVectors& LeftLedgePointWS, FTwoVectors& RightLedgePointsWS, int32 Accuracy = 6);
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem|Controlls")
 	const bool CheckFootIKValid(const FName KeyName, const float TraceUpOffset, const float TraceRightOffset);
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem|Vectors Operation")
 	void CreateLedgePointForHandsIK(const bool DurningInterpMove);
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem|Vectors Operation")
 	const bool CreateLedgePointWhenClimbing();
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem|Vectors Operation")
 	const bool FindObjectRightWallEnds(const FTransform CharacterOrigin, const FVector ObjectCenter, const FRotator ForwardRot, AActor* TargetActor, FTwoVectors& OutLPoint, FTwoVectors& OutRPoint);
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem|Update When Climbing")
 	bool CheckVerticalObjectHeightEnd() const;
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem|Update When Climbing")
 	const bool InterpolatedSideMove(const bool bCanMove);
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem|Vertical Movement")
 	void CheckTheLedgeIsCurrentAvaliableForVertical(const bool bFromNormalLedge);
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem")
 	void WhenVerticalTick();
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem")
 	void CalcVelocity();
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem")
 	void BaseClimbingFunctionsEvent();
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem|Free Hang Move")
 	const bool StartForwardMoveWhenFreeHang(const bool bCanMove, UPrimitiveComponent* Component, const FTwoVectors LP, const FTwoVectors RP);
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem")
 	void SmoothInterpToLedgePoint(float& OutAlpha, bool& OutFinished);
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem")
 	void SetPrepareToClimbEvent(const int32 NewPrepareToClimbIndex);
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem|Start Stop Climbing")
 	const bool CheckLedgeDown();
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem|Start Stop Climbing")
 	void DropToHoldingLedge();
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem|Movement when Climbing|Corner Outer")
 	void StartCornerSequence(const bool bCanCorner);
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem|Vectors Operation")
 	const FTwoVectors NormalizeToObjectOrigin(const float MaxNormalizeLength);
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem")
 	const bool SaveVariables(
 		const bool bIsValid,
 		AActor* NewTargetActorPoint,
 		const FTwoVectors InGeneralizedLedgePointWS,
 		const FVector InGeneralizedLedgeNormalWS);
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem")
 	const bool SwitchShortMovementRightMethod(const bool bCanMove);
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem|Debug")
 	void DrawDebugShapeFunction(const FVector Origin, const float Size, const FLinearColor Color, const float Duration, const float Thickness, const FString Text);
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem")
 	FVector GetFootsIKTracePositionAtEndOfSeq(const FName FootBoneName, const FName RootBone, const float ZOffset, FVector& OutPosition) const;
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem|Movement when Climbing|Corner Inner")
 	const bool StartCornerInnerSequence(const bool bCanCorner, UPrimitiveComponent* Component, const float Direction);
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem|Movement when Climbing|Turn 180")
 	void StartTurnBehindSequence(const bool bCanTurn, const FTransform Center);
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem|Movement when Climbing|Jump Back")
 	void StartJumpBack(UPrimitiveComponent* Component);
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem|Movement when Climbing|Jump Next Ledge")
 	void StartJumpToNextLedge(const bool bCondition, UPrimitiveComponent* Component, const FTwoVectors LP, const FTwoVectors RP, const bool bUpdateVerticalState, const bool bDurningSequence);
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem|Movement when Climbing|Vertical Movement")
 	void JumpToVerticalObject(const bool bCondition, UPrimitiveComponent* Component, const FTwoVectors LP, const FTwoVectors RP, const FVector CustomNormal, const FTransform LedgeOrigin);
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem")
 	FVector AddUpOffset(const FVector A, const FRotator InRot) const;
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem")
 	FClimbingDetectPoints AddUpOffsetMulti(const FVector L, const FVector R, const FVector C, const FLSComponentAndTransform LocalSpaceComponent) const;
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem")
 	FTransform SelectTransformInterpolationCurve(const float Alpha, const FTransform A, const FTransform B, const FTransform C) const;
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem")
 	bool IsNotFragmentClimbing() const;
 
 	void TryRebuildVerticalLedge();
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem|Movement when Climbing|Corner")
 	const bool CheckCorner(const FClimbingLedge InClimbingLedge, const bool MultiDetect);
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem|Movement when Climbing|Corner Inner")
 	const bool CheckCornerInner(const FClimbingLedge InClimbingLedge, UPrimitiveComponent*& OutComponent, float& OutDirection);
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem|Movement when Climbing|FreeHang Move")
 	const bool CheckForwardJumpWhenFreeHang(const FClimbingLedge InLedgeWS, FTwoVectors& OutLP, FTwoVectors& OutRP, UPrimitiveComponent*& OutComponent);
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem|Movement when Climbing|Vertical Movement")
 	const bool MoveVerticalUpOrDown();
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem|Vectors Operation")
 	const bool TryFindLedgeEndsNextActor(const FVector Origin, const FTwoVectors Direction, const TArray<AActor*> IgnoreActors, FTwoVectors& LeftLedgePointWS, FTwoVectors& RightLedgePointsWS, int32 Accuracy = 4);
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem|Vectors Operation")
 	const bool TryFindClimbablePointSelect(AActor*& OutActor, FTwoVectors& OutLedgePoint, FVector& OutNormal);
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem|Vectors Operation")
 	const bool TryFindClimbablePoint(const float Radius, AActor*& OutActor, FTwoVectors& OutLedgePoint, FVector& OutNormal);
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem|Vectors Operation")
 	const bool TryFindClimbableLadderPoint(const float Radius, AActor*& OutActor, FTwoVectors& OutLedgePoint, FVector& OutNormal);
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem|Vectors Operation")
 	void TryFindLadderActorWhenClimbing();
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem|Vectors Operation")
 	FVector LadderPointUtil_BaseOrigin() const;
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem|Movement when Climbing|Jump Back")
 	const bool CheckCanJumpBack(UPrimitiveComponent*& OutComponent);
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem|Movement when Climbing|Turn 180")
 	const bool CheckCanTurn180(FClimbingLedge& OutNewLedge, FTransform& OutCenter);
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem|Movement when Climbing|Vertical Movement")
 	float CheckDistanceAndDirection(const FVector OriginLocation, const FVector Location, const FRotator OriginRot, const FVector ImpactPoint) const;
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem|Movement when Climbing|Vertical Movement")
 	FClimbingLedge ConvertVerticalLedge(const FTwoVectors LP, const FTwoVectors RP, const FTwoVectors Center) const;
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem|Movement when Climbing|Vertical Movement")
 	FTwoVectors FindObjectCenterTracePosition(const TArray<FTwoVectors> Array, const TArray<FTwoVectors> Array2) const;
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem|Movement when Climbing|Vertical Movement")
 	const bool FindVerticalObject(FClimbingLedge& OutClimbingLedge);
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem|Movement when Climbing|Vertical Movement")
 	bool CheckTheDirectionValid() const;
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem|Movement when Climbing|Jump Next Ledge")
 	const bool FindNextClimbableActor(const bool ForVertical, const bool DurningSequence, FTwoVectors& OutLeftLedgePoint, FTwoVectors& OutRightLedgePoint, UPrimitiveComponent*& OutComponent, bool& OutDurningSeq);
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem|Movement when Climbing|Jump Next Ledge")
 	bool FindNextCA_CheckZ(const FVector ImpactPoint, const FVector InVec) const;
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem|Movement when Climbing|Jump Next Ledge")
 	bool FindNextCA_CheckValidatePoint(const FVector Target, const FTransform BasePosition, FVector& OutLocation) const;
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem|Movement when Climbing|Jump Next Ledge")
 	FRotator FindNextCA_ConvertLedgeToCapsulePosition(const FVector Impact, const FVector Normal, FTwoVectors& OutLocation) const;
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem|Movement when Climbing|Jump Next Ledge")
 	FClimbingDetectPoints FindNextCA_ChooseDirection(const FLSComponentAndTransform LS, const int32 Index, const FTransform BasePosition, TArray<AActor*>& OutActors, UPrimitiveComponent*& OutComponent) const;
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem|Movement when Climbing|Jump Next Ledge")
 	FTwoVectors FindNextCA_FirstTraceConfig(const bool ForVertical, const bool DurningSequence, TArray<AActor*>& OutActors) const;
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem|Movement when Climbing|Jump Next Ledge")
 	FTwoVectors FindNextCA_SecondTraceConfig(const int32 LoopIndex, const int32 LastIndex, const FVector Location, const FVector TraceEnd, const FTransform BasePosition, TArray<AActor*>& OutActors) const;
 
-
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem|Functions")
 	void CanJumpBackHandleEvent();
-
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem|Functions")
 	void FindVerticalHandleEvent();
-
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem|Functions")
 	void FreeHangHandleEvent();
-
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem|Functions")
 	void EarlyStartHandleEvent();
-
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem|Functions")
 	void JumpNextActorHandleEvent(const bool bIsDurningSequence);
-
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem|Functions")
 	void VerticalMovementHandleEvent();
-
 	void EdgeDetectionHandleEvent();
 	void ShortMoveHandleEvent(const bool bIsLedgeValid);
-
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem|Functions")
 	void DoWhileTrueClimbingHandleEvent();
-
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem|Functions")
 	void DoWhileFalseClimbingHandleEvent();
-
-	UFUNCTION(BlueprintCallable, Category = "ClimbSystem|Functions")
 	void DoWhileNotClimbHandleEvent();
 
 
@@ -596,8 +465,7 @@ protected:
 
 	TWeakObjectPtr<class UQTEActionComponent> QTEActionComponent;
 
-	UPROPERTY()
-	TObjectPtr<class AClimbingObject> TargetActorPoint;
+	TWeakObjectPtr<class AClimbingObject> TargetActorPoint;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Debug")
 	bool bDrawDebugTrace = false;

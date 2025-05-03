@@ -127,6 +127,7 @@ UWvCharacterMovementComponent::UWvCharacterMovementComponent(const FObjectInitia
 
 	//CharacterMovementCVars::AsyncCharacterMovement = 1;
 
+	StepUpOffset = 30.0f;
 	
 }
 
@@ -147,7 +148,6 @@ void UWvCharacterMovementComponent::BeginPlay()
 	PerchRadiusThreshold = FMath::Abs(CapsuleRadius);
 	AnimInstance = CharacterOwner->GetMesh()->GetAnimInstance();
 	InitUnScaledCapsuleHalfHeight = Capsule->GetUnscaledCapsuleHalfHeight();
-	ClimbQueryParams.AddIgnoredActor(CharacterOwner);
 
 	MantleTimeline = new FTimeline();
 
@@ -156,7 +156,6 @@ void UWvCharacterMovementComponent::BeginPlay()
 
 void UWvCharacterMovementComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-	WallClimbingDAInstance = nullptr;
 	MantleDAInstance = nullptr;
 	VaultDAInstance = nullptr;
 
@@ -325,7 +324,6 @@ void UWvCharacterMovementComponent::TickComponent(float DeltaTime, enum ELevelTi
 			//Acceleration = ScaleInputAcceleration(ConstrainInputAcceleration(InputVector));
 			//AnalogInputModifier = ComputeAnalogInputModifier();
 
-			TryWallClimbingMovement();
 
 			if (MantleTimeline != nullptr && MantleTimeline->IsPlaying())
 			{
@@ -374,9 +372,6 @@ void UWvCharacterMovementComponent::StartNewPhysics(float deltaTime, int32 Itera
 		{
 			switch (CustomMovementMode)
 			{
-				case CUSTOM_MOVE_WallClimbing:
-				PhysWallClimbing(deltaTime, Iterations);
-				break;
 				case CUSTOM_MOVE_Mantling:
 				PhysMantling(deltaTime, Iterations);
 				break;
@@ -424,11 +419,6 @@ float UWvCharacterMovementComponent::GetMaxSpeed() const
 		}
 	}
 
-	if (IsWallClimbing() && IsValid(WallClimbingDAInstance))
-	{
-		return WallClimbingDAInstance->MaxClimbingSpeed;
-	}
-
 	return Super::GetMaxSpeed();
 }
 
@@ -455,10 +445,6 @@ float UWvCharacterMovementComponent::GetMaxWalkSpeedCrouched() const
 
 float UWvCharacterMovementComponent::GetMaxAcceleration() const
 {
-	if (IsValid(WallClimbingDAInstance))
-	{
-		return IsWallClimbing() ? WallClimbingDAInstance->MaxClimbingAcceleration : Super::GetMaxAcceleration();
-	}
 	return Super::GetMaxAcceleration();
 }
 
@@ -470,11 +456,6 @@ void UWvCharacterMovementComponent::OnMovementModeChanged(EMovementMode Previous
 		{
 			switch (CustomMovementMode)
 			{
-				case ECustomMovementMode::CUSTOM_MOVE_WallClimbing:
-				{
-					ShrinkCapsuleSize();
-				}
-				break;
 				case ECustomMovementMode::CUSTOM_MOVE_Climbing:
 				{
 					// ClimbingComponent
@@ -498,19 +479,6 @@ void UWvCharacterMovementComponent::OnMovementModeChanged(EMovementMode Previous
 	const ECustomMovementMode PreviousCMM = (ECustomMovementMode)PreviousCustomMode;
 	switch (PreviousCMM)
 	{
-		case ECustomMovementMode::CUSTOM_MOVE_WallClimbing:
-		{
-			if (ASC.IsValid())
-			{
-				// Remove Abort Tag
-				if (ASC->HasMatchingGameplayTag(TAG_Locomotion_ClimbingAbort))
-				{
-					ASC->RemoveGameplayTag(TAG_Locomotion_ClimbingAbort, 1);
-				}
-			}
-			ResetShrinkCapsuleSize();
-		}
-		break;
 		case ECustomMovementMode::CUSTOM_MOVE_Climbing:
 		{
 			// ClimbingComponent
@@ -2801,829 +2769,6 @@ void UWvCharacterMovementComponent::PhysMantling(float deltaTime, int32 Iteratio
 }
 #pragma endregion
 
-#pragma region WallClimbing
-bool UWvCharacterMovementComponent::IsWallClimbing() const
-{
-	return ((MovementMode == MOVE_Custom) && (CustomMovementMode == CUSTOM_MOVE_WallClimbing)) && UpdatedComponent;
-}
-
-void UWvCharacterMovementComponent::TryWallClimbingMovement()
-{
-	if (!ASC.IsValid())
-	{
-		return;
-	}
-
-
-	// Added Tag ForbidClimbing..
-	if (IsForbidClimbing())
-	{
-		return;
-	}
-
-	// @TODO
-	// This is necessary for the playback of Smoothing Animation.
-	if (IsMantling() || IsSwimming())
-	{
-		return;
-	}
-
-	if (IsValid(WallClimbingDAInstance))
-	{
-		SweepAndStoreWallHits();
-		if (!IsWallClimbing())
-		{
-			TryClimbing();
-		}
-	}
-
-}
-
-void UWvCharacterMovementComponent::PhysWallClimbing(float deltaTime, int32 Iterations)
-{
-	if (deltaTime < MIN_TICK_TIME)
-	{
-		return;
-	}
-
-	if (!ASC.IsValid())
-	{
-#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
-		if (CVarDebugWallClimbingSystem.GetValueOnGameThread() > 0)
-		{
-			UE_LOG(LogCharacterMovement, Error, TEXT("Not Valid ASC !!"));
-		}
-#endif
-		return;
-	}
-
-	const bool bClimbingFail = ComputeSurfaceInfo();
-	if (!bClimbingFail || ShouldStopClimbing() || ClimbDownToFloor() || ASC->HasMatchingGameplayTag(TAG_Locomotion_ClimbingAbort))
-	{
-		StopClimbing(deltaTime, Iterations);
-		return;
-	}
-
-	UpdateClimbSprintState(deltaTime);
-	ComputeClimbingVelocity(deltaTime);
-	const FVector OldLocation = UpdatedComponent->GetComponentLocation();
-	MoveAlongClimbingSurface(deltaTime);
-	TryClimbUpLedge();
-	
-	if (!HasAnimRootMotion() && !CurrentRootMotion.HasOverrideVelocity())
-	{
-		Velocity = (UpdatedComponent->GetComponentLocation() - OldLocation) / deltaTime;
-	}
-	SnapToClimbingSurface(deltaTime);
-}
-
-void UWvCharacterMovementComponent::SweepAndStoreWallHits()
-{
-	if (WallClimbingDAInstance->FilterClasses.Num() <= 0)
-	{
-		return;
-	}
-
-	auto Radius = WallClimbingDAInstance->CollisionCapsuleRadius;
-	auto HalfHeight = WallClimbingDAInstance->CollisionCapsuleHalfHeight;
-	const FCollisionShape CollisionShape = FCollisionShape::MakeCapsule(Radius, HalfHeight);
-
-	const FVector StartOffset = UpdatedComponent->GetForwardVector() * 20.0f;
-	const FVector StartLocation = UpdatedComponent->GetComponentLocation() + StartOffset;
-	const FVector EndLocation = StartLocation + UpdatedComponent->GetForwardVector();
-
-	TArray<FHitResult> HitResults;
-	const bool bHitWallResult = GetWorld()->SweepMultiByChannel(HitResults, StartLocation, EndLocation, FQuat::Identity,
-		WallClimbingDAInstance->ClimbTraceChannel, CollisionShape, ClimbQueryParams);
-
-	if (bHitWallResult)
-	{
-		CurrentWallHits = HitResults;
-	}
-	else
-	{
-		CurrentWallHits.Reset();
-	}
-}
-
-bool UWvCharacterMovementComponent::CanStartClimbing()
-{
-	for (FHitResult& Hit : CurrentWallHits)
-	{
-		if (!IsValid(Hit.GetActor()))
-		{
-			continue;
-		}
-
-		if (WallClimbingDAInstance->FilterClasses.Find(Hit.GetActor()->GetClass()) == INDEX_NONE)
-		{
-#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
-			if (CVarDebugWallClimbingSystem.GetValueOnGameThread() > 0)
-			{
-				UE_LOG(LogTemp, Warning, TEXT("Cannot be climbed because the Actor is not included in the FilterClass...."));
-			}
-#endif
-			continue;
-		}
-
-		if (!GetWallWidth(Hit))
-		{
-#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
-			if (CVarDebugWallClimbingSystem.GetValueOnGameThread() > 0)
-			{
-				UE_LOG(LogTemp, Warning, TEXT("Object cannot be climbed because its width is smaller than CapsuleRadius..."));
-			}
-#endif
-
-			continue;
-		}
-
-		const FVector HorizontalNormal = Hit.Normal.GetSafeNormal2D();
-		const float HorizontalDot = FVector::DotProduct(UpdatedComponent->GetForwardVector(), -HorizontalNormal);
-		const float VerticalDot = FVector::DotProduct(Hit.Normal, HorizontalNormal);
-		const float HorizontalDegrees = FMath::RadiansToDegrees(FMath::Acos(HorizontalDot));
-		const bool bIsCeiling = FMath::IsNearlyZero(VerticalDot);
-
-		const float F_Angle = UKismetMathLibrary::DegAcos(FVector::DotProduct(Hit.Normal, FVector(1.0f, 0.0f, 0.0f)));
-		const float SlopeAngle = GetSlopeAngle(Hit);
-
-#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
-		if (CVarDebugWallClimbingSystem.GetValueOnGameThread() > 0)
-		{
-			UE_LOG(LogTemp, Log, TEXT("HitClass %s"), *Hit.GetActor()->GetClass()->GetName());
-			UE_LOG(LogTemp, Log, TEXT("HorizontalDot %.3f"), HorizontalDot);
-			UE_LOG(LogTemp, Log, TEXT("HorizontalDegrees %.3f"), HorizontalDegrees);
-			UE_LOG(LogTemp, Log, TEXT("VerticalDot %.3f"), VerticalDot);
-			UE_LOG(LogTemp, Log, TEXT("SlopeAngle %.3f"), SlopeAngle);
-			UE_LOG(LogTemp, Log, TEXT("F_Angle %.3f"), F_Angle);
-
-		}
-#endif
-
-		if (SlopeAngle <= GetWalkableFloorAngle())
-		{
-#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
-			if (CVarDebugWallClimbingSystem.GetValueOnGameThread() > 0)
-			{
-				UE_LOG(LogTemp, Warning, TEXT("The angle of the walkable surface.."));
-			}
-#endif
-		}
-
-		// 壁がどれだけ急勾配であるか（法線がどれだけ上向きか下向きか）は気にしないので、そうしても正しい答えは得られない。
-		// 一つの解決策は、wNを水平面pに投影し、それを正規化することである。法線がUpVectorに等しい平面を作ることでpを作ることができる。
-		// その結果、Z成分がゼロに等しいベクトルRができる。つまり、Z成分を無視すればいい
-		if (HorizontalDegrees <= WallClimbingDAInstance->MinHorizontalDegreesToStartClimbing && !bIsCeiling && IsFacingSurface(VerticalDot))
-		{
-			return true;
-		}
-	}
-
-	return false;
-}
-
-const bool UWvCharacterMovementComponent::GetWallWidth(FHitResult& HitResult)
-{
-	const UCapsuleComponent* Capsule = CharacterOwner->GetCapsuleComponent();
-	const float OrigRadius = Capsule->GetUnscaledCapsuleRadius();
-	const float Radius = OrigRadius * 1.2f;
-	const auto TraceChannel = UEngineTypes::ConvertToTraceType(WallClimbingDAInstance->ClimbTraceChannel);
-	const float DetectDistance = WallClimbingDAInstance->ForwardTraceDistance * 4.0f;
-
-#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
-	const EDrawDebugTrace::Type TraceType = (CVarDebugWallClimbingSystem.GetValueOnGameThread() > 0) ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None;
-#else
-	const EDrawDebugTrace::Type TraceType = EDrawDebugTrace::None;
-#endif
-
-	FHitResult HitR;
-	{
-		const FVector StartOrigin = CharacterOwner->GetActorRightVector() * Radius;
-		const FVector StartLocaion = CharacterOwner->GetActorLocation() + StartOrigin;
-		const FVector EndOrigin = StartOrigin + CharacterOwner->GetActorForwardVector() * DetectDistance;
-		const FVector EndLocaion = CharacterOwner->GetActorLocation() + EndOrigin;
-		UKismetSystemLibrary::LineTraceSingle(GetWorld(), StartLocaion, EndLocaion, TraceChannel, false, TArray<AActor*>({ CharacterOwner }),
-			TraceType, HitR, true, FLinearColor::White, FLinearColor::Blue, 10.0f);
-
-		if (!HitR.IsValidBlockingHit() || !IsValid(HitR.GetActor()))
-			return false;
-	}
-
-	FHitResult HitL;
-	{
-		const FVector StartOrigin = CharacterOwner->GetActorRightVector() * -Radius;
-		const FVector StartLocaion = CharacterOwner->GetActorLocation() + StartOrigin;
-		const FVector EndOrigin = StartOrigin + CharacterOwner->GetActorForwardVector() * DetectDistance;
-		const FVector EndLocaion = CharacterOwner->GetActorLocation() + EndOrigin;
-		UKismetSystemLibrary::LineTraceSingle(GetWorld(), StartLocaion, EndLocaion, TraceChannel, false, TArray<AActor*>({ CharacterOwner }),
-			TraceType, HitL, true, FLinearColor::White, FLinearColor::Blue, 10.0f);
-
-		if (!HitL.IsValidBlockingHit() || !IsValid(HitL.GetActor()))
-			return false;
-	}
-
-	if (HitResult.GetActor() == HitR.GetActor() && HitL.GetActor() == HitResult.GetActor())
-	{
-		const float WallWidth = (HitR.ImpactPoint - HitL.ImpactPoint).Size2D();
-		return FMath::Abs(WallWidth) >= OrigRadius;
-	}
-
-	return false;
-}
-
-bool UWvCharacterMovementComponent::IsFacingSurface(const float Steepness) const
-{
-	const float BaseLength = WallClimbingDAInstance->ForwardTraceDistance;
-	const float SteepnessMultiplier = 1 + (1 - Steepness) * 5;
-
-	return EyeHeightTrace(BaseLength * SteepnessMultiplier);
-}
-
-/// <summary>
-/// Climbing starts when any Stick input is present
-/// </summary>
-/// <returns></returns>
-bool UWvCharacterMovementComponent::IsPlayerStickInputUp() const
-{
-	const FVector2D Axis = BaseCharacter->GetInputAxis();
-	return Axis.Y > 0.0f;//  || (FMath::Abs(Axis.X)) > 0.0f
-}
-
-void UWvCharacterMovementComponent::GetEyeHeightTraceData(FHitResult& OutHitResult, const float TraceDistance)
-{
-	const float BaseEyeHeight = GetCharacterOwner()->BaseEyeHeight;
-	const float EyeHeightOffset = IsWallClimbing() ? BaseEyeHeight + WallClimbingDAInstance->ClimbingCollisionShrinkAmount : BaseEyeHeight;
-
-	const FVector Start = UpdatedComponent->GetComponentLocation() + UpdatedComponent->GetUpVector() * EyeHeightOffset;
-	const FVector End = Start + (UpdatedComponent->GetForwardVector() * TraceDistance);
-
-	const bool bHitResult = GetWorld()->LineTraceSingleByChannel(
-		OutHitResult, Start, End,
-		WallClimbingDAInstance->ClimbTraceChannel, ClimbQueryParams);
-
-#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
-	if (CVarDebugWallClimbingSystem.GetValueOnGameThread() > 0)
-	{
-		if (OutHitResult.IsValidBlockingHit())
-		{
-			UKismetSystemLibrary::DrawDebugLine(GetWorld(), Start, OutHitResult.ImpactPoint, FLinearColor::Red, 1.0f, 1.0f);
-			UKismetSystemLibrary::DrawDebugPoint(GetWorld(), OutHitResult.ImpactPoint, 20.0f, FLinearColor::Red, 1.0f);
-		}
-	}
-#endif
-}
-
-bool UWvCharacterMovementComponent::EyeHeightTrace(const float TraceDistance) const
-{
-	FHitResult UpperEdgeHit;
-	const float BaseEyeHeight = GetCharacterOwner()->BaseEyeHeight;
-	const float EyeHeightOffset = IsWallClimbing() ? BaseEyeHeight + WallClimbingDAInstance->ClimbingCollisionShrinkAmount : BaseEyeHeight;
-
-	const FVector Start = UpdatedComponent->GetComponentLocation() + UpdatedComponent->GetUpVector() * EyeHeightOffset;
-	const FVector End = Start + (UpdatedComponent->GetForwardVector() * TraceDistance);
-
-	const bool bHitResult = GetWorld()->LineTraceSingleByChannel(
-		UpperEdgeHit, Start, End,
-		WallClimbingDAInstance->ClimbTraceChannel, ClimbQueryParams);
-
-#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
-	if (CVarDebugWallClimbingSystem.GetValueOnGameThread() > 0)
-	{
-		if (UpperEdgeHit.IsValidBlockingHit())
-		{
-			UKismetSystemLibrary::DrawDebugLine(GetWorld(), Start, UpperEdgeHit.ImpactPoint, FLinearColor::Green, 1.0f, 1.0f);
-			UKismetSystemLibrary::DrawDebugPoint(GetWorld(), UpperEdgeHit.ImpactPoint, 20.0f, FLinearColor::Green, 1.0f);
-		}
-	}
-#endif
-
-	return bHitResult;
-}
-
-void UWvCharacterMovementComponent::SetRotationToStand() const
-{
-	const FRotator StandRotation = FRotator(0, UpdatedComponent->GetComponentRotation().Yaw, 0);
-	UpdatedComponent->SetRelativeRotation(StandRotation);
-}
-
-void UWvCharacterMovementComponent::UpdateClimbSprintState(const float DeltaTime)
-{
-	if (!IsClimbJumping())
-	{
-		return;
-	}
-
-	CurrentClimbDashTime += DeltaTime;
-
-	// Better to cache it when dash starts
-	float MinTime, MaxTime;
-	WallClimbingDAInstance->ClimbJumpCurve->GetTimeRange(MinTime, MaxTime);
-
-	if (CurrentClimbDashTime >= MaxTime)
-	{
-		StopClimbJumping();
-	}
-}
-
-const bool UWvCharacterMovementComponent::ComputeSurfaceInfo()
-{
-	CurrentClimbingNormal = FVector::ZeroVector;
-	CurrentClimbingPosition = FVector::ZeroVector;
-
-	const FVector Start = UpdatedComponent->GetComponentLocation();
-	const FCollisionShape CollisionSphere = FCollisionShape::MakeSphere(6);
-
-	for (const FHitResult& WallHit : CurrentWallHits)
-	{
-		const FVector End = Start + (WallHit.ImpactPoint - Start).GetSafeNormal() * 120;
-
-		FHitResult AssistHit;
-		GetWorld()->SweepSingleByChannel(AssistHit, Start, End, FQuat::Identity, WallClimbingDAInstance->ClimbTraceChannel, CollisionSphere, ClimbQueryParams);
-
-		const FVector HorizontalNormal = AssistHit.Normal.GetSafeNormal2D();
-		const float HorizontalDot = FVector::DotProduct(UpdatedComponent->GetForwardVector(), -HorizontalNormal);
-		const float VerticalDot = FVector::DotProduct(AssistHit.Normal, HorizontalNormal);
-		const float HorizontalDegrees = FMath::RadiansToDegrees(FMath::Acos(HorizontalDot));
-		const bool bIsCeiling = FMath::IsNearlyZero(VerticalDot);
-		const float SlopeAngle = GetSlopeAngle(AssistHit);
-
-#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
-		if (CVarDebugWallClimbingSystem.GetValueOnGameThread() > 0)
-		{
-			UE_LOG(LogTemp, Warning, TEXT("HorizontalDegrees %.3f"), HorizontalDegrees);
-			UE_LOG(LogTemp, Warning, TEXT("VerticalDot %.3f"), VerticalDot);
-			UE_LOG(LogTemp, Warning, TEXT("SlopeAngle %.3f"), SlopeAngle);
-		}
-#endif
-		const float MinDegrees = WallClimbingDAInstance->MinHorizontalDegreesToStartClimbing;
-		const bool bIsFacingSurface = IsFacingSurface(VerticalDot);
-		const bool bConditionResult = (HorizontalDegrees <= MinDegrees && !bIsCeiling && bIsFacingSurface);
-
-		if (!bConditionResult)
-		{
-			UE_LOG(LogTemp, Warning, TEXT("Failer Condition false, HorizontalDegrees %.3f, bNotIsCeiling => %s, bIsFacingSurface => %s"), 
-				HorizontalDegrees, 
-				!bIsCeiling ? TEXT("true") : TEXT("false"),
-				bIsFacingSurface ? TEXT("true") : TEXT("false"));
-		}
-
-		CurrentClimbingPosition += AssistHit.Location;
-		CurrentClimbingNormal += AssistHit.Normal;
-
-	}
-
-	CurrentClimbingPosition /= CurrentWallHits.Num();
-	CurrentClimbingNormal = CurrentClimbingNormal.GetSafeNormal();
-	return true;
-}
-
-bool UWvCharacterMovementComponent::ShouldStopClimbing() const
-{
-	const bool bIsOnCeiling = FVector::Parallel(CurrentClimbingNormal, FVector::UpVector);
-	return (CurrentClimbingNormal.IsZero() || bIsOnCeiling);
-}
-
-void UWvCharacterMovementComponent::StopClimbing(const float DeltaTime, int32 Iterations)
-{
-	SetRotationToStand();
-	StopClimbJumping();
-	StopClimbing_Action();
-	CheckGroundOrFalling(DeltaTime, Iterations);
-}
-
-void UWvCharacterMovementComponent::StopClimbing_Action()
-{
-	OnWallClimbingEndDelegate.Broadcast();
-	LocomotionComponent->SetLockUpdatingRotation(false);
-
-	if (bPrepareStrafeMovement)
-	{
-		BaseCharacter->StrafeMovement();
-	}
-	else
-	{
-		BaseCharacter->VelocityMovement();
-	}
-}
-
-void UWvCharacterMovementComponent::CheckGroundOrFalling(const float DeltaTime, int32 Iterations)
-{
-	FFindFloorResult FloorResult;
-	FindFloor(CharacterOwner->GetActorLocation(), FloorResult, false);
-	const bool bIsWalkable = (IsWalkable(FloorResult.HitResult));
-	const bool bIsBot = CharacterOwner->IsBotControlled();
-	SetMovementMode(bIsWalkable ? bIsBot ? EMovementMode::MOVE_NavWalking : EMovementMode::MOVE_Walking : EMovementMode::MOVE_Falling);
-	StartNewPhysics(DeltaTime, Iterations);
-}
-
-bool UWvCharacterMovementComponent::ClimbDownToFloor() const
-{
-	FHitResult FloorHit;
-	const bool bDownHitResult = CheckFloor(FloorHit);
-	if (!bDownHitResult)
-	{
-		return false;
-	}
-
-	const bool bOnWalkableFloor = FloorHit.Normal.Z > GetWalkableFloorZ();
-	const float DownSpeed = FVector::DotProduct(Velocity, -FloorHit.Normal);
-	const bool bIsMovingTowardsFloor = (DownSpeed >= WallClimbingDAInstance->MaxClimbingSpeed / 3.0f) && bOnWalkableFloor;
-	const bool bIsClimbingFloor = CurrentClimbingNormal.Z > GetWalkableFloorZ();
-	//UE_LOG(LogTemp, Log, TEXT("DownSpeed => %.3f, function => %s"), DownSpeed, *FString(__FUNCTION__));
-	return bIsMovingTowardsFloor || (bIsClimbingFloor && bOnWalkableFloor);
-}
-
-bool UWvCharacterMovementComponent::CheckFloor(FHitResult& FloorHit) const
-{
-	const FVector StartLocation = UpdatedComponent->GetComponentLocation() + (UpdatedComponent->GetUpVector() * -20);
-	const FVector EndLocation = StartLocation + FVector::DownVector * WallClimbingDAInstance->FloorCheckDistance;
-
-#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
-	if (CVarDebugWallClimbingSystem.GetValueOnGameThread() > 0)
-	{
-		UKismetSystemLibrary::DrawDebugLine(GetWorld(), StartLocation, EndLocation, FLinearColor::Gray, 1.0f, 1.0f);
-	}
-#endif
-
-	return GetWorld()->LineTraceSingleByChannel(FloorHit, StartLocation, EndLocation, /*ClimbingDataAsset->ClimbTraceChannel*/ ECC_WorldStatic, ClimbQueryParams);
-}
-
-bool UWvCharacterMovementComponent::HasReachedEdge() const
-{
-	const UCapsuleComponent* Capsule = CharacterOwner->GetCapsuleComponent();
-	const float TraceDistance = Capsule->GetUnscaledCapsuleRadius() * 2.5f;
-	return !EyeHeightTrace(TraceDistance);
-}
-
-const bool UWvCharacterMovementComponent::CanMoveToLedgeClimbLocation(FHitResult& OutHitResult)
-{
-	const UCapsuleComponent* Capsule = CharacterOwner->GetCapsuleComponent();
-	const FVector VerticalOffset = FVector::UpVector * WallClimbingDAInstance->LedgeEndTraceDistance.X;
-	const FVector ForwardOffset = UpdatedComponent->GetForwardVector() * WallClimbingDAInstance->LedgeEndTraceDistance.Y;
-	const FVector CheckEndLocation = UpdatedComponent->GetComponentLocation() + ForwardOffset + VerticalOffset;
-
-	FHitResult CapsuleHit;
-	const FVector CapsuleStartCheck = CheckEndLocation - ForwardOffset;
-
-	const bool bBlocked = GetWorld()->SweepSingleByChannel(CapsuleHit, CapsuleStartCheck, CheckEndLocation,
-		FQuat::Identity, /*ClimbingDataAsset->ClimbTraceChannel*/ ECC_WorldStatic, Capsule->GetCollisionShape(), ClimbQueryParams);
-
-#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
-	if (CVarDebugWallClimbingSystem.GetValueOnGameThread() > 0)
-	{
-		UKismetSystemLibrary::DrawDebugLine(GetWorld(), UpdatedComponent->GetComponentLocation(), CapsuleStartCheck, FLinearColor::Red, 4.0f, 1.0f);
-		UKismetSystemLibrary::DrawDebugLine(GetWorld(), CapsuleStartCheck, CheckEndLocation, FLinearColor::Red, 4.0f, 1.0f);
-	}
-#endif
-
-	// LedgeTrace traces upward and forward, so it cannot be ledge in the case of a wall.
-	if (!bBlocked)
-	{
-		return IsLocationWalkable(CheckEndLocation, OutHitResult);
-	}
-
-	return false;
-}
-
-const bool UWvCharacterMovementComponent::IsLocationWalkable(const FVector& CheckLocation, FHitResult& OutHitResult)
-{
-	constexpr float DownTraceDistance = 400.0f;
-	const FVector CheckEnd = CheckLocation + (FVector::DownVector * DownTraceDistance);
-
-	//FHitResult LedgeHit;
-	const bool bHitLedgeGround = GetWorld()->LineTraceSingleByChannel(OutHitResult, CheckLocation, CheckEnd,
-		/*ClimbingDataAsset->ClimbTraceChannel*/ ECC_WorldStatic, ClimbQueryParams);
-
-	const float SlopeAngle = GetSlopeAngle(OutHitResult);
-
-	if (!IsWalkable(OutHitResult))
-	{
-		UE_LOG(LogTemp, Log, TEXT("TraceHitData holds data that cannot be walked. => %s"), *FString(__FUNCTION__));
-		return false;
-	}
-
-	if (SlopeAngle >= GetWalkableFloorAngle())
-	{
-		UE_LOG(LogTemp, Log, TEXT("The slope exceeds a certain value. SlopeAngle => %.3f, GetWalkableFloorAngle => %.3f"), SlopeAngle, GetWalkableFloorAngle());
-		return false;
-	}
-
-	const bool bHitResult = (bHitLedgeGround && OutHitResult.Normal.Z >= GetWalkableFloorZ());
-
-#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
-	if (CVarDebugWallClimbingSystem.GetValueOnGameThread() > 0)
-	{
-		const float Radius = CharacterOwner->GetCapsuleComponent()->GetUnscaledCapsuleRadius();
-		const FRotator Rot = UpdatedComponent->GetComponentRotation();
-		UKismetSystemLibrary::DrawDebugCapsule(GetWorld(), OutHitResult.ImpactPoint, InitUnScaledCapsuleHalfHeight, Radius, Rot, FLinearColor::Red, 4.0f, 1.0f);
-	}
-#endif
-
-	if (bHitResult)
-	{
-		const FRotator StandRotation = FRotator(0, UpdatedComponent->GetComponentRotation().Yaw, 0);
-		//UpdatedComponent->SetRelativeRotation(StandRotation);
-
-		FTransform LocalTransform {StandRotation, OutHitResult.ImpactPoint, FVector::OneVector };
-		//FVector LandingPoint = OutHitResult.ImpactPoint;
-		//LocalTransform.SetLocation(LandingPoint);
-
-		ClimbUpLedgeLS.Transform = LocalTransform;
-		ClimbUpLedgeLS.Component = OutHitResult.Component.Get();
-		return true;
-	}
-
-	return false;
-}
-
-void UWvCharacterMovementComponent::ComputeClimbingVelocity(const float DeltaTime)
-{
-	RestorePreAdditiveRootMotionVelocity();
-
-	if (!HasAnimRootMotion() && !CurrentRootMotion.HasOverrideVelocity())
-	{
-		if (IsClimbJumping())
-		{
-			AlignClimbDashDirection();
-
-			const float CurrentCurveSpeed = WallClimbingDAInstance->ClimbJumpCurve->GetFloatValue(CurrentClimbDashTime);
-			Velocity = ClimbDashDirection * CurrentCurveSpeed;
-		}
-		else
-		{
-			constexpr float Friction = 0.0f;
-			constexpr bool bFluid = false;
-			CalcVelocity(DeltaTime, Friction, bFluid, WallClimbingDAInstance->BrakingDecelerationClimbing);
-		}
-	}
-
-	ApplyRootMotionToVelocity(DeltaTime);
-}
-
-void UWvCharacterMovementComponent::AlignClimbDashDirection()
-{
-	const FVector HorizontalSurfaceNormal = GetClimbSurfaceNormal();
-	ClimbDashDirection = FVector::VectorPlaneProject(ClimbDashDirection, HorizontalSurfaceNormal);
-}
-
-void UWvCharacterMovementComponent::MoveAlongClimbingSurface(const float DeltaTime)
-{
-	const FVector Adjusted = Velocity * DeltaTime;
-
-	FHitResult Hit(1.f);
-
-	SafeMoveUpdatedComponent(Adjusted, GetClimbingRotation(DeltaTime), true, Hit);
-
-	if (Hit.Time < 1.f)
-	{
-		HandleImpact(Hit, DeltaTime, Adjusted);
-		SlideAlongSurface(Adjusted, (1.f - Hit.Time), Hit.Normal, Hit, true);
-	}
-}
-
-FQuat UWvCharacterMovementComponent::GetClimbingRotation(const float DeltaTime) const
-{
-	const FQuat Current = UpdatedComponent->GetComponentQuat();
-
-	if (HasAnimRootMotion() || CurrentRootMotion.HasOverrideVelocity())
-	{
-		return Current;
-	}
-
-	const FQuat Target = FRotationMatrix::MakeFromX(-CurrentClimbingNormal).ToQuat();
-	const float RotationSpeed = WallClimbingDAInstance->ClimbingRotationSpeed * FMath::Max(1, Velocity.Length() / WallClimbingDAInstance->MaxClimbingSpeed);
-	return FMath::QInterpTo(Current, Target, DeltaTime, RotationSpeed);
-}
-
-/// <summary>
-/// Check Mantling Event
-/// </summary>
-/// <returns></returns>
-const bool UWvCharacterMovementComponent::TryClimbUpLedge()
-{
-	if (!IsValid(BaseCharacter))
-	{
-		return false;
-	}
-
-	const float UpSpeed = FVector::DotProduct(Velocity, UpdatedComponent->GetUpVector());
-	const bool bIsMovingUp = UpSpeed >= WallClimbingDAInstance->MaxClimbUpLedgeSpeed;
-
-	FHitResult HitResult;
-	//if (bIsMovingUp && CanMoveToLedgeClimbLocation(HitResult) && HasReachedEdge())
-	if (bIsMovingUp && CanMoveToLedgeClimbLocation(HitResult))
-	{
-		//SetRotationToStand();
-		//StopClimbJumping();
-		//StopClimbing_Action();
-
-		// @TODO
-		//const FVector RelativeLocation = GetCapsuleLocationFromBase(HitResult.ImpactPoint, 0.0f);
-		//const FVector Offset = FVector(-1.0f, -1.0f, 0.0f);
-		//const FVector Diff = (RelativeLocation - UpdatedComponent->GetComponentLocation());
-		//const float MantleHeight = Diff.Z;
-		//MantleStart(MantleHeight, ClimbUpLedgeLS, GetMantleType(MantleHeight));
-
-		UMotionWarpingComponent* MotionWarpingComponent = BaseCharacter->GetMotionWarpingComponent();
-		if (MotionWarpingComponent)
-		{
-			FMotionWarpingTarget WarpingTarget;
-			WarpingTarget.Name = UWvCharacterMovementComponent::ClimbSyncPoint;
-			WarpingTarget.Location = ClimbUpLedgeLS.Transform.GetLocation();
-			WarpingTarget.Rotation = FRotator(UpdatedComponent->GetComponentQuat());
-			MotionWarpingComponent->AddOrUpdateWarpTarget(WarpingTarget);
-
-			SetRotationToStand();
-			StopClimbJumping();
-			StopClimbing_Action();
-
-			UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(BaseCharacter, TAG_Locomotion_ClimbingLedgeEnd, FGameplayEventData());
-			SetMovementMode(MOVE_Custom, CUSTOM_MOVE_Mantling);
-			return true;
-		}
-		//return true;
-	}
-
-	return false;
-}
-
-void UWvCharacterMovementComponent::SnapToClimbingSurface(const float DeltaTime) const
-{
-	const FVector Forward = UpdatedComponent->GetForwardVector();
-	const FVector Location = UpdatedComponent->GetComponentLocation();
-	const FQuat Rotation = UpdatedComponent->GetComponentQuat();
-	const FVector ForwardDifference = (CurrentClimbingPosition - Location).ProjectOnTo(Forward);
-	const FVector Offset = -CurrentClimbingNormal * (ForwardDifference.Length() - WallClimbingDAInstance->DistanceFromSurface);
-	constexpr bool bSweep = true;
-	const float SnapSpeed = WallClimbingDAInstance->ClimbingSnapSpeed * ((Velocity.Length() / WallClimbingDAInstance->MaxClimbingSpeed) + 1);
-	UpdatedComponent->MoveComponent(Offset * SnapSpeed * DeltaTime, Rotation, bSweep);
-}
-
-/// <summary>
-/// Start Climbing
-/// </summary>
-void UWvCharacterMovementComponent::TryClimbing()
-{
-	if (CanStartClimbing() && IsPlayerStickInputUp())
-	{
-		LocomotionComponent->SetLockUpdatingRotation(true);
-
-		const auto LocomotionEssencialVariables = LocomotionComponent->GetLocomotionEssencialVariables();
-		const ELSRotationMode LSRotationMode = LocomotionEssencialVariables.LSRotationMode;
-		bPrepareStrafeMovement = (LSRotationMode == ELSRotationMode::LookingDirection);
-		bUseControllerDesiredRotation = false;
-		bOrientRotationToMovement = false;
-
-		SetMovementMode(MOVE_Custom, CUSTOM_MOVE_WallClimbing);
-		OnWallClimbingBeginDelegate.Broadcast();
-	}
-}
-
-bool UWvCharacterMovementComponent::IsForbidClimbing() const
-{
-	if (ASC.IsValid())
-	{
-		return (ASC->HasMatchingGameplayTag(TAG_Locomotion_ForbidClimbing));
-	}
-	return false;
-}
-
-void UWvCharacterMovementComponent::ForbidClimbing(const bool bIsTagAdd)
-{
-	if (!ASC.IsValid())
-	{
-		UE_LOG(LogTemp, Error, TEXT("ASC Is not Valid => %s"), *FString(__FUNCTION__));
-		return;
-	}
-
-	if (bIsTagAdd)
-	{
-		if (!IsForbidClimbing())
-		{
-			ASC->AddGameplayTag(TAG_Locomotion_ForbidClimbing, 1);
-		}
-	}
-	else
-	{
-		if (IsForbidClimbing())
-		{
-			ASC->RemoveGameplayTag(TAG_Locomotion_ForbidClimbing, 1);
-		}
-	}
-}
-
-void UWvCharacterMovementComponent::TryClimbJumping()
-{
-	if (!LocomotionComponent.IsValid() || IsClimbJumping())
-	{
-		return;
-	}
-
-	const FVector2D Axis = BaseCharacter->GetInputAxis();
-	if (Axis.Y < 0.0f)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("Climbing jumps cannot be entered downward. => %s"), *FString(__FUNCTION__));
-		return;
-	}
-
-	if (IsValid(WallClimbingDAInstance) && WallClimbingDAInstance->ClimbJumpCurve)
-	{
-		if (ASC.IsValid())
-		{
-			ASC->AddGameplayTag(TAG_Locomotion_ClimbingJump, 1);
-		}
-		CurrentClimbDashTime = 0.f;
-		StoreClimbDashDirection();
-	}
-}
-
-void UWvCharacterMovementComponent::StopClimbJumping()
-{
-	if (ASC.IsValid())
-	{
-		ASC->RemoveGameplayTag(TAG_Locomotion_ClimbingJump, 1);
-	}
-
-	CurrentClimbDashTime = 0.f;
-	ClimbDashDirection = FVector::ZeroVector;
-}
-
-void UWvCharacterMovementComponent::StoreClimbDashDirection()
-{
-	ClimbDashDirection = UpdatedComponent->GetUpVector();
-
-	const float AccelerationThreshold = WallClimbingDAInstance->MaxClimbingAcceleration / 10;
-	if (Acceleration.Length() > AccelerationThreshold)
-	{
-		ClimbDashDirection = Acceleration.GetSafeNormal();
-	}
-}
-
-void UWvCharacterMovementComponent::AbortClimbing()
-{
-	if (ASC.IsValid())
-	{
-		ASC->AddGameplayTag(TAG_Locomotion_ClimbingAbort, 1);
-	}
-}
-
-FVector UWvCharacterMovementComponent::GetClimbSurfaceNormal() const
-{
-	return CurrentClimbingNormal;
-}
-
-FVector UWvCharacterMovementComponent::GetClimbDashDirection() const
-{
-	return ClimbDashDirection;
-}
-
-bool UWvCharacterMovementComponent::IsClimbJumping() const
-{
-	if (ASC.IsValid())
-	{
-		return (ASC->HasMatchingGameplayTag(TAG_Locomotion_ClimbingJump)) && IsWallClimbing();
-	}
-	return false;
-}
-
-void UWvCharacterMovementComponent::ShrinkCapsuleSize()
-{
-	if (IsValid(CharacterOwner) && IsValid(WallClimbingDAInstance))
-	{
-		UCapsuleComponent* Capsule = CharacterOwner->GetCapsuleComponent();
-		Capsule->SetCapsuleHalfHeight(Capsule->GetUnscaledCapsuleHalfHeight() - WallClimbingDAInstance->ClimbingCollisionShrinkAmount);
-	}
-}
-
-void UWvCharacterMovementComponent::ResetShrinkCapsuleSize()
-{
-	if (IsValid(CharacterOwner) && IsValid(WallClimbingDAInstance))
-	{
-		UCapsuleComponent* Capsule = CharacterOwner->GetCapsuleComponent();
-		Capsule->SetCapsuleHalfHeight(InitUnScaledCapsuleHalfHeight);
-	}
-	StopMovementImmediately();
-}
-
-UAnimMontage* UWvCharacterMovementComponent::GetClimbUpLedgeMontage() const
-{
-	if (IsValid(WallClimbingDAInstance))
-	{
-		return WallClimbingDAInstance->LedgeClimbMontage;
-	}
-	return nullptr;
-}
-
-UAnimMontage* UWvCharacterMovementComponent::GetClimbUpLedgeMontage(const bool bIsFreeHang) const
-{
-	if (IsValid(WallClimbingDAInstance))
-	{
-		return bIsFreeHang ? WallClimbingDAInstance->ClimbToStandingFreeHangMontage : WallClimbingDAInstance->ClimbToStandingMontage;
-	}
-	return nullptr;
-}
-#pragma endregion
-
 
 /// <summary>
 /// apply to ClimbingComponent
@@ -3717,12 +2862,6 @@ void UWvCharacterMovementComponent::RequestAsyncLoad()
 		MantleStreamableHandle = StreamableManager.RequestAsyncLoad(ObjectPath, FStreamableDelegate::CreateUObject(this, &ThisClass::OnMantleAssetLoadComplete));
 	}
 
-	if (!WallClimbingDA.IsNull())
-	{
-		const FSoftObjectPath ObjectPath = WallClimbingDA.ToSoftObjectPath();
-		WallClimbingStreamableHandle = StreamableManager.RequestAsyncLoad(ObjectPath, FStreamableDelegate::CreateUObject(this, &ThisClass::OnWallClimbingAssetLoadComplete));
-	}
-
 	if (!VaultDA.IsNull())
 	{
 		const FSoftObjectPath ObjectPath = VaultDA.ToSoftObjectPath();
@@ -3764,24 +2903,6 @@ void UWvCharacterMovementComponent::OnLoadMantleDA()
 	}
 }
 
-void UWvCharacterMovementComponent::OnWallClimbingAssetLoadComplete()
-{
-	OnLoadWallClimbingDA();
-	WallClimbingStreamableHandle.Reset();
-}
-
-void UWvCharacterMovementComponent::OnLoadWallClimbingDA()
-{
-	bool bIsResult = false;
-	do
-	{
-		WallClimbingDAInstance = WallClimbingDA.LoadSynchronous();
-		bIsResult = (IsValid(WallClimbingDAInstance));
-
-	} while (!bIsResult);
-	UE_LOG(LogTemp, Log, TEXT("Complete %s => [%s]"), *GetNameSafe(WallClimbingDAInstance), *FString(__FUNCTION__));
-}
-
 void UWvCharacterMovementComponent::OnVaultAssetLoadComplete()
 {
 	OnLoadVaultDA();
@@ -3800,5 +2921,101 @@ void UWvCharacterMovementComponent::OnLoadVaultDA()
 	UE_LOG(LogTemp, Log, TEXT("Complete %s => [%s]"), *GetNameSafe(VaultDAInstance), *FString(__FUNCTION__));
 }
 #pragma endregion
+
+
+
+FTraversalDataCheckInputs UWvCharacterMovementComponent::GetTraversalDataCheckInputs() const
+{
+	if (IsFalling() || IsFlying())
+	{
+		FTraversalDataCheckInputs FallData;
+
+		FallData.TraceForwardDirection = CharacterOwner->GetActorForwardVector();
+		FallData.TraceForwardDistance = 80.0f;
+		FallData.TraceOriginOffset = FVector::ZeroVector;
+		FallData.TraceEndOffset = FVector(0.f, 0.f, 50.0f);
+		FallData.TraceRadius = 30.0f;
+		FallData.TraceHalfHeight = 80.0f;
+		return FallData;
+	}
+
+
+	const FRotator ActorRotation = CharacterOwner->GetActorRotation();
+	const FVector LocalVelocity = ActorRotation.UnrotateVector(Velocity);
+
+	FTraversalDataCheckInputs DefaultTraversalData;
+	DefaultTraversalData.TraceForwardDirection = CharacterOwner->GetActorForwardVector();
+	DefaultTraversalData.TraceForwardDistance = UKismetMathLibrary::MapRangeClamped(LocalVelocity.X, 0.f, 500.0f, 75.0f, 350.0f);
+	DefaultTraversalData.TraceOriginOffset = FVector::ZeroVector;
+	DefaultTraversalData.TraceEndOffset = FVector::ZeroVector;
+	DefaultTraversalData.TraceRadius = 30.0f;
+	DefaultTraversalData.TraceHalfHeight = 60.0f;
+	return DefaultTraversalData;
+}
+
+
+void UWvCharacterMovementComponent::TryTraversalAction(bool& OutTraversalCheckFailed, bool& OutMontageSelectionFailed)
+{
+	const FTraversalDataCheckInputs& Inputs = GetTraversalDataCheckInputs();
+
+	const FVector ActorLocation = CharacterOwner->GetActorLocation();
+
+	const float CapsuleRadius = CharacterOwner->GetCapsuleComponent()->GetScaledCapsuleRadius();
+	const float CapsuleHalfHeight = CharacterOwner->GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
+
+	const EDrawDebugTrace::Type TraceType = EDrawDebugTrace::ForDuration;
+	const FVector TraceStart = ActorLocation + Inputs.TraceOriginOffset;
+	const FVector TraceEnd = TraceStart + (Inputs.TraceForwardDirection * Inputs.TraceForwardDistance) + Inputs.TraceEndOffset;
+
+	const ETraceTypeQuery TraceTypeQuery = UEngineTypes::ConvertToTraceType(ECC_Visibility);
+
+	FHitResult HitResult(ForceInit);
+	const bool bCapsuleHitResult = UKismetSystemLibrary::CapsuleTraceSingle(
+		GetWorld(), TraceStart, TraceEnd, Inputs.TraceRadius, Inputs.TraceHalfHeight, TraceTypeQuery, false,
+		TArray<AActor*>({}), TraceType, HitResult, true, FLinearColor::Red, FLinearColor::Green, 5.0f);
+
+	if (!bCapsuleHitResult)
+	{
+		OutTraversalCheckFailed = true;
+		return;
+	}
+
+	FTraversalActionData TraversalCheckResult;
+	TraversalCheckResult.HitComponent = HitResult.Component.Get();
+
+
+}
+
+void UWvCharacterMovementComponent::OnTraversalStart()
+{
+	bIgnoreClientMovementErrorChecksAndCorrection = 1;
+	bServerAcceptClientAuthoritativePosition = 1;
+}
+
+void UWvCharacterMovementComponent::OnTraversalEnd()
+{
+	bIgnoreClientMovementErrorChecksAndCorrection = 0;
+	bServerAcceptClientAuthoritativePosition = 0;
+}
+
+
+const bool UWvCharacterMovementComponent::TraceWidth(const FHitResult& Hit, const FVector Direction)
+{
+	if (!Hit.Component.IsValid())
+	{
+		return false;
+	}
+
+	auto LedgeDepth = Hit.ImpactNormal * MinFrontLedgeDepth;
+	auto Local_Dir = Direction * (MinLedgeWidth / 2.0f);
+
+	const auto TraceStart = (Hit.ImpactPoint + Local_Dir) + LedgeDepth;
+	const auto TraceEnd = (Hit.ImpactPoint + Local_Dir) - LedgeDepth;
+
+	FHitResult HitResult(ForceInit);
+	FCollisionQueryParams LineParams(SCENE_QUERY_STAT(KismetTraceComponent), bIsTraversalTraceComplex);
+	const bool bIsResult = Hit.GetComponent()->LineTraceComponent(HitResult, TraceStart, TraceEnd, LineParams);
+	return bIsResult && HitResult.IsValidBlockingHit();
+}
 
 

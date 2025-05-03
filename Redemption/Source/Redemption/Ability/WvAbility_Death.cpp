@@ -17,6 +17,8 @@
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(WvAbility_Death)
 
+using namespace CharacterDebug;
+
 UWvAbility_Death::UWvAbility_Death(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
 	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
@@ -51,9 +53,7 @@ void UWvAbility_Death::ActivateAbility(const FGameplayAbilitySpecHandle Handle, 
 	FHitReactInfoRow* HitReactInfo = UWvCommonUtils::FindHitReactInfoRow(Character);
 
 #if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
-	static const IConsoleVariable* TraceCVar = IConsoleManager::Get().FindConsoleVariable(TEXT("wv.CharacterCombatDebugTrace"));
-	const int32 TraceCVarValue = TraceCVar->GetInt();
-	bDebugTrace = (TraceCVarValue > 0);
+	bDebugTrace = (CVarDebugCombatSystem.GetValueOnGameThread() > 0);
 #else
 	bDebugTrace = false;
 #endif

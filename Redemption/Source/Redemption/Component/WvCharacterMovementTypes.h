@@ -8,7 +8,10 @@
 #include "WorldCollision.h"
 #include "Animation/AnimMontage.h"
 #include "Engine/DataAsset.h"
+#include "Engine/EngineTypes.h"
+#include "Locomotion/LocomotionSystemTypes.h"
 #include "WvCharacterMovementTypes.generated.h"
+
 
 UENUM(BlueprintType)
 enum ECustomMovementMode
@@ -16,7 +19,6 @@ enum ECustomMovementMode
 	CUSTOM_MOVE_Default UMETA(DisplayName = "CustomDefault"),
 	CUSTOM_MOVE_Climbing UMETA(DisplayName = "CustomClimbing"),
 	CUSTOM_MOVE_Mantling UMETA(DisplayName = "CustomMantling"),
-	CUSTOM_MOVE_WallClimbing UMETA(DisplayName = "CustomWallClimbing"),
 	CUSTOM_MOVE_Ladder UMETA(DisplayName = "CustomLadder"),
 	CUSTOM_MOVE_Vaulting UMETA(DisplayName = "CustomVaulting"),
 	CUSTOM_MOVE_MAX	UMETA(Hidden),
@@ -105,77 +107,6 @@ struct FWvEdgeDetectionInfo
 	FTraceDelegate EdgeTraceDelegate;
 };
 
-UCLASS(BlueprintType)
-class REDEMPTION_API UClimbingDataAsset : public UDataAsset
-{
-	GENERATED_BODY()
-
-public:
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	TEnumAsByte<ECollisionChannel> ClimbTraceChannel;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	TArray<UClass*> FilterClasses;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	FVector2D LedgeEndTraceDistance { 160.0f, 100.0f };
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	float CollisionCapsuleRadius = 50.0f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	float CollisionCapsuleHalfHeight = 72.0f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	float ForwardTraceDistance = 100.0f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (ClampMin = "10.0", ClampMax = "500.0"))
-	float MaxClimbingSpeed = 150.0f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (ClampMin = "10.0", ClampMax = "500.0"))
-	float MaxClimbUpLedgeSpeed = 60.0f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (ClampMin = "10.0", ClampMax = "2000.0"))
-	float MaxClimbingAcceleration = 380.0f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (ClampMin = "0.0", ClampMax = "3000.0"))
-	float BrakingDecelerationClimbing = 550.f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (ClampMin = "0.0", ClampMax = "60.0"))
-	float ClimbingSnapSpeed = 4.f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (ClampMin = "0.0", ClampMax = "80.0"))
-	float DistanceFromSurface = 45.f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (ClampMin = "1.0", ClampMax = "60.0"))
-	float ClimbingRotationSpeed = 6.0f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (ClampMin = "0.0", ClampMax = "80.0"))
-	float ClimbingCollisionShrinkAmount = 30.0f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (ClampMin = "1.0", ClampMax = "500.0"))
-	float FloorCheckDistance = 90.0f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	FVector2D WallAngleRange = FVector2D(50.0f, 100.0f);
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	float MinHorizontalDegreesToStartClimbing = 25.0f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	UCurveFloat* ClimbJumpCurve;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	UAnimMontage* LedgeClimbMontage;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	UAnimMontage* ClimbToStandingMontage;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	UAnimMontage* ClimbToStandingFreeHangMontage;
-
-	UClimbingDataAsset() {}
-};
 
 
 /// <summary>
@@ -544,6 +475,153 @@ public:
 		VaultAssetHigh.Distance = 150.0f;
 		VaultAssetHigh.MovementSpeedThreshold = 500.0f;
 	}
+};
+
+
+
+UENUM(BlueprintType)
+enum class ETraversalType : uint8
+{
+	None,
+	Hurdle,
+	Vault,
+	Mantle,
+};
+
+USTRUCT(BlueprintType)
+struct FTraversalActionData
+{
+	GENERATED_BODY()
+
+public:
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	ETraversalType ActionType = ETraversalType::None;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	bool bHasFrontLedge = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FVector FrontLedgeLocation = FVector::ZeroVector;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FVector FrontLedgeNormal = FVector::ZeroVector;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	bool bHasBackLedge = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FVector BackLedgeLocation = FVector::ZeroVector;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FVector BackLedgeNormal = FVector::ZeroVector;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	bool bHasBackFloor = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FVector BackFloorLocation = FVector::ZeroVector;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float ObstacleHeight = 0.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float ObstacleDepth = 0.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float BackLedgeHeight = 0.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	TObjectPtr<UPrimitiveComponent> HitComponent = nullptr;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	TObjectPtr<UAnimMontage> ChosenMontage = nullptr;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float StartTime = 0.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float PlayRate = 0.f;
+};
+
+
+USTRUCT(BlueprintType)
+struct FTraversalActionDataInputs
+{
+	GENERATED_BODY()
+
+public:
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	ETraversalType ActionType = ETraversalType::None;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	bool bHasFrontLedge = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	bool bHasBackLedge = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	bool bHasBackFloor = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float ObstacleHeight = 0.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float ObstacleDepth = 0.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float BackLedgeHeight = 0.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	TEnumAsByte<EMovementMode> MovementMode{ EMovementMode::MOVE_None};
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	ELSGait LSGait{ELSGait::Running };
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float Speed = 0.f;
+
+};
+
+
+USTRUCT(BlueprintType)
+struct FTraversalActionDataOutputs
+{
+	GENERATED_BODY()
+
+public:
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	ETraversalType ActionType = ETraversalType::None;
+
+};
+
+
+USTRUCT(BlueprintType)
+struct FTraversalDataCheckInputs
+{
+	GENERATED_BODY()
+
+public:
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Traversal")
+	FVector TraceForwardDirection = FVector::ForwardVector;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Traversal")
+	float TraceForwardDistance = 0.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Traversal")
+	FVector TraceOriginOffset = FVector::ZeroVector;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Traversal")
+	FVector TraceEndOffset = FVector::ZeroVector;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Traversal")
+	float TraceRadius = 0.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Traversal")
+	float TraceHalfHeight = 0.0f;
 };
 
 

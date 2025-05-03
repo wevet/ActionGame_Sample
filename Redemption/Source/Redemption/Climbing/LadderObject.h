@@ -3,23 +3,23 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "GameFramework/Actor.h"
+#include "InteractionObject.h"
 #include "Components/PrimitiveComponent.h"
 #include "LadderObject.generated.h"
 
 UCLASS()
-class REDEMPTION_API ALadderObject : public AActor
+class REDEMPTION_API ALadderObject : public AInteractionObject
 {
 	GENERATED_BODY()
 	
 public:
-	ALadderObject();
+	ALadderObject(const FObjectInitializer& ObjectInitializer);
+	virtual void Tick(float DeltaTime) override;
 
 protected:
 	virtual void BeginPlay() override;
 
-public:
-	virtual void Tick(float DeltaTime) override;
+
 
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "LadderObject")

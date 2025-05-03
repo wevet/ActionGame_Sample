@@ -39,7 +39,6 @@ enum class ELSMovementMode : uint8
 	Swimming UMETA(DisplayName = "Swimming"),
 	Mantling UMETA(DisplayName = "Mantling"),
 	Climbing UMETA(DisplayName = "Climbing"),
-	WallClimbing UMETA(DisplayName = "WallClimbing"),
 	Ladder UMETA(DisplayName = "Ladder"),
 	Vaulting UMETA(DiaplayName = "Vaulting"),
 };

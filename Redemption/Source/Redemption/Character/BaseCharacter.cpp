@@ -474,6 +474,7 @@ void ABaseCharacter::Tick(float DeltaTime)
 
 }
 
+
 #if WITH_EDITOR
 void ABaseCharacter::PostEditChangeProperty(struct FPropertyChangedEvent& PropertyChangedEvent)
 {
@@ -486,6 +487,7 @@ void ABaseCharacter::PostEditChangeProperty(struct FPropertyChangedEvent& Proper
 	}
 }
 #endif
+
 
 void ABaseCharacter::OnStartCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust)
 {
@@ -536,6 +538,8 @@ void ABaseCharacter::GetLifetimeReplicatedProps(TArray< FLifetimeProperty >& Out
 
 	DOREPLIFETIME_CONDITION(ThisClass, ReplicatedAcceleration, COND_SimulatedOnly);
 	DOREPLIFETIME(ThisClass, MyTeamID)
+
+	DOREPLIFETIME_CONDITION(ThisClass, TraversalActionData, COND_SimulatedOnly);
 }
 
 void ABaseCharacter::PreReplication(IRepChangedPropertyTracker& ChangedPropertyTracker)
@@ -569,6 +573,10 @@ void ABaseCharacter::OnRep_ReplicatedAcceleration()
 		UnpackedAcceleration.Z = double(ReplicatedAcceleration.AccelZ) * MaxAccel / 127.0; // [-127, 127] -> [-MaxAccel, MaxAccel]
 		WvCharacterMovementComponent->SetReplicatedAcceleration(UnpackedAcceleration);
 	}
+}
+
+void ABaseCharacter::OnRep_TraversalActionData()
+{
 }
 
 void ABaseCharacter::OnRep_MyTeamID(FGenericTeamId OldTeamID)
@@ -605,6 +613,7 @@ void ABaseCharacter::NotifyControllerChanged()
 		}
 	}
 }
+
 
 #pragma region IWvAbilitySystemAvatarInterface
 const FWvAbilitySystemAvatarData& ABaseCharacter::GetAbilitySystemData()
@@ -674,6 +683,7 @@ FName ABaseCharacter::GetAvatarName() const
 	return NAME_None;
 }
 #pragma endregion
+
 
 #pragma region IWvAbilityTargetInterface
 FGenericTeamId ABaseCharacter::GetGenericTeamId() const
@@ -986,6 +996,7 @@ bool ABaseCharacter::IsCinematic() const
 }
 #pragma endregion
 
+
 #pragma region IWvAIActionStateInterface
 void ABaseCharacter::SetAIActionState(const EAIActionState NewAIActionState)
 {
@@ -1245,12 +1256,6 @@ void ABaseCharacter::Jump()
 						//}
 					}
 					break;
-					case CUSTOM_MOVE_WallClimbing:
-					{
-						// wall climbing when jump action
-						CMC->TryClimbJumping();
-					}
-					break;
 					case CUSTOM_MOVE_Mantling:
 					{
 						//
@@ -1282,6 +1287,7 @@ void ABaseCharacter::Jump()
 			break;
 		}
 	}
+
 }
 
 void ABaseCharacter::StopJumping()
@@ -1296,6 +1302,7 @@ void ABaseCharacter::StopJumping()
 	{
 		LadderComponent->SetJumpInputPressed(false);
 	}
+
 }
 
 void ABaseCharacter::VelocityMovement()
@@ -1475,10 +1482,6 @@ void ABaseCharacter::AbortClimbing()
 		if (CMC->IsClimbing())
 		{
 			ClimbingComponent->ApplyStopClimbingInput(0.3f, false);
-		}
-		else if (CMC->IsWallClimbing())
-		{
-			CMC->AbortClimbing();
 		}
 	}
 }
@@ -2739,5 +2742,10 @@ void ABaseCharacter::PreTickLocomotion()
 	CMC->MaxWalkSpeed = LocomotionComponent->ChooseMaxWalkSpeed();
 	CMC->MaxWalkSpeedCrouched = LocomotionComponent->ChooseMaxWalkSpeedCrouched();
 
+}
+
+FTraversalActionData ABaseCharacter::GetTraversalActionData() const
+{
+	return TraversalActionData;
 }
 

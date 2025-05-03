@@ -86,9 +86,7 @@ UE_DEFINE_GAMEPLAY_TAG(TAG_Character_TargetLock_Forbid, "Character.Action.Target
 UE_DEFINE_GAMEPLAY_TAG(TAG_Character_Action_Cinematic, "Character.Action.Cinematic");
 
 // Climbing 
-UE_DEFINE_GAMEPLAY_TAG(TAG_Locomotion_ClimbingJump, "Locomotion.Climbing.Jump");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Locomotion_ClimbingLedgeEnd, "Locomotion.Climbing.LedgeEnd");
-UE_DEFINE_GAMEPLAY_TAG(TAG_Locomotion_ClimbingAbort, "Locomotion.Climbing.Abort");
 
 // Mantling
 UE_DEFINE_GAMEPLAY_TAG(TAG_Locomotion_Mantling, "Locomotion.Mantling");

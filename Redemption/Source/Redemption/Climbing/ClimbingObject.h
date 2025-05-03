@@ -3,62 +3,49 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "GameFramework/Actor.h"
-#include "Components/StaticMeshComponent.h"
+#include "InteractionObject.h"
 #include "ClimbingObject.generated.h"
 
 UCLASS()
-class REDEMPTION_API AClimbingObject : public AActor
+class REDEMPTION_API AClimbingObject : public AInteractionObject
 {
 	GENERATED_BODY()
 	
 public:	
-	AClimbingObject();
+	AClimbingObject(const FObjectInitializer& ObjectInitializer);
 	virtual void Tick(float DeltaTime) override;
 
 protected:
 	virtual void BeginPlay() override;
 
-public:
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ClimbingObject")
-	bool bIsWallClimbing = false;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ClimbingObject", meta = (EditCondition = "!bIsWallClimbing"))
-	bool bIsVerticalClimbingObject;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ClimbingObject")
-	bool bIsClimbingEnable;
 
 protected:
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "ClimbingObject|References", meta = (AllowPrivateAccess = "true"))
-	class UStaticMeshComponent* StaticMeshComponent;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ClimbingObject")
+	bool bIsVerticalClimbingObject{ false };
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ClimbingObject")
+	bool bIsClimbingEnable{ false };
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ClimbingObject")
+	bool bIsFractureEnable{ false };
+
 
 public:
 	UFUNCTION(BlueprintCallable, Category = "ClimbingObject")
-	const bool IsVerticalClimbing();
+	bool IsVerticalClimbing() const;
 
 	UFUNCTION(BlueprintCallable, Category = "ClimbingObject")
-	UStaticMeshComponent* GetStaticMeshComponent();
+	bool IsHorizontalClimbing() const;
 
-	bool IsWallClimbing() const;
+	UFUNCTION(BlueprintCallable, Category = "ClimbingObject")
 	bool CanClimbing() const;
 
-	UFUNCTION(BlueprintCallable, Category = "ClimbingObject")
 	void SetEnableClimbingObject(const bool NewClimbingEnable);
-
-	UFUNCTION(BlueprintCallable, Category = "ClimbingObject")
 	void SetFractureEnable(const bool NewFractureEnable);
 
 	UFUNCTION(BlueprintCallable, Category = "ClimbingObject")
 	bool CanFracture() const;
 
-	const float CalcurateBoundingBox();
-
-protected:
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "ClimbingObject")
-	bool bIsFractureEnable = false;
-
-public:
 	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "ClimbingObject")
 	void DoFocus();
 
@@ -67,6 +54,9 @@ public:
 
 	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "ClimbingObject")
 	void DrawBoundingBox();
+
+	const float CalcurateBoundingBox();
+
 };
 
 

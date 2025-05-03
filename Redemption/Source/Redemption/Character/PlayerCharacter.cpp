@@ -386,6 +386,12 @@ void APlayerCharacter::HandleJump(const bool bIsPress)
 	{
 		Super::StopJumping();
 	}
+
+	if (OnJumpChangeDelegate.IsBound())
+	{
+		OnJumpChangeDelegate.Broadcast(bIsPress);
+	}
+
 }
 
 void APlayerCharacter::HandleSprinting(const bool bIsPress)
@@ -413,7 +419,6 @@ void APlayerCharacter::HandleSprinting(const bool bIsPress)
 			switch (CustomMovementMode)
 			{
 			case ECustomMovementMode::CUSTOM_MOVE_Climbing:
-			case ECustomMovementMode::CUSTOM_MOVE_WallClimbing:
 				Super::AbortClimbing();
 			break;
 			case ECustomMovementMode::CUSTOM_MOVE_Mantling:

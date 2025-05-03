@@ -15,6 +15,7 @@
 #include "Climbing/ClimbingComponent.h"
 #include "Mission/MissionSystemTypes.h"
 #include "Significance/SignificanceInterface.h"
+#include "Component/WvCharacterMovementTypes.h"
 
 // builtin
 #include "BehaviorTree/BehaviorTree.h"
@@ -52,6 +53,7 @@ namespace CharacterDebug
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FActionStateChangeDelegate, EAIActionState, NewAIActionState, EAIActionState, PrevAIActionState);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FAimingChangeDelegate, bool, bEnableAiming);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FFlagChangeDelegate, bool, bEnable);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOverlayChangeDelegate, const ELSOverlayState, CurrentOverlay);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FAsyncLoadCompleteDelegate);
 
@@ -258,6 +260,9 @@ public:
 
 	UPROPERTY(BlueprintAssignable)
 	FAimingChangeDelegate OnSkillEnableDelegate;
+
+	UPROPERTY(BlueprintAssignable)
+	FFlagChangeDelegate OnJumpChangeDelegate;
 
 	UPROPERTY(BlueprintAssignable)
 	FOverlayChangeDelegate OverlayChangeDelegate;
@@ -526,6 +531,8 @@ public:
 
 	bool IsMotionMatchingEnable() const;
 
+	FTraversalActionData GetTraversalActionData() const;
+
 #pragma region NearlestAction
 	void CalcurateNearlestTarget(const float SyncPointWeight);
 	void ResetNearlestTarget();
@@ -625,8 +632,21 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Component, meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<class UMinimapMarkerComponent> MinimapMarkerComponent;
 
+	UPROPERTY(Transient, ReplicatedUsing = OnRep_ReplicatedAcceleration)
+	FWvReplicatedAcceleration ReplicatedAcceleration;
+
+	UPROPERTY(ReplicatedUsing = OnRep_MyTeamID)
+	FGenericTeamId MyTeamID;
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "BaseCharacter|Config")
 	FCustomWvAbilitySystemAvatarData AbilitySystemData;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, ReplicatedUsing = OnRep_TraversalActionData, Category = "BaseCharacter|Config")
+	FTraversalActionData TraversalActionData;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "BaseCharacter|Config")
+	FFinisherConfig FinisherConfig;
+
 
 #pragma region DA
 	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = "BaseCharacter|Config")
@@ -637,9 +657,6 @@ protected:
 #pragma endregion
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "BaseCharacter|Config")
-	FFinisherConfig FinisherConfig;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "BaseCharacter|Config")
 	FGameplayTag CharacterTag;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "BaseCharacter|Config")
@@ -647,12 +664,6 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "BaseCharacter|Config")
 	bool bIsDiedRemoveInventory = false;
-
-	UPROPERTY(Transient, ReplicatedUsing = OnRep_ReplicatedAcceleration)
-	FWvReplicatedAcceleration ReplicatedAcceleration;
-
-	UPROPERTY(ReplicatedUsing = OnRep_MyTeamID)
-	FGenericTeamId MyTeamID;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AI")
 	EAIActionState AIActionState;
@@ -669,6 +680,9 @@ protected:
 
 	UFUNCTION()
 	void OnRep_ReplicatedAcceleration();
+
+	UFUNCTION()
+	void OnRep_TraversalActionData();
 
 	UFUNCTION()
 	virtual void OnWallClimbingBegin_Callback();

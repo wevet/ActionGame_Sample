@@ -39,7 +39,6 @@ UClimbingComponent::UClimbingComponent(const FObjectInitializer& ObjectInitializ
 {
 	PrimaryComponentTick.bCanEverTick = true;
 
-	TargetActorPoint = nullptr;
 	bOwnerPlayerController = false;
 	bRestartWaitAxis = false;
 
@@ -115,7 +114,7 @@ void UClimbingComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	LadderComponent.Reset();
 	QTEActionComponent.Reset();
 
-	TargetActorPoint = nullptr;
+	TargetActorPoint.Reset();
 
 	ClimbingCurveDAInstance = nullptr;
 	Super::EndPlay(EndPlayReason);
@@ -136,25 +135,22 @@ void UClimbingComponent::TickComponent(float DeltaTime, ELevelTick TickType, FAc
 	bDrawDebugShape = false;
 #endif
 
-	if (!IsWallClimbingState())
+	if (DoesNotClimbing())
 	{
-		if (DoesNotClimbing())
+		DoWhileNotClimbHandleEvent();
+	}
+	else
+	{
+		if (UpdateTargetBroken())
 		{
-			DoWhileNotClimbHandleEvent();
+			ApplyStopClimbingInput(STOP_CLIMBING_INPUT_TIME, false);
 		}
 		else
 		{
-			if (UpdateTargetBroken())
-			{
-				ApplyStopClimbingInput(STOP_CLIMBING_INPUT_TIME, false);
-			}
-			else
-			{
-				float Alpha = 0.f;
-				bool bIsFinished = false;
-				SmoothInterpToLedgePoint(Alpha, bIsFinished);
-				HandleTickWhileEvent(bIsFinished);
-			}
+			float Alpha = 0.f;
+			bool bIsFinished = false;
+			SmoothInterpToLedgePoint(Alpha, bIsFinished);
+			HandleTickWhileEvent(bIsFinished);
 		}
 	}
 }
@@ -202,7 +198,8 @@ void UClimbingComponent::ChangeRotationMode_Callback()
 {
 	if (Character)
 	{
-		bIsStrafingMode = Character->IsStrafeMovementMode();
+		const auto& LocomotionEssencialVariables = LocomotionComponent->GetLocomotionEssencialVariables();
+		bIsStrafingMode = (LocomotionEssencialVariables.LSRotationMode == ELSRotationMode::LookingDirection);
 	}
 
 }
@@ -369,10 +366,7 @@ bool UClimbingComponent::IsHorizontalClimbingObject(AActor* HitActor) const
 {
 	if (AClimbingObject* ClimbingObject = Cast<AClimbingObject>(HitActor))
 	{
-		if (!ClimbingObject->IsVerticalClimbing() && ClimbingObject->CanClimbing())
-		{
-			return true;
-		}
+		return ClimbingObject->IsHorizontalClimbing();
 	}
 	return false;
 }
@@ -381,20 +375,17 @@ bool UClimbingComponent::IsVerticalClimbingObject(AActor* HitActor) const
 {
 	if (AClimbingObject* ClimbingObject = Cast<AClimbingObject>(HitActor))
 	{
-		if (ClimbingObject->IsVerticalClimbing() && ClimbingObject->CanClimbing())
-		{
-			return true;
-		}
+		return ClimbingObject->IsVerticalClimbing();
 	}
 	return false;
 }
 
 void UClimbingComponent::UpdateClimbingObject(AActor* NewTargetActorPoint)
 {
-	if (TargetActorPoint)
+	if (TargetActorPoint.IsValid())
 	{
 		TargetActorPoint->DoUnFocus();
-		TargetActorPoint = nullptr;
+		TargetActorPoint.Reset();
 	}
 
 	if (AClimbingObject* ClimbingObject = Cast<AClimbingObject>(NewTargetActorPoint))
@@ -456,7 +447,7 @@ bool UClimbingComponent::SwitchSmoothMovementDirection() const
 
 const bool UClimbingComponent::UpdateTargetBroken()
 {
-	if (!TargetActorPoint)
+	if (!TargetActorPoint.IsValid())
 	{
 		return false;
 	}
@@ -545,18 +536,11 @@ bool UClimbingComponent::GetLadderMovementEnable() const
 #pragma region Bridge_ABP
 bool UClimbingComponent::IsWallClimbingState() const
 {
-	if (IsValid(CharacterMovementComponent))
-	{
-		return CharacterMovementComponent->IsWallClimbing();
-	}
 	return false;
 }
 
 bool UClimbingComponent::IsClimbingState() const
 {
-	if (IsWallClimbingState())
-		return false;
-
 	if (CharacterMovementComponent)
 	{
 		return CharacterMovementComponent->IsClimbing() && bIsClimbing;
@@ -850,52 +834,6 @@ FClimbingCurveData UClimbingComponent::FindClimbingCurve(const FName CurveName) 
 	return Data;
 }
 
-/// <summary>
-/// ChildActorComponent Measures
-/// </summary>
-/// <param name="HitComponent"></param>
-/// <returns></returns>
-bool UClimbingComponent::HasChildClimbingObject(UPrimitiveComponent* HitComponent) const
-{
-	if (!IsValid(HitComponent))
-		return false;
-
-	if (AActor* OwnerActor = HitComponent->GetOwner())
-	{
-		UChildActorComponent* ChildActorComp = OwnerActor->FindComponentByClass<UChildActorComponent>();
-		if (ChildActorComp)
-		{
-			return CanClimbingObject(ChildActorComp->GetChildActor());
-		}
-	}
-
-	return false;
-}
-
-/// <summary>
-/// Determine if the object is a Climbable Object from HitResult
-/// </summary>
-/// <param name="HitResult"></param>
-/// <returns></returns>
-AActor* UClimbingComponent::GetClimbingDetectActor(const FHitResult& HitResult) const
-{
-	if (CanClimbingObject(HitResult.GetActor()))
-	{
-		return HitResult.GetActor();
-	}
-	else
-	{
-		if (AActor* OwnerActor = HitResult.GetActor())
-		{
-			UChildActorComponent* ChildActorComp = OwnerActor->FindComponentByClass<UChildActorComponent>();
-			if (ChildActorComp)
-			{
-				return ChildActorComp->GetChildActor();
-			}
-		}
-	}
-	return nullptr;
-}
 
 /// <summary>
 /// Update only TargetRotation
@@ -907,6 +845,11 @@ void UClimbingComponent::UpdateTargetRotation(const FRotator NewRotation)
 	{
 		constexpr float InterpSpeed = 10.0f;
 		LocomotionComponent->ApplyCharacterRotation(NewRotation, false, InterpSpeed, true);
+
+		const auto& LocomotionEssencialVariables = LocomotionComponent->GetLocomotionEssencialVariables();
+
+		WEVET_COMMENT("Climbing Bug")
+		Character->SetActorRotation(LocomotionEssencialVariables.CharacterRotation);
 	}
 }
 
@@ -923,7 +866,9 @@ void UClimbingComponent::CharacterSmoothInterpTransform(const FTransform NewTran
 {
 	if (Character)
 	{
-		Character->SetActorLocationAndRotation(NewTransform.GetLocation(), FRotator(NewTransform.GetRotation()));
+		//Character->SetActorLocationAndRotation(NewTransform.GetLocation(), FRotator(NewTransform.GetRotation()));
+
+		Character->SetActorLocation(NewTransform.GetLocation());
 	}
 
 	UpdateTargetRotation(FRotator(NewTransform.GetRotation()));
@@ -1348,7 +1293,7 @@ FClimbingLedge UClimbingComponent::GetCornerLedgeInput() const
 	Result.LeftPoint = Transform;
 	Result.RightPoint = Transform;
 	Result.Origin = Transform;
-	Result.Component = TargetActorPoint ? TargetActorPoint->GetStaticMeshComponent() : nullptr;
+	Result.Component = TargetActorPoint.Get() ? TargetActorPoint->GetStaticMeshComponent() : nullptr;
 	return Result;
 }
 
@@ -1374,7 +1319,7 @@ void UClimbingComponent::CharacterWhenClimbing()
 	}
 
 	{
-		bOnVerticalObject = TargetActorPoint ? TargetActorPoint->IsVerticalClimbing() && bUseOnlyVerticalMovementFunctions : false;
+		bOnVerticalObject = TargetActorPoint.IsValid() ? TargetActorPoint->IsVerticalClimbing() && bUseOnlyVerticalMovementFunctions : false;
 	}
 }
 
@@ -1401,7 +1346,7 @@ void UClimbingComponent::ClearVerticalMovement()
 /// <returns></returns>
 const bool UClimbingComponent::NormalizeCapsuleTransformToLedge(const bool Valid, const FTwoVectors& LWS, const FTwoVectors& RWS, const float CapsuleScale, UPrimitiveComponent* CustomComponent)
 {
-	if (!Valid || !TargetActorPoint)
+	if (!Valid || !TargetActorPoint.IsValid())
 	{
 		//UE_LOG(LogTemp, Error, TEXT("not valid climbing object => %s"), *FString(__FUNCTION__));
 		return false;
@@ -1474,7 +1419,7 @@ void UClimbingComponent::FindForwardNormal(
 
 TArray<AActor*> UClimbingComponent::MakeIgnoreActorsArray(const float Radius) const
 {
-	if (!IsValid(TargetActorPoint))
+	if (!TargetActorPoint.IsValid())
 		return TArray<AActor*>({});
 
 	if (!IsValid(TargetActorPoint->GetStaticMeshComponent()))
@@ -1484,7 +1429,7 @@ TArray<AActor*> UClimbingComponent::MakeIgnoreActorsArray(const float Radius) co
 	TArray<AActor*> ResultArray;
 
 	TArray<AActor*> IgnoreActors;
-	IgnoreActors.Add(TargetActorPoint);
+	IgnoreActors.Add(TargetActorPoint.Get());
 
 	TArray<TEnumAsByte<EObjectTypeQuery>> ObjectTypes;
 	// WorldStatic
@@ -1512,18 +1457,15 @@ TArray<AActor*> UClimbingComponent::MakeIgnoreActorsArrayWithCustomPoint(const F
 
 void UClimbingComponent::TryEarlyStartFunctions(bool& OutbCanEarlyStart)
 {
-	if (bIsClimbing)
+	if (bIsClimbing && TargetActorPoint.IsValid())
 	{
-		if (IsValid(TargetActorPoint))
-		{
-			const float Threshold = 0.7f;
-			const float FrameThreshold = 0.65f;
-			FClimbingCurveData Data = FindClimbingCurve(Feet_Crossing);
+		const float Threshold = 0.7f;
+		const float FrameThreshold = 0.65f;
+		FClimbingCurveData Data = FindClimbingCurve(Feet_Crossing);
 
-			OutbCanEarlyStart &= AnimNormalizedFrameTime > FrameThreshold;
-			OutbCanEarlyStart &= IsValid(HandsIKLedgeLS.Component);
-			OutbCanEarlyStart &= (Data.bValid ? Data.Value : 0.0f) < Threshold;
-		}
+		OutbCanEarlyStart &= AnimNormalizedFrameTime > FrameThreshold;
+		OutbCanEarlyStart &= IsValid(HandsIKLedgeLS.Component);
+		OutbCanEarlyStart &= (Data.bValid ? Data.Value : 0.0f) < Threshold;
 	}
 }
 
@@ -1597,7 +1539,7 @@ FClimbingLedge UClimbingComponent::ConvertLedgeToWorld(const FClimbingLedge Loca
 void UClimbingComponent::SelectMovementFunctionType(bool& OutNormal)
 {
 	OutNormal = true;
-	if (IsVerticalClimbingObject(TargetActorPoint))
+	if (IsVerticalClimbingObject(TargetActorPoint.Get()))
 	{
 		if (bUseOnlyVerticalMovementFunctions)
 		{
@@ -1781,7 +1723,9 @@ const bool UClimbingComponent::TryFindLedgeEnds(const FVector Origin, const FTwo
 const bool UClimbingComponent::CheckFootIKValid(const FName KeyName, const float TraceUpOffset, const float TraceRightOffset)
 {
 	if (!IsValid(SkeletalMeshComponent) || !IsValid(Character))
+	{
 		return false;
+	}
 
 	const FVector KeyLocation = DefaultFootsOffset.FindRef(KeyName).GetLocation();
 	const FTransform ComponentTrans = SkeletalMeshComponent->GetComponentToWorld();
@@ -1806,7 +1750,7 @@ const bool UClimbingComponent::CheckFootIKValid(const FName KeyName, const float
 /// <param name="DurningInterpMove"></param>
 void UClimbingComponent::CreateLedgePointForHandsIK(const bool DurningInterpMove)
 {
-	if (!IsValid(TargetActorPoint))
+	if (!TargetActorPoint.IsValid())
 	{
 		return;
 	}
@@ -1826,7 +1770,7 @@ void UClimbingComponent::CreateLedgePointForHandsIK(const bool DurningInterpMove
 	FTwoVectors RP = FTwoVectors();
 	const bool bHitInValid = TryFindLedgeEnds(GeneralizedLedgePointWS.v1, FTwoVectors(), LP, RP);
 
-	if (IsHorizontalClimbingObject(TargetActorPoint))
+	if (IsHorizontalClimbingObject(TargetActorPoint.Get()))
 	{
 		CreateLedgePointForHandsIK_Internal(LP, RP);
 		return;
@@ -1848,7 +1792,7 @@ void UClimbingComponent::CreateLedgePointForHandsIK(const bool DurningInterpMove
 
 void UClimbingComponent::CreateLedgePointForHandsIK_Internal(const FTwoVectors LP, const FTwoVectors RP)
 {
-	check(TargetActorPoint);
+	check(TargetActorPoint.Get());
 
 	FLSComponentAndTransform Left;
 	Left.Transform = UClimbingUtils::ConvertTwoVectorsToTransform(LP);
@@ -1997,11 +1941,15 @@ const bool UClimbingComponent::FindObjectRightWallEnds(
 
 bool UClimbingComponent::CheckVerticalObjectHeightEnd() const
 {
-	if (IsHorizontalClimbingObject(TargetActorPoint))
+	if (IsHorizontalClimbingObject(TargetActorPoint.Get()))
+	{
 		return true;
+	}
 
 	if (!IsValid(CachedVerticalLedgeLS.Component))
+	{
 		return true;
+	}
 
 	FLSComponentAndTransform LS;
 	LS.Component = CachedVerticalLedgeLS.Component;
@@ -2100,7 +2048,7 @@ const bool UClimbingComponent::InterpolatedSideMove(const bool bCanMove)
 /// <param name="bFromNormalLedge"></param>
 void UClimbingComponent::CheckTheLedgeIsCurrentAvaliableForVertical(const bool bFromNormalLedge)
 {
-	if (!IsValid(TargetActorPoint))
+	if (!TargetActorPoint.IsValid())
 	{
 		bTheVerticalObjectIsCurrentValid = false;
 		return;
@@ -2182,13 +2130,13 @@ void UClimbingComponent::CalcVelocity()
 }
 
 const bool UClimbingComponent::StartForwardMoveWhenFreeHang(
-	const bool bCanMove,
-	UPrimitiveComponent* Component,
-	const FTwoVectors LP,
-	const FTwoVectors RP)
+	const bool bCanMove, UPrimitiveComponent* Component,
+	const FTwoVectors LP, const FTwoVectors RP)
 {
 	if (!bCanMove)
+	{
 		return false;
+	}
 
 	// Activate Timeline Event
 	const float RandRange = UKismetMathLibrary::RandomFloatInRange(0.9f, 1.06f);
@@ -2478,7 +2426,7 @@ const bool UClimbingComponent::CheckLedgeDown()
 
 void UClimbingComponent::DropToHoldingLedge()
 {
-	if (IsVerticalClimbingObject(TargetActorPoint))
+	if (IsVerticalClimbingObject(TargetActorPoint.Get()))
 	{
 		return;
 	}
@@ -2590,8 +2538,10 @@ void UClimbingComponent::StartCornerSequence(const bool bCanCorner)
 const FTwoVectors UClimbingComponent::NormalizeToObjectOrigin(const float MaxNormalizeLength)
 {
 	FTwoVectors Result;
-	if (!IsValid(TargetActorPoint))
+	if (!TargetActorPoint.IsValid())
+	{
 		return Result;
+	}
 
 	const float Angle = UKismetMathLibrary::MakeRotFromX(GeneralizedLedgeNormalWS).Yaw;
 	const FVector RightVector = TargetActorPoint->GetStaticMeshComponent()->GetRightVector();
@@ -2668,12 +2618,8 @@ const bool UClimbingComponent::SwitchShortMovementRightMethod(const bool bCanMov
 }
 
 void UClimbingComponent::DrawDebugShapeFunction(
-	const FVector Origin,
-	const float Size,
-	const FLinearColor Color,
-	const float Duration,
-	const float Thickness,
-	const FString Text)
+	const FVector Origin, const float Size, const FLinearColor Color,
+	const float Duration, const float Thickness, const FString Text)
 {
 #if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
 	if (bDrawDebugTrace && GetWorld())
@@ -2684,11 +2630,7 @@ void UClimbingComponent::DrawDebugShapeFunction(
 #endif
 }
 
-FVector UClimbingComponent::GetFootsIKTracePositionAtEndOfSeq(
-	const FName FootBoneName,
-	const FName RootBone,
-	const float ZOffset,
-	FVector& OutPosition) const
+FVector UClimbingComponent::GetFootsIKTracePositionAtEndOfSeq(const FName FootBoneName, const FName RootBone, const float ZOffset, FVector& OutPosition) const
 {
 	const FVector BoneLocation = SkeletalMeshComponent->GetSocketLocation(FootBoneName);
 	const FVector RootBoneLocation = SkeletalMeshComponent->GetSocketLocation(RootBone);
@@ -2706,7 +2648,9 @@ FVector UClimbingComponent::GetFootsIKTracePositionAtEndOfSeq(
 const bool UClimbingComponent::StartCornerInnerSequence(const bool bCanCorner, UPrimitiveComponent* Component, const float Direction)
 {
 	if (!bCanCorner || !IsHorizontalClimbingObject(Component->GetOwner()))
+	{
 		return true;
+	}
 
 	// Activate Timeline Event
 	TimelineDuration = CornerTimeDuration * FMath::FRandRange(0.78f, 0.9f) * AllSequencesTimeMultiply;
@@ -2744,7 +2688,7 @@ const bool UClimbingComponent::StartCornerInnerSequence(const bool bCanCorner, U
 
 void UClimbingComponent::StartTurnBehindSequence(const bool bCanTurn, const FTransform Center)
 {
-	if (!IsValid(TargetActorPoint))
+	if (!TargetActorPoint.IsValid())
 		return;
 
 	const FVector CharacterLocation = Character->GetActorLocation();
@@ -2984,7 +2928,7 @@ void UClimbingComponent::StartJumpToNextLedge(
 		CreateLedgePointForHandsIK(true);
 		OnClimbingBegin();
 
-		if (bUpdateVerticalState && IsValid(TargetActorPoint))
+		if (bUpdateVerticalState && TargetActorPoint.IsValid())
 		{
 			bOnVerticalObject = TargetActorPoint->IsVerticalClimbing();
 		}
@@ -3338,15 +3282,12 @@ FTransform UClimbingComponent::SelectTransformInterpolationCurve(const float Alp
 /// <returns></returns>
 bool UClimbingComponent::IsNotFragmentClimbing() const
 {
-	if (CharacterMovementComponent->IsWallClimbing())
-		return false;
-
 	return !bIsClimbing;
 }
 
 void UClimbingComponent::TryRebuildVerticalLedge()
 {
-	if (bIsClimbing && !bUseOnlyVerticalMovementFunctions && IsVerticalClimbingObject(TargetActorPoint))
+	if (bIsClimbing && !bUseOnlyVerticalMovementFunctions && IsVerticalClimbingObject(TargetActorPoint.Get()))
 	{
 		if (!bTheVerticalObjectIsCurrentValid)
 		{
@@ -3356,7 +3297,7 @@ void UClimbingComponent::TryRebuildVerticalLedge()
 
 			FTwoVectors OutLPoint;
 			FTwoVectors OutRPoint;
-			const bool bResult = FindObjectRightWallEnds(Origin, ObjectCenter, ForwardRot, TargetActorPoint, OutLPoint, OutRPoint);
+			const bool bResult = FindObjectRightWallEnds(Origin, ObjectCenter, ForwardRot, TargetActorPoint.Get(), OutLPoint, OutRPoint);
 
 			if (bResult)
 			{
@@ -3446,7 +3387,7 @@ const bool UClimbingComponent::CheckCorner(const FClimbingLedge InClimbingLedge,
 			}
 
 			// @TODO
-			if (!TargetActorPoint)
+			if (!TargetActorPoint.IsValid())
 				return false;
 
 			// If you don't return, it moves into the wall.
@@ -3486,7 +3427,7 @@ const bool UClimbingComponent::CheckCornerInner(const FClimbingLedge InClimbingL
 
 	const EDrawDebugTrace::Type TraceType = bDrawDebugTrace ? EDrawDebugTrace::ForOneFrame : EDrawDebugTrace::None;
 
-	const TArray<AActor*> IgnoreActors({ TargetActorPoint });
+	const TArray<AActor*> IgnoreActors({ TargetActorPoint.Get() });
 
 	constexpr int32 MaxLoopIndex = 6;
 
@@ -3516,7 +3457,7 @@ const bool UClimbingComponent::CheckCornerInner(const FClimbingLedge InClimbingL
 
 			for (FHitResult& HitResult : OutHitsResult)
 			{
-				const bool bValid = (CanClimbingObject(HitResult.GetActor()) || HasChildClimbingObject(HitResult.Component.Get()));
+				const bool bValid = (CanClimbingObject(HitResult.GetActor()));
 				if (!bValid)
 				{
 					if (bDrawDebugTrace)
@@ -3570,9 +3511,8 @@ const bool UClimbingComponent::CheckCornerInner(const FClimbingLedge InClimbingL
 			const FVector ThirsTraceEnd = ThirdBasePoint + FVector(0.f, 0.f, -60.0f);
 
 			HitResult.Reset();
-			bool bFinalHitResult = UKismetSystemLibrary::LineTraceSingle(GetWorld(), ThirsTraceStart, ThirsTraceEnd, TraceChannel, false,
+			const bool bFinalHitResult = UKismetSystemLibrary::LineTraceSingle(GetWorld(), ThirsTraceStart, ThirsTraceEnd, TraceChannel, false,
 				FinalIgnoreActors, TraceType, HitResult, true, FLinearColor(0.f, 0.23f, 0.05f, 1.0f), FLinearColor(0.23f, 1.0f, 0.23f, 1.0f), 0.1f);
-			bFinalHitResult &= HasChildClimbingObject(HitResult.Component.Get());
 
 			if (!bFinalHitResult)
 			{
@@ -3652,7 +3592,7 @@ const bool UClimbingComponent::CheckForwardJumpWhenFreeHang(const FClimbingLedge
 
 	HitResult.Reset();
 	const bool bCapsuleHit = UKismetSystemLibrary::CapsuleTraceSingle(
-		GetWorld(), SecondTraceStart, SecondTraceEnd, CapsuleRadius, CapsuleHeight, TraceChannel, false, TArray<AActor*>({ TargetActorPoint, }),
+		GetWorld(), SecondTraceStart, SecondTraceEnd, CapsuleRadius, CapsuleHeight, TraceChannel, false, TArray<AActor*>({ TargetActorPoint.Get(),}),
 		TraceType, HitResult, true, FLinearColor::Red, FLinearColor::Green, 5.0f);
 
 	//if (bDrawDebugTrace)
@@ -3977,8 +3917,8 @@ const bool UClimbingComponent::TryFindClimbablePoint(const float Radius, AActor*
 {
 	if (!IsNotFragmentClimbing())
 	{
-		OutActor = TargetActorPoint;
-		return IsValid(TargetActorPoint);
+		OutActor = TargetActorPoint.Get();
+		return TargetActorPoint.IsValid();
 	}
 
 	// Step 1. Find Climbable Actors
@@ -4062,7 +4002,7 @@ const bool UClimbingComponent::TryFindClimbablePoint(const float Radius, AActor*
 		OutLedgePoint.v1 = HitResult.ImpactPoint;
 		OutLedgePoint.v2 = bIsHalfDot ? HitResult.Normal * -1.0f : HitResult.Normal * 1.0f;
 		OutNormal = CurNormal;
-		OutActor = GetClimbingDetectActor(HitResult);
+		OutActor = HitResult.GetActor();
 		return CanClimbingObject(HitResult.GetActor());
 	}
 
@@ -4135,8 +4075,8 @@ const bool UClimbingComponent::TryFindClimbableLadderPoint(const float Radius, A
 {
 	if (!IsNotFragmentClimbing())
 	{
-		OutActor = TargetActorPoint;
-		return IsValid(TargetActorPoint);
+		OutActor = TargetActorPoint.Get();
+		return TargetActorPoint.IsValid();
 	}
 
 	if (!LadderConditionToStartFinding())
@@ -4323,32 +4263,33 @@ const bool UClimbingComponent::TryFindClimbableLadderPoint(const float Radius, A
 
 void UClimbingComponent::TryFindLadderActorWhenClimbing()
 {
-	if (IsValid(LadderComponent.Get()))
+	if (!LadderComponent.IsValid())
 	{
-		const FVector Location = Character->GetActorLocation();
-		const FVector ForwardVector = Character->GetActorForwardVector() * 1.0f;
-		const FVector UpVector = Character->GetActorUpVector();
-		const FVector RightVector = Character->GetActorRightVector();
-		const FVector2D AxisValue = GetCharacterInputAxis(false);
-		const FVector InputStreangth = (UpVector * AxisValue.Y) + (RightVector * AxisValue.X);
-		FVector ClampSize = UKismetMathLibrary::ClampVectorSize(InputStreangth, -1.0f, 1.0);
+		return;
+	}
 
-		constexpr float Min = 30.0f;
-		constexpr float Max = 70.0f;
-		ClampSize *= FMath::FRandRange(Min, Max);
+	const FVector Location = Character->GetActorLocation();
+	const FVector ForwardVector = Character->GetActorForwardVector() * 1.0f;
+	const FVector UpVector = Character->GetActorUpVector();
+	const FVector RightVector = Character->GetActorRightVector();
+	const FVector2D AxisValue = GetCharacterInputAxis(false);
+	const FVector InputStreangth = (UpVector * AxisValue.Y) + (RightVector * AxisValue.X);
+	FVector ClampSize = UKismetMathLibrary::ClampVectorSize(InputStreangth, -1.0f, 1.0);
 
-		const FVector Total = (Location + ForwardVector + ClampSize);
+	constexpr float Min = 30.0f;
+	constexpr float Max = 70.0f;
+	ClampSize *= FMath::FRandRange(Min, Max);
 
-		if (LadderComponent->CheckAndStartLadderMovement(Total, false, true))
-		{
-			ApplyStopClimbingInput(0.4f, false);
-		}
+	const FVector Total = (Location + ForwardVector + ClampSize);
+	if (LadderComponent->CheckAndStartLadderMovement(Total, false, true))
+	{
+		ApplyStopClimbingInput(STOP_CLIMBING_INPUT_TIME, false);
 	}
 }
 
 const bool UClimbingComponent::CheckCanJumpBack(UPrimitiveComponent*& OutComponent)
 {
-	if (!IsValid(TargetActorPoint))
+	if (!TargetActorPoint.IsValid())
 	{
 		return false;
 	}
@@ -4367,7 +4308,7 @@ const bool UClimbingComponent::CheckCanJumpBack(UPrimitiveComponent*& OutCompone
 	}
 
 	TArray<AActor*> IgnoreActors = MakeIgnoreActorsArray(120.0f);
-	IgnoreActors.Add(TargetActorPoint);
+	IgnoreActors.Add(TargetActorPoint.Get());
 
 	float VerticalStreangth = (AxisValue.Y * 45.0f);
 	VerticalStreangth *= (AxisValue.Y > 0.0f) ? 2.0f : 1.0f;
@@ -4541,10 +4482,14 @@ const bool UClimbingComponent::CheckCanTurn180(FClimbingLedge& OutNewLedge, FTra
 			IgnoreActors, DebugTrace, HitResult, true, FLinearColor(0.44f, 0.f, 0.2f, 1.0f), FLinearColor(0.72f, 0.25f, 1.0f, 1.0f), 1.0f);
 
 		if (!bSecondHitResult)
+		{
 			return true;
+		}
 
 		if (!HitResult.bStartPenetrating)
+		{
 			return true;
+		}
 
 
 		const FVector SecondImpactPoint = HitResult.ImpactPoint;
@@ -4590,14 +4535,18 @@ const bool UClimbingComponent::CheckCanTurn180(FClimbingLedge& OutNewLedge, FTra
 			IgnoreActors, DebugTrace, HitResult, true, FLinearColor(0.44f, 0.f, 0.2f, 1.0f), FLinearColor(0.72f, 0.25f, 1.0f, 1.0f), 1.0f);
 
 		if (!bSecondHitResult)
+		{
 			return false;
+		}
 
 		const FVector SecondImpactPoint = HitResult.ImpactPoint;
 		float HalfHeight = 0.f;
 		float ScaleSize = ConvertCapsuleSize(0.7f, HalfHeight);
 
 		if (!CheckCapsuleHaveRoom((HitResult.ImpactPoint - FVector(0.f, 0.f, HalfHeight)), 0.9f, 0.5f))
+		{
 			return false;
+		}
 
 		FTwoVectors Direction;
 		Direction.v1 = FirstNormal;
@@ -4635,7 +4584,7 @@ const bool UClimbingComponent::FindVerticalObject(FClimbingLedge& OutClimbingLed
 		return false;
 	}
 
-	const FTransform Origin = IsHorizontalClimbingObject(TargetActorPoint) ? SelectBaseLedgeTransform(true) : SelectBaseVerticalLedgeTransform();
+	const FTransform Origin = IsHorizontalClimbingObject(TargetActorPoint.Get()) ? SelectBaseLedgeTransform(true) : SelectBaseVerticalLedgeTransform();
 	const FVector FirstTraceStartLocation = Origin.GetLocation() + UKismetMathLibrary::GetForwardVector(FRotator(Origin.GetRotation())) * -5.0f;
 	const FVector RightOffset = FVector(0.f, 0.f, 1.0f) * SmoothInputAxis.X;
 	const FVector Right = (UKismetMathLibrary::GetRightVector(FRotator(Origin.GetRotation())) * SmoothInputAxis.Y) + RightOffset;
@@ -4648,7 +4597,7 @@ const bool UClimbingComponent::FindVerticalObject(FClimbingLedge& OutClimbingLed
 
 	TArray<FHitResult> HitsResult;
 	const bool bCapsuleHitResult = UKismetSystemLibrary::CapsuleTraceMulti(GetWorld(), FirstTraceStartLocation, FirstTraceEndLocation,
-		FirstRadius, FirstHalfHeight, TraceChannel, false, TArray<AActor*>({ TargetActorPoint, }), TraceType, HitsResult, true,
+		FirstRadius, FirstHalfHeight, TraceChannel, false, TArray<AActor*>({ TargetActorPoint.Get(),}), TraceType, HitsResult, true,
 		FLinearColor::Red, FLinearColor::Green, 0.3f);
 
 	if (!bCapsuleHitResult)
@@ -4743,6 +4692,7 @@ bool UClimbingComponent::CheckTheDirectionValid() const
 	return (FVector::DotProduct(OrigForward, Forward) > DotThreshold) && bTheVerticalObjectIsCurrentValid;
 }
 
+
 #pragma region Vertical_Action_Tool
 float UClimbingComponent::CheckDistanceAndDirection(const FVector OriginLocation, const FVector Location, const FRotator OriginRot, const FVector ImpactPoint) const
 {
@@ -4793,6 +4743,7 @@ FTwoVectors UClimbingComponent::FindObjectCenterTracePosition(const TArray<FTwoV
 	return Result;
 }
 #pragma endregion
+
 
 #pragma region FindNextClimbableActor_Tool
 bool UClimbingComponent::FindNextCA_CheckZ(const FVector ImpactPoint, const FVector InVec) const
@@ -4898,7 +4849,7 @@ FTwoVectors UClimbingComponent::FindNextCA_FirstTraceConfig(const bool ForVertic
 	Total += ForwardVector;
 	const auto Result = Total * ResultValue;
 
-	OutActors.Add(TargetActorPoint);
+	OutActors.Add(TargetActorPoint.Get());
 
 	FTwoVectors Temp;
 	// Start
@@ -4919,7 +4870,7 @@ FTwoVectors UClimbingComponent::FindNextCA_SecondTraceConfig(const int32 LoopInd
 	const float InverseCapsuleSize = CapsuleSize * -1.0f;
 	const float InverseHalfCapsuleSize = HalfCapsuleSize * -1.0f;
 
-	OutActors.Add(TargetActorPoint);
+	OutActors.Add(TargetActorPoint.Get());
 	FTwoVectors Temp;
 	// Start
 	Temp.v1 = LerpVector + (ForwardVector * InverseCapsuleSize) + FVector(0.f, 0.f, HalfCapsuleSize);
@@ -4928,6 +4879,7 @@ FTwoVectors UClimbingComponent::FindNextCA_SecondTraceConfig(const int32 LoopInd
 	return Temp;
 }
 #pragma endregion
+
 
 FVector UClimbingComponent::LadderPointUtil_BaseOrigin() const
 {
@@ -4958,7 +4910,7 @@ const bool UClimbingComponent::FindNextClimbableActor(const bool ForVertical, co
 {
 	bool bIsMustFindNectActor = false;
 	const auto AxisValue = GetCharacterInputAxis(false);
-	if (AxisValue.Y > 0.f && AxisValue.X == 0.f && ClimbActionType != EClimbActionType::CornerInner && IsHorizontalClimbingObject(TargetActorPoint))
+	if (AxisValue.Y > 0.f && AxisValue.X == 0.f && ClimbActionType != EClimbActionType::CornerInner && IsHorizontalClimbingObject(TargetActorPoint.Get()))
 	{
 		FTransform OutCenter;
 		FClimbingLedge OutNewLedge;

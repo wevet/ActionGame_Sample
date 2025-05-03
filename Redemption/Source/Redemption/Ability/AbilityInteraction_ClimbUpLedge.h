@@ -30,4 +30,11 @@ protected:
 	UPROPERTY()
 	class UWvCharacterMovementComponent* MovementComponent;
 	
+
+	UPROPERTY(EditDefaultsOnly)
+	UAnimMontage* ClimbToStandingFreeHangMontage;
+
+	UPROPERTY(EditDefaultsOnly)
+	UAnimMontage* ClimbToStandingMontage;
+
 };

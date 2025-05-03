@@ -25,6 +25,8 @@
 #include "Animation/AnimNode_LinkedAnimLayer.h"
 #include "Animation/BlendSpace.h"
 
+using namespace CharacterDebug;
+using namespace LocomotionDebug;
 
 //#include UE_INLINE_GENERATED_CPP_BY_NAME(WvAnimInstance)
 
@@ -90,9 +92,6 @@ UWvAnimInstance::UWvAnimInstance(const FObjectInitializer& ObjectInitializer) : 
 
 	bIsClimbing = false;
 
-	bIsWallClimbing = false;
-	bIsWallClimbingJumping = false;
-
 	RagdollPoseSnapshot = FName(TEXT("RagdollPose"));
 }
 
@@ -127,8 +126,7 @@ void UWvAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 	Super::NativeUpdateAnimation(DeltaSeconds);
 
 #if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
-	static const IConsoleVariable* RelevantCVar = IConsoleManager::Get().FindConsoleVariable(TEXT("wv.LocomotionSystem.Debug"));
-	const int32 RelevantConsoleValue = RelevantCVar->GetInt();
+	const int32 RelevantConsoleValue = CVarDebugLocomotionSystem.GetValueOnAnyThread();
 	if (RelevantConsoleValue > 0 && RelevantConsoleValue < 2)
 	{
 		if (Character.IsValid())
@@ -170,12 +168,6 @@ void UWvAnimInstance::NativeThreadSafeUpdateAnimation(float DeltaSeconds)
 
 		//CharacterTransformLastFrame = CharacterTransform;
 		//CharacterTransform = Character->GetActorTransform();
-	}
-
-	if (IsValid(CharacterMovementComponent))
-	{
-		bIsWallClimbing = CharacterMovementComponent->IsWallClimbing();
-		bIsWallClimbingJumping = CharacterMovementComponent->IsClimbJumping();
 	}
 
 	if (LocomotionComponent.IsValid())

@@ -5,28 +5,25 @@
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(ClimbingObject)
 
-AClimbingObject::AClimbingObject()
+AClimbingObject::AClimbingObject(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
 	PrimaryActorTick.bCanEverTick = true;
 	bIsVerticalClimbingObject = false;
 	bIsClimbingEnable = true;
+
+	StaticMeshComponent->SetCollisionResponseToChannel(ECollisionChannel::ECC_Visibility, ECollisionResponse::ECR_Ignore);
+	StaticMeshComponent->SetCollisionResponseToChannel(ECollisionChannel::ECC_GameTraceChannel1, ECollisionResponse::ECR_Ignore);
+	StaticMeshComponent->SetCollisionResponseToChannel(ECollisionChannel::ECC_GameTraceChannel2, ECollisionResponse::ECR_Ignore);
+	StaticMeshComponent->SetCollisionResponseToChannel(ECollisionChannel::ECC_GameTraceChannel3, ECollisionResponse::ECR_Ignore);
+
+	// Climb Trace Block
+	StaticMeshComponent->SetCollisionResponseToChannel(ECollisionChannel::ECC_GameTraceChannel6, ECollisionResponse::ECR_Block);
+
 }
 
 void AClimbingObject::BeginPlay()
 {
 	Super::BeginPlay();
-	Super::SetActorTickEnabled(false);
-
-	if (GetStaticMeshComponent())
-	{
-		GetStaticMeshComponent()->SetCollisionResponseToChannel(ECollisionChannel::ECC_Visibility, ECollisionResponse::ECR_Ignore);
-		GetStaticMeshComponent()->SetCollisionResponseToChannel(ECollisionChannel::ECC_GameTraceChannel1, ECollisionResponse::ECR_Ignore);
-		GetStaticMeshComponent()->SetCollisionResponseToChannel(ECollisionChannel::ECC_GameTraceChannel2, ECollisionResponse::ECR_Ignore);
-		GetStaticMeshComponent()->SetCollisionResponseToChannel(ECollisionChannel::ECC_GameTraceChannel3, ECollisionResponse::ECR_Ignore);
-
-		// Climb Trace Block
-		GetStaticMeshComponent()->SetCollisionResponseToChannel(ECollisionChannel::ECC_GameTraceChannel6, ECollisionResponse::ECR_Block);
-	}
 }
 
 void AClimbingObject::Tick(float DeltaTime)
@@ -34,28 +31,20 @@ void AClimbingObject::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 }
 
-const bool AClimbingObject::IsVerticalClimbing()
+
+bool AClimbingObject::IsVerticalClimbing() const
 {
-	return bIsVerticalClimbingObject && !bIsWallClimbing;
+	return bIsVerticalClimbingObject && CanClimbing();
 }
 
-UStaticMeshComponent* AClimbingObject::GetStaticMeshComponent()
+bool AClimbingObject::IsHorizontalClimbing() const
 {
-	if (!StaticMeshComponent)
-	{
-		StaticMeshComponent = Cast<UStaticMeshComponent>(GetComponentByClass(UStaticMeshComponent::StaticClass()));
-	}
-	return StaticMeshComponent;
-}
-
-bool AClimbingObject::IsWallClimbing() const
-{
-	return bIsWallClimbing;
+	return !bIsVerticalClimbingObject && CanClimbing();
 }
 
 bool AClimbingObject::CanClimbing() const
 {
-	return bIsClimbingEnable && !bIsWallClimbing;
+	return bIsClimbingEnable;
 }
 
 void AClimbingObject::SetEnableClimbingObject(const bool NewClimbingEnable)

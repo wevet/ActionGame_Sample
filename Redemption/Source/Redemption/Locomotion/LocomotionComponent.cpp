@@ -18,6 +18,7 @@
 #include "MotionWarpingComponent.h"
 #include "DrawDebugHelpers.h"
 #include "KismetAnimationLibrary.h"
+#include "AbilitySystemGlobals.h"
 
 //#include "PhysicsEngine/PhysicsSettings.h"
 //#include "PhysicalMaterials/PhysicalMaterial.h"
@@ -27,16 +28,15 @@
 #define RUN_SPEED 400.f
 #define SPRINT_SPEED 600.f
 
+namespace LocomotionDebug
+{
 #if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
-static TAutoConsoleVariable<int32> CVarDebugLocomotionSystem(
-	TEXT("wv.LocomotionSystem.Debug"),
-	0, 
-	TEXT("LocomotionSystem Debug .\n") 
-	TEXT("<=0: off\n") 
-	TEXT("  1: on\n")
-	TEXT("  2: player ignore\n"),
-	ECVF_Default);
+	TAutoConsoleVariable<int32> CVarDebugLocomotionSystem(TEXT("wv.LocomotionSystem.Debug"), 0, TEXT("LocomotionSystem Debug .\n") TEXT("<=0: off\n") TEXT("  1: on\n") TEXT("  2: player ignore\n"), ECVF_Default);
 #endif
+}
+
+using namespace CharacterDebug;
+using namespace LocomotionDebug;
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(LocomotionComponent)
 
@@ -134,17 +134,17 @@ void ULocomotionComponent::BeginPlay()
 
 	Character = Cast<ABaseCharacter>(GetOwner());
 
+	if (UAbilitySystemComponent* ASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(GetOwner()))
+	{
+		AbilitySystemComponent = Cast<UWvAbilitySystemComponent>(ASC);
+	}
+
 	if (Character.IsValid())
 	{
 		CharacterMovementComponent = Cast<UWvCharacterMovementComponent>(Character->GetCharacterMovement());
 		SkeletalMeshComponent = Character->GetMesh();
 		CapsuleComponent = Character->GetCapsuleComponent();
 		bIsOwnerPlayerController = bool(Cast<APlayerController>(Character->GetController()));
-
-		if (IAbilitySystemInterface* ASI = Cast<IAbilitySystemInterface>(Character))
-		{
-			AbilitySystemComponent = Cast<UWvAbilitySystemComponent>(ASI->GetAbilitySystemComponent());
-		}
 	}
 
 	if (CharacterMovementComponent.IsValid())
@@ -1158,35 +1158,29 @@ void ULocomotionComponent::DoCharacterGrounded()
 {
 	if (!LocomotionEssencialVariables.bWasMoving)
 	{
-		if (LocomotionEssencialVariables.LSRotationMode == ELSRotationMode::LookingDirection && LocomotionEssencialVariables.bAiming)
-		{
-			LimitRotation(AimRotationLimitTheshold);
-		}
+		return;
 	}
-	else
+
+	const float RotationRate = CalculateRotationRate(SpeedRate.X, SlowSpeedRate, SpeedRate.Y, FastSpeedRate);
+	switch (LocomotionEssencialVariables.LSRotationMode)
 	{
-		const float RotationRate = CalculateRotationRate(SpeedRate.X, SlowSpeedRate, SpeedRate.Y, FastSpeedRate);
-		switch (LocomotionEssencialVariables.LSRotationMode)
+		case ELSRotationMode::VelocityDirection:
 		{
-			case ELSRotationMode::VelocityDirection:
-			{
-				const FRotator VelocityRot = FRotator(0.0f, LocomotionEssencialVariables.LastVelocityRotation.Yaw, 0.0f);
-				ApplyCharacterRotation(VelocityRot, false, RotationRate, false);
-			}
-			break;
-			case ELSRotationMode::LookingDirection:
-			{
-				const FVector2D MinOffset = StrafeRotationMinOffset;
-				const FVector2D MaxOffset = StrafeRotationMaxOffset;
-
-				const float Buffer = 5.0f;
-				const FRotator Rotation = LookingDirectionWithOffset(Buffer, MinOffset.X, MinOffset.Y, MaxOffset.X, MaxOffset.Y, Buffer);
-				ApplyCharacterRotation(Rotation, true, RotationRate, true);
-			}
-			break;
+			const FRotator VelocityRot = FRotator(0.0f, LocomotionEssencialVariables.LastVelocityRotation.Yaw, 0.0f);
+			ApplyCharacterRotation(VelocityRot, false, RotationRate, false);
 		}
-	}
+		break;
+		case ELSRotationMode::LookingDirection:
+		{
+			const FVector2D MinOffset = StrafeRotationMinOffset;
+			const FVector2D MaxOffset = StrafeRotationMaxOffset;
 
+			const float Buffer = 5.0f;
+			const FRotator Rotation = LookingDirectionWithOffset(Buffer, MinOffset.X, MinOffset.Y, MaxOffset.X, MaxOffset.Y, Buffer);
+			ApplyCharacterRotation(Rotation, true, RotationRate, true);
+		}
+		break;
+	}
 }
 
 void ULocomotionComponent::Move(const FVector2D InputAxis)
@@ -1229,9 +1223,6 @@ void ULocomotionComponent::MovementInputControl(const bool bForwardAxis)
 		case ELSMovementMode::Ragdoll:
 		RagdollMovementInput();
 		break;
-		case ELSMovementMode::WallClimbing:
-		ClimbingMovementInput(bForwardAxis);
-		break;
 	}
 }
 
@@ -1270,36 +1261,6 @@ void ULocomotionComponent::TargetMovementInput(const bool bForwardAxis)
 		// get right vector 
 		const FVector Direction = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
 		Character->AddMovementInput(Direction, RightAxisValue);
-	}
-}
-
-void ULocomotionComponent::ClimbingMovementInput(const bool bForwardAxis)
-{
-	if (CharacterMovementComponent.IsValid() && CharacterMovementComponent->IsWallClimbing())
-	{
-		if (CharacterMovementComponent->IsClimbJumping())
-		{
-#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
-			static const IConsoleVariable* CVar = IConsoleManager::Get().FindConsoleVariable(TEXT("wv.WallClimbingSystem.Debug"));
-			const int32 ConsoleValue = CVar->GetInt();
-			if (ConsoleValue > 0)
-			{
-				UE_LOG(LogTemp, Log, TEXT("Current Is ClimbingJumping"));
-			}
-#endif
-			return;
-		}
-
-		if (bForwardAxis)
-		{
-			const FVector Direction = FVector::CrossProduct(CharacterMovementComponent->GetClimbSurfaceNormal(), -Character->GetActorRightVector());
-			Character->AddMovementInput(Direction, ForwardAxisValue);
-		}
-		else
-		{
-			const FVector Direction = FVector::CrossProduct(CharacterMovementComponent->GetClimbSurfaceNormal(), Character->GetActorUpVector());
-			Character->AddMovementInput(Direction, RightAxisValue);
-		}
 	}
 }
 
@@ -1477,19 +1438,6 @@ void ULocomotionComponent::ApplyCharacterRotation(const FRotator InTargetRotatio
 	}
 }
 
-void ULocomotionComponent::LimitRotation(const float AimYawLimit)
-{
-	if (FMath::Abs(LocomotionEssencialVariables.AimYawDelta) > AimYawLimit)
-	{
-		auto CurDelta = LocomotionEssencialVariables.AimYawDelta;
-		const float A = (LocomotionEssencialVariables.LookingRotation.Yaw + AimYawLimit);
-		const float B = (LocomotionEssencialVariables.LookingRotation.Yaw - AimYawLimit);
-		const float Value = (CurDelta > 0.0f) ? B : A;
-		const FRotator Rotation = FRotator(0.f, Value, 0.f);
-		ApplyCharacterRotation(Rotation, true, AimRotationInterpSpeed, true);
-	}
-}
-
 bool ULocomotionComponent::CardinalDirectionAngles(const float Value, const float Min, const float Max, const float Buffer, const ELSCardinalDirection Direction) const
 {
 	const bool A = UKismetMathLibrary::InRange_FloatFloat(Value, (Min + Buffer), (Max - Buffer));
@@ -1530,8 +1478,6 @@ ELSMovementMode ULocomotionComponent::GetPawnMovementModeChanged(const EMovement
 			{
 				case ECustomMovementMode::CUSTOM_MOVE_Climbing:
 				return ELSMovementMode::Climbing;
-				case ECustomMovementMode::CUSTOM_MOVE_WallClimbing:
-				return ELSMovementMode::WallClimbing;
 				case ECustomMovementMode::CUSTOM_MOVE_Mantling:
 				return ELSMovementMode::Mantling;
 				case ECustomMovementMode::CUSTOM_MOVE_Vaulting:

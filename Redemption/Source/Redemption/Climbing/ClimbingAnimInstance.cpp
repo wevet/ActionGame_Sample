@@ -12,6 +12,7 @@
 #include "Kismet/KismetSystemLibrary.h"
 
 
+using namespace CharacterDebug;
 //#include UE_INLINE_GENERATED_CPP_BY_NAME(ClimbingAnimInstance)
 
 
@@ -34,8 +35,6 @@ UClimbingAnimInstance::UClimbingAnimInstance(const FObjectInitializer& ObjectIni
 	bIsMoveToNextLedgeMode = false;
 	bIsLockUpdatingHangingMode = false;
 
-	bIsWallClimbing = false;
-	bIsWallClimbingJumping = false;
 
 	HandsIKOffset.v1 = FVector(7.0f, -8.0f, 0.f);
 	HandsIKOffset.v2 = FVector(10.0f, -4.0f, 0.f);
@@ -58,9 +57,7 @@ void UClimbingAnimInstance::NativeThreadSafeUpdateAnimation(float DeltaTimeX)
 	Super::NativeThreadSafeUpdateAnimation(DeltaTimeX);
 
 #if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
-	static const IConsoleVariable* CVar = IConsoleManager::Get().FindConsoleVariable(TEXT("wv.WallClimbingSystem.Debug"));
-	const int32 ConsoleValue = CVar->GetInt();
-	bDebugTrace = (ConsoleValue > 0);
+	bDebugTrace = (CVarDebugWallClimbingSystem.GetValueOnAnyThread() > 0);
 #else
 	bDebugTrace = false;
 #endif
@@ -69,10 +66,6 @@ void UClimbingAnimInstance::NativeThreadSafeUpdateAnimation(float DeltaTimeX)
 	{
 		return;
 	}
-
-
-	bIsWallClimbing = CharacterMovementComponent->IsWallClimbing();
-	bIsWallClimbingJumping = CharacterMovementComponent->IsClimbJumping();
 
 	if (IsValid(LocomotionComponent))
 	{
@@ -92,7 +85,7 @@ void UClimbingAnimInstance::NativeThreadSafeUpdateAnimation(float DeltaTimeX)
 		bIsLaddering = LadderComponent->IsLadderState();
 	}
 
-	const bool bIsNotAnyClimbing = !(bIsClimbing || bIsWallClimbing);
+	const bool bIsNotAnyClimbing = !bIsClimbing;
 	if (bIsNotAnyClimbing)
 	{
 		FixRootOfsetOnMantleMontage();
@@ -298,11 +291,7 @@ void UClimbingAnimInstance::TransitionDynamicMontage()
 	}
 }
 
-FTransform UClimbingAnimInstance::ConvertLedgeTransformToHandIK(
-	const FTransform Input, 
-	const float UpOffset, 
-	const float ForwardOffset, 
-	const float RightOffsetVER) const
+FTransform UClimbingAnimInstance::ConvertLedgeTransformToHandIK(const FTransform Input, const float UpOffset, const float ForwardOffset, const float RightOffsetVER) const
 {
 	auto BasePos = Input.GetLocation();
 	auto Pos = FVector(0.f, 0.f, 1.0f);

@@ -22,6 +22,7 @@ protected:
 	virtual void BeginPlay() override;
 
 public:
+	UFUNCTION()
 	void UpdateSignificance(const float DeltaTime);
 
 

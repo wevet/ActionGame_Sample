@@ -107,11 +107,6 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Climbing")
 	bool bIsClimbing;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Climbing|Wall")
-	bool bIsWallClimbing;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Climbing|Wall")
-	bool bIsWallClimbingJumping;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Climbing")
 	bool bIsStartMantling;
