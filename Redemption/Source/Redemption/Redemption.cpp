@@ -92,6 +92,8 @@ UE_DEFINE_GAMEPLAY_TAG(TAG_Locomotion_ClimbingLedgeEnd, "Locomotion.Climbing.Led
 UE_DEFINE_GAMEPLAY_TAG(TAG_Locomotion_Mantling, "Locomotion.Mantling");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Locomotion_Vaulting, "Locomotion.Vaulting");
 
+UE_DEFINE_GAMEPLAY_TAG(TAG_Locomotion_Traversal, "Locomotion.Traversal");
+
 // Forbid
 UE_DEFINE_GAMEPLAY_TAG(TAG_Locomotion_ForbidClimbing, "Locomotion.Forbid.Climbing");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Locomotion_ForbidMantling, "Locomotion.Forbid.Mantling");

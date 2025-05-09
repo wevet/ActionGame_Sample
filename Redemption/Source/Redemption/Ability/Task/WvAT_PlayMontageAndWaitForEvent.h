@@ -57,7 +57,8 @@ public:
 		float StartTimeSeconds = 0.0f,
 		FName StartSection = NAME_None,
 		bool bStopWhenAbilityEnds = true,
-		float AnimRootMotionTranslationScale = 1.0f);
+		float AnimRootMotionTranslationScale = 1.0f, 
+		float StartingPosition = 0.0f);
 
 public:
 	/** Montage that is playing */
@@ -81,7 +82,10 @@ public:
 
 	/** Modifies how root motion movement to apply */
 	UPROPERTY()
-	float AnimRootMotionTranslationScale;
+	float AnimRootMotionTranslationScale{1.0f};
+
+	UPROPERTY()
+	float StartingPosition{0.f};
 
 	/** Rather montage should be aborted if ability ends */
 	UPROPERTY()

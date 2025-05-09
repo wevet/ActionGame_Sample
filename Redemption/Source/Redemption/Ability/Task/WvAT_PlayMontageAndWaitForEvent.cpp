@@ -109,7 +109,8 @@ UWvAT_PlayMontageAndWaitForEvent* UWvAT_PlayMontageAndWaitForEvent::PlayMontageA
 	float StartTimeSeconds,
 	FName StartSection, 
 	bool bStopWhenAbilityEnds,
-	float AnimRootMotionTranslationScale)
+	float AnimRootMotionTranslationScale, 
+	float StartingPosition)
 {
 	UAbilitySystemGlobals::NonShipping_ApplyGlobalAbilityScaler_Rate(Rate);
 
@@ -121,6 +122,7 @@ UWvAT_PlayMontageAndWaitForEvent* UWvAT_PlayMontageAndWaitForEvent::PlayMontageA
 	Instance->StartSection = StartSection;
 	Instance->bStopWhenAbilityEnds = bStopWhenAbilityEnds;
 	Instance->AnimRootMotionTranslationScale = AnimRootMotionTranslationScale;
+	Instance->StartingPosition = StartingPosition;
 	return Instance;
 }
 
@@ -171,6 +173,9 @@ void UWvAT_PlayMontageAndWaitForEvent::Activate()
 
 				bPlayedMontage = true;
 				ASC->AbilityMontageBeginDelegate.Broadcast(Ability, MontageToPlay);
+
+				// update starting position
+				AnimInstance->Montage_SetPosition(MontageToPlay, StartingPosition);
 			}
 		}
 		else

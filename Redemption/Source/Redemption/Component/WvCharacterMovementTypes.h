@@ -21,6 +21,7 @@ enum ECustomMovementMode
 	CUSTOM_MOVE_Mantling UMETA(DisplayName = "CustomMantling"),
 	CUSTOM_MOVE_Ladder UMETA(DisplayName = "CustomLadder"),
 	CUSTOM_MOVE_Vaulting UMETA(DisplayName = "CustomVaulting"),
+	CUSTOM_MOVE_Traversal UMETA(DisplayName = "CustomTraversal"),
 	CUSTOM_MOVE_MAX	UMETA(Hidden),
 };
 
@@ -542,6 +543,11 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float PlayRate = 0.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float FrontLedgeOffset{0.f};
+
+	void Reset();
 };
 
 

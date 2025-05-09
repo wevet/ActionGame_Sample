@@ -378,18 +378,27 @@ void APlayerCharacter::OnDoubleClickInputEventTrigger_Callback(const FGameplayTa
 #pragma region HandleEvent
 void APlayerCharacter::HandleJump(const bool bIsPress)
 {
+	const auto CMC = GetWvCharacterMovementComponent();
+
 	if (bIsPress)
 	{
-		Super::Jump();
+		if (OnJumpChangeDelegate.IsBound())
+		{
+			OnJumpChangeDelegate.Broadcast(bIsPress);
+		}
+
+		if (!CMC->IsTraversaling())
+		{
+			Super::Jump();
+		}
 	}
 	else
 	{
-		Super::StopJumping();
-	}
+		if (!CMC->IsTraversaling())
+		{
+			Super::StopJumping();
+		}
 
-	if (OnJumpChangeDelegate.IsBound())
-	{
-		OnJumpChangeDelegate.Broadcast(bIsPress);
 	}
 
 }
@@ -422,6 +431,8 @@ void APlayerCharacter::HandleSprinting(const bool bIsPress)
 				Super::AbortClimbing();
 			break;
 			case ECustomMovementMode::CUSTOM_MOVE_Mantling:
+			break;
+			case ECustomMovementMode::CUSTOM_MOVE_Traversal:
 			break;
 			case ECustomMovementMode::CUSTOM_MOVE_Ladder:
 				Super::AbortLaddering();

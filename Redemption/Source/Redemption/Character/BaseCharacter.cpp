@@ -341,8 +341,7 @@ void ABaseCharacter::BeginPlay()
 		Other1->SetVisibility(false);
 	}
 
-	// @TODO
-	// async function
+	WEVET_COMMENT("Must Async Function CMC")
 	UWvCharacterMovementComponent* CMC = GetWvCharacterMovementComponent();
 	CMC->OnWallClimbingBeginDelegate.AddDynamic(this, &ThisClass::OnWallClimbingBegin_Callback);
 	CMC->OnWallClimbingEndDelegate.AddDynamic(this, &ThisClass::OnWallClimbingEnd_Callback);
@@ -456,7 +455,7 @@ void ABaseCharacter::Tick(float DeltaTime)
 
 		if (CMC->IsFalling() && bHasMovementInput)
 		{
-			CMC->FallingMantling();
+			//CMC->FallingMantling();
 		}
 
 
@@ -577,6 +576,14 @@ void ABaseCharacter::OnRep_ReplicatedAcceleration()
 
 void ABaseCharacter::OnRep_TraversalActionData()
 {
+}
+
+void ABaseCharacter::Traversal_Server_Implementation(const FTraversalActionData& TraversalActionDataRep)
+{
+	TraversalActionData = TraversalActionDataRep;
+
+	UWvCharacterMovementComponent* CMC = GetWvCharacterMovementComponent();
+	CMC->OnTraversalStart();
 }
 
 void ABaseCharacter::OnRep_MyTeamID(FGenericTeamId OldTeamID)
@@ -1260,6 +1267,11 @@ void ABaseCharacter::Jump()
 					{
 						//
 					}
+					case CUSTOM_MOVE_Traversal:
+					{
+						//
+					}
+					break;
 					break;
 					case CUSTOM_MOVE_Ladder:
 					{
@@ -2744,8 +2756,20 @@ void ABaseCharacter::PreTickLocomotion()
 
 }
 
+
+#pragma region Traversal
 FTraversalActionData ABaseCharacter::GetTraversalActionData() const
 {
 	return TraversalActionData;
 }
+
+void ABaseCharacter::ResetTraversalActionData()
+{
+	TraversalActionData.Reset();
+
+	//UE_LOG(LogTemp, Error, TEXT("[%s]"), *FString(__FUNCTION__));
+}
+#pragma endregion
+
+
 

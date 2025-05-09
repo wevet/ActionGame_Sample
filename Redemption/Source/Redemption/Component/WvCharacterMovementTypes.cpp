@@ -36,4 +36,20 @@ void FVaultParams::Clear()
 	Component.Reset();
 }
 
+void FTraversalActionData::Reset()
+{
+	HitComponent = nullptr;
+	ChosenMontage = nullptr;
+	ActionType = ETraversalType::None;
 
+	bHasFrontLedge = false;
+	FrontLedgeLocation = FVector::ZeroVector;
+	FrontLedgeNormal = FVector::ZeroVector;
+
+	bHasBackLedge = false;
+	BackLedgeLocation = FVector::ZeroVector;
+	BackLedgeNormal = FVector::ZeroVector;
+
+	bHasBackFloor = false;
+	BackFloorLocation = FVector::ZeroVector;
+}

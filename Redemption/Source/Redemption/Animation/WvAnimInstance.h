@@ -175,6 +175,12 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "BaseAnimInstance")
 	void DrawDebugSkeleton(UAnimationAsset* AnimationAsset);
 
+	UFUNCTION(BlueprintCallable, Category = "BaseAnimInstance|Traversal", meta = (BlueprintThreadSafe))
+	const FTransform GetTraversalInteractionTransform();
+
+	UFUNCTION(BlueprintCallable, Category = "BaseAnimInstance|Traversal")
+	void SetTraversalInteractionTransform(const FTransform NewTraversalInteractionTransform);
+
 protected:
 	UPROPERTY()
 	TWeakObjectPtr<class ABaseCharacter> Character;
@@ -368,6 +374,8 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "MotionMatching")
 	FMovementDirectionThresholds MovementDirectionThresholds;
+
+	FTransform TraversalInteractionTransform{FTransform::Identity};
 
 	//UPROPERTY()
 	//FTransform CharacterTransformLastFrame;

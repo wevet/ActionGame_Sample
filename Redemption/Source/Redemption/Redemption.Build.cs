@@ -29,12 +29,13 @@ public class Redemption : ModuleRules
 				"DataRegistry",
 				"ReplicationGraph",
 				"Json",
-				//"AnimationLocomotionLibraryRuntime",
 				"AnimationBudgetAllocator", // budget
 				"SignificanceManager", // budget
 				"ChaosVehicles", // vehicle system
 				"PoseSearch",
 				"AnimGraphRuntime",
+				//"AnimationWarping",
+				"AnimationWarpingRuntime",
 				"ControlRig",
 				"Chooser",
 				"MotionWarping",
@@ -44,9 +45,6 @@ public class Redemption : ModuleRules
 				"GameplayStateTreeModule",
 				"SkeletalMerging",
 				"HairStrandsCore",
-				//"GameplayStateTree",
-				//"StateTree",
-				//"MassGameplay",
 				"MassActors",
 				"StructUtils",
 				"HairStrandsCore",
@@ -66,7 +64,7 @@ public class Redemption : ModuleRules
 		);
 
 		PrivateDependencyModuleNames.AddRange(
-			new string[] 
+			new string[]
 			{
 				"InputCore",
 				"Slate",
@@ -87,14 +85,14 @@ public class Redemption : ModuleRules
 		// For non-shipping build.
 		if (Target.Configuration != UnrealTargetConfiguration.Shipping)
 		{
-		//	PublicDependencyModuleNames.AddRange
-		//	(
-		//		new string[]
-		//		{
-		//			"ImGui",
-		//			"ApplicationCore",
-		//		}
-		//	);
+			//	PublicDependencyModuleNames.AddRange
+			//	(
+			//		new string[]
+			//		{
+			//			"ImGui",
+			//			"ApplicationCore",
+			//		}
+			//	);
 		}
 
 		if (Target.bBuildEditor)

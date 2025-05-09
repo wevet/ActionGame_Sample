@@ -41,6 +41,7 @@ enum class ELSMovementMode : uint8
 	Climbing UMETA(DisplayName = "Climbing"),
 	Ladder UMETA(DisplayName = "Ladder"),
 	Vaulting UMETA(DiaplayName = "Vaulting"),
+	Traversal UMETA(DisplayName = "Traversal"),
 };
 
 UENUM(BlueprintType)

@@ -52,8 +52,7 @@ namespace CharacterDebug
 }
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FActionStateChangeDelegate, EAIActionState, NewAIActionState, EAIActionState, PrevAIActionState);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FAimingChangeDelegate, bool, bEnableAiming);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FFlagChangeDelegate, bool, bEnable);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FBoolOneParamDelegate, bool, bEnable);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOverlayChangeDelegate, const ELSOverlayState, CurrentOverlay);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FAsyncLoadCompleteDelegate);
 
@@ -256,13 +255,13 @@ public:
 	FAsyncLoadCompleteDelegate AsyncMeshesLoadCompleteDelegate;
 
 	UPROPERTY(BlueprintAssignable)
-	FAimingChangeDelegate AimingChangeDelegate;
+	FBoolOneParamDelegate AimingChangeDelegate;
 
 	UPROPERTY(BlueprintAssignable)
-	FAimingChangeDelegate OnSkillEnableDelegate;
+	FBoolOneParamDelegate OnSkillEnableDelegate;
 
 	UPROPERTY(BlueprintAssignable)
-	FFlagChangeDelegate OnJumpChangeDelegate;
+	FBoolOneParamDelegate OnJumpChangeDelegate;
 
 	UPROPERTY(BlueprintAssignable)
 	FOverlayChangeDelegate OverlayChangeDelegate;
@@ -531,7 +530,15 @@ public:
 
 	bool IsMotionMatchingEnable() const;
 
+	// ~Start Traversal
 	FTraversalActionData GetTraversalActionData() const;
+	void ResetTraversalActionData();
+
+	UFUNCTION(BlueprintCallable, Server, Reliable)
+	void Traversal_Server(const FTraversalActionData& TraversalActionDataRep);
+
+	// ~End Traversal
+
 
 #pragma region NearlestAction
 	void CalcurateNearlestTarget(const float SyncPointWeight);
@@ -683,6 +690,7 @@ protected:
 
 	UFUNCTION()
 	void OnRep_TraversalActionData();
+
 
 	UFUNCTION()
 	virtual void OnWallClimbingBegin_Callback();

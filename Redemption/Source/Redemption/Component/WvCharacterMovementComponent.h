@@ -21,6 +21,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FHandleImpactAtStepUpFail, const FV
 class ABaseCharacter;
 class ULocomotionComponent;
 class UWvAbilitySystemComponent;
+class UChooserTable;
 struct FTimeline;
 
 /**
@@ -44,6 +45,7 @@ public:
 	virtual FRotator GetDeltaRotation(float DeltaTime) const override;
 	virtual bool StepUp(const FVector& GravDir, const FVector& Delta, const FHitResult& Hit, FStepDownResult* OutStepDownResult = NULL) override;
 	virtual void PhysWalking(float DeltaTime, int32 Iterations) override;
+
 	virtual void ComputeFloorDist(const FVector& CapsuleLocation, float LineDistance, float SweepDistance, FFindFloorResult& OutFloorResult, float SweepRadius, const FHitResult* DownwardSweepResult) const override;
 	virtual bool CheckFall(const FFindFloorResult& OldFloor, const FHitResult& Hit, const FVector& Delta, const FVector& OldLocation, float remainingTime, float timeTick, int32 Iterations, bool bMustJump) override;
 
@@ -54,11 +56,9 @@ public:
 	virtual float SlideAlongSurface(const FVector& Delta, float Time, const FVector& InNormal, FHitResult& Hit, bool bHandleImpact) override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
-
-	UFUNCTION(BlueprintCallable, Category = "Wv|CharacterMovement")
 	const FWvCharacterGroundInfo& GetGroundInfo();
-
 	void SetReplicatedAcceleration(const FVector& InAcceleration);
+
 
 public:
 	virtual void RequestAsyncLoad() override;
@@ -75,6 +75,9 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Character|Components|CharacterMovement")
 	bool IsLaddering() const;
+
+	UFUNCTION(BlueprintCallable, Category = "Character|Components|CharacterMovement")
+	bool IsTraversaling() const;
 
 	UPROPERTY(BlueprintAssignable)
 	FHandleImpact OnHandleImpact;
@@ -108,15 +111,31 @@ public:
 	void FinishVaulting();
 	FVaultParams GetVaultParams() const;
 
-	// traversal
-	UFUNCTION(BlueprintCallable)
+	// ~Start Traversal
+	UFUNCTION(BlueprintCallable, Category = "CharacterMovement|Traversal")
 	FTraversalDataCheckInputs GetTraversalDataCheckInputs() const;
 
-	UFUNCTION(BlueprintCallable)
-	void TryTraversalAction(bool& OutTraversalCheckFailed, bool& OutMontageSelectionFailed);
+	UFUNCTION(BlueprintCallable, Category = "CharacterMovement|Traversal")
+	const bool TryTraversalAction();
 
+	UFUNCTION(BlueprintCallable, Category = "CharacterMovement|Traversal")
+	void TryAndCalculateTraversal(UPARAM(ref) FHitResult& HitResult, UPARAM(ref) FTraversalActionData& OutTraversalActionData);
+
+	UFUNCTION(BlueprintCallable, Category = "CharacterMovement|Traversal")
+	float CalcurateLedgeOffsetHeight(const FTraversalActionData& InTraversalActionData) const;
+
+	UFUNCTION(BlueprintCallable, Category = "CharacterMovement|Traversal")
 	void OnTraversalStart();
+
 	void OnTraversalEnd();
+
+	UFUNCTION(BlueprintCallable, Category = "CharacterMovement|Traversal")
+	const TArray<UObject*> GetAnimMontageFromChooserTable(const TSubclassOf<UObject> ObjectClass, UPARAM(Ref) FTraversalActionDataInputs& Input, FTraversalActionDataOutputs& Output);
+
+	// ~End Traversal
+
+	UFUNCTION(BlueprintCallable, Category = "CharacterMovement|Misc")
+	void CheckGroundOrFalling();
 
 protected:
 	virtual void InitializeComponent() override;
@@ -162,7 +181,7 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Character Movement: Vaulting")
 	TSoftObjectPtr<UVaultAnimationDataAsset> VaultDA;
 
-
+	// ~Start Traversal
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Character Movement: Traversal")
 	float MinLedgeWidth{70.0f};
 
@@ -178,8 +197,20 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Character Movement: Traversal")
 	bool bIsTraversalTraceComplex{ true };
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Character Movement: Traversal")
+	TObjectPtr<class UChooserTable> TraversalChooserTable{ nullptr };
+
+	// ~End Traversal
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Character Movement: Falling")
 	bool bIsDrawGroundTrace{ false };
+
+	/*
+	* Input direction and forward direction minimum angle, when the angle between the two is too small,
+	* the movement state can be automatic climbing detection judgment
+	*/
+	float MinInputForwardAngle = 5.0f;
+
 
 	FTimeline* MantleTimeline;
 
@@ -260,7 +291,6 @@ private:
 
 	void PhysVaulting(float deltaTime, int32 Iterations);
 	const bool TryVaultUpInternal(const FHitResult* ForwardHit, FHitResult& CurrentHit);
-	const bool TryEnterVaultCheckAngle() const;
 	const bool ValidVaultSpeedThreshold() const;
 	float GetVaultDistance() const;
 	void BeginVaulting();
@@ -341,8 +371,14 @@ private:
 
 
 	// ~Start Traversal
+	const bool TryEnterWallCheckAngle(const bool bIsCheckGround) const;
 	const bool TraceWidth(const FHitResult& Hit, const FVector Direction);
-
-
+	const bool TraceAlongHitPlane(const FHitResult& Hit, const float TraceLength, const FVector TraceDirection, FHitResult& OutHit);
+	void SetTraceHitPoint(UPARAM(ref) FHitResult& OutHit, const FVector NewImpactPoint);
+	void NudgeHitTowardsObjectOrigin(UPARAM(ref) FHitResult& Hit);
+	void Traversal_TraceCorners(const FHitResult& Hit, const FVector TraceDirection, const float TraceLength, FVector& OffsetCenterPoint, bool& bCloseToCorner, float& DistanceToCorner);
+	void PhysTraversaling(float deltaTime, int32 Iterations);
+	void PrintTraversalActionData(const FTraversalActionData& Data);
 	// ~End Traversal
+
 };

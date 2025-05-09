@@ -683,3 +683,14 @@ void UWvAnimInstance::DrawDebugSkeleton(UAnimationAsset* AnimationAsset)
 #endif
 }
 
+const FTransform UWvAnimInstance::GetTraversalInteractionTransform()
+{
+	return TraversalInteractionTransform;
+}
+
+void UWvAnimInstance::SetTraversalInteractionTransform(const FTransform NewTraversalInteractionTransform)
+{
+	TraversalInteractionTransform = NewTraversalInteractionTransform;
+}
+
+

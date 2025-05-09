@@ -1028,6 +1028,11 @@ void ULocomotionComponent::OnMovementModeChange()
 			//
 		}
 		break;
+		case ELSMovementMode::Traversal:
+		{
+			//
+		}
+		break;
 	}
 
 	UpdateCharacterMovementSettings();
@@ -1484,6 +1489,8 @@ ELSMovementMode ULocomotionComponent::GetPawnMovementModeChanged(const EMovement
 				return ELSMovementMode::Vaulting;
 				case ECustomMovementMode::CUSTOM_MOVE_Ladder:
 				return ELSMovementMode::Ladder;
+				case ECustomMovementMode::CUSTOM_MOVE_Traversal:
+				return ELSMovementMode::Traversal;
 			}
 		}
 		break;
