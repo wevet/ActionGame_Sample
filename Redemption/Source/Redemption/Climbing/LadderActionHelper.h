@@ -207,6 +207,9 @@ protected:
 	UPROPERTY()
 	TObjectPtr<class UTimelineComponent> TLComp;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<class UTimelineComponent> TimelineComponent;
+
 public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "LadderActionHelper")
 	FVector2D AlphaOutput{0.8f, 1.0f};

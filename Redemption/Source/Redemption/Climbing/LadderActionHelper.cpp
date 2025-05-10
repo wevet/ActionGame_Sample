@@ -25,6 +25,7 @@ ALadderActionHelper::ALadderActionHelper()
 	CurveNames.Add(TEXT("Extract_Root-Rot_Yaw"));
 }
 
+
 void ALadderActionHelper::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	FTimerManager& TimerManager = GetWorldTimerManager();
@@ -34,6 +35,7 @@ void ALadderActionHelper::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	Super::EndPlay(EndPlayReason);
 }
 
+
 void ALadderActionHelper::BeginPlay()
 {
 	Super::BeginPlay();
@@ -42,11 +44,13 @@ void ALadderActionHelper::BeginPlay()
 	TLComp = Cast<UTimelineComponent>(GetComponentByClass(UTimelineComponent::StaticClass()));
 }
 
+
 void ALadderActionHelper::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
 }
+
 
 void ALadderActionHelper::Initialize(class ABaseCharacter* NewCharacter, class UWvAnimInstance* NewBaseAnimInstance)
 {
@@ -54,16 +58,19 @@ void ALadderActionHelper::Initialize(class ABaseCharacter* NewCharacter, class U
 	BaseAnimInstance = NewBaseAnimInstance;
 }
 
+
 void ALadderActionHelper::SetCallbackFunctioEvent(class UObject* NewOuter, const FName InEventName)
 {
 	Outer = NewOuter;
 	EventName = InEventName;
 }
 
+
 void ALadderActionHelper::SetCallbackEventEnable(const bool bIsCallToInterface)
 {
 	bCallToInterface = bIsCallToInterface;
 }
+
 
 void ALadderActionHelper::PlayMatchedMontageTwoPoints(
 	ABaseCharacter* Character,
@@ -188,6 +195,7 @@ void ALadderActionHelper::PlayMatchedMontageTwoPointsConfig(const FMatchedMontag
 	RotationCurveType = TwoPointsConfig.CustomRotationInterpType;
 }
 
+
 void ALadderActionHelper::PlayMatchedMontageThirdPointsConfig(const FMatchedMontageThirdPoints ThirdPointsConfig)
 {
 	SequenceType = 1;
@@ -234,6 +242,7 @@ void ALadderActionHelper::PlayMatchedMontageThirdPointsConfig(const FMatchedMont
 		UE_LOG(LogTemp, Error, TEXT("nullptr TLComp => [%s]"), *FString(__FUNCTION__));
 	}
 }
+
 
 void ALadderActionHelper::PlayMatchedAnimSequenceTwoPointsConfig(
 	const FMatchedMontageTwoPoints TwoPointsConfig,
@@ -295,6 +304,7 @@ void ALadderActionHelper::PlayMatchedAnimSequenceTwoPointsConfig(
 	}
 }
 
+
 void ALadderActionHelper::TimelineFinish_Callback()
 {
 	if (bCallToInterface)
@@ -311,6 +321,7 @@ void ALadderActionHelper::TimelineFinish_Callback()
 	}
 }
 
+
 bool ALadderActionHelper::IsTLCompPlaying() const
 {
 	if (IsValid(TLComp))
@@ -319,6 +330,7 @@ bool ALadderActionHelper::IsTLCompPlaying() const
 	}
 	return false;
 }
+
 
 FLSComponentAndTransform ALadderActionHelper::GetLSTargetTransform(const int32 Index) const
 {
@@ -335,6 +347,7 @@ FLSComponentAndTransform ALadderActionHelper::GetLSTargetTransform(const int32 I
 	// start
 	return bConvertTransformsToWorld ? UClimbingUtils::ComponentLocalToWorldMatrix(StartTransform_LS) : StartTransform_LS;
 }
+
 
 void ALadderActionHelper::UpdateLockingDecreasingCurves(const float Y, const float X, const float Z)
 {
@@ -354,6 +367,7 @@ void ALadderActionHelper::UpdateLockingDecreasingCurves(const float Y, const flo
 	}
 }
 
+
 float ALadderActionHelper::GetTimelinePlayBackNormalized() const
 {
 	if (!IsValid(TLComp))
@@ -365,6 +379,7 @@ float ALadderActionHelper::GetTimelinePlayBackNormalized() const
 	const float Length = TLComp->GetTimelineLength();
 	return bRemapTimelineAlpha ? UKismetMathLibrary::MapRangeClamped(PlaybackPosition, 0.0f, Length, 0.0f, 1.0f) : PlaybackPosition;
 }
+
 
 FVector ALadderActionHelper::GetCustomCurveValue(const float InTime) const
 {
@@ -378,6 +393,7 @@ FVector ALadderActionHelper::GetCustomCurveValue(const float InTime) const
 
 	return CustomCurve->GetVectorValue(UKismetMathLibrary::MapRangeClamped(InTime, 0.0f, 1.0f, 0.0f, MaxTime));
 }
+
 
 bool ALadderActionHelper::CheckCanPlaying(const ABaseCharacter* ForTest) const
 {
@@ -404,6 +420,7 @@ bool ALadderActionHelper::CheckCanPlaying(const ABaseCharacter* ForTest) const
 	}
 	return true;
 }
+
 
 FClimbingCurveData ALadderActionHelper::GetAnimCurve(const FName CurveName, const bool bWithLock, const float LockVariable) const
 {
@@ -433,6 +450,7 @@ FClimbingCurveData ALadderActionHelper::GetAnimCurve(const FName CurveName, cons
 	return Result;
 }
 
+
 float ALadderActionHelper::GetRotationCurve() const
 {
 	if (IsValid(RotationCurve))
@@ -456,6 +474,7 @@ float ALadderActionHelper::GetRotationCurve() const
 	auto Value = GetTimelinePlayBackNormalized();
 	return (Value > Thredhold) ? UKismetMathLibrary::MapRangeClamped(Value, 0.0f, Thredhold, 0.0f, 1.0f) : 1.0f;
 }
+
 
 FTransform ALadderActionHelper::GetTransformThreePointInterp(const float X, const float Y, const float Z) const
 {

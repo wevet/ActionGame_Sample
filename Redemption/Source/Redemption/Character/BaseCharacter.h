@@ -75,6 +75,7 @@ class UStaticMeshComponent;
 class ULODSyncComponent;
 class USignificanceComponent;
 class UMinimapMarkerComponent;
+class UChooserTable;
 
 
 UCLASS()
@@ -207,9 +208,6 @@ public:
 	class UMotionWarpingComponent* GetMotionWarpingComponent() const;
 
 	UFUNCTION(BlueprintCallable, Category = Components)
-	class UCharacterTrajectoryComponent* GetCharacterTrajectoryComponent() const;
-
-	UFUNCTION(BlueprintCallable, Category = Components)
 	class ULocomotionComponent* GetLocomotionComponent() const;
 
 	UFUNCTION(BlueprintCallable, Category = Components)
@@ -236,10 +234,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category = Components)
 	class UStaticMeshComponent* GetAccessoryObjectRoot() const;
 
-	UFUNCTION(BlueprintCallable, Category = Components)
 	class USkeletalMeshComponent* GetFaceMeshComponent() const;
 
-	UFUNCTION(BlueprintCallable, Category = Components)
 	class UMinimapMarkerComponent* GetMinimapMarkerComponent() const;
 
 	UFUNCTION(BlueprintCallable, Category = Movement)
@@ -325,7 +321,7 @@ public:
 	FTransform GetPivotOverlayTansform() const;
 
 	UFUNCTION(BlueprintCallable, Category = Action)
-	void OverlayStateChange(const ELSOverlayState CurrentOverlay);
+	const bool OverlayStateChange(const ELSOverlayState CurrentOverlay);
 
 	const bool HandleAttackPawnPrepare();
 
@@ -662,6 +658,9 @@ protected:
 
 	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = "BaseCharacter|Config")
 	UAIActionStateDataAsset* AIActionStateDA;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Character Movement: Traversal")
+	TObjectPtr<class UChooserTable> OverlayAnimationTable{ nullptr };
 #pragma endregion
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "BaseCharacter|Config")
@@ -707,6 +706,7 @@ protected:
 
 	UFUNCTION()
 	void OnAbilityFailed_Callback(const UGameplayAbility* Ability, const FGameplayTagContainer& GameplayTags);
+
 
 	// Called to determine what happens to the team ID when possession ends
 	virtual FGenericTeamId DetermineNewTeamAfterPossessionEnds(FGenericTeamId OldTeamID) const
@@ -785,10 +785,8 @@ protected:
 	const bool CanFiniherSender();
 #pragma endregion
 
-#pragma region AsyncLoad
-	UPROPERTY()
-	TObjectPtr<UOverlayAnimInstanceDataAsset> OverlayAnimDA;
 
+#pragma region AsyncLoad
 	UPROPERTY()
 	TObjectPtr<UCloseCombatAnimationDataAsset> CloseCombatDA;
 

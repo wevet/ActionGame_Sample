@@ -32,15 +32,6 @@ enum class EMantleType : uint8
 	FallingCatch UMETA(DisplayName = "FallingCatch"),
 };
 
-UENUM(BlueprintType)
-enum class EVaultMovementType : uint8
-{
-	None   UMETA(DisplayName = "None"),
-	Low    UMETA(DisplayName = "Low"),
-	High   UMETA(DisplayName = "High"),
-	ThrowLow  UMETA(DisplayName = "ThrowLow"),
-	ThrowHigh  UMETA(DisplayName = "ThrowHigh"),
-};
 
 
 /**
@@ -313,6 +304,7 @@ public:
 
 
 
+#pragma region Traversal
 UENUM(BlueprintType)
 enum class ETraversalType : uint8
 {
@@ -462,5 +454,6 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Traversal")
 	float TraceHalfHeight = 0.0f;
 };
+#pragma endregion
 
 

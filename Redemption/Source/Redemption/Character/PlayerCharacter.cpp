@@ -185,6 +185,7 @@ void APlayerCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerIn
 	}
 }
 
+
 #pragma region IWvAbilityTargetInterface
 void APlayerCharacter::OnReceiveKillTarget(AActor* Actor, const float Damage)
 {
@@ -214,6 +215,7 @@ void APlayerCharacter::UnFreeze()
 	SetKeyInputEnable();
 }
 #pragma endregion
+
 
 void APlayerCharacter::Move(const FInputActionValue& Value)
 {
@@ -713,14 +715,6 @@ void APlayerCharacter::OverlayStateChange_Callback(const ELSOverlayState PrevOve
 
 	if (bResult)
 	{
-		WEVET_COMMENT("Temp Weapon")
-
-		auto Weapon = ItemInventoryComponent->GetEquipWeapon();
-		if (Weapon)
-		{
-			Weapon->SetActorHiddenInGame(true);
-		}
-
 		Super::OverlayStateChange(CurrentOverlay);
 	}
 

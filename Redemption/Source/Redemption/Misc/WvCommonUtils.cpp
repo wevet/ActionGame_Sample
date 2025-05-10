@@ -25,6 +25,10 @@
 #include "PhysicalMaterials/PhysicalMaterial.h"
 #include "Engine/StaticMeshActor.h"
 
+
+#include "ChooserFunctionLibrary.h"
+
+
 #include UE_INLINE_GENERATED_CPP_BY_NAME(WvCommonUtils)
 
 FLSComponentAndTransform UWvCommonUtils::ComponentWorldToLocal(const FLSComponentAndTransform WorldSpaceComponent)
@@ -611,5 +615,25 @@ void UWvCommonUtils::SetAIControllerTickInterval(APawn* Actor, const float TickI
 	{
 		ActorComponent->SetComponentTickInterval(TickInterval);
 	}
+}
+
+
+
+UClass* UWvCommonUtils::FindClassInChooserTable(UObject* ContextObject, UChooserTable* ChooserTable)
+{
+	if (ChooserTable && ContextObject)
+	{
+		FChooserEvaluationContext Context;
+		Context.AddObjectParam(ContextObject);
+
+		FInstancedStruct ChooserStruct = UChooserFunctionLibrary::MakeEvaluateChooser(ChooserTable);
+		UObject* ResultObject = UChooserFunctionLibrary::EvaluateObjectChooserBase(Context, ChooserStruct, UClass::StaticClass(), false);
+
+		if (UClass* ResultClass = Cast<UClass>(ResultObject))
+		{
+			return ResultClass;
+		}
+	}
+	return nullptr;
 }
 

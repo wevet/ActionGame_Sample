@@ -8,6 +8,8 @@
 #include "Animation/AnimInstance.h"
 #include "BaseCharacterTypes.generated.h"
 
+class AItemBaseActor;
+
 
 USTRUCT(BlueprintType)
 struct FOverlayAnimInstance
@@ -64,6 +66,9 @@ public:
 };
 
 
+/// <summary>
+/// @TODO
+/// </summary>
 USTRUCT(BlueprintType)
 struct FChooserOutputs
 {

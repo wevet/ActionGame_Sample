@@ -188,9 +188,6 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<class UWvCharacterMovementComponent> CharacterMovementComponent;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
-	TObjectPtr<class UCharacterTrajectoryComponent> CharacterTrajectoryComponent;
-
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
 	FCharacterOverlayInfo CharacterOverlayInfo;
 

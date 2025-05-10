@@ -22,6 +22,7 @@ class ALadderObject;
 class UPrimitiveComponent;
 class UCapsuleComponent;
 class UWvAnimInstance;
+class ALadderActionHelper;
 
 USTRUCT(BlueprintType)
 struct REDEMPTION_API FAnimMontageAndConfig
@@ -638,6 +639,9 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "LadderMovement")
 	FVector LeftFootIK;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "LadderMovement")
+	TSubclassOf<class ALadderActionHelper> LadderActionHelperTemplate;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "BalanceMovement")
 	float CapsuleRadius = 0.0f;

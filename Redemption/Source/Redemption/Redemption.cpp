@@ -111,7 +111,6 @@ UE_DEFINE_GAMEPLAY_TAG(TAG_Vehicle_State_Drive, "Vehicle.State.Drive");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Character_State_SmartObject_Using, "Character.State.SmartObject.Using");
 
 // async load data asset tag
-UE_DEFINE_GAMEPLAY_TAG(TAG_Game_Asset_AnimationBlueprint, "Game.Asset.AnimationBlueprint");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Game_Asset_HitReaction, "Game.Asset.HitReaction");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Game_Asset_FinisherSender, "Game.Asset.FinisherSender");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Game_Asset_FinisherReceiver, "Game.Asset.FinisherReceiver");

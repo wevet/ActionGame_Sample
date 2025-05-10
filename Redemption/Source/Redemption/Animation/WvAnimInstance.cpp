@@ -9,6 +9,7 @@
 #include "Misc/WvCommonUtils.h"
 #include "PredictionAnimInstance.h"
 #include "Redemption.h"
+#include "Climbing/ClimbingAnimInstance.h"
 
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemGlobals.h"
@@ -110,8 +111,6 @@ void UWvAnimInstance::NativeInitializeAnimation()
 	LocomotionComponent = Character->GetLocomotionComponent();
 	CapsuleComponent = Character->GetCapsuleComponent();
 
-	CharacterTrajectoryComponent = Character->GetCharacterTrajectoryComponent();
-
 	if (UAbilitySystemComponent* ASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(Character.Get()))
 	{
 		InitializeWithAbilitySystem(ASC);
@@ -119,6 +118,9 @@ void UWvAnimInstance::NativeInitializeAnimation()
 		// 指定タグが追加/削除時に呼ぶ処理をバインド
 		ASC->RegisterGameplayTagEvent(TAG_Character_ActionLookAt, EGameplayTagEventType::NewOrRemoved).AddUObject(this, &ThisClass::TagChangeEvent);
 	}
+
+
+
 }
 
 void UWvAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
@@ -253,6 +255,13 @@ void UWvAnimInstance::NativeUninitializeAnimation()
 void UWvAnimInstance::NativeBeginPlay()
 {
 	Super::NativeBeginPlay();
+
+	const static FName TagName = FName(TEXT("Climbing"));
+	auto ClimbAnimInstance = Cast<UClimbingAnimInstance>(this->GetLinkedAnimGraphInstanceByTag(TagName));
+	if (ClimbAnimInstance)
+	{
+		ClimbAnimInstance->CreateProperties();
+	}
 }
 
 FAnimInstanceProxy* UWvAnimInstance::CreateAnimInstanceProxy()

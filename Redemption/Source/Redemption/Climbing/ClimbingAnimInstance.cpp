@@ -56,7 +56,7 @@ void UClimbingAnimInstance::NativeThreadSafeUpdateAnimation(float DeltaTimeX)
 {
 	Super::NativeThreadSafeUpdateAnimation(DeltaTimeX);
 
-	SetCharacterReferences();
+	//SetCharacterReferences();
 
 #if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
 	bDebugTrace = (CVarDebugWallClimbingSystem.GetValueOnAnyThread() > 0);
@@ -92,45 +92,6 @@ void UClimbingAnimInstance::NativeThreadSafeUpdateAnimation(float DeltaTimeX)
 	{
 		FixRootOfsetOnMantleMontage();
 	}
-}
-
-void UClimbingAnimInstance::SetCharacterReferences()
-{
-	if (!IsValid(Character))
-	{
-		Character = Cast<ACharacter>(TryGetPawnOwner());
-	}
-
-	if (!IsValid(Character))
-	{
-		return;
-	}
-
-	if (!IsValid(LocomotionComponent))
-	{
-		LocomotionComponent = Cast<ULocomotionComponent>(Character->GetComponentByClass(ULocomotionComponent::StaticClass()));
-	}
-
-	if (!IsValid(LadderComponent))
-	{
-		LadderComponent = Cast<ULadderComponent>(Character->GetComponentByClass(ULadderComponent::StaticClass()));
-	}
-
-	if (!IsValid(CharacterMovementComponent))
-	{
-		CharacterMovementComponent = Cast<UWvCharacterMovementComponent>(Character->GetCharacterMovement());
-	}
-
-	if (!IsValid(ClimbingComponent))
-	{
-		ClimbingComponent = Cast<UClimbingComponent>(Character->GetComponentByClass(UClimbingComponent::StaticClass()));
-		if (ClimbingComponent)
-		{
-			RootOffset.Z = (ClimbingComponent->ConstCapsuleOffset - 10.0f);
-		}
-	}
-
-
 }
 
 void UClimbingAnimInstance::NotifyJumpBackEvent()
@@ -326,3 +287,29 @@ void UClimbingAnimInstance::SaveDiffrenceBetweenTime(const float InTime)
 }
 
 
+
+void UClimbingAnimInstance::CreateProperties()
+{
+	if (!IsValid(Character))
+	{
+		Character = Cast<ACharacter>(TryGetPawnOwner());
+	}
+
+	if (!IsValid(Character))
+	{
+		return;
+	}
+
+	LocomotionComponent = Cast<ULocomotionComponent>(Character->GetComponentByClass(ULocomotionComponent::StaticClass()));
+
+	LadderComponent = Cast<ULadderComponent>(Character->GetComponentByClass(ULadderComponent::StaticClass()));
+
+	CharacterMovementComponent = Cast<UWvCharacterMovementComponent>(Character->GetCharacterMovement());
+
+	ClimbingComponent = Cast<UClimbingComponent>(Character->GetComponentByClass(UClimbingComponent::StaticClass()));
+	if (ClimbingComponent)
+	{
+		RootOffset.Z = (ClimbingComponent->ConstCapsuleOffset - 10.0f);
+	}
+
+}

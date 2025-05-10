@@ -133,6 +133,8 @@ protected:
 	bool bDebugTrace;
 
 public:
+	void CreateProperties();
+
 	void NotifyJumpBackEvent();
 
 	UFUNCTION(BlueprintCallable, Category = "ABP_Climbing")
@@ -178,7 +180,6 @@ private:
 	FTimerHandle WaitAxisTimer;
 
 	const bool FreeHangStateEvent_Internal(const bool bDetectedIK);
-	void SetCharacterReferences();
 	void PrepareToForwardMove(const FClimbingLedge CachedLedgeLS);
 
 	void FixRootOfsetOnMantleMontage();

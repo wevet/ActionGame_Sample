@@ -17,7 +17,10 @@ class ABaseCharacter;
 class UMaterialInstanceDynamic;
 class AStaticMeshActor;
 class ARedemptionGameMode;
+class UChooserTable;
 struct FHitReactInfoRow;
+
+
 
 /**
  * 
@@ -149,7 +152,8 @@ public:
 	static void SetActorAndComponentTickIntervalWithIgnore(AActor* Actor, const float TickInterval, const TArray<UActorComponent*>& IgnoreComponents);
 	static void UpdateMinLODBySignificanceLevel(AActor* Actor, const int32 MinLOD);
 	static void SetAIControllerTickInterval(APawn* Actor, const float TickInterval);
-};
 
+	static UClass* FindClassInChooserTable(UObject* ContextObject, UChooserTable* ChooserTable);
+};
 
 

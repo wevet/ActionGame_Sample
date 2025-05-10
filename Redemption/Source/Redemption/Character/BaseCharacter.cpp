@@ -74,6 +74,11 @@
 #include "IAnimationBudgetAllocator.h"
 #include "SignificanceManager.h"
 
+
+#include "Algo/Transform.h"
+//#include "ChooserFunctionLibrary.h"
+
+
 #include UE_INLINE_GENERATED_CPP_BY_NAME(BaseCharacter)
 
 
@@ -388,7 +393,6 @@ void ABaseCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
 
 	ResetFinisherAnimationData();
 
-	OverlayAnimDA = nullptr;
 	CloseCombatDA = nullptr;
 	FinisherSenderDA = nullptr;
 	FinisherReceinerDA = nullptr;
@@ -1146,11 +1150,6 @@ UMotionWarpingComponent* ABaseCharacter::GetMotionWarpingComponent() const
 	return MotionWarpingComponent; 
 }
 
-UCharacterTrajectoryComponent* ABaseCharacter::GetCharacterTrajectoryComponent() const
-{
-	return CharacterTrajectoryComponent; 
-}
-
 UWvCharacterMovementComponent* ABaseCharacter::GetWvCharacterMovementComponent() const
 {
 	return CastChecked<UWvCharacterMovementComponent>(GetCharacterMovement());
@@ -1606,35 +1605,44 @@ void ABaseCharacter::DoForceKill()
 }
 #pragma endregion
 
-void ABaseCharacter::OverlayStateChange(const ELSOverlayState CurrentOverlay)
+
+/// <summary>
+/// Animation overlay change from chooser table
+/// </summary>
+/// <param name="CurrentOverlay"></param>
+const bool ABaseCharacter::OverlayStateChange(const ELSOverlayState CurrentOverlay)
 {
 	if (SelectableOverlayState == CurrentOverlay)
 	{
-		return;
+		return false;
 	}
 
-	if (!IsValid(OverlayAnimDA))
-	{
-		OverlayAnimDA = OnAsyncLoadDataAsset<UOverlayAnimInstanceDataAsset>(TAG_Game_Asset_AnimationBlueprint);
-	}
+	bool bIsOverlayChange = false;
+	const ELSOverlayState PrevOverlay = SelectableOverlayState;
 
 	SelectableOverlayState = CurrentOverlay;
 
-	if (IsValid(OverlayAnimDA))
+	if (const UClass* OverlayAnimClass = UWvCommonUtils::FindClassInChooserTable(this, OverlayAnimationTable))
 	{
-		auto AnimInstanceClass = OverlayAnimDA->FindAnimInstance(CurrentOverlay);
-		if (AnimInstanceClass)
+		if (OverlayAnimClass->IsChildOf(UAnimInstance::StaticClass()))
 		{
-			GetMesh()->LinkAnimClassLayers(AnimInstanceClass);
+			TSubclassOf<UAnimInstance> Subclass = const_cast<UClass*>(OverlayAnimClass);
+			GetMesh()->LinkAnimClassLayers(Subclass);
 			OverlayChangeDelegate.Broadcast(CurrentOverlay);
+			bIsOverlayChange = true;
 		}
 	}
-	else
+
+
+	if (!bIsOverlayChange)
 	{
-		UE_LOG(LogTemp, Error, TEXT("not valid DA => [%s]"), *FString(__FUNCTION__));
+		SelectableOverlayState = PrevOverlay;
+		UE_LOG(LogTemp, Error, TEXT("Overlay Change Failed, function: [%s]"), *FString(__FUNCTION__));
 	}
 
+	return bIsOverlayChange;
 }
+
 
 bool ABaseCharacter::IsTargetLock() const
 {
@@ -2262,7 +2270,9 @@ void ABaseCharacter::RequestAsyncLoad()
 	for (TPair<FGameplayTag, TSoftObjectPtr<UDataAsset>>Pair : GameDataAssets)
 	{
 		if (Pair.Value.IsNull())
+		{
 			continue;
+		}
 		TempPaths.Add(Pair.Value.ToSoftObjectPath());
 	}
 
@@ -2314,7 +2324,6 @@ void ABaseCharacter::OnAsyncLoadCompleteHandler()
 
 void ABaseCharacter::OnSyncLoadCompleteHandler()
 {
-	OverlayAnimDA = OnSyncLoadDataAsset<UOverlayAnimInstanceDataAsset>(TAG_Game_Asset_AnimationBlueprint);
 
 }
 

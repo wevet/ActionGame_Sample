@@ -169,7 +169,6 @@ void AMassCharacter::OnAsyncLoadCompleteHandler()
 {
 	//Super::OnAsyncLoadCompleteHandler();
 
-	OverlayAnimDA = OnAsyncLoadDataAsset<UOverlayAnimInstanceDataAsset>(TAG_Game_Asset_AnimationBlueprint);
 	FinisherReceinerDA = OnAsyncLoadDataAsset<UFinisherDataAsset>(TAG_Game_Asset_FinisherReceiver);
 	HitReactionDA = OnAsyncLoadDataAsset<UWvHitReactDataAsset>(TAG_Game_Asset_HitReaction);
 	AsyncLoadStreamer.Reset();
