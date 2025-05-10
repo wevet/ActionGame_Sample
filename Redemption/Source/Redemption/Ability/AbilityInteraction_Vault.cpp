@@ -36,13 +36,13 @@ void UAbilityInteraction_Vault::ActivateAbility(const FGameplayAbilitySpecHandle
 		return;
 	}
 
-	const FVaultParams VaultParams = MovementComponent->GetVaultParams();
-	if (!VaultParams.AnimMontage)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("[%s : Montage is null.]"), *FString(__FUNCTION__));
-		CancelAbility(Handle, ActorInfo, ActivationInfo, false);
-		return;
-	}
+	//const FVaultParams VaultParams = MovementComponent->GetVaultParams();
+	//if (!VaultParams.AnimMontage)
+	//{
+	//	UE_LOG(LogTemp, Warning, TEXT("[%s : Montage is null.]"), *FString(__FUNCTION__));
+	//	CancelAbility(Handle, ActorInfo, ActivationInfo, false);
+	//	return;
+	//}
 
 	Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
 
@@ -65,9 +65,9 @@ void UAbilityInteraction_Vault::ActivateAbility(const FGameplayAbilitySpecHandle
 	MontageTask = UWvAT_PlayMontageAndWaitForEvent::PlayMontageAndWaitForEvent(
 		this,
 		FName("Vault"),
-		VaultParams.AnimMontage,
+		nullptr,
 		FGameplayTagContainer(),
-		VaultParams.AnimPlayRate,
+		1.0,
 		0.f,
 		FName("Default"),
 		true,
@@ -81,15 +81,6 @@ void UAbilityInteraction_Vault::ActivateAbility(const FGameplayAbilitySpecHandle
 
 void UAbilityInteraction_Vault::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled)
 {
-	if (MovementComponent->IsVaulting())
-	{
-		MovementComponent->FinishVaulting();
-
-#if WITH_EDITOR
-		UE_LOG(LogTemp, Log, TEXT("[%s]"), *FString(__FUNCTION__));
-#endif
-	}
-
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
 }
 

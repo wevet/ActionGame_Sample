@@ -40,7 +40,6 @@ enum class ELSMovementMode : uint8
 	Mantling UMETA(DisplayName = "Mantling"),
 	Climbing UMETA(DisplayName = "Climbing"),
 	Ladder UMETA(DisplayName = "Ladder"),
-	Vaulting UMETA(DiaplayName = "Vaulting"),
 	Traversal UMETA(DisplayName = "Traversal"),
 };
 

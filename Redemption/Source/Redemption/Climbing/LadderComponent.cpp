@@ -56,8 +56,8 @@ void ULadderComponent::BeginPlay()
 		DefaultCapsuleSize.X = Radius;
 		DefaultCapsuleSize.Y = HalfHeight;
 
-		bOwnerPlayerController = bool(Cast<APlayerController>(Character->GetController()));
-		Super::SetComponentTickEnabled(bOwnerPlayerController);
+		//bOwnerPlayerController = bool(Cast<APlayerController>(Character->GetController()));
+		//Super::SetComponentTickEnabled(bOwnerPlayerController);
 
 	}
 	else

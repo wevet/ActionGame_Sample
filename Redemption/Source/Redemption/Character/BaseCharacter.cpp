@@ -819,7 +819,7 @@ void ABaseCharacter::Freeze()
 	WvAbilitySystemComponent->AddGameplayTag(TAG_Locomotion_ForbidClimbing, 1);
 	WvAbilitySystemComponent->AddGameplayTag(TAG_Locomotion_ForbidMantling, 1);
 	WvAbilitySystemComponent->AddGameplayTag(TAG_Locomotion_ForbidJump, 1);
-	WvAbilitySystemComponent->AddGameplayTag(TAG_Locomotion_ForbidVaulting, 1);
+	WvAbilitySystemComponent->AddGameplayTag(TAG_Locomotion_ForbidTraversal, 1);
 
 	WvAbilitySystemComponent->AddGameplayTag(TAG_Character_ActionMelee_Forbid, 1);
 	WvAbilitySystemComponent->AddGameplayTag(TAG_Character_ActionJump_Forbid, 1);
@@ -839,7 +839,7 @@ void ABaseCharacter::UnFreeze()
 	WvAbilitySystemComponent->RemoveGameplayTag(TAG_Locomotion_ForbidClimbing, 1);
 	WvAbilitySystemComponent->RemoveGameplayTag(TAG_Locomotion_ForbidMantling, 1);
 	WvAbilitySystemComponent->RemoveGameplayTag(TAG_Locomotion_ForbidJump, 1);
-	WvAbilitySystemComponent->RemoveGameplayTag(TAG_Locomotion_ForbidVaulting, 1);
+	WvAbilitySystemComponent->RemoveGameplayTag(TAG_Locomotion_ForbidTraversal, 1);
 
 	WvAbilitySystemComponent->RemoveGameplayTag(TAG_Character_ActionMelee_Forbid, 1);
 	WvAbilitySystemComponent->RemoveGameplayTag(TAG_Character_ActionJump_Forbid, 1);
@@ -857,7 +857,7 @@ bool ABaseCharacter::IsFreezing() const
 		Container.AddTag(TAG_Locomotion_ForbidClimbing);
 		Container.AddTag(TAG_Locomotion_ForbidMantling);
 		Container.AddTag(TAG_Locomotion_ForbidJump);
-		Container.AddTag(TAG_Locomotion_ForbidVaulting);
+		Container.AddTag(TAG_Locomotion_ForbidTraversal);
 
 		Container.AddTag(TAG_Character_ActionMelee_Forbid);
 		Container.AddTag(TAG_Character_ActionJump_Forbid);
@@ -1236,12 +1236,7 @@ void ABaseCharacter::Jump()
 			case MOVE_Walking:
 			case MOVE_NavWalking:
 			{
-				const bool bIsVaultingResult = CMC->DetectVaulting();
-				if (!bIsVaultingResult)
-				{
-					Super::Jump();
-				}
-
+				Super::Jump();
 			}
 			break;
 			case MOVE_Falling:

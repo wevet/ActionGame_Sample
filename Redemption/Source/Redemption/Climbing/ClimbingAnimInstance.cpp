@@ -44,7 +44,7 @@ void UClimbingAnimInstance::NativeInitializeAnimation()
 {
 	Super::NativeInitializeAnimation();
 
-	SetCharacterReferences();
+
 }
 
 void UClimbingAnimInstance::NativeUpdateAnimation(float DeltaTimeX)
@@ -55,6 +55,8 @@ void UClimbingAnimInstance::NativeUpdateAnimation(float DeltaTimeX)
 void UClimbingAnimInstance::NativeThreadSafeUpdateAnimation(float DeltaTimeX)
 {
 	Super::NativeThreadSafeUpdateAnimation(DeltaTimeX);
+
+	SetCharacterReferences();
 
 #if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
 	bDebugTrace = (CVarDebugWallClimbingSystem.GetValueOnAnyThread() > 0);

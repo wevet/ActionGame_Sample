@@ -289,6 +289,7 @@ public:
 	FVector GetForwardMoveDir(FVector CompareDir) const;
 	FVector GetRightMoveDir(FVector CompareDir) const;
 	FVector GetCharacterFeetLocation() const;
+	FVector GetCharacterHeadLocation() const;
 
 	virtual void DoSprinting();
 	virtual void DoStopSprinting();

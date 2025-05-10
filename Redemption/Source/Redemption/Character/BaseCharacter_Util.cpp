@@ -415,6 +415,14 @@ FVector ABaseCharacter::GetCharacterFeetLocation() const
 	return Position;
 }
 
+FVector ABaseCharacter::GetCharacterHeadLocation() const
+{
+	auto Position = GetActorLocation();
+	const float Height = GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
+	Position.Z += Height;
+	return Position;
+}
+
 float ABaseCharacter::GetDistanceFromToeToKnee(FName KneeL, FName BallL, FName KneeR, FName BallR) const
 {
 	const FVector KneeLPosition = GetMesh()->GetSocketLocation(KneeL);

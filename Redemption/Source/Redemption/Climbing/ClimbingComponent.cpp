@@ -1379,8 +1379,7 @@ const bool UClimbingComponent::NormalizeCapsuleTransformToLedge(const bool Valid
 	return false;
 }
 
-void UClimbingComponent::FindForwardNormal(const FVector LedgeVector, const FVector LedgeForward, const float RightOffset, 
-	const TArray<AActor*> ToIgnore, FVector& OutImpactPoint, FVector& OutForwardVector)
+void UClimbingComponent::FindForwardNormal(const FVector LedgeVector, const FVector LedgeForward, const float RightOffset, const TArray<AActor*> ToIgnore, FVector& OutImpactPoint, FVector& OutForwardVector)
 {
 	const FVector V_Offset = FVector(0.0f, 0.0f, -15.0f);
 	const float LedgeForwardOffset = 60.0f;

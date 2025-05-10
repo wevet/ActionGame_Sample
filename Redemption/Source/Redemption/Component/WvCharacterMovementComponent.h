@@ -14,6 +14,17 @@
 #include "Engine/StreamableManager.h"
 #include "WvCharacterMovementComponent.generated.h"
 
+
+namespace CharacterMovementDebug
+{
+#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
+
+	extern TAutoConsoleVariable<int32> CVarDebugCharacterTraversal;
+
+#endif
+}
+
+
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FMovementActionDelegate);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FHandleImpact, const FHitResult&, HitInfo);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FHandleImpactAtStepUpFail, const FVector&, RampVector, const FHitResult&, HitInfo);
@@ -65,9 +76,6 @@ public:
 
 public:
 	UFUNCTION(BlueprintCallable, Category = "Character|Components|CharacterMovement")
-	bool IsVaulting() const;
-
-	UFUNCTION(BlueprintCallable, Category = "Character|Components|CharacterMovement")
 	bool IsMantling() const;
 
 	UFUNCTION(BlueprintCallable, Category = "Character|Components|CharacterMovement")
@@ -93,8 +101,6 @@ public:
 
 	static FName MantleSyncPoint;
 	static FName ClimbSyncPoint;
-	static FName VaultUpSyncPoint;
-	static FName VaultThrowSyncPoint;
 
 	bool HasFallEdge() const { return bHasFallEdge; }
 	void UpdateCharacterMovementSettings(const bool bHasStanding);
@@ -107,10 +113,6 @@ public:
 	void MantleEnd();
 
 
-	const bool DetectVaulting();
-	void FinishVaulting();
-	FVaultParams GetVaultParams() const;
-
 	// ~Start Traversal
 	UFUNCTION(BlueprintCallable, Category = "CharacterMovement|Traversal")
 	FTraversalDataCheckInputs GetTraversalDataCheckInputs() const;
@@ -118,18 +120,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "CharacterMovement|Traversal")
 	const bool TryTraversalAction();
 
-	UFUNCTION(BlueprintCallable, Category = "CharacterMovement|Traversal")
-	void TryAndCalculateTraversal(UPARAM(ref) FHitResult& HitResult, UPARAM(ref) FTraversalActionData& OutTraversalActionData);
-
-	UFUNCTION(BlueprintCallable, Category = "CharacterMovement|Traversal")
-	float CalcurateLedgeOffsetHeight(const FTraversalActionData& InTraversalActionData) const;
-
-	UFUNCTION(BlueprintCallable, Category = "CharacterMovement|Traversal")
 	void OnTraversalStart();
-
 	void OnTraversalEnd();
 
-	UFUNCTION(BlueprintCallable, Category = "CharacterMovement|Traversal")
 	const TArray<UObject*> GetAnimMontageFromChooserTable(const TSubclassOf<UObject> ObjectClass, UPARAM(Ref) FTraversalActionDataInputs& Input, FTraversalActionDataOutputs& Output);
 
 	// ~End Traversal
@@ -147,7 +140,6 @@ protected:
 protected:
 	FWvCharacterGroundInfo CachedGroundInfo;
 
-	//UPROPERTY(Transient, DuplicateTransient)
 	UPROPERTY()
 	TObjectPtr<class ABaseCharacter> BaseCharacter;
 
@@ -177,9 +169,6 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Character Movement: Mantle")
 	TSoftObjectPtr<UMantleAnimationDataAsset> MantleDA;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Character Movement: Vaulting")
-	TSoftObjectPtr<UVaultAnimationDataAsset> VaultDA;
 
 	// ~Start Traversal
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Character Movement: Traversal")
@@ -280,28 +269,6 @@ private:
 #pragma endregion
 
 
-#pragma region Vaulting
-	const bool TryEnterVault();
-
-	const bool CheckForwardObstacle(const float Distance, FHitResult& OutHit, const FHitResult* InHit = nullptr);
-	void GetObstacleHeight(const FVector& RefPoint, FHitResult& OutHit);
-	const bool TryVaultUp(const FHitResult* ForwardHit);
-	const bool TryVaultThrough(const FHitResult* ForwardHit);
-
-
-	void PhysVaulting(float deltaTime, int32 Iterations);
-	const bool TryVaultUpInternal(const FHitResult* ForwardHit, FHitResult& CurrentHit);
-	const bool ValidVaultSpeedThreshold() const;
-	float GetVaultDistance() const;
-	void BeginVaulting();
-
-	const bool DetectVaultLandingPoint(const FHitResult& CurrentHit);
-
-	UPROPERTY()
-	FVaultParams VaultParams;
-	FTransform VaultingTarget;
-	FTransform VaultingThrowTarget;
-#pragma endregion
 
 
 #pragma region Mantling
@@ -361,14 +328,6 @@ private:
 	void OnLoadMantleDA();
 	// ~End AsyncLoadMantle
 
-	// ~Start AsyncVault
-	UPROPERTY()
-	TObjectPtr<class UVaultAnimationDataAsset> VaultDAInstance;
-	TSharedPtr<FStreamableHandle> VaultStreamableHandle;
-	void OnVaultAssetLoadComplete();
-	void OnLoadVaultDA();
-	// ~End AsyncVault
-
 
 	// ~Start Traversal
 	const bool TryEnterWallCheckAngle(const bool bIsCheckGround) const;
@@ -378,7 +337,12 @@ private:
 	void NudgeHitTowardsObjectOrigin(UPARAM(ref) FHitResult& Hit);
 	void Traversal_TraceCorners(const FHitResult& Hit, const FVector TraceDirection, const float TraceLength, FVector& OffsetCenterPoint, bool& bCloseToCorner, float& DistanceToCorner);
 	void PhysTraversaling(float deltaTime, int32 Iterations);
-	void PrintTraversalActionData(const FTraversalActionData& Data);
+
+	void TryAndCalculateTraversal(UPARAM(ref) FHitResult& HitResult, UPARAM(ref) FTraversalActionData& OutTraversalActionData);
+	float CalcurateLedgeOffsetHeight(const FTraversalActionData& InTraversalActionData) const;
+	void PrintTraversalActionData();
+
+
 	// ~End Traversal
 
 };

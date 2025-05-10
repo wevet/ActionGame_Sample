@@ -20,7 +20,6 @@ enum ECustomMovementMode
 	CUSTOM_MOVE_Climbing UMETA(DisplayName = "CustomClimbing"),
 	CUSTOM_MOVE_Mantling UMETA(DisplayName = "CustomMantling"),
 	CUSTOM_MOVE_Ladder UMETA(DisplayName = "CustomLadder"),
-	CUSTOM_MOVE_Vaulting UMETA(DisplayName = "CustomVaulting"),
 	CUSTOM_MOVE_Traversal UMETA(DisplayName = "CustomTraversal"),
 	CUSTOM_MOVE_MAX	UMETA(Hidden),
 };
@@ -243,138 +242,6 @@ public:
 #pragma endregion
 
 
-#pragma region TraversalVault
-USTRUCT(BlueprintType)
-struct FVaultAnimation
-{
-	GENERATED_BODY()
-
-	UPROPERTY(EditDefaultsOnly)
-	class UAnimMontage* LeftAnimMontage{nullptr};
-
-	UPROPERTY(EditDefaultsOnly)
-	class UAnimMontage* RightAnimMontage{ nullptr };
-};
-
-USTRUCT(BlueprintType)
-struct FVaultSenseParams
-{
-	GENERATED_BODY()
-
-public:
-	UPROPERTY(EditDefaultsOnly, Category = "Vaulting Up")
-	float FrontEdgeAngle = 140.0f;
-
-	UPROPERTY(EditDefaultsOnly, Category = "Vaulting Up")
-	float DistanceThreshold = 30.0f;
-
-	// Vault Through Obstacle surface smoothing height
-	UPROPERTY(EditDefaultsOnly, Category = "Vaulting Through")
-	float MaxSmoothHeight = 30.0;
-
-	// Minimum normal angle of the surface to jump over
-	UPROPERTY(EditDefaultsOnly, Category = "Vaulting Through")
-	float VaultThrowMinAngle = 70.0f;
-
-	// Maximum normal angle of the surface to jump over
-	UPROPERTY(EditDefaultsOnly, Category = "Vaulting Through")
-	float VaultThrowMaxAngle = 140.0f;
-
-	// Minimum hit distance to the forward wall on a front flip. If less than this, VaultAction will be canceled.
-	float MinDetectDistance = 10.0f;
-
-	/*
-	* The maximum angle between the input direction and the forward direction, when the angle between the two is too large,
-	* the automatic climbing detection judgment will not be executed
-	*/
-	float MaxInputForwardAngle = 20.0f;
-
-	/*
-	* Input direction and forward direction minimum angle, when the angle between the two is too small,
-	* the movement state can be automatic climbing detection judgment
-	*/
-	float MinInputForwardAngle = 5.0f;
-
-	/*
-	* Minimum auto-climbing obstacle height, if this value is too small,
-	* it will cause even short steps to trigger auto-climbing
-	*/
-	UPROPERTY(EditDefaultsOnly, Category = "Vaulting Up")
-	float MinObstacleHeight = 20.0f;
-
-	// Vault Through Para
-	UPROPERTY(EditDefaultsOnly, Category = "Vaulting Through")
-	float LandBufferDistance = 75.0f;
-
-	// Minimum distance when Vault throw over steps
-	float MinVaultOverFallDistance = 30.0f;
-};
-
-USTRUCT(BlueprintType)
-struct FVaultParamsBase
-{
-	GENERATED_BODY()
-
-	UPROPERTY(EditDefaultsOnly)
-	float MaxHeight;
-
-	UPROPERTY(EditDefaultsOnly)
-	float MaxDepth;
-
-	UPROPERTY(EditDefaultsOnly)
-	float MovementSpeedThreshold;
-
-	UPROPERTY(EditDefaultsOnly)
-	FVector2D AnimPlayRateRange;
-
-	FVaultParamsBase()
-	{
-		MaxHeight = 200.0f;
-		MaxDepth = 250.0f;
-		MovementSpeedThreshold = 500.0f;
-		AnimPlayRateRange = FVector2D(1.0f, 1.0f);
-	}
-};
-
-USTRUCT(BlueprintType)
-struct FVaultAssets : public FVaultParamsBase
-{
-	GENERATED_BODY()
-
-	UPROPERTY(EditDefaultsOnly)
-	float Distance = 150.0f;
-
-	UPROPERTY(EditDefaultsOnly)
-	FVaultAnimation VaultAnimation;
-
-	UPROPERTY(EditDefaultsOnly)
-	FVaultAnimation VaultThrowAnimation;
-};
-
-USTRUCT()
-struct FVaultParams : public FVaultParamsBase
-{
-	GENERATED_BODY()
-
-	UPROPERTY()
-	float AnimPlayRate = 1.0f;
-
-	UPROPERTY()
-	class UAnimMontage* AnimMontage{nullptr};
-
-	UPROPERTY()
-	TWeakObjectPtr<UPrimitiveComponent> Component;
-
-	bool bVaultingStarted = false;
-	int32 VaultingCount = 0;
-	EVaultMovementType PrevVaultMovementType = EVaultMovementType::None;
-	EVaultMovementType VaultMovementType = EVaultMovementType::None;
-	void Clear();
-	void CheckVaultType();
-	bool HasEvenVaultingCount() const;
-};
-#pragma endregion
-
 
 
 UCLASS(BlueprintType)
@@ -441,40 +308,6 @@ public:
 		GroundedTraceSettings.ReachDistance = 75.f;
 		GroundedTraceSettings.ForwardTraceRadius = 30.f;
 		GroundedTraceSettings.DownwardTraceRadius = 30.f;
-	}
-};
-
-
-UCLASS(BlueprintType)
-class REDEMPTION_API UVaultAnimationDataAsset : public UDataAsset
-{
-	GENERATED_BODY()
-
-public:
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	FVaultSenseParams VaultSenseParams;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	FVaultAssets VaultAssetLow;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	FVaultAssets VaultAssetHigh;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	TEnumAsByte<ETraceTypeQuery> VaultTraceChannel;
-
-	UVaultAnimationDataAsset()
-	{
-		// Vault parameters
-		VaultAssetLow.MaxHeight = 150.0f;
-		VaultAssetLow.MaxDepth = 200.0f;
-		VaultAssetLow.Distance = 100.0f;
-		VaultAssetLow.MovementSpeedThreshold = 400.0f;
-
-		VaultAssetHigh.MaxHeight = 300.0f;
-		VaultAssetHigh.MaxDepth = 300.0f;
-		VaultAssetHigh.Distance = 150.0f;
-		VaultAssetHigh.MovementSpeedThreshold = 500.0f;
 	}
 };
 
