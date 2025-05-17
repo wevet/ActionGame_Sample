@@ -40,6 +40,8 @@ public class WvAbilitySystem : ModuleRules
 				"AIModule",
 				"GameplayCameras",
 				"EngineCameras",
+				"Niagara",
+				"PhysicsCore",
 			}
 		);
 

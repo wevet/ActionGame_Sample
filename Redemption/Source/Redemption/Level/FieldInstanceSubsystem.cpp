@@ -10,6 +10,8 @@
 #include "GameExtension.h"
 
 #include "Kismet/GameplayStatics.h"
+#include "Engine/AssetManager.h"
+#include "Engine/StreamableManager.h"
 
 //#include "SaveGameSystem.h"
 
@@ -33,6 +35,22 @@ UFieldInstanceSubsystem* UFieldInstanceSubsystem::Get()
 void UFieldInstanceSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
 	UE_LOG(LogTemp, Log, TEXT("%s"), *FString(__FUNCTION__));
+	
+
+#if false
+	UAssetManager& AM = UAssetManager::Get();
+	TArray<FPrimaryAssetId> Ids;
+	AM.GetPrimaryAssetIdList(FPrimaryAssetType("FoleyEventDataAsset"), Ids);
+
+	UE_LOG(LogTemp, Log, TEXT("Found %d FoleyEventDataAsset IDs:"), Ids.Num());
+	for (auto& Id : Ids)
+	{
+		UE_LOG(LogTemp, Log, TEXT("  - Type: %s  Name: %s"), *Id.PrimaryAssetType.ToString(), *Id.PrimaryAssetName.ToString());
+	}
+#endif
+
+	LoadAllFootstepAssets();
+
 
 }
 
@@ -44,6 +62,8 @@ void UFieldInstanceSubsystem::Deinitialize()
 
 }
 
+
+#pragma region DayNightCycle
 /// <summary>
 /// set day night system hour
 /// </summary>
@@ -166,6 +186,8 @@ void UFieldInstanceSubsystem::SetSkyActor(ASkyActor* NewSkyActor)
 		UE_LOG(LogTemp, Warning, TEXT("[%s]: Modify SkyActor. [%s]"), *FString(__FUNCTION__), *GetNameSafe(SkyActor));
 	}
 }
+#pragma endregion
+
 
 void UFieldInstanceSubsystem::AddPOIActor(AActor* NewActor)
 {
@@ -208,4 +230,102 @@ TArray<AActor*> UFieldInstanceSubsystem::GetPOIActors() const
 
 	return Filtered;
 }
+
+
+#pragma region FoleyFootStep
+void UFieldInstanceSubsystem::LoadAllFootstepAssets()
+{
+
+	UAssetManager& AM = UAssetManager::Get();
+
+	const FPrimaryAssetId SingleId(
+		FPrimaryAssetType("FoleyEventDataAsset"),
+		FName("DA_FoleyEventCommon")
+	);
+
+	AM.LoadPrimaryAssets(
+		{ SingleId }, {},
+		FStreamableDelegate::CreateUObject(this, &UFieldInstanceSubsystem::OnFoleyEventDataAssetsLoaded), 0);
+}
+
+void UFieldInstanceSubsystem::OnFoleyEventDataAssetsLoaded()
+{
+	UAssetManager& AM = UAssetManager::Get();
+
+	const FPrimaryAssetId SingleId(
+		FPrimaryAssetType("FoleyEventDataAsset"),
+		FName("DA_FoleyEventCommon")
+	);
+
+	FoleyEventDataAsset = Cast<UFoleyEventDataAsset>(AM.GetPrimaryAssetObject(SingleId));
+
+	if (FoleyEventDataAsset)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Success FoleyDA: [%s]"), *FString(__FUNCTION__));
+	}
+}
+
+const FFoleyBaseAsset& UFieldInstanceSubsystem::GetFoleyBaseAsset(const FGameplayTag SurfaceTag, TEnumAsByte<EPhysicalSurface> SurfaceTypeInEditor, bool& bOutFound) const
+{
+	bOutFound = false;
+
+	if (!IsValid(FoleyEventDataAsset))
+	{
+		static const FFoleyBaseAsset DefaultAsset;
+		return DefaultAsset;
+	}
+
+	const FFoleyBaseAssetContainer* Container = FoleyEventDataAsset->DataMap.Find(SurfaceTag);
+	if (Container)
+	{
+		for (const FFoleyBaseAsset& Asset : Container->DataArray)
+		{
+			if (Asset.SurfaceTypeInEditor == SurfaceTypeInEditor)
+			{
+				bOutFound = true;
+				return Asset;
+			}
+		}
+
+		if (Container->DataArray.Num() > 0)
+		{
+			bOutFound = true;
+			return Container->DataArray[0];
+		}
+	}
+
+	static const FFoleyBaseAsset DefaultAsset;
+	return DefaultAsset;
+}
+
+FFoleyBaseAsset UFieldInstanceSubsystem::GetFoleyBaseAssetCopy(FGameplayTag SurfaceTag, TEnumAsByte<EPhysicalSurface> SurfaceTypeInEditor, bool& bOutFound) const
+{
+	bOutFound = false;
+
+	if (!IsValid(FoleyEventDataAsset))
+	{
+		return FFoleyBaseAsset();
+	}
+
+	if (const FFoleyBaseAssetContainer* Container = FoleyEventDataAsset->DataMap.Find(SurfaceTag))
+	{
+		for (const FFoleyBaseAsset& Asset : Container->DataArray)
+		{
+			if (Asset.SurfaceTypeInEditor == SurfaceTypeInEditor)
+			{
+				bOutFound = true;
+				return Asset;
+			}
+		}
+		if (Container->DataArray.Num() > 0)
+		{
+			bOutFound = true;
+			return Container->DataArray[0];
+		}
+	}
+
+	return FFoleyBaseAsset();
+}
+#pragma endregion
+
 

@@ -5,7 +5,6 @@
 #include "CoreMinimal.h"
 #include "Ability/WvGameplayAbility.h"
 #include "Task/WvAT_PlayMontageAndWaitForEvent.h"
-#include "WvAbilitySystemTypes.h"
 #include "WvAbility_FriendlyAction.generated.h"
 
 class ABaseCharacter;
@@ -33,7 +32,6 @@ private:
 	UPROPERTY()
 	class UWvAT_PlayMontageAndWaitForEvent* MontageTask;
 
-	UPROPERTY()
 	TWeakObjectPtr<ABaseCharacter> Character;
 	
 };

@@ -13,6 +13,7 @@
 #include "Component/WeaknessComponent.h"
 #include "Component/TrailInteractionComponent.h"
 #include "Mission/MinimapMarkerComponent.h"
+#include "WvFoleyAssetTypes.h"
 
 #include "Locomotion/LocomotionComponent.h"
 #include "PredictionFootIKComponent.h"
@@ -76,7 +77,7 @@
 
 
 #include "Algo/Transform.h"
-//#include "ChooserFunctionLibrary.h"
+#include "ChooserFunctionLibrary.h"
 
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(BaseCharacter)
@@ -153,11 +154,8 @@ ABaseCharacter::ABaseCharacter(const FObjectInitializer& ObjectInitializer)
 
 	UWvCharacterMovementComponent* WvMoveComp = CastChecked<UWvCharacterMovementComponent>(GetCharacterMovement());
 	WvMoveComp->GravityScale = 1.0f;
-	WvMoveComp->MaxAcceleration = 2400.0f;
 	WvMoveComp->BrakingFrictionFactor = 1.0f;
-	WvMoveComp->BrakingFriction = 6.0f;
-	WvMoveComp->GroundFriction = 8.0f;
-	WvMoveComp->BrakingDecelerationWalking = 1400.0f;
+
 	WvMoveComp->bUseControllerDesiredRotation = false;
 	WvMoveComp->bOrientRotationToMovement = true;
 	WvMoveComp->RotationRate = FRotator(0.0f, 420.0f, 0.0f);
@@ -167,13 +165,16 @@ ABaseCharacter::ABaseCharacter(const FObjectInitializer& ObjectInitializer)
 	WvMoveComp->SetCrouchedHalfHeight(55.0f);
 	WvMoveComp->JumpZVelocity = 500.f;
 	WvMoveComp->AirControl = 0.35f;
-	WvMoveComp->MinAnalogWalkSpeed = 20.f;
 
+	WvMoveComp->BrakingDecelerationWalking = 1500.0f;
+	WvMoveComp->GroundFriction = 5.0f;
+	WvMoveComp->MinAnalogWalkSpeed = 150.f;
+	WvMoveComp->MaxWalkSpeed = 500.0f;
+	WvMoveComp->bIgnoreBaseRotation = false;
+	WvMoveComp->MaxAcceleration = 800.0f;
+	WvMoveComp->BrakingFriction = 0.0f;
+	WvMoveComp->bUseSeparateBrakingFriction = true;
 
-	// motion matching prop
-	//WvMoveComp->RotationRate = FRotator(0.0f, 0.0f, -1.0f);
-	//WvMoveComp->BrakingFriction = 0.0f;
-	//WvMoveComp->bUseSeparateBrakingFriction = true;
 
 	SetReplicateMovement(true);
 
@@ -1235,10 +1236,18 @@ void ABaseCharacter::Jump()
 			case MOVE_Walking:
 			case MOVE_NavWalking:
 			{
-				Super::Jump();
+				CMC->SetTraversalPressed(true);
+				if (!CMC->TryTraversalAction())
+				{
+					Super::Jump();
+				}
+
 			}
 			break;
 			case MOVE_Falling:
+			{
+				CMC->SetTraversalPressed(true);
+			}
 			break;
 			case MOVE_Flying:
 			break;
@@ -1302,6 +1311,11 @@ void ABaseCharacter::StopJumping()
 
 	ClimbingComponent->SetJumpInputPressed(false);
 
+	UWvCharacterMovementComponent* CMC = GetWvCharacterMovementComponent();
+	if (CMC)
+	{
+		CMC->SetTraversalPressed(false);
+	}
 
 	ULadderComponent* LadderComponent = Cast<ULadderComponent>(GetComponentByClass(ULadderComponent::StaticClass()));
 	if (LadderComponent)
@@ -2772,6 +2786,17 @@ void ABaseCharacter::ResetTraversalActionData()
 	TraversalActionData.Reset();
 
 	//UE_LOG(LogTemp, Error, TEXT("[%s]"), *FString(__FUNCTION__));
+}
+
+
+bool ABaseCharacter::CanPlayFoleySounds() const
+{
+	auto CMC = GetWvCharacterMovementComponent();
+	if (IsValid(CMC))
+	{
+		return CMC->IsMovingOnGround() || CMC->IsTraversaling();
+	}
+	return false;
 }
 #pragma endregion
 

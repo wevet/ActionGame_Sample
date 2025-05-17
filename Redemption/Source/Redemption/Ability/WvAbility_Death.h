@@ -5,7 +5,6 @@
 #include "CoreMinimal.h"
 #include "WvGameplayAbility.h"
 #include "Task/WvAT_PlayMontageAndWaitForEvent.h"
-#include "WvAbilitySystemTypes.h"
 #include "WvAbility_Death.generated.h"
 
 /**

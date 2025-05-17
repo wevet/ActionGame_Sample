@@ -6,6 +6,7 @@
 #include "WvGameplayEffectContext.h"
 #include "WvGameplayTargetData.h"
 #include "WvAbilitySystemBlueprintFunctionLibrary.h"
+#include "WvAbilitySystemTypes.h"
 
 #include "Character/BaseCharacter.h"
 #include "Component/CombatComponent.h"

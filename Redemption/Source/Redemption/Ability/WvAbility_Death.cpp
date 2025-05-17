@@ -6,6 +6,7 @@
 #include "WvGameplayEffectContext.h"
 #include "WvGameplayTargetData.h"
 #include "WvAbilitySystemBlueprintFunctionLibrary.h"
+//#include "WvAbilitySystemTypes.h"
 
 #include "Character/BaseCharacter.h"
 #include "Component/CombatComponent.h"
@@ -118,7 +119,13 @@ void UWvAbility_Death::PlayHitReactMontage(UAnimMontage* Montage)
 	}
 
 	MontageTask = UWvAT_PlayMontageAndWaitForEvent::PlayMontageAndWaitForEvent(
-		this, FName("Death"), Montage, FGameplayTagContainer(), 1.0, 0.f, FName("Default"), true, 1.0f);
+		this, 
+		FName("Death"), 
+		Montage, 
+		FGameplayTagContainer(),
+		1.0, 
+		0.f, 
+		FName("Default"), true, 1.0f);
 
 	MontageTask->OnCancelled.AddDynamic(this, &UWvAbility_Death::OnPlayMontageCompleted_Event);
 	MontageTask->OnInterrupted.AddDynamic(this, &UWvAbility_Death::OnPlayMontageCompleted_Event);

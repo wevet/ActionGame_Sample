@@ -9,7 +9,8 @@
 #include "BaseCharacterTypes.generated.h"
 
 class AItemBaseActor;
-
+class USoundBase;
+class UNiagaraSystem;
 
 USTRUCT(BlueprintType)
 struct FOverlayAnimInstance
@@ -61,8 +62,8 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	TArray<FSkillAnimMontage> ModAnimMontages;
 
-	FSkillAnimMontage Find(const FGameplayTag Tag, const EBodyShapeType BodyShapeType) const;
-	FSkillAnimMontage Find(const EBodyShapeType BodyShapeType) const;
+	const FSkillAnimMontage& FindSkill(const FGameplayTag Tag, const EBodyShapeType BodyShapeType);
+	const FSkillAnimMontage& FindSkill(const EBodyShapeType BodyShapeType);
 };
 
 
@@ -93,5 +94,6 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Chooser Outputs")
 	TArray<FName> Tags;
 };
+
 
 

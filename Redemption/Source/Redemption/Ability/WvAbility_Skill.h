@@ -39,6 +39,6 @@ private:
 	UPROPERTY()
 	class UWvAT_PlayMontageAndWaitForEvent* MontageTask;
 
-	const FSkillAnimMontage GetSkillAnimMontage();
+	const FSkillAnimMontage& GetSkillAnimMontage();
 };
 

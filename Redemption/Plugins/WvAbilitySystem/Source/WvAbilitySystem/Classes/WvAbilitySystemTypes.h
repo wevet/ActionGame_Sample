@@ -6,12 +6,17 @@
 #include "WvAbilityBase.h"
 
 #include "AttributeSet.h"
-#include "AbilitySystemComponent.h"
 #include "Engine/DataAsset.h"
 #include "Engine/DataTable.h"
 #include "LegacyCameraShake.h"
 #include "NativeGameplayTags.h"
+#include "Abilities/GameplayAbilityRepAnimMontage.h"
 #include "WvAbilitySystemTypes.generated.h"
+
+
+class UAbilitySystemComponent;
+class USkeletalMeshComponent;
+class UPrimitiveComponent;
 
 
 // Avatar
@@ -157,9 +162,10 @@ WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Character_AI_Ignore);
 WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Character_AI_Friend_Action);
 WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Character_AI_Friend_Action_Playing);
 
+// fooley asset tag FoleyEvent
+WVABILITYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Plugin_Game_Asset_FoleyEvent);
 
-class USkeletalMeshComponent;
-class UPrimitiveComponent;
+
 
 
 #define ATTRIBUTE_ACCESSORS(ClassName, PropertyName) \
@@ -1466,5 +1472,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float PlayRate = 1.0f;
 };
+
+
 
 

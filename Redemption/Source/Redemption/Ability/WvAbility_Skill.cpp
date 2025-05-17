@@ -44,7 +44,7 @@ void UWvAbility_Skill::ActivateAbility(const FGameplayAbilitySpecHandle Handle, 
 	}
 
 	const auto LocomotionEssencialVariables = Character->GetLocomotionComponent()->GetLocomotionEssencialVariables();
-	const FSkillAnimMontage SkillAnimationData = GetSkillAnimMontage();
+	const FSkillAnimMontage& SkillAnimationData = GetSkillAnimMontage();
 	UAnimMontage* CurAnimMontage = SkillAnimationData.AnimMontage;
 	const float PlayRate = SkillAnimationData.PlayRate;
 
@@ -109,15 +109,15 @@ void UWvAbility_Skill::OnPlayMontageCompleted_Event(FGameplayTag EventTag, FGame
 	K2_EndAbility();
 }
 
-const FSkillAnimMontage UWvAbility_Skill::GetSkillAnimMontage()
+const FSkillAnimMontage& UWvAbility_Skill::GetSkillAnimMontage()
 {
 	ABaseCharacter* Character = GetBaseCharacter();
 
-	const FSkillAnimMontage SkillAnimationData = SkillAnimationDA->Find(Character->GetAvatarTag(), Character->GetBodyShapeType());
+	const FSkillAnimMontage& SkillAnimationData = SkillAnimationDA->FindSkill(Character->GetAvatarTag(), Character->GetBodyShapeType());
 
 	if (bIsBotSkillAnim)
 	{
-		const FSkillAnimMontage ModAnim = SkillAnimationDA->Find(Character->GetBodyShapeType());
+		const FSkillAnimMontage& ModAnim = SkillAnimationDA->FindSkill(Character->GetBodyShapeType());
 		return ModAnim;
 	}
 	return SkillAnimationData;

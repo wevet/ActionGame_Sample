@@ -5,9 +5,13 @@
 #include "CoreMinimal.h"
 #include "Subsystems/GameInstanceSubsystem.h"
 #include "DayNightBaseActor.h"
+#include "WvFoleyAssetTypes.h"
 #include "FieldInstanceSubsystem.generated.h"
 
+
 class ASkyActor;
+class UFoleyEventDataAsset;
+
 
 UENUM(BlueprintType)
 enum class EDayNightPhase : uint8
@@ -59,8 +63,21 @@ public:
 	UFUNCTION(BlueprintCallable, Category = Level)
 	TArray<AActor*> GetPOIActors() const;
 
+
+	//UFUNCTION(BlueprintCallable, Category = "Foley")
+	void LoadAllFootstepAssets();
+
+	void OnFoleyEventDataAssetsLoaded();
+
+
+	const FFoleyBaseAsset& GetFoleyBaseAsset(const FGameplayTag SurfaceTag, TEnumAsByte<EPhysicalSurface> SurfaceTypeInEditor, bool& bOutFound) const;
+
+	UFUNCTION(BlueprintCallable, Category = "Foley")
+	FFoleyBaseAsset GetFoleyBaseAssetCopy(FGameplayTag SurfaceTag, TEnumAsByte<EPhysicalSurface> SurfaceTypeInEditor, bool& bOutFound) const;
+
 private:
 	static UFieldInstanceSubsystem* Instance;
+	EDayNightPhase DayNightPhase = EDayNightPhase::Day;
 
 	UPROPERTY()
 	TArray<AActor*> POIActors;
@@ -71,7 +88,7 @@ private:
 	UPROPERTY()
 	TObjectPtr<class ASkyActor> SkyActor;
 
-	EDayNightPhase DayNightPhase = EDayNightPhase::Day;
-
+	UPROPERTY()
+	TObjectPtr<class UFoleyEventDataAsset> FoleyEventDataAsset;
 };
 

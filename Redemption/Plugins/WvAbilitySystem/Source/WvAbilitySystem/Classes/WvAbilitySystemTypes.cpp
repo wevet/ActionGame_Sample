@@ -4,6 +4,7 @@
 #include "WvAbilitySystem.h"
 #include "GameplayTagsManager.h"
 #include "WvAbilitySystemGlobals.h"
+#include "AbilitySystemComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Components/PrimitiveComponent.h"
 #include "GameFramework/Character.h"
@@ -154,6 +155,12 @@ UE_DEFINE_GAMEPLAY_TAG(TAG_Character_AI_Ignore, "Character.AI.Ignore");
 // using friend ai action abp used
 UE_DEFINE_GAMEPLAY_TAG(TAG_Character_AI_Friend_Action, "Character.AI.Friend.Action");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Character_AI_Friend_Action_Playing, "Character.AI.Friend.Action.Playing");
+
+// fooley asset tag FoleyEvent
+UE_DEFINE_GAMEPLAY_TAG(TAG_Plugin_GameAsset_FoleyEvent, "Plugin.GameAsset.FoleyEvent");
+
+
+
 
 bool FWvOverlapResult::IsValid() const
 {
@@ -352,11 +359,11 @@ FTransform FWvAbilityLocation::GetTransform(FName SocketName, AActor* Avatar /* 
 			}
 		}
 
-		if (Offset != FVector::ZeroVector)
+		if (!Offset.IsNearlyZero())
 		{
 			ResultTransform.AddToTranslation(Offset);
 		}
-		if (Rotator != FRotator::ZeroRotator)
+		if (!Rotator.IsNearlyZero())
 		{
 			ResultTransform.ConcatenateRotation(Rotator.Quaternion());
 		}
@@ -753,6 +760,4 @@ float UCloseCombatAnimationDataAsset::CalcurateBodyShapePlayRate(const EBodyShap
 	return TruncatedValue;
 }
 #pragma endregion
-
-
 

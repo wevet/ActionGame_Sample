@@ -7,6 +7,7 @@
 #include "Character/WvAIController.h"
 #include "Animation/WvAnimInstance.h"
 #include "Locomotion/LocomotionComponent.h"
+#include "WvAbilitySystemTypes.h"
 
 #include "Kismet/KismetMathLibrary.h"
 #include "Kismet/KismetSystemLibrary.h"

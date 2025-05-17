@@ -5,8 +5,10 @@
 #include "WvAbilitySystemGlobals.h"
 #include "Interface/WvAbilityTargetInterface.h"
 #include "PhysicsEngine/PhysicsAsset.h"
+#include "WvAbilitySystemComponentBase.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(WvGameplayTargetData)
+
 
 #pragma region FWvGameplayAbilityTargetData
 bool FWvGameplayAbilityTargetData::HasHitResult() const
@@ -340,4 +342,5 @@ TArray<FActiveGameplayEffectHandle> FWvGameplayAbilityTargetData_SingleTargetHit
 	return AppliedHandles;
 }
 #pragma endregion
+
 

@@ -453,6 +453,8 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Traversal")
 	float TraceHalfHeight = 0.0f;
+
+	bool bIsValidData{ false };
 };
 #pragma endregion
 

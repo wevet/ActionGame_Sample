@@ -9,10 +9,12 @@
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(WvAbilitySystemGlobals)
 
+
 FGameplayEffectContext* UWvAbilitySystemGlobals::AllocGameplayEffectContext() const
 {
 	return new FWvGameplayEffectContext();
 }
+
 
 void UWvAbilitySystemGlobals::StartAsyncLoadingObjectLibraries()
 {

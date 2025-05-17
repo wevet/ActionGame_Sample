@@ -320,6 +320,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = Movement)
 	FTransform GetPivotOverlayTansform() const;
 
+	UFUNCTION(BlueprintCallable, Category = Movement)
+	bool CanPlayFoleySounds() const;
+
 	UFUNCTION(BlueprintCallable, Category = Action)
 	const bool OverlayStateChange(const ELSOverlayState CurrentOverlay);
 
@@ -653,14 +656,17 @@ protected:
 
 
 #pragma region DA
-	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = "BaseCharacter|Config")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "BaseCharacter|Config")
 	TMap<FGameplayTag, TSoftObjectPtr<UDataAsset>> GameDataAssets;
 
-	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = "BaseCharacter|Config")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "BaseCharacter|Config")
 	UAIActionStateDataAsset* AIActionStateDA;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Character Movement: Traversal")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "BaseCharacter|Chooser")
 	TObjectPtr<class UChooserTable> OverlayAnimationTable{ nullptr };
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "BaseCharacter|Chooser")
+	TObjectPtr<class UChooserTable> FoleyAssetTable{ nullptr };
 #pragma endregion
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "BaseCharacter|Config")

@@ -3,8 +3,10 @@
 
 #include "AbilityInteraction_Mantle.h"
 #include "Character/BaseCharacter.h"
+#include "Component/WvCharacterMovementComponent.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(AbilityInteraction_Mantle)
+
 
 UAbilityInteraction_Mantle::UAbilityInteraction_Mantle(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {

@@ -5,7 +5,7 @@
 
 TSubclassOf<UAnimInstance> UOverlayAnimInstanceDataAsset::FindAnimInstance(const ELSOverlayState InOverlayState) const
 {
-	auto FindItemData = OverlayAnimInstances.FindByPredicate([&](FOverlayAnimInstance Item)
+	auto FindItemData = OverlayAnimInstances.FindByPredicate([&](FOverlayAnimInstance& Item)
 	{
 		return (Item.OverlayState == InOverlayState);
 	});
@@ -19,7 +19,7 @@ TSubclassOf<UAnimInstance> UOverlayAnimInstanceDataAsset::FindAnimInstance(const
 
 TSubclassOf<UAnimInstance> UOverlayAnimInstanceDataAsset::FindAnimInstance(const EGenderType GenderType, const ELSOverlayState InOverlayState) const
 {
-	auto FindItemData = OverlayAnimInstances.FindByPredicate([&](FOverlayAnimInstance Item)
+	auto FindItemData = OverlayAnimInstances.FindByPredicate([&](FOverlayAnimInstance& Item)
 	{
 		return (Item.OverlayState == InOverlayState);
 	});
@@ -32,36 +32,23 @@ TSubclassOf<UAnimInstance> UOverlayAnimInstanceDataAsset::FindAnimInstance(const
 }
 
 
-FSkillAnimMontage USkillAnimationDataAsset::Find(const FGameplayTag Tag, const EBodyShapeType BodyShapeType) const
+const FSkillAnimMontage& USkillAnimationDataAsset::FindSkill(const FGameplayTag Tag, const EBodyShapeType BodyShapeType)
 {
-	auto FindItemData = SkillAnimMontages.FindByPredicate([&](FSkillAnimMontage Item)
+	auto FindItemData = SkillAnimMontages.FindByPredicate([&](FSkillAnimMontage& Item)
 	{
 		return (Item.CharacterTag == Tag) && (Item.BodyShapeType == BodyShapeType);
 	});
-
-	if (FindItemData)
-	{
-		return *FindItemData;
-	}
-
-	FSkillAnimMontage Temp;
-	return Temp;
+	return *FindItemData;
 }
 
-FSkillAnimMontage USkillAnimationDataAsset::Find(const EBodyShapeType BodyShapeType) const
+
+const FSkillAnimMontage& USkillAnimationDataAsset::FindSkill(const EBodyShapeType BodyShapeType)
 {
-	auto FindItemData = ModAnimMontages.FindByPredicate([&](FSkillAnimMontage Item)
+	auto FindItemData = ModAnimMontages.FindByPredicate([&](FSkillAnimMontage& Item)
 	{
 		return (Item.BodyShapeType == BodyShapeType);
 	});
-
-	if (FindItemData)
-	{
-		return *FindItemData;
-	}
-
-	FSkillAnimMontage Temp;
-	return Temp;
+	return *FindItemData;
 }
 
 

@@ -6,6 +6,7 @@
 #include "AttributeSet.h"
 #include "WvAbilitySystemGlobals.h"
 #include "WvAbilitySystemTypes.h"
+#include "WvAbilitySystemComponentBase.h"
 #include "GameplayEffectExtension.h"
 #include "WvAbilityAttributeSet.generated.h"
 

@@ -35,7 +35,6 @@ private:
 	UPROPERTY()
 	class UWvAT_PlayMontageAndWaitForEvent* MontageTask;
 	
-	UPROPERTY()
 	TWeakObjectPtr<ABaseCharacter> Character;
 
 };

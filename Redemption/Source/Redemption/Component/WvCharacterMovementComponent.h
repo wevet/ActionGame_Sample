@@ -5,7 +5,6 @@
 #include "Engine/EngineTypes.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "WvCharacterMovementTypes.h"
-#include "Locomotion/LocomotionSystemTypes.h"
 #include "Component/AsyncComponentInterface.h"
 
 #include "Math/Rotator.h"
@@ -114,17 +113,12 @@ public:
 
 
 	// ~Start Traversal
-	UFUNCTION(BlueprintCallable, Category = "CharacterMovement|Traversal")
 	FTraversalDataCheckInputs GetTraversalDataCheckInputs() const;
-
-	UFUNCTION(BlueprintCallable, Category = "CharacterMovement|Traversal")
 	const bool TryTraversalAction();
-
 	void OnTraversalStart();
 	void OnTraversalEnd();
-
 	const TArray<UObject*> GetAnimMontageFromChooserTable(const TSubclassOf<UObject> ObjectClass, UPARAM(Ref) FTraversalActionDataInputs& Input, FTraversalActionDataOutputs& Output);
-
+	void SetTraversalPressed(const bool bIsNewTraversalPressed);
 	// ~End Traversal
 
 	UFUNCTION(BlueprintCallable, Category = "CharacterMovement|Misc")
@@ -172,16 +166,10 @@ protected:
 
 	// ~Start Traversal
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Character Movement: Traversal")
-	float MinLedgeWidth{70.0f};
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Character Movement: Traversal")
-	float MaxLedgeSidewaysDepth{ 70.0f };
+	float MinLedgeWidth{ 70.0f };
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Character Movement: Traversal")
 	float MinFrontLedgeDepth{ 37.522631f };
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Character Movement: Traversal")
-	bool bIsRespectPlayersFacingDir{true};
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Character Movement: Traversal")
 	bool bIsTraversalTraceComplex{ true };
@@ -189,6 +177,10 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Character Movement: Traversal")
 	TObjectPtr<class UChooserTable> TraversalChooserTable{ nullptr };
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Character Movement: Traversal")
+	TArray<TSubclassOf<AActor>> ExcludedClasses;
+
+	bool bIsTraversalPressed{ false };
 	// ~End Traversal
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Character Movement: Falling")
@@ -309,8 +301,6 @@ private:
 
 	void PhysMantling(float deltaTime, int32 Iterations);
 
-	UFUNCTION()
-	void OnMantleUpdate(const float BlendIn);
 
 	UFUNCTION()
 	void OnMantleEnd();
@@ -318,7 +308,6 @@ private:
 #pragma endregion
 
 
-	void PhysLaddering(float deltaTime, int32 Iterations);
 
 	// ~Start AsyncLoadMantle
 	UPROPERTY()
@@ -328,6 +317,10 @@ private:
 	void OnLoadMantleDA();
 	// ~End AsyncLoadMantle
 
+
+	// ~Start Ladder
+	void PhysLaddering(float deltaTime, int32 Iterations);
+	// ~End Ladder
 
 	// ~Start Traversal
 	const bool TryEnterWallCheckAngle(const bool bIsCheckGround) const;
@@ -341,8 +334,6 @@ private:
 	void TryAndCalculateTraversal(UPARAM(ref) FHitResult& HitResult, UPARAM(ref) FTraversalActionData& OutTraversalActionData);
 	float CalcurateLedgeOffsetHeight(const FTraversalActionData& InTraversalActionData) const;
 	void PrintTraversalActionData();
-
-
 	// ~End Traversal
 
 };

@@ -3,8 +3,10 @@
 
 #include "AbilityInteraction_Traversal.h"
 #include "Character/BaseCharacter.h"
+#include "Component/WvCharacterMovementComponent.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(AbilityInteraction_Traversal)
+
 
 UAbilityInteraction_Traversal::UAbilityInteraction_Traversal(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
@@ -62,14 +64,19 @@ void UAbilityInteraction_Traversal::ActivateAbility(const FGameplayAbilitySpecHa
 		MontageTask->EndTask();
 	}
 
+	MovementComponent->SetTraversalPressed(false);
+
 	MontageTask = UWvAT_PlayMontageAndWaitForEvent::PlayMontageAndWaitForEvent(
 		this,
 		FName("Traversal"),
 		TraversalActionData.ChosenMontage,
 		FGameplayTagContainer(),
 		TraversalActionData.PlayRate,
-		0.f, FName("Default"),
-		true, 1.0f, TraversalActionData.StartTime);
+		0.f, 
+		FName("Default"),
+		true, 
+		1.0f, 
+		TraversalActionData.StartTime);
 
 	MontageTask->OnCancelled.AddDynamic(this, &UAbilityInteraction_Traversal::OnPlayMontageCompleted_Event);
 	MontageTask->OnInterrupted.AddDynamic(this, &UAbilityInteraction_Traversal::OnPlayMontageCompleted_Event);

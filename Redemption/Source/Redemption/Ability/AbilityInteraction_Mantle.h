@@ -5,8 +5,9 @@
 #include "CoreMinimal.h"
 #include "WvGameplayAbility.h"
 #include "Task/WvAT_PlayMontageAndWaitForEvent.h"
-#include "Component/WvCharacterMovementComponent.h"
 #include "AbilityInteraction_Mantle.generated.h"
+
+class UWvCharacterMovementComponent;
 
 /**
  * 

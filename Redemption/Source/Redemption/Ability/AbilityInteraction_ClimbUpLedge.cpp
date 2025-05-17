@@ -45,7 +45,7 @@ void UAbilityInteraction_ClimbUpLedge::ActivateAbility(const FGameplayAbilitySpe
 	UAnimMontage* Montage = nullptr;
 	if (TriggerEventData)
 	{
-		auto ClimbingData = Cast<UClimbingData>(TriggerEventData->OptionalObject);
+		const UClimbingData* ClimbingData = Cast<UClimbingData>(TriggerEventData->OptionalObject);
 		if (ClimbingData)
 		{
 			Montage = ClimbingData->bIsFreeHang ? ClimbToStandingFreeHangMontage : ClimbToStandingMontage;
