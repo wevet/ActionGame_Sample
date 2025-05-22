@@ -12,6 +12,13 @@
 #include "Engine/SkeletalMeshSocket.h"
 //#include "Logging/LogMacros.h
 #include "AssetRegistry/AssetRegistryModule.h"
+#include "AnimationBlueprintLibrary.h"
+#include "Animation/SmartName.h"
+#include "Containers/Array.h"
+#include "Misc/PackageName.h"
+#include "Animation/AnimTypes.h"
+//#include "IAnimationDataModelModule.h"     // IAnimationDataModelModule
+//#include "CurveMetaDataModel.h"           // FCurveMetaDataModel
 
 
 void UWvEditorBlueprintFunctionLibrary::ReImportAnimation(const TArray<FName> PackagePaths)
@@ -155,8 +162,6 @@ void UWvEditorBlueprintFunctionLibrary::CopyBlendProfiles(USkeleton* SourceSkele
 	UE_LOG(LogTemp, Log, TEXT("Blend Profile Copy Completed"));
 }
 
-
-
 void UWvEditorBlueprintFunctionLibrary::CopySkeletalSockets(USkeleton* SourceSkeleton, TArray<USkeleton*> TargetSkeletons)
 {
 	if (!SourceSkeleton)
@@ -237,7 +242,6 @@ void UWvEditorBlueprintFunctionLibrary::CopySkeletalSockets(USkeleton* SourceSke
 	UE_LOG(LogTemp, Log, TEXT("Socket Copy Completed"));
 }
 
-
 void UWvEditorBlueprintFunctionLibrary::CopySkeletalSlots(USkeleton* SourceSkeleton, TArray<USkeleton*> TargetSkeletons)
 {
 	if (!SourceSkeleton)
@@ -312,5 +316,133 @@ void UWvEditorBlueprintFunctionLibrary::CopySkeletalSlots(USkeleton* SourceSkele
 	UE_LOG(LogTemp, Log, TEXT("Slots Copy Completed"));
 }
 
+void UWvEditorBlueprintFunctionLibrary::CopySkeletalVirtualBones(USkeleton* SourceSkeleton, const TArray<USkeleton*>& TargetSkeletons)
+{
+	if (!SourceSkeleton)
+	{
+		UE_LOG(LogTemp, Error, TEXT("nullptr source skeleton"));
+		return;
+	}
+
+	// 取得：元スケルトンの仮想ボーン一覧
+	const TArray<FVirtualBone>& SourceVBones = SourceSkeleton->GetVirtualBones();
+
+	for (USkeleton* TargetSkeleton : TargetSkeletons)
+	{
+		if (!TargetSkeleton)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Skipping null TargetSkeleton"));
+			continue;
+		}
+
+		TargetSkeleton->Modify();
+		TargetSkeleton->MarkPackageDirty();
+
+		// 既存の仮想ボーンをハッシュ化してセットを作成
+		TSet<uint64> ExistingVBHashes;
+		for (const FVirtualBone& VB : TargetSkeleton->GetVirtualBones())
+		{
+			uint64 Hash = HashCombine(HashCombine(GetTypeHash(VB.SourceBoneName), GetTypeHash(VB.TargetBoneName)), GetTypeHash(VB.VirtualBoneName));
+			ExistingVBHashes.Add(Hash);
+		}
+
+		// コピー対象をループ
+		int32 Copied = 0, Skipped = 0;
+		for (const FVirtualBone& SrcVB : SourceVBones)
+		{
+			uint64 Hash = HashCombine(HashCombine(GetTypeHash(SrcVB.SourceBoneName), GetTypeHash(SrcVB.TargetBoneName)), GetTypeHash(SrcVB.VirtualBoneName));
+
+			if (ExistingVBHashes.Contains(Hash))
+			{
+				UE_LOG(LogTemp, Warning, TEXT("Skipping existing virtual bone: %s (Src:%s, Tgt:%s)"), *SrcVB.VirtualBoneName.ToString(), *SrcVB.SourceBoneName.ToString(), *SrcVB.TargetBoneName.ToString());
+				Skipped++;
+				continue;
+			}
+
+			// 新規仮想ボーンを追加
+			FName NewVBName = SrcVB.VirtualBoneName;
+			const bool bAdded = TargetSkeleton->AddNewVirtualBone(SrcVB.SourceBoneName, SrcVB.TargetBoneName, NewVBName);
+
+			if (bAdded)
+			{
+				UE_LOG(LogTemp, Log, TEXT("Copied virtual bone: %s (Src:%s, Tgt:%s)"), *NewVBName.ToString(), *SrcVB.SourceBoneName.ToString(), *SrcVB.TargetBoneName.ToString());
+				Copied++;
+			}
+			else
+			{
+				UE_LOG(LogTemp, Warning, TEXT("Failed to copy virtual bone: %s"), *SrcVB.VirtualBoneName.ToString());
+				Skipped++;
+			}
+		}
+
+		TargetSkeleton->MarkPackageDirty();
+		TargetSkeleton->Modify();
+		UE_LOG(LogTemp, Log, TEXT("Virtual Bone Copy Completed for '%s' | Copied: %d | Skipped: %d"), *TargetSkeleton->GetName(), Copied, Skipped);
+	}
+
+	UE_LOG(LogTemp, Log, TEXT("All Virtual Bone Copy operations completed."));
+}
+
+void UWvEditorBlueprintFunctionLibrary::CopySkeletonCurves(USkeleton* SourceSkeleton, const TArray<USkeleton*>& TargetSkeletons)
+{
+	if (!SourceSkeleton)
+	{
+		UE_LOG(LogTemp, Error, TEXT("CopySkeletonCurves: SourceSkeleton is null"));
+		return;
+	}
+
+	const FSmartNameMapping* SrcCurveMap = SourceSkeleton->GetSmartNameContainer(USkeleton::AnimCurveMappingName);
+
+	if (SrcCurveMap)
+	{
+		UE_LOG(LogTemp, Error, TEXT("SourceSkeleton: Failed to get target AnimCurveMappingName container for %s"), *SourceSkeleton->GetName());
+		return;
+	}
+
+	TArray<FName> CurveNames;
+	SrcCurveMap->FillNameArray(CurveNames);
+
+	for (USkeleton* TargetSkeleton : TargetSkeletons)
+	{
+		if (!TargetSkeleton)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("CopySkeletonCurves: Skipping null TargetSkeleton"));
+			continue;
+		}
+
+		TargetSkeleton->Modify();
+		TargetSkeleton->MarkPackageDirty();
+
+		const FSmartNameMapping* DstCurveMap = TargetSkeleton->GetSmartNameContainer(USkeleton::AnimCurveMappingName);
+		if (!DstCurveMap)
+		{
+			UE_LOG(LogTemp, Error, TEXT("CopySkeletonCurves: Failed to get target AnimCurveMappingName container for %s"), *TargetSkeleton->GetName());
+			continue;
+		}
+
+		int32 Added = 0, Skipped = 0;
+		for (const FName& Name : CurveNames)
+		{
+			if (DstCurveMap->Exists(Name))
+			{
+				Skipped++;
+				continue;
+			}
+
+			FSmartName OutSmartName;
+			if (TargetSkeleton->AddSmartNameAndModify(USkeleton::AnimCurveMappingName, Name, OutSmartName)) 
+			{
+				UE_LOG(LogTemp, Log, TEXT("Copied curve '%s' to '%s'"), *Name.ToString(), *TargetSkeleton->GetName());
+			}
+			else
+			{
+				UE_LOG(LogTemp, Warning, TEXT("Failed to add curve '%s' to '%s'"), *Name.ToString(), *TargetSkeleton->GetName());
+			}
+		}
+		UE_LOG(LogTemp, Log, TEXT("CopySkeletonCurves for '%s' completed: Added=%d, Skipped=%d"), *TargetSkeleton->GetName(), Added, Skipped);
+	}
+
+	UE_LOG(LogTemp, Log, TEXT("CopySkeletonCurves: All targets processed."));
+}
 
 

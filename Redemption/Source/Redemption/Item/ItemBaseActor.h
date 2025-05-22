@@ -7,7 +7,9 @@
 #include "Locomotion/LocomotionSystemTypes.h"
 #include "ItemBaseActor.generated.h"
 
+
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FItemEquipDelegate, const bool, bWasEquip);
+
 
 UCLASS(Abstract)
 class REDEMPTION_API AItemBaseActor : public AActor

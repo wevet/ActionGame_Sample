@@ -38,6 +38,7 @@ public:
 	FVector Center{ FVector::ZeroVector };
 };
 
+
 USTRUCT(BlueprintType)
 struct REDEMPTION_API FClimbingEssentialVariable
 {
@@ -83,6 +84,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	EClimbActionType ClimbActionType{ EClimbActionType::None};
 };
+
 
 UCLASS(BlueprintType)
 class REDEMPTION_API UClimbingCurveDataAsset : public UDataAsset

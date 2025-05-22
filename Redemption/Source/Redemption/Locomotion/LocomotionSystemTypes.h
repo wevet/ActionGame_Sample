@@ -3,13 +3,13 @@
 #pragma once
 
 #include "Engine/EngineTypes.h"
-#include "Curves/CurveFloat.h"
 #include "Components/PrimitiveComponent.h"
-#include "GameplayTagContainer.h"
 #include "LocomotionSystemTypes.generated.h"
+
 
 class UTexture2D;
 enum class EBodyShapeType : uint8;
+
 
 UENUM(BlueprintType)
 enum class EWvDirectionType : uint8
@@ -99,6 +99,7 @@ enum class EAttackWeaponState : uint8
 	Rifle UMETA(DisplayName = "Rifle"),
 	Knife UMETA(DisplayName = "Knife"),
 	Bomb UMETA(DisplayName = "Bomb"),
+	Other UMETA(DisplayName = "Other"),
 	InValid UMETA(Hidden)
 };
 
@@ -190,7 +191,7 @@ enum class EQTEType : uint8
 };
 
 USTRUCT(BlueprintType)
-struct REDEMPTION_API FLSComponentAndTransform
+struct FLSComponentAndTransform
 {
 	GENERATED_BODY()
 
@@ -209,8 +210,10 @@ public:
 	}
 };
 
+
+#pragma region Camera
 USTRUCT(BlueprintType)
-struct REDEMPTION_API FCameraSettings
+struct FCameraSettings
 {
 	GENERATED_BODY()
 
@@ -235,7 +238,7 @@ public:
 };
 
 USTRUCT(BlueprintType)
-struct REDEMPTION_API FCameraSettingsGait
+struct FCameraSettingsGait
 {
 	GENERATED_BODY()
 
@@ -255,7 +258,7 @@ public:
 };
 
 USTRUCT(BlueprintType)
-struct REDEMPTION_API FCameraSettingsStance
+struct FCameraSettingsStance
 {
 	GENERATED_BODY()
 
@@ -272,7 +275,7 @@ public:
 };
 
 USTRUCT(BlueprintType)
-struct REDEMPTION_API FCameraSettingsTarget
+struct FCameraSettingsTarget
 {
 	GENERATED_BODY()
 
@@ -296,6 +299,8 @@ public:
 	FCameraSettingsTarget()
 	{}
 };
+#pragma endregion
+
 
 USTRUCT(BlueprintType)
 struct FRequestAbilityAnimationData
@@ -442,7 +447,7 @@ public:
 };
 
 USTRUCT(BlueprintType)
-struct REDEMPTION_API FPawnAttackParam
+struct FPawnAttackParam
 {
 	GENERATED_BODY()
 
@@ -506,7 +511,7 @@ public:
 };
 
 USTRUCT(BlueprintType)
-struct REDEMPTION_API FAttackMotionWarpingData
+struct FAttackMotionWarpingData
 {
 	GENERATED_BODY()
 
@@ -999,39 +1004,21 @@ public:
 #pragma endregion
 
 
-#pragma region WeaponCharacterAnimation
+
 USTRUCT(BlueprintType)
-struct REDEMPTION_API FWeaponCharacterAnimation
+struct REDEMPTION_API FWeaponCharacterAnimationInput
 {
 	GENERATED_BODY()
 
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	EAttackWeaponState WeaponState{EAttackWeaponState::EmptyWeapon};
+	EAttackWeaponState WeaponState{ EAttackWeaponState::EmptyWeapon };
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	UAnimMontage* ShotAnimation{nullptr};
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	UAnimMontage* ReloadAnimation{ nullptr };
-
-	FWeaponCharacterAnimation() 
+	FWeaponCharacterAnimationInput()
 	{
 	}
 };
 
-USTRUCT(BlueprintType)
-struct REDEMPTION_API FWeaponCharacterAnimationData
-{
-	GENERATED_BODY()
-
-public:
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	TArray<FWeaponCharacterAnimation> Animations;
-
-	FWeaponCharacterAnimation Find(const EAttackWeaponState InWeaponState) const;
-};
-#pragma endregion
 
 
 USTRUCT()

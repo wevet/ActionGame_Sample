@@ -7,6 +7,7 @@
 #include "UObject/NoExportTypes.h"
 #include "EngineUtils.h"
 #include "Component/WvCharacterMovementTypes.h"
+#include "Locomotion/LocomotionSystemTypes.h"
 #include "WvCommonUtils.generated.h"
 
 class USkeletalMeshComponent;
@@ -18,7 +19,9 @@ class UMaterialInstanceDynamic;
 class AStaticMeshActor;
 class ARedemptionGameMode;
 class UChooserTable;
+class UPrimitiveComponent;
 struct FHitReactInfoRow;
+//struct FLSComponentAndTransform;
 
 
 

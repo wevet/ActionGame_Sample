@@ -2617,7 +2617,8 @@ void UWvCharacterMovementComponent::PrintTraversalActionData()
 	}
 }
 
-const TArray<UObject*> UWvCharacterMovementComponent::GetAnimMontageFromChooserTable(const TSubclassOf<UObject> ObjectClass, UPARAM(Ref) FTraversalActionDataInputs& Input, FTraversalActionDataOutputs& Output)
+const TArray<UObject*> UWvCharacterMovementComponent::GetAnimMontageFromChooserTable(const TSubclassOf<UObject> ObjectClass, 
+	UPARAM(Ref) FTraversalActionDataInputs& Input, FTraversalActionDataOutputs& Output)
 {
 	FChooserEvaluationContext Context;
 	Context.AddStructParam(Input);
@@ -2760,6 +2761,11 @@ void UWvCharacterMovementComponent::OnTraversalStart()
 	bIgnoreClientMovementErrorChecksAndCorrection = 1;
 	bServerAcceptClientAuthoritativePosition = 1;
 
+	if (OnTraversalBeginDelegate.IsBound())
+	{
+		OnTraversalBeginDelegate.Broadcast();
+	}
+
 	UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(CharacterOwner, TAG_Locomotion_Traversal, FGameplayEventData());
 	SetMovementMode(MOVE_Custom, CUSTOM_MOVE_Traversal);
 }
@@ -2770,6 +2776,11 @@ void UWvCharacterMovementComponent::OnTraversalEnd()
 	bServerAcceptClientAuthoritativePosition = 0;
 
 	CheckGroundOrFalling();
+
+	if (OnTraversalEndDelegate.IsBound())
+	{
+		OnTraversalEndDelegate.Broadcast();
+	}
 }
 
 

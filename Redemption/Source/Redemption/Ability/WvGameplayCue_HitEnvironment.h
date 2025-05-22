@@ -4,10 +4,6 @@
 
 #include "CoreMinimal.h"
 #include "GameplayCueNotify_Static.h"
-#include "NiagaraSystem.h"
-#include "Sound/SoundBase.h"
-#include "GameplayTagContainer.h"
-#include "Game/CombatInstanceSubsystem.h"
 #include "WvGameplayCue_HitEnvironment.generated.h"
 
 

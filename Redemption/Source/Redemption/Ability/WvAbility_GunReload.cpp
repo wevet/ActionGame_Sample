@@ -6,16 +6,19 @@
 #include "WvGameplayEffectContext.h"
 #include "WvGameplayTargetData.h"
 #include "WvAbilitySystemBlueprintFunctionLibrary.h"
-
 #include "Character/BaseCharacter.h"
 #include "Component/InventoryComponent.h"
 #include "Misc/WvCommonUtils.h"
 #include "Item/BulletHoldWeaponActor.h"
+#include "Item/WeaponBaseActor.h"
+
 
 #include "Kismet/KismetMathLibrary.h"
 #include "Kismet/KismetSystemLibrary.h"
+#include "ChooserFunctionLibrary.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(WvAbility_GunReload)
+
 
 UWvAbility_GunReload::UWvAbility_GunReload(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
@@ -31,13 +34,6 @@ bool UWvAbility_GunReload::CanActivateAbility(const FGameplayAbilitySpecHandle H
 
 void UWvAbility_GunReload::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
 {
-	if (!CharacterAnimationDA)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("[%s : CharacterAnimationDA is null.]"), *FString(__FUNCTION__));
-		CancelAbility(Handle, ActorInfo, ActivationInfo, false);
-		return;
-	}
-
 	const ABaseCharacter* Character = GetBaseCharacter();
 	if (!Character)
 	{
@@ -59,8 +55,7 @@ void UWvAbility_GunReload::ActivateAbility(const FGameplayAbilitySpecHandle Hand
 		return;
 	}
 
-	FWeaponCharacterAnimation AnimationData = CharacterAnimationDA->Find(Character->GetAvatarTag(), WeaponBaseActor->GetAttackWeaponState());
-	auto Montage = AnimationData.ReloadAnimation;
+	UAnimMontage* Montage = FindChooserTable(WeaponBaseActor.Get());
 	if (!Montage)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("[%s : bWeaponEvent false or Montage is null.]"), *FString(__FUNCTION__));
@@ -113,4 +108,24 @@ void UWvAbility_GunReload::OnPlayMontageCompleted_Event(FGameplayTag EventTag, F
 	WeaponBaseActor.Reset();
 }
 
+
+UAnimMontage* UWvAbility_GunReload::FindChooserTable(AWeaponBaseActor* InWeaponBaseActor) const
+{
+	if (AssetChooserTable)
+	{
+		FWeaponCharacterAnimationInput Input;
+		Input.WeaponState = WeaponBaseActor->GetAttackWeaponState();
+
+		FChooserEvaluationContext Context;
+		Context.AddStructParam(Input);
+		//Context.AddStructParam(Output);
+		//Context.AddObjectParam(this);
+
+		const FInstancedStruct ChooserStruct = UChooserFunctionLibrary::MakeEvaluateChooser(AssetChooserTable);
+		auto Result = UChooserFunctionLibrary::EvaluateObjectChooserBase(Context, ChooserStruct, UAnimMontage::StaticClass(), false);
+		return Cast<UAnimMontage>(Result);
+	}
+
+	return nullptr;
+}
 

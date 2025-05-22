@@ -4,17 +4,20 @@
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(ItemBaseActor)
 
+
 AItemBaseActor::AItemBaseActor(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
 	PrimaryActorTick.bCanEverTick = true;
 	bCanEquip = true;
 }
 
+
 void AItemBaseActor::BeginPlay()
 {
 	Super::BeginPlay();
 	Super::SetActorTickEnabled(false);
 }
+
 
 void AItemBaseActor::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {

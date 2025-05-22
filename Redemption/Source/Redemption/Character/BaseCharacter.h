@@ -12,7 +12,6 @@
 #include "Ability/WvAbilitySystemComponent.h"
 #include "Ability/WvAbilityType.h"
 #include "BaseCharacterTypes.h"
-#include "Climbing/ClimbingComponent.h"
 #include "Mission/MissionSystemTypes.h"
 #include "Significance/SignificanceInterface.h"
 #include "Component/WvCharacterMovementTypes.h"
@@ -69,6 +68,7 @@ class UInventoryComponent;
 class UCombatComponent;
 class UStatusComponent;
 class UWeaknessComponent;
+class UClimbingComponent;
 class UWvAnimInstance;
 class UWvFaceAnimInstance;
 class UStaticMeshComponent;
@@ -699,10 +699,10 @@ protected:
 
 
 	UFUNCTION()
-	virtual void OnWallClimbingBegin_Callback();
+	virtual void OnTraversalBegin_Callback();
 
 	UFUNCTION()
-	virtual void OnWallClimbingEnd_Callback();
+	virtual void OnTraversalEnd_Callback();
 
 	UFUNCTION()
 	virtual void OnRoationChange_Callback();

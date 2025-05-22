@@ -4,8 +4,11 @@
 
 #include "CoreMinimal.h"
 #include "Subsystems/GameInstanceSubsystem.h"
-#include "Character/BaseCharacter.h"
 #include "CharacterInstanceSubsystem.generated.h"
+
+
+class ABaseCharacter;
+class UWvSkeletalMeshComponent;
 
 /**
  * 

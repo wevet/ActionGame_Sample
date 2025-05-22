@@ -33,6 +33,7 @@ namespace LocomotionDebug
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FLocomotionStateChangeDelegate);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FLocomotionOverlayChangeDelegate, const ELSOverlayState, PrevOverlay, const ELSOverlayState, CurrentOverlay);
 
+
 UCLASS(BlueprintType)
 class REDEMPTION_API ULocomotionStateDataAsset : public UDataAsset
 {
@@ -61,6 +62,7 @@ public:
 	FGameplayTag FindRotationModeTag(const ELSRotationMode LSRotationMode) const;
 	FGameplayTag FindGaitTag(const ELSGait LSGait) const;
 };
+
 
 UCLASS(ClassGroup = (Locomotion), meta = (BlueprintSpawnableComponent))
 class REDEMPTION_API ULocomotionComponent : public UActorComponent, public ILocomotionInterface
@@ -383,20 +385,12 @@ private:
 
 	FVector ChooseTargetPosition() const;
 
-	UPROPERTY()
 	TWeakObjectPtr<class ABaseCharacter> Character;
-
-	UPROPERTY()
 	TWeakObjectPtr<class UWvCharacterMovementComponent> CharacterMovementComponent;
-
-	UPROPERTY()
 	TWeakObjectPtr<class USkeletalMeshComponent> SkeletalMeshComponent;
-
-	UPROPERTY()
 	TWeakObjectPtr<class UWvAbilitySystemComponent> AbilitySystemComponent;
-
-	UPROPERTY()
 	TWeakObjectPtr<class UCapsuleComponent> CapsuleComponent;
+
 
 	FVector LandingVelocity = FVector::ZeroVector;
 	bool bWasJustLanded = false;
@@ -416,6 +410,9 @@ private:
 
 
 };
+
+
+
 
 /**
  * Tick function that calls ULocomotionComponent::DoTick
@@ -453,6 +450,7 @@ struct TStructOpsTypeTraits<FLocomotionPostPhysicsTickFunction> : public TStruct
 	};
 };
 
+
 class FLocomotionTask
 {
 	ULocomotionComponent* TargetComponent;
@@ -480,3 +478,4 @@ public:
 		TargetComponent->DoTick();
 	}
 };
+

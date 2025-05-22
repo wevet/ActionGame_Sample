@@ -93,10 +93,10 @@ public:
 	FHandleImpactAtStepUpFail OnHandleImpactAtStepUpFail;
 
 	UPROPERTY(BlueprintAssignable)
-	FMovementActionDelegate OnWallClimbingBeginDelegate;
+	FMovementActionDelegate OnTraversalBeginDelegate;
 
 	UPROPERTY(BlueprintAssignable)
-	FMovementActionDelegate OnWallClimbingEndDelegate;
+	FMovementActionDelegate OnTraversalEndDelegate;
 
 	static FName MantleSyncPoint;
 	static FName ClimbSyncPoint;

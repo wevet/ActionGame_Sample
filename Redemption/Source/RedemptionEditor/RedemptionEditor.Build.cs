@@ -28,6 +28,7 @@ public class RedemptionEditor : ModuleRules
 				"BlueprintGraph",
 				"DesktopPlatform",
 				"AnimationModifiers",
+				"AnimationBlueprintLibrary",
 				"InputCore",
 				"Redemption",
 				"RHI",

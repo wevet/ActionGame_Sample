@@ -298,34 +298,7 @@ const FFoleyBaseAsset& UFieldInstanceSubsystem::GetFoleyBaseAsset(const FGamepla
 	return DefaultAsset;
 }
 
-FFoleyBaseAsset UFieldInstanceSubsystem::GetFoleyBaseAssetCopy(FGameplayTag SurfaceTag, TEnumAsByte<EPhysicalSurface> SurfaceTypeInEditor, bool& bOutFound) const
-{
-	bOutFound = false;
-
-	if (!IsValid(FoleyEventDataAsset))
-	{
-		return FFoleyBaseAsset();
-	}
-
-	if (const FFoleyBaseAssetContainer* Container = FoleyEventDataAsset->DataMap.Find(SurfaceTag))
-	{
-		for (const FFoleyBaseAsset& Asset : Container->DataArray)
-		{
-			if (Asset.SurfaceTypeInEditor == SurfaceTypeInEditor)
-			{
-				bOutFound = true;
-				return Asset;
-			}
-		}
-		if (Container->DataArray.Num() > 0)
-		{
-			bOutFound = true;
-			return Container->DataArray[0];
-		}
-	}
-
-	return FFoleyBaseAsset();
-}
 #pragma endregion
+
 
 

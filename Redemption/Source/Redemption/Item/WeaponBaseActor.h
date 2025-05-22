@@ -10,6 +10,8 @@
 #include "WeaponBaseActor.generated.h"
 
 struct FPawnAttackParam;
+class ABaseCharacter;
+
 
 UCLASS(BlueprintType)
 class REDEMPTION_API UWeaponParameterDataAsset : public UDataAsset
@@ -24,23 +26,6 @@ public:
 	FPawnAttackParam Find(const FName WeaponKeyName) const;
 };
 
-
-UCLASS(BlueprintType)
-class REDEMPTION_API UWeaponCharacterAnimationDataAsset : public UDataAsset
-{
-	GENERATED_BODY()
-
-protected:
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	TMap<FGameplayTag, FWeaponCharacterAnimationData> AnimationMap;
-
-public:
-	FWeaponCharacterAnimationData Find(const FGameplayTag CharacterTagName) const;
-	FWeaponCharacterAnimation Find(const FGameplayTag CharacterTagName, const EAttackWeaponState InWeaponState) const;
-};
-
-
-class ABaseCharacter;
 /**
  * 
  */

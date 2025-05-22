@@ -11,25 +11,37 @@ class UNiagaraSystem;
 class USoundBase;
 class UPrimaryDataAsset;
 
-
 USTRUCT(BlueprintType)
-struct FFoleyBaseAsset
+struct FVFXBaseAsset
 {
 	GENERATED_BODY()
 
 public:
-	FFoleyBaseAsset() : SurfaceTypeInEditor(SurfaceType_Default)
+	FVFXBaseAsset()
+	{
+	}
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VFXBase")
+	TObjectPtr<class USoundBase> Sound{ nullptr };
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "VFXBase")
+	TObjectPtr<class UNiagaraSystem> Effect{ nullptr };
+};
+
+
+USTRUCT(BlueprintType)
+struct FFoleyBaseAsset : public FVFXBaseAsset
+{
+	GENERATED_BODY()
+
+public:
+	FFoleyBaseAsset() : FVFXBaseAsset(),
+		SurfaceTypeInEditor(SurfaceType_Default)
 	{
 	}
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Foley")
 	TEnumAsByte<EPhysicalSurface> SurfaceTypeInEditor;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Foley")
-	TObjectPtr<class USoundBase> Sound{ nullptr };
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Foley")
-	TObjectPtr<class UNiagaraSystem> Effect{ nullptr };
 };
 
 
@@ -56,5 +68,49 @@ class WVABILITYSYSTEM_API UFoleyEventDataAsset : public UPrimaryDataAsset
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Foley")
 	TMap<FGameplayTag, FFoleyBaseAssetContainer> DataMap;
+};
+
+
+USTRUCT(BlueprintType)
+struct FEnvironmentVFXAsset : public FVFXBaseAsset
+{
+	GENERATED_BODY()
+
+public:
+	FEnvironmentVFXAsset() : OverrideAssetTag(FGameplayTag::EmptyTag)
+	{
+	}
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "EnvironmentBaseAsset")
+	FGameplayTag OverrideAssetTag;
+};
+
+
+USTRUCT(BlueprintType)
+struct FEnvironmentVFXAssetContainer
+{
+	GENERATED_BODY()
+
+public:
+	FEnvironmentVFXAssetContainer()
+	{
+	}
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "EnvironmentVFXAssetContainer")
+	TArray<FEnvironmentVFXAsset> DataArray;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "EnvironmentVFXAssetContainer")
+	FVFXBaseAsset DefaultBaseAsset;
+};
+
+
+UCLASS(BlueprintType, meta = (DisplayName = "EnvironmentVFXDataAsset", PrimaryAssetType = "EnvironmentVFXDataAsset"))
+class WVABILITYSYSTEM_API UEnvironmentVFXDataAsset : public UPrimaryDataAsset
+{
+	GENERATED_BODY()
+
+public:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Foley")
+	TMap<FName, FEnvironmentVFXAssetContainer> DataMap;
 };
 

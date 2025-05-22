@@ -6,9 +6,12 @@
 #include "WvGameplayAbility.h"
 #include "Task/WvAT_BulletDamage.h"
 #include "Task/WvAT_PlayMontageAndWaitForEvent.h"
-#include "Item/WeaponBaseActor.h"
 #include "WvAbilitySystemTypes.h"
 #include "WvAbility_GunFire.generated.h"
+
+
+class UChooserTable;
+class AWeaponBaseActor;
 
 /**
  * 
@@ -30,7 +33,7 @@ protected:
 	int32 GameplayEffectGroupIndexs = 0;
 
 	UPROPERTY(EditDefaultsOnly)
-	UWeaponCharacterAnimationDataAsset* CharacterAnimationDA;
+	TObjectPtr<UChooserTable> AssetChooserTable;
 
 	UPROPERTY(EditDefaultsOnly)
 	float Randomize = 150.0f;
@@ -50,4 +53,6 @@ private:
 
 	UPROPERTY()
 	TWeakObjectPtr<AWeaponBaseActor> WeaponBaseActor;
+
+	UAnimMontage* FindChooserTable(AWeaponBaseActor* InWeaponBaseActor) const;
 };

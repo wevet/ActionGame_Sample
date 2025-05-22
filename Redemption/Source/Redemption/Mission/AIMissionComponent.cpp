@@ -7,6 +7,9 @@
 #include "Misc/WvCommonUtils.h"
 #include "Character/WvPlayerController.h"
 
+#include UE_INLINE_GENERATED_CPP_BY_NAME(AIMissionComponent)
+
+
 UAIMissionComponent::UAIMissionComponent(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
 	PrimaryComponentTick.bCanEverTick = true;

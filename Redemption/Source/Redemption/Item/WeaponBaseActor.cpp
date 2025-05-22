@@ -24,25 +24,6 @@ FPawnAttackParam UWeaponParameterDataAsset::Find(const FName WeaponKeyName) cons
 }
 
 
-#pragma region WeaponCharacterAnimationDataAsset
-FWeaponCharacterAnimationData UWeaponCharacterAnimationDataAsset::Find(const FGameplayTag CharacterTagName) const
-{
-	if (AnimationMap.Contains(CharacterTagName))
-	{
-		return AnimationMap.FindRef(CharacterTagName);
-	}
-
-	FWeaponCharacterAnimationData Temp;
-	return Temp;
-}
-
-FWeaponCharacterAnimation UWeaponCharacterAnimationDataAsset::Find(const FGameplayTag CharacterTagName, const EAttackWeaponState InWeaponState) const
-{
-	auto AnimationData = Find(CharacterTagName);
-	return AnimationData.Find(InWeaponState);
-}
-#pragma endregion
-
 
 AWeaponBaseActor::AWeaponBaseActor(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {

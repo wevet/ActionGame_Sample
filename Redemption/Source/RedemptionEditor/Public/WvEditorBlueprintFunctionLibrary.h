@@ -33,5 +33,11 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	static void CopySkeletalSlots(USkeleton* SourceSkeleton, TArray<USkeleton*> TargetSkeletons);
+
+	UFUNCTION(BlueprintCallable)
+	static void CopySkeletalVirtualBones(USkeleton* SourceSkeleton, const TArray<USkeleton*>& TargetSkeletons);
+
+	UFUNCTION(BlueprintCallable)
+	static void CopySkeletonCurves(USkeleton* SourceSkeleton, const TArray<USkeleton*>& TargetSkeletons);
 };
 

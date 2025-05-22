@@ -5,9 +5,12 @@
 #include "CoreMinimal.h"
 #include "Ability/WvGameplayAbility.h"
 #include "Task/WvAT_PlayMontageAndWaitForEvent.h"
-#include "Item/WeaponBaseActor.h"
 #include "WvAbilitySystemTypes.h"
 #include "WvAbility_GunReload.generated.h"
+
+
+class UChooserTable;
+class AWeaponBaseActor;
 
 /**
  * 
@@ -22,8 +25,9 @@ protected:
 	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
 	virtual void EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled) override;
 
+
 	UPROPERTY(EditDefaultsOnly)
-	UWeaponCharacterAnimationDataAsset* CharacterAnimationDA;
+	TObjectPtr<UChooserTable> AssetChooserTable;
 
 private:
 	UFUNCTION()
@@ -33,4 +37,6 @@ private:
 	class UWvAT_PlayMontageAndWaitForEvent* MontageTask;
 
 	TWeakObjectPtr<AWeaponBaseActor> WeaponBaseActor;
+
+	UAnimMontage* FindChooserTable(AWeaponBaseActor* InWeaponBaseActor) const;
 };

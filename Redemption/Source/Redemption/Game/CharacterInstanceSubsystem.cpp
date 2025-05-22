@@ -5,7 +5,7 @@
 #include "Character/WvAIController.h"
 #include "Component/WvSkeletalMeshComponent.h"
 #include "Mission/MinimapMarkerComponent.h"
-
+#include "Character/BaseCharacter.h"
 #include "Misc/WvCommonUtils.h"
 #include "Redemption.h"
 #include "GameExtension.h"
@@ -17,9 +17,12 @@
 #include "IAnimationBudgetAllocator.h"
 #include "SignificanceManager.h"
 
+
 using namespace Game;
 
+
 #include UE_INLINE_GENERATED_CPP_BY_NAME(CharacterInstanceSubsystem)
+
 
 UCharacterInstanceSubsystem* UCharacterInstanceSubsystem::Instance = nullptr;
 
@@ -110,14 +113,9 @@ void UCharacterInstanceSubsystem::DoForceKillIgnorePlayer(bool bFindWorldActorIt
 		UpdateCharacterInWorld();
 	}
 
-	Characters.RemoveAll([](ABaseCharacter* Character)
-	{
-		return !Character->IsBotCharacter();
-	});
-
 	for (ABaseCharacter* Character : Characters)
 	{
-		if (IsValid(Character))
+		if (IsValid(Character) && Character->IsBotCharacter())
 		{
 			Character->DoForceKill();
 		}
@@ -201,14 +199,17 @@ bool UCharacterInstanceSubsystem::IsInBattleAny() const
 
 TArray<ABaseCharacter*> UCharacterInstanceSubsystem::GetLeaderAgent() const
 {
-	TArray<ABaseCharacter*> Result = Characters;
-	Result.RemoveAll([](ABaseCharacter* Character) 
+	TArray<ABaseCharacter*> Result;
+	for (auto Character : Characters)
 	{
-		return !Character->IsLeader();
-	});
-
+		if (IsValid(Character) && Character->IsLeader())
+		{
+			Result.Add(Character);
+		}
+	}
 	return Result;
 }
+
 
 void UCharacterInstanceSubsystem::GeneratorSpawnedFinish()
 {

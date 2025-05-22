@@ -12,25 +12,27 @@
 #include "Component/StatusComponent.h"
 #include "Component/WeaknessComponent.h"
 #include "Component/TrailInteractionComponent.h"
-#include "Mission/MinimapMarkerComponent.h"
-#include "WvFoleyAssetTypes.h"
-
-#include "Locomotion/LocomotionComponent.h"
-#include "PredictionFootIKComponent.h"
-#include "WvPlayerController.h"
-#include "WvAIController.h"
 #include "Animation/WvAnimInstance.h"
 #include "Animation/WvFaceAnimInstance.h"
-#include "Ability/WvInheritanceAttributeSet.h"
+#include "Mission/MinimapMarkerComponent.h"
+#include "Locomotion/LocomotionComponent.h"
+#include "WvPlayerController.h"
+#include "WvAIController.h"
 #include "Game/WvGameInstance.h"
 #include "Vehicle/WvWheeledVehiclePawn.h"
 #include "Item/BulletHoldWeaponActor.h"
 #include "GameExtension.h"
 #include "Climbing/ClimbingComponent.h"
 #include "Climbing/LadderComponent.h"
-#include "Component/AsyncComponentInterface.h"
-#include "WvAbilitySystemBlueprintFunctionLibrary.h"
 #include "Game/CharacterInstanceSubsystem.h"
+#include "Level/FieldInstanceSubsystem.h"
+#include "Significance/SignificanceComponent.h"
+
+// plugin
+#include "WvFoleyAssetTypes.h"
+#include "PredictionFootIKComponent.h"
+#include "Ability/WvInheritanceAttributeSet.h"
+#include "WvAbilitySystemBlueprintFunctionLibrary.h"
 
 
 #include "Components/LODSyncComponent.h"
@@ -40,20 +42,8 @@
 #include "Components/PawnNoiseEmitterComponent.h"
 #include "MotionWarpingComponent.h"
 #include "AI/Navigation/NavigationTypes.h"
-#include "Delegates/Delegate.h"
-#include "Engine/EngineBaseTypes.h"
-#include "Engine/World.h"
-#include "GameFramework/Controller.h"
-#include "GameplayTagContainer.h"
-#include "Math/Rotator.h"
-#include "Math/UnrealMathSSE.h"
-#include "Math/Vector.h"
-#include "Misc/AssertionMacros.h"
 #include "Net/UnrealNetwork.h"
-#include "Templates/Casts.h"
-#include "Trace/Detail/Channel.h"
-#include "UObject/CoreNetTypes.h"
-#include "UObject/NameTypes.h"
+
 #include "UObject/Object.h"
 #include "UObject/ObjectPtr.h"
 #include "UObject/UObjectBaseUtility.h"
@@ -67,15 +57,8 @@
 // Misc
 #include "Engine/SkeletalMeshSocket.h"
 #include "Runtime/Launch/Resources/Version.h"
-
-#include "WvAIController.h"
-#include "Level/FieldInstanceSubsystem.h"
-
-#include "Significance/SignificanceComponent.h"
 #include "IAnimationBudgetAllocator.h"
 #include "SignificanceManager.h"
-
-
 #include "Algo/Transform.h"
 #include "ChooserFunctionLibrary.h"
 
@@ -149,8 +132,6 @@ ABaseCharacter::ABaseCharacter(const FObjectInitializer& ObjectInitializer)
 	Other1->SetupAttachment(WvMeshComp);
 	Other1->SetReceivesDecals(true);
 
-	// @TODO
-	// create sk comp Bottom Top Feet Body
 
 	UWvCharacterMovementComponent* WvMoveComp = CastChecked<UWvCharacterMovementComponent>(GetCharacterMovement());
 	WvMoveComp->GravityScale = 1.0f;
@@ -166,6 +147,7 @@ ABaseCharacter::ABaseCharacter(const FObjectInitializer& ObjectInitializer)
 	WvMoveComp->JumpZVelocity = 500.f;
 	WvMoveComp->AirControl = 0.35f;
 
+	// set motion matching parameters
 	WvMoveComp->BrakingDecelerationWalking = 1500.0f;
 	WvMoveComp->GroundFriction = 5.0f;
 	WvMoveComp->MinAnalogWalkSpeed = 150.f;
@@ -174,7 +156,6 @@ ABaseCharacter::ABaseCharacter(const FObjectInitializer& ObjectInitializer)
 	WvMoveComp->MaxAcceleration = 800.0f;
 	WvMoveComp->BrakingFriction = 0.0f;
 	WvMoveComp->bUseSeparateBrakingFriction = true;
-
 
 	SetReplicateMovement(true);
 
@@ -315,8 +296,6 @@ void ABaseCharacter::OnConstruction(const FTransform& Transform)
 	InitSkelMeshTransform.SetLocation(SkelMesh->GetRelativeLocation());
 	InitSkelMeshTransform.SetRotation(FQuat(SkelMesh->GetRelativeRotation()));
 	InitSkelMeshTransform.SetScale3D(SkelMesh->GetRelativeScale3D());
-	//InitSkelMeshTransform = SkelMesh->GetComponentTransform();
-
 }
 
 void ABaseCharacter::BeginPlay()
@@ -349,8 +328,8 @@ void ABaseCharacter::BeginPlay()
 
 	WEVET_COMMENT("Must Async Function CMC")
 	UWvCharacterMovementComponent* CMC = GetWvCharacterMovementComponent();
-	CMC->OnWallClimbingBeginDelegate.AddDynamic(this, &ThisClass::OnWallClimbingBegin_Callback);
-	CMC->OnWallClimbingEndDelegate.AddDynamic(this, &ThisClass::OnWallClimbingEnd_Callback);
+	CMC->OnTraversalBeginDelegate.AddDynamic(this, &ThisClass::OnTraversalBegin_Callback);
+	CMC->OnTraversalEndDelegate.AddDynamic(this, &ThisClass::OnTraversalEnd_Callback);
 
 	CMC->AddTickPrerequisiteComponent(CharacterMovementHelperComponent);
 
@@ -384,8 +363,8 @@ void ABaseCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	TM.ClearTimer(Ragdoll_TimerHandle);
 
 	UWvCharacterMovementComponent* CMC = GetWvCharacterMovementComponent();
-	CMC->OnWallClimbingBeginDelegate.RemoveDynamic(this, &ThisClass::OnWallClimbingBegin_Callback);
-	CMC->OnWallClimbingEndDelegate.RemoveDynamic(this, &ThisClass::OnWallClimbingEnd_Callback);
+	CMC->OnTraversalBeginDelegate.RemoveDynamic(this, &ThisClass::OnTraversalBegin_Callback);
+	CMC->OnTraversalEndDelegate.RemoveDynamic(this, &ThisClass::OnTraversalEnd_Callback);
 
 	LocomotionComponent->OnRotationModeChangeDelegate.RemoveDynamic(this, &ThisClass::OnRoationChange_Callback);
 	LocomotionComponent->OnGaitChangeDelegate.RemoveDynamic(this, &ThisClass::OnGaitChange_Callback);
@@ -457,12 +436,6 @@ void ABaseCharacter::Tick(float DeltaTime)
 		const float MaxAcc = CMC->GetMaxAcceleration();
 		MovementInputAmount = Acc / MaxAcc;
 		bHasMovementInput = (MovementInputAmount > 0.0f);
-
-		if (CMC->IsFalling() && bHasMovementInput)
-		{
-			//CMC->FallingMantling();
-		}
-
 
 	}
 
@@ -1439,12 +1412,12 @@ void ABaseCharacter::DoTargetLockOff()
 	}
 }
 
-void ABaseCharacter::OnWallClimbingBegin_Callback()
+void ABaseCharacter::OnTraversalBegin_Callback()
 {
 	UE_LOG(LogTemp, Log, TEXT("Character => %s, function => %s"), *GetName(), *FString(__FUNCTION__));
 }
 
-void ABaseCharacter::OnWallClimbingEnd_Callback()
+void ABaseCharacter::OnTraversalEnd_Callback()
 {
 	UE_LOG(LogTemp, Log, TEXT("Character => %s, function => %s"), *GetName(), *FString(__FUNCTION__));
 }
@@ -1814,7 +1787,7 @@ void ABaseCharacter::OnGaitChange_Callback()
 
 void ABaseCharacter::OnAbilityFailed_Callback(const UGameplayAbility* Ability, const FGameplayTagContainer& GameplayTags)
 {
-
+	//UE_LOG(LogTemp, Error, TEXT("Ability: [%s] \n function:[%s]"), *GetNameSafe(Ability), *FString(__FUNCTION__));
 }
 
 /// <summary>

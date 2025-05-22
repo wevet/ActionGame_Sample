@@ -4,22 +4,9 @@
 
 #include "CoreMinimal.h"
 #include "Subsystems/GameInstanceSubsystem.h"
-#include "Game/WvGameInstance.h"
-#include "Engine/DataTable.h"
+#include "WvFoleyAssetTypes.h"
 #include "CombatInstanceSubsystem.generated.h"
 
-USTRUCT(BlueprintType)
-struct FHitReactEnvironmentRow : public FTableRowBase
-{
-	GENERATED_BODY()
-
-public:
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
-	class UNiagaraSystem* HitEffect{nullptr};
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
-	class USoundBase* HitSound{ nullptr };
-};
 
 /**
  * 
@@ -39,20 +26,17 @@ public:
 
 
 	// asset load
-	void BeginHitImpactAssetsLoad();
+	void LoadAllEnvironmentVFXAssets();
 
 	void OnHitEnvironment(const AActor* Attacker, const FHitResult& HitResult);
+
+	const FVFXBaseAsset& GetVFXAssets(const FName SurfaceName, const FGameplayTag InTag, bool& bOutFound) const;
 
 private:
 	static UCombatInstanceSubsystem* Instance;
 
+	void OnEnvironmentVFXDataAssetsLoaded();
 
-	void OnHitImpactAssetsLoadCompleted();
-
-	FSoftObjectPath LoadSoftObjectPathes;
-	TSharedPtr<FStreamableHandle> StreamableHandle;
-
-	TSoftObjectPtr<UDataTable> HitEffectDTRawPtr;
 	UPROPERTY()
-	TObjectPtr<class UDataTable> HitEffectDTInstance;
+	TObjectPtr<class UEnvironmentVFXDataAsset> EnvironmentVFXDataAsset;
 };

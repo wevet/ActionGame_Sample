@@ -219,6 +219,7 @@ void AWvAIController::BroadcastOnPlayerStateChanged()
 	LastSeenPlayerState = PlayerState;
 }
 
+
 #pragma region IWvAbilityTargetInterface
 void AWvAIController::SetGenericTeamId(const FGenericTeamId& NewTeamID)
 {
@@ -342,6 +343,7 @@ void AWvAIController::BuildRunAI()
 	}
 }
 #pragma endregion
+
 
 #pragma region Core
 void AWvAIController::ResumeTree()

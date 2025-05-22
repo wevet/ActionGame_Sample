@@ -153,20 +153,5 @@ bool FQTEData::IsSuccess() const
 #pragma endregion
 
 
-FWeaponCharacterAnimation FWeaponCharacterAnimationData::Find(const EAttackWeaponState InWeaponState) const
-{
-	auto FindItemData = Animations.FindByPredicate([&](FWeaponCharacterAnimation Item)
-	{
-		return (Item.WeaponState == InWeaponState);
-	});
-
-	if (FindItemData)
-	{
-		return *FindItemData;
-	}
-
-	FWeaponCharacterAnimation Temp;
-	return Temp;
-}
 
 

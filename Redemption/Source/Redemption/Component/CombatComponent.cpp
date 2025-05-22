@@ -1088,7 +1088,9 @@ bool UCombatComponent::IsCloseCombatWeapon() const
 {
 	auto Inventory = Character->GetInventoryComponent();
 	const EAttackWeaponState WeaponType = Inventory->GetEquipWeaponType();
-	return WeaponType == EAttackWeaponState::EmptyWeapon || WeaponType == EAttackWeaponState::Knife;
+	return WeaponType == EAttackWeaponState::EmptyWeapon || 
+		WeaponType == EAttackWeaponState::Knife || 
+		WeaponType == EAttackWeaponState::Other;
 }
 #pragma endregion
 

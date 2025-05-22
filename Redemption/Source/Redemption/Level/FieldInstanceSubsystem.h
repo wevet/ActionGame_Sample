@@ -72,8 +72,6 @@ public:
 
 	const FFoleyBaseAsset& GetFoleyBaseAsset(const FGameplayTag SurfaceTag, TEnumAsByte<EPhysicalSurface> SurfaceTypeInEditor, bool& bOutFound) const;
 
-	UFUNCTION(BlueprintCallable, Category = "Foley")
-	FFoleyBaseAsset GetFoleyBaseAssetCopy(FGameplayTag SurfaceTag, TEnumAsByte<EPhysicalSurface> SurfaceTypeInEditor, bool& bOutFound) const;
 
 private:
 	static UFieldInstanceSubsystem* Instance;

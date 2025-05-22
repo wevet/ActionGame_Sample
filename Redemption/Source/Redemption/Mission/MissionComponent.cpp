@@ -3,6 +3,8 @@
 #include "Mission/MissionComponent.h"
 #include "Game/WvGameInstance.h"
 
+#include UE_INLINE_GENERATED_CPP_BY_NAME(MissionComponent)
+
 UMissionComponent::UMissionComponent(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
 	PrimaryComponentTick.bCanEverTick = true;

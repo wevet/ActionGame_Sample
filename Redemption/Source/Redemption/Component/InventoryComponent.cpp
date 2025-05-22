@@ -57,7 +57,7 @@ const EAttackWeaponState UInventoryComponent::ConvertWeaponState(const ELSOverla
 		return EAttackWeaponState::Knife;
 	case ELSOverlayState::Binoculars:
 		OutbCanAttack = false;
-		break;
+		return EAttackWeaponState::Other;
 	}
 
 	return EAttackWeaponState::EmptyWeapon;
@@ -65,7 +65,7 @@ const EAttackWeaponState UInventoryComponent::ConvertWeaponState(const ELSOverla
 
 const bool UInventoryComponent::ChangeAttackWeapon(const EAttackWeaponState InAttackWeaponState, int32 Index/* = 0 */)
 {
-	if (WeaponActorMap.Num() <= 0)
+	if (WeaponActorMap.IsEmpty())
 	{
 		UE_LOG(LogTemp, Warning, TEXT("WeaponActorMap Is Empty => %s"), *FString(__FUNCTION__));
 		return false;
@@ -79,7 +79,7 @@ const bool UInventoryComponent::ChangeAttackWeapon(const EAttackWeaponState InAt
 	}
 
 	TArray<AWeaponBaseActor*>& WeaponArray = WeaponActorMap[InAttackWeaponState];
-	if (WeaponArray.Num() <= 0)
+	if (WeaponArray.IsEmpty())
 	{
 		UE_LOG(LogTemp, Warning, TEXT("WeaponArray Is Empty => %s"), *FString(__FUNCTION__));
 		return false;
@@ -485,8 +485,7 @@ void UInventoryComponent::CreateWeaponInstances()
 		EquipWeapon_Internal(InitWeaponPtr);
 	}
 
-	// output log
-#if OUTPUT_LOG
+#if 1 //OUTPUT_LOG
 	for (TPair<EAttackWeaponState, TArray<AWeaponBaseActor*>>Pair : WeaponActorMap)
 	{
 		const FString CategoryName = *FString::Format(TEXT("Category => {0}"), { *GETENUMSTRING("/Script/Redemption.EAttackWeaponState", Pair.Key) });

@@ -113,13 +113,13 @@ const FSkillAnimMontage& UWvAbility_Skill::GetSkillAnimMontage()
 {
 	ABaseCharacter* Character = GetBaseCharacter();
 
-	const FSkillAnimMontage& SkillAnimationData = SkillAnimationDA->FindSkill(Character->GetAvatarTag(), Character->GetBodyShapeType());
-
 	if (bIsBotSkillAnim)
 	{
 		const FSkillAnimMontage& ModAnim = SkillAnimationDA->FindSkill(Character->GetBodyShapeType());
 		return ModAnim;
 	}
+
+	const FSkillAnimMontage& SkillAnimationData = SkillAnimationDA->FindSkill(Character->GetAvatarTag(), Character->GetBodyShapeType());
 	return SkillAnimationData;
 }
 

@@ -3,51 +3,12 @@
 #pragma once
 #include "Locomotion/LocomotionSystemTypes.h"
 #include "WvAbilitySystemTypes.h"
-
-// builtin
-#include "Animation/AnimInstance.h"
 #include "BaseCharacterTypes.generated.h"
 
-class AItemBaseActor;
-class USoundBase;
-class UNiagaraSystem;
 
-USTRUCT(BlueprintType)
-struct FOverlayAnimInstance
-{
-	GENERATED_BODY()
-
-public:
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	ELSOverlayState OverlayState{ELSOverlayState::None};
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	TSubclassOf<UAnimInstance> AnimInstanceClass;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	TSubclassOf<UAnimInstance> FemaleAnimInstanceClass;
-};
+class UAnimInstance;
 
 
-UCLASS(BlueprintType)
-class REDEMPTION_API UOverlayAnimInstanceDataAsset : public UDataAsset
-{
-	GENERATED_BODY()
-
-public:
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	TArray<FOverlayAnimInstance> OverlayAnimInstances;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	TSubclassOf<UAnimInstance> UnArmedAnimInstanceClass;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	TSubclassOf<UAnimInstance> UnArmedFemaleAnimInstanceClass;
-
-	TSubclassOf<UAnimInstance> FindAnimInstance(const ELSOverlayState InOverlayState) const;
-
-	TSubclassOf<UAnimInstance> FindAnimInstance(const EGenderType GenderType, const ELSOverlayState InOverlayState) const;
-};
 
 
 UCLASS(BlueprintType)

@@ -7,42 +7,29 @@
 #include "Component/WvCharacterMovementComponent.h"
 #include "Component/WvSkeletalMeshComponent.h"
 #include "Locomotion/LocomotionComponent.h"
-#include "PredictionFootIKComponent.h"
-#include "Component/InventoryComponent.h"
 #include "Component/CombatComponent.h"
 #include "Component/StatusComponent.h"
-#include "Component/WeaknessComponent.h"
 #include "WvPlayerController.h"
 #include "Animation/WvAnimInstance.h"
 #include "Game/WvGameInstance.h"
 #include "GameExtension.h"
+#include "Level/FieldInstanceSubsystem.h"
+
 
 #include "Components/CapsuleComponent.h"
-#include "Components/InputComponent.h"
-#include "Components/StaticMeshComponent.h"
-#include "Components/PawnNoiseEmitterComponent.h"
 #include "GroomComponent.h"
-#include "Engine/World.h"
-#include "GameFramework/Controller.h"
-#include "GameplayTagContainer.h"
-#include "Math/Rotator.h"
-#include "Math/UnrealMathSSE.h"
-#include "Math/Vector.h"
 #include "UObject/UObjectBaseUtility.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Kismet/GameplayStatics.h"
-
-
-#include "WvAIController.h"
-#include "Level/FieldInstanceSubsystem.h"
-#include "HAL/IConsoleManager.h"
 #include "Engine/SkinnedAssetCommon.h"
 
 
 #define K_MATERIAL_DYNAMIC_INST_PREFIX TEXT("_DynInst")
 
+
 using namespace CharacterDebug;
+
 
 void ABaseCharacter::RecalcurateBounds()
 {
@@ -149,24 +136,23 @@ UMaterialInstanceDynamic* ABaseCharacter::GetGroomDynamicMaterialInstanceWithMat
 	UMaterialInterface* HelmetMat) const
 {
 	const int32 L_ElementIndex = MeshComponent->GetMaterialIndex(SlotName);
-
-	auto Str = SlotName.ToString();
-	Str.Append(K_MATERIAL_DYNAMIC_INST_PREFIX);
+	const FString MIDSlotName = SlotName.ToString().Append(K_MATERIAL_DYNAMIC_INST_PREFIX);
 
 	switch (L_ElementIndex)
 	{
 	case 0:
-		return HairMat ? MeshComponent->CreateDynamicMaterialInstance(L_ElementIndex, HairMat, FName(Str)) : nullptr;
+		return HairMat ? MeshComponent->CreateDynamicMaterialInstance(L_ElementIndex, HairMat, FName(MIDSlotName)) : nullptr;
 		break;
 	case 1:
-		return FacialMat ? MeshComponent->CreateDynamicMaterialInstance(L_ElementIndex, FacialMat, FName(Str)) : nullptr;
+		return FacialMat ? MeshComponent->CreateDynamicMaterialInstance(L_ElementIndex, FacialMat, FName(MIDSlotName)) : nullptr;
 		break;
 	case 2:
-		return HelmetMat ? MeshComponent->CreateDynamicMaterialInstance(L_ElementIndex, HelmetMat, FName(Str)) : nullptr;
+		return HelmetMat ? MeshComponent->CreateDynamicMaterialInstance(L_ElementIndex, HelmetMat, FName(MIDSlotName)) : nullptr;
 		break;
 	}
 	return nullptr;
 }
+
 
 void ABaseCharacter::SetUpdateAnimationEditor()
 {
@@ -555,10 +541,10 @@ void ABaseCharacter::LoadAndSetMeshes(const bool bIsBlockLoadAssets, TSoftObject
 
 	FStreamableManager& StreamableManager = UWvGameInstance::GetStreamableManager();
 
-	TArray<TSoftObjectPtr<USkeletalMesh>> LocalArray({ BaseMesh, BodyMesh, FaceMesh, TopMesh, BottomMesh, FeetMesh});
+	TArray<TSoftObjectPtr<USkeletalMesh>> SoftSKMeshes({ BaseMesh, BodyMesh, FaceMesh, TopMesh, BottomMesh, FeetMesh});
 
 	InitialBodyMeshesPath.Reset(0);
-	for (auto SoftMesh : LocalArray)
+	for (auto SoftMesh : SoftSKMeshes)
 	{
 		InitialBodyMeshesPath.Add(SoftMesh.ToSoftObjectPath());
 	}
@@ -582,7 +568,7 @@ void ABaseCharacter::OnLoadAndSetMeshes_Callback()
 
 	if (!IsInGameThread())
 	{
-		return;
+		UE_LOG(LogTemp, Warning, TEXT("not game thread: [%s]"), *FString(__FUNCTION__));
 	}
 
 	if (InitialBodyMeshesPath.IsValidIndex(0))
