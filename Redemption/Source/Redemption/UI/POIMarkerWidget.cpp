@@ -116,11 +116,12 @@ void UPOIMarkerWidget::Renderer(const float DeltaTime)
 void UPOIMarkerWidget::Renderer_Player(const float DeltaTime)
 {
 	const auto Rotation = Owner->GetActorRotation();
-	const float Yaw = Rotation.Yaw;
-	//if (Yaw < 0.0f)
-	//{
-	//	Yaw += 360.0f;
-	//}
+	float Yaw = Rotation.Yaw;
+
+	if (Yaw < 0.0f)
+	{
+		Yaw += 360.0f;
+	}
 
 	CurrentYaw = FMath::FInterpTo(CurrentYaw, Yaw, DeltaTime, InterpSpeed);
 
@@ -138,7 +139,10 @@ void UPOIMarkerWidget::Renderer_Player(const float DeltaTime)
 	{
 		if (Character.IsValid())
 		{
-			const auto CtrlYaw = Character->GetControlRotation().Yaw;
+			const auto CtrlYaw = (Character->GetControlRotation().Yaw);
+			//float CtrlYaw = Character->GetControlRotation().Yaw;
+			//CtrlYaw = FMath::Fmod(CtrlYaw + 360.f, 360.f);
+			//CtrlYaw = -CtrlYaw;
 			PawnView->SetRenderTransformAngle(CtrlYaw);
 		}
 	}
@@ -153,18 +157,33 @@ void UPOIMarkerWidget::Renderer_Player(const float DeltaTime)
 void UPOIMarkerWidget::Renderer_Bot(const float DeltaTime)
 {
 
-	const auto Rotation = Character->GetActorRotation();
-
-	if (IsValid(PawnIcon) && IsValid(PawnThrobber))
+	if (!Character.IsValid())
 	{
-		PawnIcon->SetRenderTransformAngle(Rotation.Yaw);
-		PawnThrobber->SetRenderTransformAngle(Rotation.Yaw);
+		return;
+	}
+
+	const auto Rotation = Owner->GetActorRotation();
+	float Yaw = Rotation.Yaw;
+
+	if (Yaw < 0.0f)
+	{
+		Yaw += 360.0f;
+	}
+
+
+	if (IsValid(PawnIcon))
+	{
+		PawnIcon->SetRenderTransformAngle(Yaw);
+	}
+
+	if (IsValid(PawnThrobber))
+	{
+		PawnThrobber->SetRenderTransformAngle(Yaw);
 	}
 
 	if (IsValid(PawnView))
 	{
-		const auto CtrlYaw = Character->GetControlRotation().Yaw;
-		PawnView->SetRenderTransformAngle(CtrlYaw);
+		PawnView->SetRenderTransformAngle(Yaw);
 	}
 }
 

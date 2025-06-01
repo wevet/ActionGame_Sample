@@ -109,6 +109,8 @@ public:
 	void VisibilityCurrentWeapon(const bool InHidden);
 
 	bool HasAttackTarget() const;
+
+	FPawnAttackParam GetWeaponAttackInfo() const;
 #pragma endregion
 
 private:

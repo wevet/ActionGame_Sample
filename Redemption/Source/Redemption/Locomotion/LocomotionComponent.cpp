@@ -1290,13 +1290,10 @@ void ULocomotionComponent::CalculateEssentialVariables(const float DeltaSeconds)
 			const float MaxAcc = CharacterMovementComponent->GetMaxSpeed();
 			const float MovementAmount = Acc / MaxAcc;
 			//UE_LOG(LogTemp, Log, TEXT("MovementAmount => %.3f"), MovementAmount);
+			//LocomotionEssencialVariables.HasAcceleration = (MovementAmount > 0.f);
 		}
 
 		LocomotionEssencialVariables.HasAcceleration = !FMath::IsNearlyEqual(SizeXY, 0.0f, 0.000001);
-		if (LocomotionEssencialVariables.bIsMassAgent)
-		{
-			LocomotionEssencialVariables.HasAcceleration = (Vel.Length() > K_MOVING_THRESHOLD);
-		}
 		LocomotionEssencialVariables.LocalVelocity2D = UKismetMathLibrary::Quat_UnrotateVector(Character->GetActorRotation().Quaternion(), LocomotionEssencialVariables.Velocity * FVector(1.0f, 1.0f, 0.0f));
 	}
 

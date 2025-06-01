@@ -71,7 +71,7 @@ void UClimbingAnimInstance::NativeThreadSafeUpdateAnimation(float DeltaTimeX)
 
 	if (IsValid(LocomotionComponent))
 	{
-		const FLocomotionEssencialVariables LocomotionEssencialVariables = LocomotionComponent->GetLocomotionEssencialVariables();
+		const auto& LocomotionEssencialVariables = LocomotionComponent->GetLocomotionEssencialVariables();
 		PrevMovementMode = LocomotionEssencialVariables.LSPrevMovementMode;
 	}
 

@@ -1088,9 +1088,7 @@ bool UCombatComponent::IsCloseCombatWeapon() const
 {
 	auto Inventory = Character->GetInventoryComponent();
 	const EAttackWeaponState WeaponType = Inventory->GetEquipWeaponType();
-	return WeaponType == EAttackWeaponState::EmptyWeapon || 
-		WeaponType == EAttackWeaponState::Knife || 
-		WeaponType == EAttackWeaponState::Other;
+	return WeaponType == EAttackWeaponState::EmptyWeapon || WeaponType == EAttackWeaponState::Knife;
 }
 #pragma endregion
 
@@ -1183,5 +1181,12 @@ bool UCombatComponent::CanFollow() const
 	return Followers.Num() < StackCount;
 }
 #pragma endregion
+
+
+FPawnAttackParam UCombatComponent::GetWeaponAttackInfo() const
+{
+	const auto Inventory = Character->GetInventoryComponent();
+	return Inventory->GetEquipWeapon()->GetWeaponAttackInfo();
+}
 
 

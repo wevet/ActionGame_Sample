@@ -40,7 +40,7 @@ EBTNodeResult::Type UBTTask_ChangeAIActionState::ExecuteTask(UBehaviorTreeCompon
 			{
 				case EAIActionState::Combat:
 				{
-					//Character->StrafeMovement();
+					Character->StrafeMovement();
 				}
 				break;
 				case EAIActionState::Search:
@@ -68,21 +68,14 @@ EBTNodeResult::Type UBTTask_ChangeAIActionState::ExecuteTask(UBehaviorTreeCompon
 
 							const bool bWasCloseCombat = CombatComp->IsCloseCombatWeapon();
 							AIController->SetBlackboardCloseCombat(bWasCloseCombat);
-							AIController->HandleTargetLock(bWasCloseCombat);
-
-							if (bWasCloseCombat)
-							{
-								Character->VelocityMovement();
-							}
-							else
-							{
-								Character->StrafeMovement();
-							}
+							AIController->HandleTargetLock(!bWasCloseCombat);
 						}
 						else
 						{
 							CombatComp->EquipAvailableWeapon();
 						}
+
+						CombatComp->SetAiming(true);
 					}
 					break;
 					case EAIActionState::Search:
@@ -90,6 +83,7 @@ EBTNodeResult::Type UBTTask_ChangeAIActionState::ExecuteTask(UBehaviorTreeCompon
 					{
 						AIController->HandleTargetLock(false);
 						CombatComp->EquipAvailableWeapon();
+						CombatComp->SetAiming(true);
 					}
 					break;
 					case EAIActionState::Patrol:
@@ -97,9 +91,12 @@ EBTNodeResult::Type UBTTask_ChangeAIActionState::ExecuteTask(UBehaviorTreeCompon
 					{
 						AIController->HandleTargetLock(false);
 						CombatComp->UnEquipWeapon();
+						CombatComp->SetAiming(false);
 					}
 					break;
 				}
+
+				//CombatComp->EquipAvailableWeapon();
 			}
 
 		}

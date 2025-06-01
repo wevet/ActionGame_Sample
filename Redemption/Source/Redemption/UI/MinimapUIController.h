@@ -57,6 +57,8 @@ private:
 	void CreatePOIIconActors(const float DeltaTime);
 	void CreatePOIIconWidgets();
 
+	void RemovePOIIconWidgets();
+
 	void UpdateTranslationPOIWidgets(const float DeltaTime);
 
 	float KeyCharactersElapsedTime{ 0.f };

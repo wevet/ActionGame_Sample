@@ -65,7 +65,7 @@ void UWvAbility_Melee::ActivateAbility(const FGameplayAbilitySpecHandle Handle, 
 		}
 	}
 
-	const auto LocomotionEssencialVariables = Character->GetLocomotionComponent()->GetLocomotionEssencialVariables();
+	const auto& LocomotionEssencialVariables = Character->GetLocomotionComponent()->GetLocomotionEssencialVariables();
 	UAnimMontage* CurAnimMontage = (IsValid(SprintToMontage) && LocomotionEssencialVariables.LSGait == ELSGait::Sprinting) ? SprintToMontage : Montage;
 
 	float PlayRate = 1.0f;

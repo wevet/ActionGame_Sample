@@ -652,6 +652,11 @@ void ABaseCharacter::DisplayDrawDebug_Internal()
 		return;
 	}
 
+	if (!IsBotCharacter() || IsDead() || !UWvCommonUtils::IsInViewport(this))
+	{
+		return;
+	}
+
 	constexpr float Step = 40.0f;
 	FVector BasePos = GetActorLocation();
 	const float CapsuleHalfHeight = GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight();

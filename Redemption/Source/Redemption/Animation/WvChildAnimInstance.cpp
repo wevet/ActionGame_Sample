@@ -39,7 +39,7 @@ void UWvChildAnimInstance::NativeThreadSafeUpdateAnimation(float DeltaSeconds)
 
 	if (LocomotionComponent)
 	{
-		const auto LocomotionEssencialVariables = LocomotionComponent->GetLocomotionEssencialVariables();
+		const auto& LocomotionEssencialVariables = LocomotionComponent->GetLocomotionEssencialVariables();
 
 		bHasAcceleration = LocomotionEssencialVariables.HasAcceleration;
 		LSGait = LocomotionEssencialVariables.LSGait;

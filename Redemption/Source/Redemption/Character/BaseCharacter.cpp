@@ -246,9 +246,11 @@ ABaseCharacter::ABaseCharacter(const FObjectInitializer& ObjectInitializer)
 	WvMeshComp->SetCollisionResponseToChannel(ECollisionChannel::ECC_Visibility, ECollisionResponse::ECR_Block);
 	WvMeshComp->SetCollisionResponseToChannel(ECollisionChannel::ECC_GameTraceChannel1, ECollisionResponse::ECR_Ignore);
 	WvMeshComp->SetCollisionResponseToChannel(ECollisionChannel::ECC_GameTraceChannel2, ECollisionResponse::ECR_Ignore);
+
 	// sets Damage
 	WvMeshComp->SetCollisionResponseToChannel(ECollisionChannel::ECC_GameTraceChannel3, ECollisionResponse::ECR_Block);
 	WvMeshComp->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+
 	// custom collision preset
 	WvMeshComp->SetCollisionProfileName(K_CHARACTER_COLLISION_PRESET);
 
@@ -757,6 +759,8 @@ void ABaseCharacter::OnReceiveKillTarget(AActor* Actor, const float Damage)
 		GetInventoryComponent()->RemoveAllInventory();
 	}
 
+	MinimapMarkerComponent->SetVisibleMakerTag(false);
+
 	OnTeamHandleReceiveKillDelegate.Broadcast(Actor, Damage);
 
 	OnReceiveKillTarget_Callback();
@@ -1263,8 +1267,9 @@ void ABaseCharacter::Jump()
 			break;
 		}
 
-		const auto EssencialVariables = LocomotionComponent->GetLocomotionEssencialVariables();
-		switch (EssencialVariables.LSMovementMode)
+
+		const auto& LocomotionEssencialVariables = LocomotionComponent->GetLocomotionEssencialVariables();
+		switch (LocomotionEssencialVariables.LSMovementMode)
 		{
 			case ELSMovementMode::Grounded:
 			case ELSMovementMode::Falling:
@@ -1336,9 +1341,9 @@ void ABaseCharacter::StrafeMovement()
 
 void ABaseCharacter::DoSprinting()
 {
-	auto LocomotionVariables = LocomotionComponent->GetLocomotionEssencialVariables();
+	const auto& LocomotionEssencialVariables = LocomotionComponent->GetLocomotionEssencialVariables();
 
-	if (LocomotionVariables.bAiming)
+	if (LocomotionEssencialVariables.bAiming)
 	{
 		DoStopAiming();
 	}
@@ -1414,12 +1419,12 @@ void ABaseCharacter::DoTargetLockOff()
 
 void ABaseCharacter::OnTraversalBegin_Callback()
 {
-	UE_LOG(LogTemp, Log, TEXT("Character => %s, function => %s"), *GetName(), *FString(__FUNCTION__));
+	//UE_LOG(LogTemp, Log, TEXT("Character => %s, function => %s"), *GetName(), *FString(__FUNCTION__));
 }
 
 void ABaseCharacter::OnTraversalEnd_Callback()
 {
-	UE_LOG(LogTemp, Log, TEXT("Character => %s, function => %s"), *GetName(), *FString(__FUNCTION__));
+	//UE_LOG(LogTemp, Log, TEXT("Character => %s, function => %s"), *GetName(), *FString(__FUNCTION__));
 }
 
 /// <summary>
@@ -1552,6 +1557,8 @@ void ABaseCharacter::BeginAliveAction()
 			//
 		});
 
+		MinimapMarkerComponent->SetVisibleMakerTag(true);
+
 		WvAbilitySystemComponent->TryActivateAbilityByTag(TAG_Character_StateAlive_Action);
 	}
 }
@@ -1599,15 +1606,24 @@ void ABaseCharacter::DoForceKill()
 /// <param name="CurrentOverlay"></param>
 const bool ABaseCharacter::OverlayStateChange(const ELSOverlayState CurrentOverlay)
 {
-	if (SelectableOverlayState == CurrentOverlay)
+	constexpr uint8 ELSOverlayState_Min = static_cast<uint8>(ELSOverlayState::None);
+	constexpr uint8 ELSOverlayState_Max = static_cast<uint8>(ELSOverlayState::Mass);
+
+	// まず uint8 にキャスト
+	uint8 Raw = static_cast<uint8>(CurrentOverlay);
+	// None(0) ～ Mass(最大) の範囲にクランプ
+	Raw = FMath::Clamp(Raw, ELSOverlayState_Min, ELSOverlayState_Max);
+	// 再び enum にキャストして代入
+	const ELSOverlayState ClampedOverlay = static_cast<ELSOverlayState>(Raw);
+
+	if (SelectableOverlayState == ClampedOverlay)
 	{
 		return false;
 	}
 
 	bool bIsOverlayChange = false;
 	const ELSOverlayState PrevOverlay = SelectableOverlayState;
-
-	SelectableOverlayState = CurrentOverlay;
+	SelectableOverlayState = ClampedOverlay;
 
 	if (const UClass* OverlayAnimClass = UWvCommonUtils::FindClassInChooserTable(this, OverlayAnimationTable))
 	{
@@ -1615,9 +1631,18 @@ const bool ABaseCharacter::OverlayStateChange(const ELSOverlayState CurrentOverl
 		{
 			TSubclassOf<UAnimInstance> Subclass = const_cast<UClass*>(OverlayAnimClass);
 			GetMesh()->LinkAnimClassLayers(Subclass);
-			OverlayChangeDelegate.Broadcast(CurrentOverlay);
+			OverlayChangeDelegate.Broadcast(ClampedOverlay);
 			bIsOverlayChange = true;
 		}
+		else
+		{
+			UE_LOG(LogTemp, Warning, TEXT("OverlayAnimClass not class UAnimInstance: [%s]"), *FString(__FUNCTION__));
+		}
+	}
+	else
+	{
+		const FString CategoryName = *FString::Format(TEXT("{0}"), { *GETENUMSTRING("/Script/Redemption.ELSOverlayState", SelectableOverlayState) });
+		UE_LOG(LogTemp, Warning, TEXT("OverlayAnimClass not found:[%s] FindClassInChooserTable: [%s]"), *CategoryName, *FString(__FUNCTION__));
 	}
 
 
@@ -1718,6 +1743,11 @@ void ABaseCharacter::SetLeaderTag()
 {
 	WvAbilitySystemComponent->AddGameplayTag(TAG_Character_AI_Leader, 1);
 	SetLeaderDisplay();
+
+	if (AWvAIController* AIC = Cast<AWvAIController>(GetController()))
+	{
+		AIC->SetLeaderTag();
+	}
 }
 
 ABaseCharacter* ABaseCharacter::GetLeaderCharacterFromController() const
@@ -1759,11 +1789,11 @@ void ABaseCharacter::OnRoationChange_Callback()
 
 void ABaseCharacter::OnGaitChange_Callback()
 {
-	const auto EssencialVariables = LocomotionComponent->GetLocomotionEssencialVariables();
+	const auto& LocomotionEssencialVariables = LocomotionComponent->GetLocomotionEssencialVariables();
 
 	float Weight = 0.6f;
 	EPredictionGait Gait = EPredictionGait::Run;
-	switch (EssencialVariables.LSGait)
+	switch (LocomotionEssencialVariables.LSGait)
 	{
 	case ELSGait::Walking:
 		Gait = EPredictionGait::Walk;
@@ -1782,7 +1812,7 @@ void ABaseCharacter::OnGaitChange_Callback()
 
 	}
 
-	PredictionFootIKComponent->ChangeSpeedCurveValue(Gait, Weight, EssencialVariables.Velocity.Size());
+	PredictionFootIKComponent->ChangeSpeedCurveValue(Gait, Weight, LocomotionEssencialVariables.Velocity.Size());
 }
 
 void ABaseCharacter::OnAbilityFailed_Callback(const UGameplayAbility* Ability, const FGameplayTagContainer& GameplayTags)
@@ -1886,10 +1916,10 @@ bool ABaseCharacter::HasComboTrigger() const
 /// <param name="SyncPointWeight"></param>
 void ABaseCharacter::CalcurateNearlestTarget(const float SyncPointWeight)
 {
-	const FLocomotionEssencialVariables LocomotionEssencial = LocomotionComponent->GetLocomotionEssencialVariables();
-	if (LocomotionEssencial.LookAtTarget.IsValid())
+	const auto& LocomotionEssencialVariables = LocomotionComponent->GetLocomotionEssencialVariables();
+	if (LocomotionEssencialVariables.LookAtTarget.IsValid())
 	{
-		FindNearlestTarget(LocomotionEssencial.LookAtTarget.Get(), SyncPointWeight);
+		FindNearlestTarget(LocomotionEssencialVariables.LookAtTarget.Get(), SyncPointWeight);
 	}
 }
 

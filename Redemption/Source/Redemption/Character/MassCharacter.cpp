@@ -24,22 +24,22 @@
 
 AMassCharacter::AMassCharacter(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
+	// dont async load components
+	bIsAllowAsyncLoadComponentAssets = false;
+	bIsDiedRemoveInventory = true;
+
 	MassAgentComponent = ObjectInitializer.CreateDefaultSubobject<UMassAgentComponent>(this, TEXT("MassAgentComponent"));
 	MassAgentComponent->bAutoActivate = 1;
 
 	StateTreeComponent = ObjectInitializer.CreateDefaultSubobject<UStateTreeComponent>(this, TEXT("StateTreeComponent"));
 	StateTreeComponent->bAutoActivate = 1;
 
-	UWvSkeletalMeshComponent* WvMeshComp = CastChecked<UWvSkeletalMeshComponent>(GetMesh());
-	check(WvMeshComp);
 
-	// sets Damage
-	//WvMeshComp->SetCollisionResponseToChannel(ECollisionChannel::ECC_GameTraceChannel3, ECollisionResponse::ECR_Block);
+	UWvCharacterMovementComponent* WvMoveComp = CastChecked<UWvCharacterMovementComponent>(GetCharacterMovement());
+	check(WvMoveComp);
+	WvMoveComp->SetUseAccelerationForPathFollowing(true);
 
-
-	// dont async load components
-	bIsAllowAsyncLoadComponentAssets = false;
-	bIsDiedRemoveInventory = true;
+	WvMoveComp->BrakingFriction = 0.8f;
 
 	SetReplicateMovement(false);
 }

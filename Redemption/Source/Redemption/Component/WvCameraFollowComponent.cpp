@@ -217,7 +217,7 @@ const bool UWvCameraFollowComponent::ChooseCameraSettings(FCameraSettings& Camer
 		return false;
 	}
 
-	const auto LocomotionEssencialVariables = LocomotionComponent->GetLocomotionEssencialVariables();
+	const auto& LocomotionEssencialVariables = LocomotionComponent->GetLocomotionEssencialVariables();
 	const ELSStance LSStance = LocomotionEssencialVariables.LSStance;
 	const ELSGait LSGait = LocomotionEssencialVariables.LSGait;
 	const ELSRotationMode LSRotationMode = LocomotionEssencialVariables.LSRotationMode;

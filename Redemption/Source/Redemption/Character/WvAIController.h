@@ -161,6 +161,8 @@ public:
 	/// <param name="IsCloseCombat"></param>
 	void SetBlackboardCloseCombat(const bool IsCloseCombat);
 
+	void EndFriendlyAbility_Callback();
+
 	UFUNCTION(BlueprintCallable, Category = AI)
 	void Execute_DoAttack();
 
@@ -168,6 +170,9 @@ public:
 	void HandleSprint(const bool bEnable);
 
 	void HandleTargetLock(const bool bLockTarget);
+
+	UFUNCTION(BlueprintCallable, Category = AI)
+	void HandleAiming(const bool bEnable);
 
 	UFUNCTION(BlueprintCallable, Category = AI)
 	void HandleStrafeMovement(const bool bEnableStrafeMovement);
@@ -206,6 +211,8 @@ public:
 	void NotifyCloseCombatUpdate();
 	void NotifyCloseCombatEnd();
 
+	void OnPerceptionTaskFinished(const ETaskType InTaskType);
+
 	UFUNCTION(BlueprintCallable, Category = AI)
 	void ModifyCloseCombatNearlestTarget();
 
@@ -228,10 +235,12 @@ public:
 	void CloseCombatActionEnd();
 
 	UFUNCTION(BlueprintCallable, Category = AI)
-	void SmoothMoveToLocation(const FVector TargetLocation, const float RotationInterp);
+	void SmoothMoveToLocation(const FVector& Direction, const float RotationInterp);
 
 	void CloseCombatAbort();
 	int32 GetComboTypeIndex() const;
+
+	void SetLeaderTag();
 
 #pragma endregion
 
@@ -348,17 +357,12 @@ private:
 	UPROPERTY()
 	TArray<AActor*> IgnoreTargets;
 
-	UPROPERTY()
+
 	FAIPerceptionTask SightTask;
-
-	UPROPERTY()
 	FAIPerceptionTask HearTask;
-
-	UPROPERTY()
 	FAIPerceptionTask FollowTask;
-
-	UPROPERTY()
 	FAIPerceptionTask FriendlyTask;
+	FAILeaderTask LeaderTask;
 
 	FVector LastSeenLocation;
 

@@ -20,11 +20,11 @@
 #include "Kismet/KismetMathLibrary.h"
 #include "NavigationSystem.h"
 
-//#include UE_INLINE_GENERATED_CPP_BY_NAME(WvAIController)
 
-
+#include UE_INLINE_GENERATED_CPP_BY_NAME(WvAIController)
 
 #define CLEAR_FRIENDLY_DATA 1
+
 
 AWvAIController::AWvAIController(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
@@ -67,6 +67,7 @@ AWvAIController::AWvAIController(const FObjectInitializer& ObjectInitializer) : 
 	MissionComponent = CreateDefaultSubobject<UAIMissionComponent>(TEXT("MissionComponent"));
 	MissionComponent->bAutoActivate = 1;
 }
+
 
 void AWvAIController::PreInitializeComponents()
 {
@@ -119,10 +120,6 @@ void AWvAIController::OnPossess(APawn* InPawn)
 	// In case of asyncload, ai is executed first, so BuildRunAI should be called after back-reading is completed.
 	BuildRunAI();
 
-	HearTask = FAIPerceptionTask(FName(TEXT("HearTask")), GetWorld());
-	SightTask = FAIPerceptionTask(FName(TEXT("SightTask")), GetWorld());
-	FollowTask = FAIPerceptionTask(FName(TEXT("FollowTask")), GetWorld());
-	FriendlyTask = FAIPerceptionTask(FName(TEXT("FriendlyTask")), GetWorld());
 }
 
 void AWvAIController::OnUnPossess()
@@ -549,6 +546,7 @@ void AWvAIController::UpdateFollowPoint()
 	}
 }
 
+
 void AWvAIController::DoSearchEnemyState(AActor* Actor, FVector OverridePosition/* = FVector::ZeroVector*/)
 {
 	if (!NodeGeneratorClasses)
@@ -569,7 +567,14 @@ void AWvAIController::DoSearchEnemyState(AActor* Actor, FVector OverridePosition
 		return;
 	}
 
-	UNavigationSystemV1* NavSys = UNavigationSystemV1::GetCurrent(GetWorld());
+	if (BaseCharacter->IsFriendlyActionPlaying())
+	{
+		CancelFriendlyActionAbility();
+		FriendlyTask.End();
+		UE_LOG(LogWvAI, Warning, TEXT("cancel friendy action task => [%s]"), *FString(__FUNCTION__));
+	}
+
+	const UNavigationSystemV1* NavSys = UNavigationSystemV1::GetCurrent(GetWorld());
 	FNavLocation EndPathLocation;
 
 	// Search range of nearest Mesh from endPoint
@@ -577,10 +582,9 @@ void AWvAIController::DoSearchEnemyState(AActor* Actor, FVector OverridePosition
 
 	FVector TargetLocation = OverridePosition.IsNearlyZero() ? CurrentStimulus.StimulusLocation : OverridePosition;
 
-	FVector EndPosition;
 	// get the coordinates on the nearest nav mesh
 	const bool bValidPoint = NavSys->ProjectPointToNavigation(TargetLocation, EndPathLocation, Extent);
-	EndPosition = (!bValidPoint) ? GetPawn()->GetActorLocation() : EndPathLocation.Location;
+	const FVector EndPosition = (bValidPoint) ? EndPathLocation.Location : GetPawn()->GetActorLocation();
 
 	if (!bValidPoint)
 	{
@@ -607,10 +611,9 @@ void AWvAIController::DoSearchEnemyState(AActor* Actor, FVector OverridePosition
 	SetBlackboardSearchNodeHolder(Generator);
 	SetBlackboardPatrolLocation(EndPosition);
 
-	HearTask.Begin(HEAR_AGE, [this]()
+	HearTask.Begin(ETaskType::Hear, HEAR_AGE, [this]()
 	{
-		ClearSearchNodeHolders();
-		//UE_LOG(LogWvAI, Log, TEXT("finish search node perception => %s"), *FString(__FUNCTION__));
+		this->OnPerceptionTaskFinished(ETaskType::Hear);
 	});
 
 }
@@ -622,7 +625,9 @@ void AWvAIController::DoCombatEnemyState(AActor* Actor)
 		if (IWvAbilityTargetInterface* ATI = Cast<IWvAbilityTargetInterface>(Actor))
 		{
 			if (ATI->IsDead())
+			{
 				return;
+			}
 		}
 
 		if (SightTask.IsRunning())
@@ -634,30 +639,16 @@ void AWvAIController::DoCombatEnemyState(AActor* Actor)
 		ClearSearchNodeHolders();
 		SetBlackboardTarget(Actor);
 
-		if (HearTask.IsRunning())
+		if (BaseCharacter->IsFriendlyActionPlaying())
 		{
-			HearTask.End();
-			UE_LOG(LogWvAI, Warning, TEXT("cancel target search task => [%s]"), *FString(__FUNCTION__));
-		}
-
-		if (FriendlyTask.IsRunning())
-		{
-			FriendlyTask.End();
 			CancelFriendlyActionAbility();
+			FriendlyTask.End();
 			UE_LOG(LogWvAI, Warning, TEXT("cancel friendy action task => [%s]"), *FString(__FUNCTION__));
 		}
 
-		SightTask.Begin(SIGHT_AGE, [this]()
+		SightTask.Begin(ETaskType::Sight, SIGHT_AGE, [this]()
 		{
-			// targetî•ñ‚ðíœ‚µ‚ÄŒx‰úƒ‚[ƒh‚É‘JˆÚ‚·‚é
-			auto LostTarget = GetBlackboardTarget();
-			ClearSightTaget();
-
-			if (IsValid(LostTarget) && !HearTask.IsRunning())
-			{
-				DoSearchEnemyState(LostTarget, LostTarget->GetActorLocation());
-				UE_LOG(LogWvAI, Warning, TEXT("%s has lost my target and I will warn me."), *GetNameSafe(GetPawn()));
-			}
+			this->OnPerceptionTaskFinished(ETaskType::Sight);
 		});
 
 	}
@@ -670,38 +661,34 @@ void AWvAIController::DoCombatEnemyState(AActor* Actor)
 
 void AWvAIController::DoFollowActionState(AActor* Actor)
 {
-	if (IsValid(Actor))
+	if (!IsValid(Actor))
 	{
-		if (!FollowTask.IsRunning())
-		{
-			// if actor same group leader
-			UCombatComponent* Comp = Actor->FindComponentByClass<UCombatComponent>();
-			if (Comp)
-			{
-				if (Comp->CanFollow())
-				{
-					Comp->AddFollower(GetPawn());
-					SetBlackboardLeader(Actor);
-					SetBlackboardFollowLocation(Actor->GetActorLocation());
-					FollowTask.Begin(FOLLOW_AGE, [this]()
-					{
+		return;
+	}
 
-					});
-				}
-			}
-		}
-		else
+	if (!FollowTask.IsRunning())
+	{
+		// if actor same group leader
+		UCombatComponent* Comp = Actor->FindComponentByClass<UCombatComponent>();
+		if (Comp)
 		{
-			//UpdateFollowPoint();
-			UE_LOG(LogWvAI, Log, TEXT("update follow running => %s"), *FString(__FUNCTION__));
+			if (Comp->CanFollow())
+			{
+				Comp->AddFollower(GetPawn());
+				SetBlackboardLeader(Actor);
+				SetBlackboardFollowLocation(Actor->GetActorLocation());
+				FollowTask.Begin(ETaskType::Follow, FOLLOW_AGE, [this]()
+				{
+					this->OnPerceptionTaskFinished(ETaskType::Follow);
+				});
+			}
 		}
 	}
 	else
 	{
-		//SetBlackboardLeader(nullptr);
-		//SetBlackboardFollowLocation(FVector::ZeroVector);
+		//UpdateFollowPoint();
+		UE_LOG(LogWvAI, Log, TEXT("update follow running => %s"), *FString(__FUNCTION__));
 	}
-
 
 }
 
@@ -718,11 +705,12 @@ void AWvAIController::DoFriendlyActionState(AActor* Actor)
 		return;
 	}
 
-	if (!FriendlyTask.IsRunning())
+	if (!BaseCharacter->IsFriendlyActionPlaying())
 	{
 		if (ABaseCharacter* FriendCharacter = Cast<ABaseCharacter>(Actor))
 		{
-			const FVector FriendMiddlePoint = UKismetMathLibrary::VLerp(BaseCharacter->GetActorLocation(), FriendCharacter->GetActorLocation(), 0.5f);
+			const float CapsuleRadius = BaseCharacter->GetCapsuleComponent()->GetUnscaledCapsuleRadius();
+			const FVector FriendEnterPoint = BaseCharacter->GetActorLocation() + (BaseCharacter->GetActorForwardVector() * CapsuleRadius);
 
 			// self controlled character apply
 			{
@@ -732,7 +720,7 @@ void AWvAIController::DoFriendlyActionState(AActor* Actor)
 				BaseCharacter->SetActorRotation(Rot);
 
 				SetBlackboardFriend(FriendCharacter);
-				SetBlackboardFriendLocation(FriendMiddlePoint);
+				SetBlackboardFriendLocation(BaseCharacter->GetActorLocation());
 				StartFriendlyTask();
 			}
 
@@ -745,7 +733,7 @@ void AWvAIController::DoFriendlyActionState(AActor* Actor)
 				FriendCharacter->SetActorRotation(Rot);
 
 				AIC->SetBlackboardFriend(BaseCharacter.Get());
-				AIC->SetBlackboardFriendLocation(FriendMiddlePoint);
+				AIC->SetBlackboardFriendLocation(FriendEnterPoint);
 				AIC->StartFriendlyTask();
 			}
 
@@ -760,13 +748,18 @@ void AWvAIController::DoFriendlyActionState(AActor* Actor)
 	}
 }
 
+void AWvAIController::EndFriendlyAbility_Callback()
+{
+	ClearFriendlyTarget();
+	ApplyFriendlyCoolDown();
+	UE_LOG(LogWvAI, Log, TEXT("clear friendy action => [%s]"), *FString(__FUNCTION__));
+}
+
 void AWvAIController::StartFriendlyTask()
 {
-	FriendlyTask.Begin(FRIEND_AGE, [this]()
+	FriendlyTask.Begin(ETaskType::Communication, FRIEND_AGE, [this]()
 	{
-		ClearFriendlyTarget();
-		ApplyFriendlyCoolDown();
-		UE_LOG(LogWvAI, Log, TEXT("clear friendy action => [%s]"), *FString(__FUNCTION__));
+		this->OnPerceptionTaskFinished(ETaskType::Communication);
 	});
 }
 
@@ -825,6 +818,18 @@ void AWvAIController::HandleTargetLock(const bool bLockTarget)
 	else
 	{
 		BaseCharacter->DoTargetLockOff();
+	}
+}
+
+void AWvAIController::HandleAiming(const bool bEnable)
+{
+	if (bEnable)
+	{
+		BaseCharacter->DoStartAiming();
+	}
+	else
+	{
+		BaseCharacter->DoStopAiming();
 	}
 }
 
@@ -945,8 +950,11 @@ bool AWvAIController::IsFriendCombatSupport(const ABaseCharacter* OtherCharacter
 	// if other character is battled? true is share target
 	if (AWvAIController* Ctrl = Cast<AWvAIController>(OtherCharacter->GetController()))
 	{
-		OutTarget = Ctrl->GetBlackboardTarget();
-		return Ctrl->IsInBattled();
+		if (Ctrl->IsInBattled())
+		{
+			OutTarget = Ctrl->GetBlackboardTarget();
+			return true;
+		}
 	}
 	return false;
 }
@@ -1110,6 +1118,14 @@ void AWvAIController::OnPredictionPerceptionUpdatedRecieve(AActor* Actor)
 #pragma region ClearFunction
 void AWvAIController::ClearSearchNodeHolders()
 {
+	// cancel hear task
+	if (!HearTask.IsRunning())
+	{
+		return;
+	}
+
+	HearTask.End();
+
 	if (Generators.Num() > 1)
 	{
 		UE_LOG(LogWvAI, Log, TEXT("Generator is unnecessarily generated. => %d Character. => %s"), Generators.Num(), *GetNameSafe(GetPawn()));
@@ -1137,11 +1153,7 @@ void AWvAIController::ClearSearchNodeHolders()
 		}
 	}
 
-	// cancel hear task
-	if (HearTask.IsRunning())
-	{
-		HearTask.End();
-	}
+	UE_LOG(LogWvAI, Warning, TEXT("cancel target search task => [%s]"), *FString(__FUNCTION__));
 }
 
 void AWvAIController::ClearSightTaget()
@@ -1229,6 +1241,46 @@ void AWvAIController::HandleRemoveAIPerceptionDelegate()
 	{
 		AIPerceptionComponent->OnPerceptionUpdated.RemoveDynamic(this, &ThisClass::OnActorsPerceptionUpdatedRecieve);
 	}
+}
+
+
+void AWvAIController::OnPerceptionTaskFinished(const ETaskType InTaskType)
+{
+	switch (InTaskType)
+	{
+		case ETaskType::Hear:
+		{
+			ClearSearchNodeHolders();
+		}
+		break;
+		case ETaskType::Sight:
+		{
+			// targetî•ñ‚ðíœ‚µ‚ÄŒx‰úƒ‚[ƒh‚É‘JˆÚ‚·‚é
+			auto LostTarget = GetBlackboardTarget();
+			ClearSightTaget();
+
+			if (IsValid(LostTarget) && !HearTask.IsRunning())
+			{
+				DoSearchEnemyState(LostTarget, LostTarget->GetActorLocation());
+				UE_LOG(LogWvAI, Warning, TEXT("%s has lost my target and I will warn me."), *GetNameSafe(GetPawn()));
+			}
+		}
+		break;
+		case ETaskType::Communication:
+		break;
+		case ETaskType::Follow:
+		break;
+		case ETaskType::None:
+		break;
+	}
+}
+
+/// <summary>
+/// ref BaseCharacter SetLeaderTag
+/// </summary>
+void AWvAIController::SetLeaderTag()
+{
+	LeaderTask.OnEnable(true);
 }
 
 
@@ -1412,7 +1464,7 @@ void AWvAIController::ApplyFriendlyCoolDown()
 #pragma endregion
 
 
-void AWvAIController::SmoothMoveToLocation(const FVector TargetLocation, const float RotationInterp)
+void AWvAIController::SmoothMoveToLocation(const FVector& Direction, const float RotationInterp)
 {
 	if (!BaseCharacter.IsValid())
 	{
@@ -1422,7 +1474,7 @@ void AWvAIController::SmoothMoveToLocation(const FVector TargetLocation, const f
 	const auto Start = BaseCharacter->GetActorLocation();
 	const float DT = BaseCharacter->GetWorld()->GetDeltaSeconds();
 
-	const FRotator LookAtRotation = UKismetMathLibrary::FindLookAtRotation(Start, TargetLocation);
+	const FRotator LookAtRotation = UKismetMathLibrary::FindLookAtRotation(Start, Direction);
 	const FRotator Result = UKismetMathLibrary::RInterpTo(BaseCharacter->GetActorRotation(), LookAtRotation, DT, RotationInterp);
 
 	BaseCharacter->SetActorRotation(FRotator(0.f, Result.Yaw, 0.f));

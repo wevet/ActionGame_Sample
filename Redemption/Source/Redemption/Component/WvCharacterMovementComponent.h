@@ -73,6 +73,8 @@ public:
 public:
 	virtual void RequestAsyncLoad() override;
 
+	void SetUseAccelerationForPathFollowing(const bool NewbUseAccelerationForPaths);
+
 public:
 	UFUNCTION(BlueprintCallable, Category = "Character|Components|CharacterMovement")
 	bool IsMantling() const;

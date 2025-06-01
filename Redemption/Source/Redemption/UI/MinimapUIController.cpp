@@ -73,13 +73,30 @@ void UMinimapUIController::CreatePOIIconActors(const float DeltaTime)
 
 	TArray<AActor*> CurrentPOIActors = UFieldInstanceSubsystem::Get()->GetPOIActors();
 
+	auto PC = Cast<AWvPlayerController>(Game::ControllerExtension::GetPlayer(GetWorld()));
+
 	for (AActor* Act : CurrentPOIActors)
 	{
+		if (IWvAbilityTargetInterface* Interface = Cast<IWvAbilityTargetInterface>(Act))
+		{
+			if (Interface->IsDead())
+			{
+				continue;
+			}
+		}
+
 		if (!POIActors.Contains(Act))
 		{
+			if (PC)
+			{
+				PC->AddMinimapHiddenActor(Act);
+			}
+
 			POIActors.Add(Act);
 		}
 	}
+
+	RemovePOIIconWidgets();
 
 	CreatePOIIconWidgets();
 
@@ -87,13 +104,15 @@ void UMinimapUIController::CreatePOIIconActors(const float DeltaTime)
 
 void UMinimapUIController::CreatePOIIconWidgets()
 {
-	auto PC = Cast<AWvPlayerController>(Game::ControllerExtension::GetPlayer(GetWorld()));
 
 	for (AActor* Act : POIActors)
 	{
-		if (PC)
+		if (IWvAbilityTargetInterface* Interface = Cast<IWvAbilityTargetInterface>(Act))
 		{
-			PC->AddMinimapHiddenActor(Act);
+			if (Interface->IsDead())
+			{
+				continue;
+			}
 		}
 
 		if (POIActorWidgets.Contains(Act))
@@ -121,6 +140,30 @@ void UMinimapUIController::CreatePOIIconWidgets()
 		Widget->SetOverlaySlot(ChildSlot);
 		POIActorWidgets.Add(Act, Widget);
 	}
+
+	
+}
+
+void UMinimapUIController::RemovePOIIconWidgets()
+{
+	for (auto It = POIActorWidgets.CreateIterator(); It; ++It)
+	{
+		// Key：Actor インターフェイス、Value：Widget
+		if (IWvAbilityTargetInterface* Interface = Cast<IWvAbilityTargetInterface>(It.Key()))
+		{
+			if (Interface->IsDead())
+			{
+				// ウィジェットを画面から外す
+				if (It.Value())
+				{
+					It.Value()->RemoveFromParent();
+				}
+
+				UE_LOG(LogTemp, Log, TEXT("remove: [%s], %s"), *GetNameSafe(It.Key()), *FString(__FUNCTION__));
+				It.RemoveCurrent();
+			}
+		}
+	}
 }
 
 void UMinimapUIController::UpdateTranslationPOIWidgets(const float DeltaTime)
@@ -139,15 +182,16 @@ void UMinimapUIController::UpdateTranslationPOIWidgets(const float DeltaTime)
 
 	const FVector PlayerLocation = CharacterOwner->GetActorLocation();
 
-	for (TPair<AActor*, UPOIMarkerWidget*>Pair : POIActorWidgets)
+	for (auto It = POIActorWidgets.CreateConstIterator(); It; ++It)
 	{
-		if (!IsValid(Pair.Key) || !IsValid(Pair.Value))
+		const AActor* Act = It.Key();
+		UPOIMarkerWidget* Widget = It.Value();
+
+		if (!IsValid(Act) || !IsValid(Widget))
 		{
 			continue;
 		}
 
-		const AActor* Act = Pair.Key;
-		auto Widget = Pair.Value;
 		Widget->Renderer(DeltaTime);
 
 		const FVector ActorLocation = Act->GetActorLocation();

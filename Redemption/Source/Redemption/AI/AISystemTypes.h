@@ -11,6 +11,18 @@
 
 DECLARE_LOG_CATEGORY_EXTERN(LogWvAI, Log, All)
 
+class AWvAIController;
+
+UENUM()
+enum class ETaskType : uint8
+{
+	None,
+	Sight, 
+	Hear, 
+	Communication,
+	Follow,
+};
+
 USTRUCT(BlueprintType)
 struct REDEMPTION_API FBlackboardKeyConfig
 {
@@ -57,31 +69,31 @@ public:
 	FName CoverPointKeyName = FName(TEXT("CoverLocation"));
 };
 
-USTRUCT(BlueprintType)
+
 struct REDEMPTION_API FAIPerceptionTask
 {
-	GENERATED_BODY()
 
 private:
-	float Timer;
-	float Interval = 0.f;
-	bool bIsNeedTimer = true;
-	bool bIsTaskPlaying = false;
-	bool bCallbackResult = false;
-	FName TaskName;
-	TFunction<void(void)> FinishDelegate;
+	ETaskType TaskType{ ETaskType::None};
+	float Timer{0.f};
+	bool bIsNeedTimer{false};
+	bool bIsTaskPlaying{false};
+	std::atomic<bool> bCancelTask{false};
+	TFunction<void()> FinishDelegate;
+	TFuture<void> TaskFuture;
 
-	UE::Tasks::FTask TaskInstance;
-	FTimerHandle TaskTimerHandle;
-	TWeakObjectPtr<UWorld> World;
+	TWeakObjectPtr<AWvAIController> WeakOwner;
+	void Cancel_Internal();
 
-	void Update();
-	void End_Internal();
+	static FString TaskTypeToString(ETaskType Type);
+
 
 public:
-	FAIPerceptionTask() {}
-	FAIPerceptionTask(const FName InTaskName, UWorld* InWorld);
-	void Begin(const float InTimer, TFunction<void(void)> InFinishDelegate);
+	FAIPerceptionTask()
+	{
+	}
+
+	void Begin(const ETaskType InTaskType, const float InTimer, TFunction<void(void)> InFinishDelegate);
 	void End();
 
 	void Abort(const bool bIsForce);
@@ -90,17 +102,20 @@ public:
 };
 
 
-USTRUCT(BlueprintType)
-struct REDEMPTION_API FAILeaderTask
+struct FAILeaderTask
 {
-	GENERATED_BODY()
 
 private:
+	bool bIsValid{false};
 
 public:
 	FAILeaderTask();
 
+	void OnEnable(const bool bIsEnable);
+
 	void Notify();
+
+	bool IsValid() const;
 };
 
 
@@ -108,10 +123,8 @@ public:
 /// close combat setting params
 /// etc. knife action or punch action
 /// </summary>
-USTRUCT(BlueprintType)
-struct REDEMPTION_API FAICloseCombatData
+struct FAICloseCombatData
 {
-	GENERATED_BODY()
 
 public:
 	FAICloseCombatData();

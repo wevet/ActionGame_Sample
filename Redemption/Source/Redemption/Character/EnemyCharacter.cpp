@@ -5,23 +5,26 @@
 #include "GameExtension.h"
 #include "Component/InventoryComponent.h"
 #include "Component/WvSkeletalMeshComponent.h"
+#include "Component/WvCharacterMovementComponent.h"
 #include "Redemption.h"
+
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(EnemyCharacter)
 
-AEnemyCharacter::AEnemyCharacter(const FObjectInitializer& ObjectInitializer)
-{
 
+AEnemyCharacter::AEnemyCharacter(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
+{
 	// dont async load components
 	bIsAllowAsyncLoadComponentAssets = true;
 	bIsDiedRemoveInventory = true;
 
-	UWvSkeletalMeshComponent* WvMeshComp = CastChecked<UWvSkeletalMeshComponent>(GetMesh());
-	check(WvMeshComp);
+	UWvCharacterMovementComponent* WvMoveComp = CastChecked<UWvCharacterMovementComponent>(GetCharacterMovement());
+	check(WvMoveComp);
+	WvMoveComp->SetUseAccelerationForPathFollowing(true);
 
-	// sets Damage
-	//WvMeshComp->SetCollisionResponseToChannel(ECollisionChannel::ECC_GameTraceChannel3, ECollisionResponse::ECR_Block);
+	WvMoveComp->BrakingFriction = 0.8f;
 
+	SetReplicateMovement(false);
 
 }
 

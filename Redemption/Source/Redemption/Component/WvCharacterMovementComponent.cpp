@@ -2176,6 +2176,16 @@ const bool UWvCharacterMovementComponent::TryEnterWallCheckAngle(const bool bIsC
 }
 
 
+void UWvCharacterMovementComponent::SetUseAccelerationForPathFollowing(const bool NewbUseAccelerationForPaths)
+{
+	NavMovementProperties.bUseAccelerationForPaths = NewbUseAccelerationForPaths;
+
+	//if (GetNavMovementProperties())
+	//{
+	//	GetNavMovementProperties()->bUseAccelerationForPaths = NewbUseAccelerationForPaths;
+	//}
+}
+
 #pragma region LadderSystem
 /// <summary>
 /// apply to LadderComponent

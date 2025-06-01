@@ -391,58 +391,44 @@ void UWvEditorBlueprintFunctionLibrary::CopySkeletonCurves(USkeleton* SourceSkel
 		return;
 	}
 
-	const FSmartNameMapping* SrcCurveMap = SourceSkeleton->GetSmartNameContainer(USkeleton::AnimCurveMappingName);
-
-	if (SrcCurveMap)
-	{
-		UE_LOG(LogTemp, Error, TEXT("SourceSkeleton: Failed to get target AnimCurveMappingName container for %s"), *SourceSkeleton->GetName());
-		return;
-	}
-
 	TArray<FName> CurveNames;
-	SrcCurveMap->FillNameArray(CurveNames);
+	SourceSkeleton->GetCurveMetaDataNames(CurveNames);
 
 	for (USkeleton* TargetSkeleton : TargetSkeletons)
 	{
 		if (!TargetSkeleton)
 		{
-			UE_LOG(LogTemp, Warning, TEXT("CopySkeletonCurves: Skipping null TargetSkeleton"));
+			UE_LOG(LogTemp, Error, TEXT("CopySkeletonCurves: Skipping null TargetSkeleton"));
 			continue;
 		}
 
 		TargetSkeleton->Modify();
 		TargetSkeleton->MarkPackageDirty();
 
-		const FSmartNameMapping* DstCurveMap = TargetSkeleton->GetSmartNameContainer(USkeleton::AnimCurveMappingName);
-		if (!DstCurveMap)
-		{
-			UE_LOG(LogTemp, Error, TEXT("CopySkeletonCurves: Failed to get target AnimCurveMappingName container for %s"), *TargetSkeleton->GetName());
-			continue;
-		}
-
 		int32 Added = 0, Skipped = 0;
 		for (const FName& Name : CurveNames)
 		{
-			if (DstCurveMap->Exists(Name))
+			if (TargetSkeleton->GetCurveMetaData(Name) != nullptr)
 			{
 				Skipped++;
 				continue;
 			}
 
-			FSmartName OutSmartName;
-			if (TargetSkeleton->AddSmartNameAndModify(USkeleton::AnimCurveMappingName, Name, OutSmartName)) 
+			const FCurveMetaData* Meta = SourceSkeleton->GetCurveMetaData(Name);
+			if (TargetSkeleton->AddCurveMetaData(Name, /*bTransact=*/true))
 			{
+				TargetSkeleton->AccumulateCurveMetaData(Name, false, false);
+				Added++;
 				UE_LOG(LogTemp, Log, TEXT("Copied curve '%s' to '%s'"), *Name.ToString(), *TargetSkeleton->GetName());
 			}
 			else
 			{
 				UE_LOG(LogTemp, Warning, TEXT("Failed to add curve '%s' to '%s'"), *Name.ToString(), *TargetSkeleton->GetName());
 			}
+			UE_LOG(LogTemp, Log, TEXT("curve '%s' to '%s'"), *Name.ToString(), *TargetSkeleton->GetName());
 		}
-		UE_LOG(LogTemp, Log, TEXT("CopySkeletonCurves for '%s' completed: Added=%d, Skipped=%d"), *TargetSkeleton->GetName(), Added, Skipped);
+		UE_LOG(LogTemp, Warning, TEXT("CopySkeletonCurves for '%s' completed: Added=%d, Skipped=%d"), *TargetSkeleton->GetName(), Added, Skipped);
 	}
-
-	UE_LOG(LogTemp, Log, TEXT("CopySkeletonCurves: All targets processed."));
 }
 
 

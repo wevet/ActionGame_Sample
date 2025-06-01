@@ -454,7 +454,7 @@ void APlayerCharacter::HandleWalking(const bool bIsPress)
 {
 	if (bIsPress)
 	{
-		const auto LocomotionEssencialVariables = LocomotionComponent->GetLocomotionEssencialVariables();
+		const auto& LocomotionEssencialVariables = LocomotionComponent->GetLocomotionEssencialVariables();
 
 		if (LocomotionEssencialVariables.LSGait == ELSGait::Walking)
 		{
@@ -555,7 +555,7 @@ void APlayerCharacter::HandleFinisherAction(const FGameplayTag Tag, const bool b
 
 void APlayerCharacter::HandleStanceMode()
 {
-	const auto LocomotionEssencialVariables = LocomotionComponent->GetLocomotionEssencialVariables();
+	const auto& LocomotionEssencialVariables = LocomotionComponent->GetLocomotionEssencialVariables();
 	const ELSStance LSStance = LocomotionEssencialVariables.LSStance;
 	if (LSStance == ELSStance::Standing)
 	{
@@ -606,7 +606,7 @@ void APlayerCharacter::HandleRotationMode()
 		return;
 	}
 
-	const auto LocomotionEssencialVariables = LocomotionComponent->GetLocomotionEssencialVariables();
+	const auto& LocomotionEssencialVariables = LocomotionComponent->GetLocomotionEssencialVariables();
 	const ELSRotationMode LSRotationMode = LocomotionEssencialVariables.LSRotationMode;
 	if (LSRotationMode == ELSRotationMode::VelocityDirection)
 	{
@@ -650,8 +650,8 @@ bool APlayerCharacter::HasFinisherAction(const FGameplayTag Tag) const
 bool APlayerCharacter::IsTargetLock() const
 {
 	const bool bHasTag = WvAbilitySystemComponent->HasMatchingGameplayTag(TAG_Character_TargetLocking);
-	const FLocomotionEssencialVariables LocomotionEssencial = LocomotionComponent->GetLocomotionEssencialVariables();
-	return bHasTag && LocomotionEssencial.LookAtTarget.IsValid();
+	const auto& LocomotionEssencialVariables = LocomotionComponent->GetLocomotionEssencialVariables();
+	return bHasTag && LocomotionEssencialVariables.LookAtTarget.IsValid();
 }
 
 bool APlayerCharacter::IsQTEActionPlaying() const

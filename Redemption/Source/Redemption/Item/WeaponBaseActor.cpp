@@ -176,6 +176,11 @@ FPawnAttackParam AWeaponBaseActor::GetWeaponAttackInfo() const
 {
 	return PawnAttackParam;
 }
+
+float AWeaponBaseActor::GetWeaponTraceRange() const
+{
+	return PawnAttackParam.TraceRange;
+}
 #pragma endregion
 
 

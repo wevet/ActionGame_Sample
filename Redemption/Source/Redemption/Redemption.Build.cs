@@ -60,6 +60,7 @@ public class Redemption : ModuleRules
 				"WvAbilitySystem",
 				"QuadrupedIK",
 				"RopeCutting",
+				"StateTreeModule",
 			}
 		);
 

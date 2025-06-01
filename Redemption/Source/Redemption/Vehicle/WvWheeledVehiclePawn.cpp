@@ -206,7 +206,7 @@ bool AWvWheeledVehiclePawn::IsSprintingMovement() const
 #pragma region IWvEnvironmentInterface
 void AWvWheeledVehiclePawn::OnReceiveAbilityAttack(AActor* Attacker, const FHitResult& HitResult)
 {
-	UE_LOG(LogTemp, Log, TEXT("Attacker => %s, function => %s"), *GetNameSafe(Attacker), *FString(__FUNCTION__));
+	//UE_LOG(LogTemp, Log, TEXT("Attacker => %s, function => %s"), *GetNameSafe(Attacker), *FString(__FUNCTION__));
 }
 #pragma endregion
 

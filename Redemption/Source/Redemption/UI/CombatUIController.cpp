@@ -162,10 +162,10 @@ void UCombatUIController::OnOverlayChange_Callback(const ELSOverlayState Current
 
 void UCombatUIController::FocusWeaponWindowRenderer()
 {
-	const auto EssencialVariables = CharacterOwner->GetLocomotionComponent()->GetLocomotionEssencialVariables();
+	const auto& LocomotionEssencialVariables = CharacterOwner->GetLocomotionComponent()->GetLocomotionEssencialVariables();
 	bool bIsCurAimingWeapon = CharacterOwner->GetInventoryComponent()->CanAimingWeapon();
-	//bIsCurAimingWeapon &= EssencialVariables.LSRotationMode == ELSRotationMode::LookingDirection;
-	bIsCurAimingWeapon &= EssencialVariables.bAiming;
+	//bIsCurAimingWeapon &= LocomotionEssencialVariables.LSRotationMode == ELSRotationMode::LookingDirection;
+	bIsCurAimingWeapon &= LocomotionEssencialVariables.bAiming;
 
 	if (bCanFocusWeapon != bIsCurAimingWeapon)
 	{

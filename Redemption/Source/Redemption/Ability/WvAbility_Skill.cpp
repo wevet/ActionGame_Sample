@@ -43,7 +43,7 @@ void UWvAbility_Skill::ActivateAbility(const FGameplayAbilitySpecHandle Handle, 
 		return;
 	}
 
-	const auto LocomotionEssencialVariables = Character->GetLocomotionComponent()->GetLocomotionEssencialVariables();
+	const auto& LocomotionEssencialVariables = Character->GetLocomotionComponent()->GetLocomotionEssencialVariables();
 	const FSkillAnimMontage& SkillAnimationData = GetSkillAnimMontage();
 	UAnimMontage* CurAnimMontage = SkillAnimationData.AnimMontage;
 	const float PlayRate = SkillAnimationData.PlayRate;

@@ -10,138 +10,107 @@ using namespace UE::Tasks;
 DEFINE_LOG_CATEGORY(LogWvAI)
 
 #pragma region PerceptionTask
-FAIPerceptionTask::FAIPerceptionTask(const FName InTaskName, UWorld* InWorld)
-{
-	TaskName = InTaskName;
-	World = InWorld;
-}
-
 bool FAIPerceptionTask::IsRunning() const
 {
-	if (!World.IsValid())
-	{
-		return false;
-	}
-
-	// infinity tasks is always running
-	if (!bIsNeedTimer)
-	{
-		return true;
-	}
-	FTimerManager& TM = World->GetTimerManager();
-	return TM.IsTimerActive(TaskTimerHandle);
+	return bIsTaskPlaying;
 }
 
 void FAIPerceptionTask::Abort(const bool bIsForce)
 {
-	bIsTaskPlaying = false;
-	if (World.IsValid())
+	if (!bIsTaskPlaying)
 	{
-		FTimerManager& TM = World->GetTimerManager();
-		TM.ClearTimer(TaskTimerHandle);
+		return;
 	}
+
+	bIsTaskPlaying = false;
+	Cancel_Internal();
 
 	if (FinishDelegate)
 	{
 		FinishDelegate();
-		UE_LOG(LogWvAI, Log, TEXT("Task Abort => %s, function => [%s]"), *TaskName.ToString(), *FString(__FUNCTION__));
-	}
-
-	FinishDelegate.Reset();
-	if (bIsForce)
-	{
-		World.Reset();
+		FinishDelegate = nullptr;
 	}
 }
 
-void FAIPerceptionTask::Begin(const float InTimer, TFunction<void(void)> InFinishDelegate)
+
+void FAIPerceptionTask::Begin(const ETaskType InTaskType, const float InTimer, TFunction<void(void)> InFinishDelegate)
 {
+	TaskType = InTaskType;
 	Timer = InTimer;
-	FinishDelegate = InFinishDelegate;
-	bIsNeedTimer = (InTimer > 0.f);
-
-	if (!World.IsValid())
-	{
-		Abort(false);
-		UE_LOG(LogWvAI, Error, TEXT("Not Valid World => [%s]"), *FString(__FUNCTION__));
-		return;
-	}
-
+	FinishDelegate = MoveTemp(InFinishDelegate);
 	bIsTaskPlaying = true;
-	if (!bIsNeedTimer)
+	bCancelTask = false;
+
+	if (Timer <= 0.f)
 	{
-		UE_LOG(LogWvAI, Log, TEXT("infinity task => [%s]"), *TaskName.ToString());
+		AsyncTask(ENamedThreads::GameThread, [this] { End(); });
 		return;
 	}
 
-	if (TaskTimerHandle.IsValid())
-		TaskTimerHandle.Invalidate();
-
-	Interval = 0.f;
-	bCallbackResult = false;
-	FTimerManager& TM = World->GetTimerManager();
-	const float DT = World->GetDeltaSeconds();
-
-	FTimerDelegate LocalDelegate;
-	LocalDelegate.BindLambda([this]
+	TaskFuture = Async(EAsyncExecution::ThreadPool, [this]()
 	{
-		this->Update();
-	});
-	TM.SetTimer(TaskTimerHandle, LocalDelegate, DT, true);
+		float Elapsed = 0.f;
+		const float Tick = 0.05f;
 
-#if false
-	TaskInstance = Launch(UE_SOURCE_LOCATION, [this]
-	{
-		FPlatformProcess::Sleep(Timer);
-		UE_LOG(LogWvAI, Log, TEXT("TaskInstance finish => %s"), *FString(__FUNCTION__));
-	},
-	ETaskPriority::Default, EExtendedTaskPriority::None);
-#endif
-
-}
-
-void FAIPerceptionTask::Update()
-{
-	if (Interval >= Timer)
-	{
-		if (!bCallbackResult)
+		UE_LOG(LogWvAI, Log, TEXT("[%s] Thread started"), *TaskTypeToString(TaskType));
+		while (Elapsed < Timer && !bCancelTask)
 		{
-			End();
+			FPlatformProcess::Sleep(Tick);
+			Elapsed += Tick;
 		}
-	}
-	else
-	{
-		const float DT = World->GetDeltaSeconds();
-		Interval += DT;
-	}
+		UE_LOG(LogWvAI, Log, TEXT("[%s] Thread woke up"), *TaskTypeToString(TaskType));
+
+		if (!bCancelTask)
+		{
+			AsyncTask(ENamedThreads::GameThread, [this]()
+			{
+				UE_LOG(LogWvAI, Log, TEXT("[%s] About to call End()"), *TaskTypeToString(TaskType));
+				this->End();
+			});
+		}
+	});
 
 }
+
+void FAIPerceptionTask::Cancel_Internal()
+{
+	bCancelTask = true;
+	if (TaskFuture.IsValid())
+	{
+		TaskFuture.Wait();
+		TaskFuture = {};
+	}
+}
+
+FString FAIPerceptionTask::TaskTypeToString(ETaskType Type)
+{
+	if (const UEnum* EnumPtr = StaticEnum<ETaskType>())
+	{
+		return EnumPtr->GetNameStringByValue(static_cast<int64>(Type));
+	}
+	return TEXT("Unknown");
+}
+
 
 void FAIPerceptionTask::End()
 {
-	End_Internal();
-}
+	if (!bIsTaskPlaying)
+	{
+		return;
+	}
 
-void FAIPerceptionTask::End_Internal()
-{
-	bCallbackResult = true;
 	bIsTaskPlaying = false;
-	FTimerManager& TM = World->GetTimerManager();
-	TM.ClearTimer(TaskTimerHandle);
-
-	const bool bCompleted = TaskInstance.IsCompleted();
-	//UE_LOG(LogWvAI, Log, TEXT("AIPerceptionTask bCompleted => %s"), bCompleted ? TEXT("true") : TEXT("false"));
+	Cancel_Internal();
 
 	if (FinishDelegate)
 	{
 		FinishDelegate();
-		UE_LOG(LogWvAI, Log, TEXT("Finish => %s, Function => %s"), *TaskName.ToString(), *FString(__FUNCTION__));
+		FinishDelegate = nullptr;
 	}
 
-	// release the reference
-	TaskInstance = {};
-	FinishDelegate.Reset();
+	UE_LOG(LogWvAI, Log, TEXT("TaskEnd:[%d] function:[%s]"), (uint8)TaskType, *FString(__FUNCTION__));
 }
+
 
 void FAIPerceptionTask::AddLength(const float AddTimer)
 {
@@ -158,6 +127,16 @@ void FAIPerceptionTask::AddLength(const float AddTimer)
 FAILeaderTask::FAILeaderTask()
 {
 
+}
+
+void FAILeaderTask::OnEnable(const bool bIsEnable)
+{
+	bIsValid = bIsEnable;
+}
+
+bool FAILeaderTask::IsValid() const
+{
+	return bIsValid;
 }
 
 void FAILeaderTask::Notify()
@@ -210,7 +189,6 @@ void FAILeaderTask::Notify()
 
 
 #pragma region CloseCombat
-
 FAICloseCombatData::FAICloseCombatData()
 {
 	bIsComboCheckEnded = false;
@@ -222,10 +200,13 @@ void FAICloseCombatData::Initialize(const int32 InComboTypeIndex, const int32 Ma
 {
 	bIsPlaying = true;
 	CurAttackComboCount = 0;
-	AttackComboCount = FMath::RandRange(0, MaxComboCount);
+	AttackComboCount = FMath::Clamp(FMath::RandRange(0, MaxComboCount), 0, BaseRandomSeeds.Num() - 1);
 	ComboTypeIndex = InComboTypeIndex;
 
 	const FVector2D SeedsRange { 0.1f, 0.3f};
+
+	ModifySeeds.Empty();
+	IntervalSeeds.Empty();
 
 	for (const float Seed : BaseRandomSeeds)
 	{
@@ -249,7 +230,7 @@ void FAICloseCombatData::Deinitialize()
 
 bool FAICloseCombatData::IsOverAttack() const
 {
-	return CurAttackComboCount > AttackComboCount;
+	return CurAttackComboCount >= AttackComboCount;
 }
 
 void FAICloseCombatData::ComboSeedBegin(TFunction<void(void)> InFinishDelegate)
@@ -260,6 +241,7 @@ void FAICloseCombatData::ComboSeedBegin(TFunction<void(void)> InFinishDelegate)
 	}
 
 	FinishDelegate = InFinishDelegate;
+	CurInterval = 0.f;
 	bIsComboCheckEnded = false;
 	CurSeeds = ModifySeeds[CurAttackComboCount];
 	CurIntervalSeeds = IntervalSeeds[CurAttackComboCount];

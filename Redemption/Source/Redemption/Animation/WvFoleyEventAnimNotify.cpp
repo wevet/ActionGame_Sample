@@ -187,8 +187,8 @@ const bool UWvFoleyEventAnimNotify::IsInCrouch(const AActor* Owner)
 		auto LocomotionComponent = Owner->FindComponentByClass<ULocomotionComponent>();
 		if (LocomotionComponent)
 		{
-			auto LocomotionEssencialVariabled = LocomotionComponent->GetLocomotionEssencialVariables();
-			return LocomotionEssencialVariabled.LSStance == ELSStance::Crouching;
+			const auto& LocomotionEssencialVariables = LocomotionComponent->GetLocomotionEssencialVariables();
+			return LocomotionEssencialVariables.LSStance == ELSStance::Crouching;
 		}
 	}
 	return false;
