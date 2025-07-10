@@ -50,11 +50,11 @@ FGameplayTag IWvAbilityTargetInterface::GetAvatarTag() const
 	return FGameplayTag::EmptyTag;
 }
 
-void IWvAbilityTargetInterface::OnSendWeaknessAttack(AActor* Actor, const FName WeaknessName, const float Damage)
+void IWvAbilityTargetInterface::OnSendWeaknessAttack(AActor* Actor, const FName& WeaknessName, const float Damage)
 {
 }
 
-void IWvAbilityTargetInterface::OnSendAbilityAttack(AActor* Actor, const FWvBattleDamageAttackSourceInfo SourceInfo, const float Damage)
+void IWvAbilityTargetInterface::OnSendAbilityAttack(AActor* Actor, const FWvBattleDamageAttackSourceInfo& SourceInfo, const float Damage)
 {
 }
 
@@ -62,15 +62,15 @@ void IWvAbilityTargetInterface::OnSendKillTarget(AActor* Actor, const float Dama
 {
 }
 
-void IWvAbilityTargetInterface::OnReceiveHitReact(FGameplayEffectContextHandle Context, const bool IsInDead, const float Damage)
+void IWvAbilityTargetInterface::OnReceiveHitReact(FGameplayEffectContextHandle& Context, const bool IsInDead, const float Damage)
 {
 }
 
-void IWvAbilityTargetInterface::OnReceiveWeaknessAttack(AActor* Actor, const FName WeaknessName, const float Damage)
+void IWvAbilityTargetInterface::OnReceiveWeaknessAttack(AActor* Actor, const FName& WeaknessName, const float Damage)
 {
 }
 
-void IWvAbilityTargetInterface::OnReceiveAbilityAttack(AActor* Actor, const FWvBattleDamageAttackSourceInfo SourceInfo, const float Damage)
+void IWvAbilityTargetInterface::OnReceiveAbilityAttack(AActor* Actor, const FWvBattleDamageAttackSourceInfo& SourceInfo, const float Damage)
 {
 }
 

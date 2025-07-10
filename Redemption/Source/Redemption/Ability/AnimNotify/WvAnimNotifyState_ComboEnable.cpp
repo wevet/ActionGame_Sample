@@ -6,11 +6,14 @@
 #include "Character/WvAIController.h"
 #include "Component/WvInputEventComponent.h"
 #include "Component/InventoryComponent.h"
+#include "Locomotion/LocomotionComponent.h"
 #include "Item/WeaponBaseActor.h"
 #include "Redemption.h"
 
 #include "GameplayTagContainer.h"
 #include "Abilities/GameplayAbility.h"
+//#include "WvAbilitySystemTypes.h"
+
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(WvAnimNotifyState_ComboEnable)
 
@@ -41,30 +44,22 @@ void UWvAnimNotifyState_ComboEnable::AbilityNotifyBegin(USkeletalMeshComponent* 
 	CurTime = 0.f;
 	TriggerTag = GetInputCombo(AbilityData);
 
-	//if (Ability && Ability->HasComboTrigger())
-	//{
-	//	UE_LOG(LogTemp, Log, TEXT("playing combo melee Tag => %s, [%s]"), *Ability->GetComboTriggerTag().GetTagName().ToString(), *FString(__FUNCTION__));
-	//}
+	CombatInputData.Reset();
 
 	TArray<FGameplayTag> TagArray;
-	OtherComboDA.GenerateKeyArray(TagArray);
 	TagArray.Add(TriggerTag);
 	TagArray.Add(TAG_Character_Player_Melee);
 
-
-#if false
-	auto Tags = RequiredGameplayTags.GetGameplayTagArray();
-	for (FGameplayTag Tag : Tags)
-	{
-		UE_LOG(LogTemp, Log, TEXT("Added Tag => %s, func => %s"), *Tag.GetTagName().ToString(), *FString(__FUNCTION__));
-	}
-#endif
+	Character = Cast<ABaseCharacter>(MeshComp->GetOwner());
+	LocomotionComponent = MeshComp->GetOwner()->FindComponentByClass<ULocomotionComponent>();
 
 
 	const FGameplayTagContainer EventTagContainer = FGameplayTagContainer::CreateFromArray(TagArray);
-	IsImmediatelyExecute = (ExecuteTime <= 0.f);
+	//IsImmediatelyExecute = (ExecuteTime <= 0.f);
+	IsImmediatelyExecute = false;
 	WaitReleaseTask = UWvAT_WaitKeyPress::WaitKeyPress(Ability, FName(TEXT("WaitKeyInput_ComboEnable")), EventTagContainer);
 	WaitReleaseTask->OnActive.__Internal_AddDynamic(this, &ThisClass::OnPressed, FName(TEXT("OnPressed")));
+	WaitReleaseTask->OnHoldingCallback.__Internal_AddDynamic(this, &ThisClass::OnHolding, FName(TEXT("OnHolding")));
 	WaitReleaseTask->ReadyForActivation();
 
 
@@ -89,6 +84,14 @@ void UWvAnimNotifyState_ComboEnable::AbilityNotifyBegin(USkeletalMeshComponent* 
 void UWvAnimNotifyState_ComboEnable::AbilityNotifyTick(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, float FrameDeltaTime, const FAnimNotifyEventReference& EventReference)
 {
 	CurTime += FrameDeltaTime;
+
+
+	if (LocomotionComponent.IsValid())
+	{
+		auto& LocomotionEssencialVariables = LocomotionComponent->GetLocomotionEssencialVariables();
+		CombatInputData.SetBackwardInputResult(LocomotionEssencialVariables.bIsBackwardInputEnable);
+	}
+
 	if (!IsImmediatelyExecute && CurTime >= ExecuteTime)
 	{
 		TryCombo();
@@ -115,6 +118,9 @@ void UWvAnimNotifyState_ComboEnable::AbilityNotifyEnd(USkeletalMeshComponent* Me
 	}
 
 	AbilitySystemComponent->RemoveLooseGameplayTags(RequiredGameplayTags, 1);
+
+	Character.Reset();
+	LocomotionComponent.Reset();
 }
 
 FGameplayTag UWvAnimNotifyState_ComboEnable::GetInputCombo(const class UWvAbilityDataAsset* AbilityData) const
@@ -140,6 +146,23 @@ void UWvAnimNotifyState_ComboEnable::OnPressed(const FGameplayTag InTag, const b
 	}
 }
 
+
+void UWvAnimNotifyState_ComboEnable::OnHolding(const FGameplayTag InTag, const bool bIsPressed)
+{
+	if (!bIsPressed)
+	{
+		return;
+	}
+
+	LastPressedTag = FGameplayTag(InTag);
+	CombatInputData.SetHoldResult(true);
+	if (IsImmediatelyExecute)
+	{
+		PressedToCombo();
+	}
+}
+
+
 void UWvAnimNotifyState_ComboEnable::TryCombo()
 {
 	if (LastPressedTag != FGameplayTag::EmptyTag)
@@ -151,38 +174,25 @@ void UWvAnimNotifyState_ComboEnable::TryCombo()
 
 void UWvAnimNotifyState_ComboEnable::PressedToCombo()
 {
-	bool Result = false;
-	UWvAbilityDataAsset* NextDA = nullptr;
-
-	if (LastPressedTag == TriggerTag)
+	// @TODO
+	// migrate chooser
+	auto SelectedDA = NextAbilityDA;
+	if (IsValid(BackwardInputAbilityDA) && CombatInputData.bIsBackwardInputResult)
 	{
-		NextDA = NextAbilityDA;
-		Result = AbilitySystemComponent->TryActivateAbilityByDataAsset(NextDA);
-	}
-	else
-	{
-		//const auto A = LastPressedTag.GetTagName().ToString();
-		//const auto B = TriggerTag.GetTagName().ToString();
-		//UE_LOG(LogTemp, Log, TEXT("diffrece Tag : [LastPressedTag => %s, TriggerTag => %s] function => [%s]"), *A, *B, *FString(__FUNCTION__));
-
-		auto FindRef = OtherComboDA.FindRef(LastPressedTag);
-		if (FindRef)
-		{
-			NextDA = FindRef;
-			Result = AbilitySystemComponent->TryActivateAbilityByDataAsset(FindRef);
-		}
-
+		SelectedDA = BackwardInputAbilityDA;
+		Character->CalculateBackwardInputRotation();
+		UE_LOG(LogTemp, Warning, TEXT("backward attack result: [%s]"), *FString(__FUNCTION__));
 	}
 
+	const bool Result = AbilitySystemComponent->TryActivateAbilityByDataAsset(SelectedDA);
 	const auto TagName = LastPressedTag.GetTagName().ToString();
 
 	if (Result)
 	{
-		UWvAbilityBase* CurrentAbility = AbilitySystemComponent->FindAbilityFromDataAsset(NextDA);
+		UWvAbilityBase* CurrentAbility = AbilitySystemComponent->FindAbilityFromDataAsset(SelectedDA);
 		if (CurrentAbility)
 		{
 			CurrentAbility->SetComboTriggerTag(LastPressedTag);
-			//UE_LOG(LogTemp, Log, TEXT("%s : [LastPressedTag => %s, function => %s]"), *GetNameSafe(CurrentAbility), *TagName, *FString(__FUNCTION__));
 		}
 		else
 		{

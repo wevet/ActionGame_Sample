@@ -25,11 +25,17 @@ public:
 	UPROPERTY(BlueprintAssignable)
 	FAT_Waitkey_InputDelegate OnActive;
 
+	UPROPERTY(BlueprintAssignable)
+	FAT_Waitkey_InputDelegate OnHoldingCallback;
+
 	UFUNCTION()
 	void SingleInputOnCallback(FGameplayTag GameplayTag, bool IsPressed);
 
 	UFUNCTION()
 	void PluralInputOnCallback(FGameplayTag GameplayTag, bool IsPressed);
+
+	UFUNCTION()
+	void HoldingInputOnCallback(FGameplayTag GameplayTag, bool IsPressed);
 
 	virtual void Activate() override;
 	virtual void BeginDestroy() override;

@@ -25,9 +25,6 @@ public:
 	FGameplayAbilitySpecHandle ApplyGiveAbility(class UWvAbilityDataAsset* AbilityData, float DamageMotion = 1.0f);
 
 	UFUNCTION(BlueprintCallable)
-	FGameplayAbilitySpecHandle ApplyGiveMagicAbility(FMagicAbilityRow RowData);
-
-	UFUNCTION(BlueprintCallable)
 	float AbilityGetCooldownTimeRemaining(const UGameplayAbility* AbilityIns);
 
 	UFUNCTION(BlueprintCallable)

@@ -38,7 +38,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "WvWheeledVehiclePawn")
 	int32 GetCurrentGear() const;
 
-#pragma region IWvEnvironmentInterface
+#pragma region IWvAbilityTargetInterface
 	virtual USceneComponent* GetOverlapBaseComponent() override;
 	virtual bool IsSprintingMovement() const override;
 #pragma endregion
@@ -68,7 +68,6 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Component, meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<class USceneComponent> DriveOutRoot;
 
-	UPROPERTY()
 	TWeakObjectPtr<class APawn> DrivingByPawn;
 
 

@@ -34,7 +34,7 @@
 #include "Ability/WvInheritanceAttributeSet.h"
 #include "WvAbilitySystemBlueprintFunctionLibrary.h"
 
-
+// built in
 #include "Components/LODSyncComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/InputComponent.h"
@@ -43,7 +43,6 @@
 #include "MotionWarpingComponent.h"
 #include "AI/Navigation/NavigationTypes.h"
 #include "Net/UnrealNetwork.h"
-
 #include "UObject/Object.h"
 #include "UObject/ObjectPtr.h"
 #include "UObject/UObjectBaseUtility.h"
@@ -53,8 +52,6 @@
 #include "Perception/AISense_Hearing.h"
 #include "Perception/AISense_Prediction.h"
 #include "AbilitySystemBlueprintLibrary.h"
-
-// Misc
 #include "Engine/SkeletalMeshSocket.h"
 #include "Runtime/Launch/Resources/Version.h"
 #include "IAnimationBudgetAllocator.h"
@@ -75,7 +72,6 @@ namespace CharacterDebug
 
 	TAutoConsoleVariable<int32> CVarDebugFallEdgeSystem(TEXT("wv.FallEdgeSystem.Debug"), 0, TEXT("FallEdgeSystem Debug .\n") TEXT("<=0: off\n") TEXT("  1: on\n"), ECVF_Default);
 	TAutoConsoleVariable<int32> CVarDebugMantlingSystem(TEXT("wv.MantlingSystem.Debug"), 0, TEXT("MantlingSystem Debug .\n") TEXT("<=0: off\n") TEXT("  1: on\n"), ECVF_Default);
-	TAutoConsoleVariable<int32> CVarDebugWallClimbingSystem(TEXT("wv.WallClimbingSystem.Debug"), 0, TEXT("WallClimbingSystem Debug .\n") TEXT("<=0: off\n") TEXT("  1: on\n"), ECVF_Default);
 
 	TAutoConsoleVariable<int32> CVarDebugVaultingSystem(TEXT("wv.VaultingSystem.Debug"), 0, TEXT("VaultingSystem Debug .\n") TEXT("<=0: off\n") TEXT("  1: on\n"), ECVF_Default);
 	TAutoConsoleVariable<int32> CVarDebugCombatSystem(TEXT("wv.CombatSystem.Debug"), 0, TEXT("CombatSystem Debug .\n") TEXT("<=0: off\n") TEXT("  1: on\n"), ECVF_Default);
@@ -714,12 +710,12 @@ USceneComponent* ABaseCharacter::GetOverlapBaseComponent()
 	return GetMesh();
 }
 
-void ABaseCharacter::OnSendWeaknessAttack(AActor* Actor, const FName WeaknessName, const float Damage)
+void ABaseCharacter::OnSendWeaknessAttack(AActor* Actor, const FName& WeaknessName, const float Damage)
 {
 	OnTeamWeaknessHandleAttackDelegate.Broadcast(Actor, WeaknessName, Damage);
 }
 
-void ABaseCharacter::OnSendAbilityAttack(AActor* Actor, const FWvBattleDamageAttackSourceInfo SourceInfo, const float Damage)
+void ABaseCharacter::OnSendAbilityAttack(AActor* Actor, const FWvBattleDamageAttackSourceInfo& SourceInfo, const float Damage)
 {
 	OnTeamHandleAttackDelegate.Broadcast(Actor, SourceInfo, Damage);
 }
@@ -733,12 +729,12 @@ void ABaseCharacter::OnSendKillTarget(AActor* Actor, const float Damage)
 	OnTeamHandleSendKillDelegate.Broadcast(Actor, Damage);
 }
 
-void ABaseCharacter::OnReceiveWeaknessAttack(AActor* Actor, const FName WeaknessName, const float Damage)
+void ABaseCharacter::OnReceiveWeaknessAttack(AActor* Actor, const FName& WeaknessName, const float Damage)
 {
 	OnTeamWeaknessHandleReceiveDelegate.Broadcast(Actor, WeaknessName, Damage);
 }
 
-void ABaseCharacter::OnReceiveAbilityAttack(AActor* Actor, const FWvBattleDamageAttackSourceInfo SourceInfo, const float Damage)
+void ABaseCharacter::OnReceiveAbilityAttack(AActor* Actor, const FWvBattleDamageAttackSourceInfo& SourceInfo, const float Damage)
 {
 	if (IWvAbilityTargetInterface* Interface = Cast<IWvAbilityTargetInterface>(GetController()))
 	{
@@ -766,7 +762,7 @@ void ABaseCharacter::OnReceiveKillTarget(AActor* Actor, const float Damage)
 	OnReceiveKillTarget_Callback();
 }
 
-void ABaseCharacter::OnReceiveHitReact(FGameplayEffectContextHandle Context, const bool IsInDead, const float Damage)
+void ABaseCharacter::OnReceiveHitReact(FGameplayEffectContextHandle& Context, const bool IsInDead, const float Damage)
 {
 	CombatComponent->StartHitReact(Context, IsInDead, Damage);
 }
@@ -1957,7 +1953,7 @@ void ABaseCharacter::FindNearlestTarget(const FVector TargetPosition, const floa
 #endif
 }
 
-void ABaseCharacter::FindNearlestTarget(const FAttackMotionWarpingData AttackMotionWarpingData)
+void ABaseCharacter::FindNearlestTarget(const FAttackMotionWarpingData& AttackMotionWarpingData)
 {
 	auto Target = FindNearlestTarget(AttackMotionWarpingData.NearlestDistance, AttackMotionWarpingData.AngleThreshold, false);
 	if (!Target)
@@ -2080,7 +2076,7 @@ const bool ABaseCharacter::CanFiniherReceiver()
 	return true;
 }
 
-bool ABaseCharacter::HasFinisherIgnoreTag(const ABaseCharacter* Target, const FGameplayTag RequireTag) const
+bool ABaseCharacter::HasFinisherIgnoreTag(const ABaseCharacter* Target, const FGameplayTag& RequireTag) const
 {
 	auto ASC = Target->GetAbilitySystemComponent();
 	if (ASC)
@@ -2101,7 +2097,7 @@ bool ABaseCharacter::HasFinisherIgnoreTag(const ABaseCharacter* Target, const FG
 	return false;
 }
 
-void ABaseCharacter::BuildFinisherAbility(const FGameplayTag RequireTag)
+void ABaseCharacter::BuildFinisherAbility(const FGameplayTag& RequireTag)
 {
 	if (!CanFiniherSender())
 	{
@@ -2213,7 +2209,7 @@ void ABaseCharacter::BuildFinisherAbility(const FGameplayTag RequireTag)
 
 }
 
-void ABaseCharacter::BuildFinisherAnimationSender(const FGameplayTag RequireTag, FFinisherAnimation& OutFinisherAnimation, int32 &OutIndex)
+void ABaseCharacter::BuildFinisherAnimationSender(const FGameplayTag& RequireTag, FFinisherAnimation& OutFinisherAnimation, int32 &OutIndex)
 {
 	if (!IsValid(FinisherSenderDA))
 	{
@@ -2545,6 +2541,23 @@ float ABaseCharacter::CalcurateBodyShapePlayRate() const
 	}
 	return 1.0f;
 }
+
+void ABaseCharacter::CalculateBackwardInputRotation()
+{
+	MotionWarpingComponent->RemoveWarpTarget(UWvCharacterMovementComponent::BackwardInputSyncPoint);
+
+	const auto& LocomotionEssencialVariables = LocomotionComponent->GetLocomotionEssencialVariables();
+
+	const FVector Input = LocomotionEssencialVariables.MovementInput;
+	const FRotator TargetRotation = FRotationMatrix::MakeFromX(Input).Rotator();
+
+	//const float CurrentYaw = GetActorRotation().Yaw;
+	//const float TargetYaw = FRotator::NormalizeAxis(CurrentYaw + LocomotionEssencialVariables.VelocityDifference);
+	//const FRotator TargetRotation(0.f, TargetYaw, 0.f);
+
+	MotionWarpingComponent->AddOrUpdateWarpTargetFromLocationAndRotation(
+		UWvCharacterMovementComponent::BackwardInputSyncPoint, FVector::ZeroVector, TargetRotation);
+}
 #pragma endregion
 
 
@@ -2734,23 +2747,8 @@ bool ABaseCharacter::GetIsDespawnCheck() const
 }
 
 
-bool ABaseCharacter::IsMotionMatchingEnable() const
-{
-	if (GetLocomotionComponent())
-	{
-		return GetLocomotionComponent()->bIsMotionMatchingEnable;
-	}
-	return false;
-}
-
-
 void ABaseCharacter::PreTickLocomotion()
 {
-	if (!IsMotionMatchingEnable())
-	{
-		return;
-	}
-
 	auto CMC = GetWvCharacterMovementComponent();
 
 	if (!IsValid(CMC) || !IsValid(LocomotionComponent))
@@ -2758,7 +2756,14 @@ void ABaseCharacter::PreTickLocomotion()
 		return;
 	}
 
-	if (CMC->IsFalling())
+	bool bHasAnimatingAbility = false;
+	auto ASC = GetWvAbilitySystemComponent();
+	if (const auto Ability = Cast<UWvGameplayAbility>(ASC->GetAnimatingAbility()))
+	{
+		bHasAnimatingAbility = Ability->HasComboTrigger();
+	}
+
+	if (CMC->IsFalling() || bHasAnimatingAbility)
 	{
 		CMC->RotationRate = FRotator(0.f, 200.f, 0.0f);
 	}
@@ -2766,7 +2771,6 @@ void ABaseCharacter::PreTickLocomotion()
 	{
 		CMC->RotationRate = FRotator(0.f, -1.f, 0.0f);
 	}
-
 
 	CMC->MaxAcceleration = LocomotionComponent->ChooseMaxAcceleration();
 	CMC->BrakingDecelerationWalking = LocomotionComponent->ChooseBrakingDeceleration();

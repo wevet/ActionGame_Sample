@@ -58,5 +58,14 @@ public:
 	static EHitReactDirection EvaluteHitReactDirection(const float Angle);
 
 	static FVector GetAttackDirection(FGameplayEffectContextHandle EffectContextHandle, const FVector ActorLocation);
+
+
+	/**
+	 * TagContainer の全タグをログに出力します。
+	 * @param Container  出力対象のタグコンテナ
+	 */
+	static void LogTagContainer(const FGameplayTagContainer& Container);
+
+
 };
 

@@ -79,8 +79,6 @@ void APlayerCharacter::BeginPlay()
 	WvCameraFollowComponent->AddTickPrerequisiteActor(this);
 	QTEActionComponent->AddTickPrerequisiteActor(this);
 
-	LocomotionComponent->bIsMotionMatchingEnable = true;
-
 	P_Controller = Cast<AWvPlayerController>(Controller);
 
 	//Add Input Mapping Context
@@ -661,7 +659,7 @@ bool APlayerCharacter::IsQTEActionPlaying() const
 
 void APlayerCharacter::DoBulletAttack()
 {
-WEVET_COMMENT("TimerHandle LoopAction")
+	WEVET_COMMENT("TimerHandle LoopAction")
 
 	const ABulletHoldWeaponActor* BulletWeapon = Cast<ABulletHoldWeaponActor>(GetInventoryComponent()->GetEquipWeapon());
 	if (!IsValid(BulletWeapon))
@@ -669,9 +667,10 @@ WEVET_COMMENT("TimerHandle LoopAction")
 		return;
 	}
 
-	GetWorld()->GetTimerManager().SetTimer(Bullet_TimerHandle, this, 
-		&ThisClass::DoBulletAttack_Callback, BulletWeapon->GetBulletInterval(), true);
+	// Å‰‚Ì1”­‚Í”­ŽË‚³‚¹‚é
+	DoBulletAttack_Callback();
 
+	GetWorld()->GetTimerManager().SetTimer(Bullet_TimerHandle, this, &ThisClass::DoBulletAttack_Callback, BulletWeapon->GetBulletInterval(), true);
 
 }
 

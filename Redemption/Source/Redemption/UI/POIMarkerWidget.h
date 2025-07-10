@@ -59,10 +59,13 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (BindWidget))
 	UOverlay* MainOverlay;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (BindWidget))
+	UOverlay* Icon_Overlay;
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "POIMarkerWidget|Variable")
 	UOverlaySlot* OverlaySlot{nullptr};
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "POIMarkerWidget|Variable")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "POIMarkerWidget|Variable")
 	FSlateColor SlateColor = FSlateColor(FLinearColor::Red);
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "POIMarkerWidget|Variable")

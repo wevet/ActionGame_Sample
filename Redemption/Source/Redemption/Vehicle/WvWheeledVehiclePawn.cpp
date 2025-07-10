@@ -39,7 +39,8 @@ AWvWheeledVehiclePawn::AWvWheeledVehiclePawn(const FObjectInitializer& ObjectIni
 	UWvSkeletalMeshComponent* SkelMesh = CastChecked<UWvSkeletalMeshComponent>(GetMesh());
 	SkelMesh->SetCollisionResponseToChannel(ECollisionChannel::ECC_GameTraceChannel3, ECollisionResponse::ECR_Block);
 
-
+	SkelMesh->bEnableUpdateRateOptimizations = true;
+	SkelMesh->VisibilityBasedAnimTickOption = EVisibilityBasedAnimTickOption::OnlyTickPoseWhenRendered;
 	
 }
 
@@ -67,6 +68,10 @@ void AWvWheeledVehiclePawn::BeginPlay()
 	},
 	InitialActionTimer, false);
 
+	if (GetVehicleMovementComponent())
+	{
+		GetVehicleMovementComponent()->SetParked(true);
+	}
 }
 
 void AWvWheeledVehiclePawn::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -127,6 +132,11 @@ void AWvWheeledVehiclePawn::SetDrivingByPawn(APawn* InPawn)
 
 		UWvCommonUtils::ControllTrailInteractionComponents(DrivingByPawn.Get(), false);
 		UWvCommonUtils::ControllTrailInteractionComponents(this, true);
+
+		if (GetVehicleMovementComponent())
+		{
+			GetVehicleMovementComponent()->SetParked(false);
+		}
 	}
 }
 
@@ -143,6 +153,11 @@ void AWvWheeledVehiclePawn::UnSetDrivingByPawn()
 
 		UWvCommonUtils::ControllTrailInteractionComponents(DrivingByPawn.Get(), true);
 		UWvCommonUtils::ControllTrailInteractionComponents(this, false);
+
+		if (GetVehicleMovementComponent())
+		{
+			GetVehicleMovementComponent()->SetParked(true);
+		}
 	}
 
 	DrivingByPawn.Reset();
@@ -191,7 +206,7 @@ void AWvWheeledVehiclePawn::HandleDriveAction()
 
 }
 
-#pragma region IWvEnvironmentInterface
+#pragma region IWvAbilityTargetInterface
 USceneComponent* AWvWheeledVehiclePawn::GetOverlapBaseComponent()
 {
 	return GetMesh();

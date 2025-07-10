@@ -38,6 +38,14 @@ void UWvAT_WaitKeyPress::PluralInputOnCallback(FGameplayTag GameplayTag, bool Is
 	}
 }
 
+void UWvAT_WaitKeyPress::HoldingInputOnCallback(FGameplayTag GameplayTag, bool IsPressed)
+{
+	if (KeyTags.HasTag(GameplayTag))
+	{
+		OnHoldingCallback.Broadcast(GameplayTag, IsPressed);
+	}
+}
+
 void UWvAT_WaitKeyPress::Activate()
 {
 	if (!IsLocallyControlled())
@@ -50,13 +58,14 @@ void UWvAT_WaitKeyPress::Activate()
 	{	
 		if (AWvPlayerController* PC = Cast<AWvPlayerController>(Character->GetController()))
 		{
-			PC->OnInputEventGameplayTagTrigger_Game.AddDynamic(this, &UWvAT_WaitKeyPress::SingleInputOnCallback);
-			PC->OnPluralInputEventTrigger.AddDynamic(this, &UWvAT_WaitKeyPress::PluralInputOnCallback);
+			PC->OnInputEventGameplayTagTrigger_Game.AddDynamic(this, &ThisClass::SingleInputOnCallback);
+			PC->OnPluralInputEventTrigger.AddDynamic(this, &ThisClass::PluralInputOnCallback);
+			PC->OnHoldingInputEventTrigger.AddDynamic(this, &ThisClass::HoldingInputOnCallback);
 		}
 		
 		if (AWvAIController* AIC = Cast<AWvAIController>(Character->GetController()))
 		{
-			AIC->OnInputEventGameplayTagTrigger.AddDynamic(this, &UWvAT_WaitKeyPress::SingleInputOnCallback);
+			AIC->OnInputEventGameplayTagTrigger.AddDynamic(this, &ThisClass::SingleInputOnCallback);
 		}
 	}
 

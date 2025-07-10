@@ -10,6 +10,10 @@
 #include "GameFramework/Character.h"
 #include "AnimationRuntime.h"
 
+#include "Kismet/KismetMathLibrary.h"
+#include "Kismet/KismetSystemLibrary.h"
+
+
 #if WITH_EDITOR
 #include "FileHelpers.h"
 #endif
@@ -371,7 +375,7 @@ FTransform FWvAbilityLocation::GetTransform(FName SocketName, AActor* Avatar /* 
 	return ResultTransform;
 }
 
-void UWvHitFeedback::DoFeedback(FGameplayEffectContextHandle EffectContextHandle, AActor* Target)
+void UWvHitFeedback::DoFeedback(const FGameplayEffectContextHandle& EffectContextHandle, AActor* Target)
 {
 
 }
@@ -760,4 +764,28 @@ float UCloseCombatAnimationDataAsset::CalcurateBodyShapePlayRate(const EBodyShap
 	return TruncatedValue;
 }
 #pragma endregion
+
+
+bool FCombatInputData::GetBackwardInputResult() const
+{
+	return bIsBackwardInputResult; 
+}
+
+
+void FCombatInputData::Reset()
+{
+	bIsBackwardInputResult = false;
+	bIsJumpInputResult = false;
+	bIsButtonHoldResult = false;
+}
+
+void FCombatInputData::SetBackwardInputResult(const bool bIsNewBackwardInputResult)
+{
+	bIsBackwardInputResult = bIsNewBackwardInputResult;
+}
+
+void FCombatInputData::SetHoldResult(const bool bIsNewButtonHoldResult)
+{
+	bIsButtonHoldResult = bIsNewButtonHoldResult;
+}
 

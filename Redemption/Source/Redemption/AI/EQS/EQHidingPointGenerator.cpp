@@ -23,7 +23,6 @@ UEQHidingPointGenerator::UEQHidingPointGenerator()
 
 	TraceRange = 1000.f;
 	StartZOffset = -10.f;
-	TraceRadius = 50.f;
 	OffsetFromWall = 50.f;
 	TraceChannel = ECC_Visibility;
 }
@@ -35,7 +34,7 @@ FText UEQHidingPointGenerator::GetDescriptionTitle() const
 
 FText UEQHidingPointGenerator::GetDescriptionDetails() const
 {
-	return FText::Format(NSLOCTEXT("EQS", "HidingPointsDetails", "Range={1}, Radius={2}"), FText::AsNumber(TraceRange), FText::AsNumber(TraceRadius));
+	return FText::Format(NSLOCTEXT("EQS", "HidingPointsDetails", "TraceRange={1}"), FText::AsNumber(TraceRange));
 }
 
 
@@ -47,19 +46,21 @@ void UEQHidingPointGenerator::UpdateHidingPoints(const TArray<FVector>& ContextL
 		return;
 	}
 
-	OutPositions.Reset(0);
-
 	ABaseCharacter* OwnerActor = Cast<ABaseCharacter>(GetQuerier());
 	if (!OwnerActor)
 	{
 		return;
 	}
 
+	OutPositions.Reset(0);
+
 	float LocalTraceRange = TraceRange;
 	UCombatComponent* CombatComp = OwnerActor->FindComponentByClass<UCombatComponent>();
 	if (CombatComp)
 	{
-		//LocalTraceRange = CombatComp->GetWeaponAttackInfo().TraceRange;
+		// @NOTE
+		// 負荷が高くなるので使わない方がいい？
+		//LocalTraceRange = FMath::Max((CombatComp->GetWeaponAttackInfo().TraceRange / 2.0f), TraceRange);
 	}
 
 	// ContextLocations の各位置について 1 回の SphereTraceMulti を実行し、複数ヒットを取得 ---

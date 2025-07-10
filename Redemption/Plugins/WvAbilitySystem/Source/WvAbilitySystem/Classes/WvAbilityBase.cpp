@@ -2,13 +2,16 @@
 
 
 #include "WvAbilityBase.h"
-
-#include "AbilitySystemBlueprintLibrary.h"
-#include "AbilitySystemGlobals.h"
-#include "AbilitySystemLog.h"
 #include "WvAbilitySystemComponentBase.h"
 #include "WvAbilityDataAsset.h"
 #include "WvAbilitySystemBlueprintFunctionLibrary.h"
+#include "WvAbilitySystem.h"
+
+// builtin
+#include "AbilitySystemBlueprintLibrary.h"
+#include "AbilitySystemGlobals.h"
+#include "AbilitySystemLog.h"
+
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(WvAbilityBase)
 
@@ -320,5 +323,65 @@ bool UWvAbilityBase::AbilityTagsHasAny(const FGameplayTagContainer TagContainer)
 	}
 	const bool bHasAny = DA->AbilityTags.HasAny(TagContainer);
 	return bHasAny;
+}
+
+
+void UWvAbilityBase::CopyDataAssetTags(const UWvAbilityDataAsset* InAbilityDataAsset)
+{
+	DamageMotion = InAbilityDataAsset->DamageMotion;
+
+#if false
+PRAGMA_DISABLE_DEPRECATION_WARNINGS
+	AbilityTags = InAbilityDataAsset->AbilityTags;
+PRAGMA_ENABLE_DEPRECATION_WARNINGS
+#endif
+
+	//SetAssetTags(InAbilityDataAsset->AbilityTags);
+
+	UE_LOG(LogWvAbility, Log, TEXT("InAbilityDataAsset->AbilityTags"));
+	UWvAbilitySystemBlueprintFunctionLibrary::LogTagContainer(InAbilityDataAsset->AbilityTags);
+
+
+	// 
+	CancelAbilitiesWithTag = InAbilityDataAsset->CancelAbilitiesWithTag;
+	BlockAbilitiesWithTag = InAbilityDataAsset->BlockAbilitiesWithTag;
+	ActivationOwnedTags = InAbilityDataAsset->ActivationOwnedTags;
+	ActivationRequiredTags = InAbilityDataAsset->ActivationRequiredTags;
+	ActivationBlockedTags = InAbilityDataAsset->ActivationBlockedTags;
+
+	// @TODO
+	SourceRequiredTags = InAbilityDataAsset->SourceRequiredTags;
+	SourceBlockedTags = InAbilityDataAsset->SourceBlockedTags;
+	TargetRequiredTags = InAbilityDataAsset->TargetRequiredTags;
+	TargetBlockedTags = InAbilityDataAsset->TargetBlockedTags;
+
+	// override Triggers
+	AbilityTriggers += InAbilityDataAsset->AbilityTriggers;
+	const int32 LastIndex = (AbilityTriggers.Num() - 1);
+	for (int32 Index = LastIndex; Index >= 0; Index--)
+	{
+		FAbilityTriggerData& TriggerData = AbilityTriggers[Index];
+		if (!TriggerData.TriggerTag.IsValid())
+		{
+			AbilityTriggers.RemoveAt(Index);
+		}
+	}
+
+
+#if false
+PRAGMA_DISABLE_DEPRECATION_WARNINGS
+	TArray<FGameplayTag> AbilityTypeTags;
+	InAbilityDataAsset->AbilityTypeTag.GetGameplayTagArray(AbilityTypeTags);
+	for (const FGameplayTag& OtherTag : AbilityTypeTags)
+	{
+		AbilityTags.AddTag(OtherTag);
+	}
+PRAGMA_ENABLE_DEPRECATION_WARNINGS
+#endif
+
+	//
+	UE_LOG(LogWvAbility, Log, TEXT("InAbilityDataAsset->AbilityTypeTag"));
+	UWvAbilitySystemBlueprintFunctionLibrary::LogTagContainer(InAbilityDataAsset->AbilityTypeTag);
+
 }
 

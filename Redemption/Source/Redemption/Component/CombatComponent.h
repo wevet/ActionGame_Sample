@@ -130,10 +130,10 @@ private:
 	void WeaknessHitReactEventCallback(const AActor* AttackActor, const FName WeaknessName, const float HitValue);
 
 	UFUNCTION()
-	void OnSendAbilityAttack(AActor* Actor, const FWvBattleDamageAttackSourceInfo SourceInfo, const float Damage);
+	void OnSendAbilityAttack(AActor* Actor, const FWvBattleDamageAttackSourceInfo& SourceInfo, const float Damage);
 	
 	UFUNCTION()
-	void OnSendWeaknessAttack(AActor* Actor, const FName WeaknessName, const float Damage);
+	void OnSendWeaknessAttack(AActor* Actor, const FName& WeaknessName, const float Damage);
 
 	void StartBoneShake(const FName HitBoneName, const FGameplayTag BoneShakeTriggerTag, const FGameplayTag BoneShakeStrengthTag);
 	void TickUpdateUpdateBoneShake();

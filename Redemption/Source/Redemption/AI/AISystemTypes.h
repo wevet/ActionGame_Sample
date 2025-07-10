@@ -7,6 +7,8 @@
 //#include "Components/PrimitiveComponent.h"
 #include "Tasks/Task.h"
 #include "Logging/LogMacros.h"
+//#include "Templates/UniqueFunction.h"
+
 #include "AISystemTypes.generated.h"
 
 DECLARE_LOG_CATEGORY_EXTERN(LogWvAI, Log, All)
@@ -79,7 +81,7 @@ private:
 	bool bIsNeedTimer{false};
 	bool bIsTaskPlaying{false};
 	std::atomic<bool> bCancelTask{false};
-	TFunction<void()> FinishDelegate;
+	TUniqueFunction<void()> FinishDelegate;
 	TFuture<void> TaskFuture;
 
 	TWeakObjectPtr<AWvAIController> WeakOwner;
@@ -93,7 +95,7 @@ public:
 	{
 	}
 
-	void Begin(const ETaskType InTaskType, const float InTimer, TFunction<void(void)> InFinishDelegate);
+	void Begin(const ETaskType InTaskType, const float InTimer, TUniqueFunction<void(void)> InFinishDelegate);
 	void End();
 
 	void Abort(const bool bIsForce);
@@ -128,12 +130,12 @@ struct FAICloseCombatData
 
 public:
 	FAICloseCombatData();
-	void Initialize(const int32 InComboTypeIndex, const int32 MaxComboCount);
+	void Initialize(const int32 InComboTypeIndex, const int32 InMaxComboCount);
 
 	void Deinitialize();
 	bool IsOverAttack() const;
 
-	void ComboSeedBegin(TFunction<void(void)> InFinishDelegate);
+	void ComboSeedBegin(TUniqueFunction<void(void)> InFinishDelegate);
 	void ComboSeedUpdate(const float DeltaTime);
 	void ComboSeedEnd();
 
@@ -146,7 +148,7 @@ private:
 	int32 AttackComboCount = INDEX_NONE;
 	int32 CurAttackComboCount = INDEX_NONE;
 
-	TArray<float> BaseRandomSeeds = { 80.0f, 60.0f, 30.0f, 10.0f, 8.0f, 5.0f, 2.0f };
+	static TArray<float> BaseRandomSeeds;
 	TArray<float> ModifySeeds;
 
 	TArray<float> IntervalSeeds;
@@ -157,7 +159,7 @@ private:
 	bool bIsPlaying;
 	float CurSeeds;
 
-	TFunction<void(void)> FinishDelegate;
+	TUniqueFunction<void(void)> FinishDelegate;
 
 	void Internal_Update();
 

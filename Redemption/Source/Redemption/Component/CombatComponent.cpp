@@ -118,12 +118,12 @@ void UCombatComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActo
 
 
 #pragma region ChainCombo
-void UCombatComponent::OnSendAbilityAttack(AActor* Actor, const FWvBattleDamageAttackSourceInfo SourceInfo, const float Damage)
+void UCombatComponent::OnSendAbilityAttack(AActor* Actor, const FWvBattleDamageAttackSourceInfo& SourceInfo, const float Damage)
 {
 	HandleChainComboUpdate();
 }
 
-void UCombatComponent::OnSendWeaknessAttack(AActor* Actor, const FName WeaknessName, const float Damage)
+void UCombatComponent::OnSendWeaknessAttack(AActor* Actor, const FName& WeaknessName, const float Damage)
 {
 	HandleChainComboUpdate();
 }

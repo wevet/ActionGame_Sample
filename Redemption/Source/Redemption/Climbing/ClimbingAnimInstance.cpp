@@ -59,7 +59,7 @@ void UClimbingAnimInstance::NativeThreadSafeUpdateAnimation(float DeltaTimeX)
 	//SetCharacterReferences();
 
 #if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
-	bDebugTrace = (CVarDebugWallClimbingSystem.GetValueOnAnyThread() > 0);
+	bDebugTrace = (CVarDebugClimbingSystem.GetValueOnAnyThread() > 0);
 #else
 	bDebugTrace = false;
 #endif

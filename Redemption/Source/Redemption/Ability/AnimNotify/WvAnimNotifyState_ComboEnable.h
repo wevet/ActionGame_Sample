@@ -9,6 +9,7 @@
 #include "WvAnimNotifyState_ComboEnable.generated.h"
 
 class ABaseCharacter;
+class ULocomotionComponent;
 
 /**
  * 
@@ -26,7 +27,7 @@ protected:
 protected:
 	// Time required for combo (relative value)
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	float ExecuteTime;
+	float ExecuteTime{ 0.1f };
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	FGameplayTagContainer RequiredGameplayTags;
@@ -35,7 +36,8 @@ protected:
 	UWvAbilityDataAsset* NextAbilityDA;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	TMap<FGameplayTag, UWvAbilityDataAsset*> OtherComboDA;
+	UWvAbilityDataAsset* BackwardInputAbilityDA;
+
 
 private:
 	FGameplayTag GetInputCombo(const class UWvAbilityDataAsset* AbilityData) const;
@@ -43,20 +45,27 @@ private:
 	UFUNCTION()
 	void OnPressed(const FGameplayTag InTag, const bool bIsPressed);
 
-	//UFUNCTION()
-	//void OnPressed(const FGameplayTag InTag, const bool bIsPressed);
+	UFUNCTION()
+	void OnHolding(const FGameplayTag InTag, const bool bIsPressed);
 
 	void TryCombo();
 	void PressedToCombo();
 
 	FGameplayTag TriggerTag;
-	UWvAT_WaitKeyPress* WaitReleaseTask;
 	FGameplayTag LastPressedTag;
-	float CurTime;
-	bool IsImmediatelyExecute;
+
+	float CurTime{ 0.f };
+	bool IsImmediatelyExecute{ false };
+
+	TWeakObjectPtr<ABaseCharacter> Character;
+	TWeakObjectPtr<ULocomotionComponent> LocomotionComponent;
 
 	UPROPERTY()
-	TWeakObjectPtr<ABaseCharacter> Character;
+	FCombatInputData CombatInputData;
+
+	UPROPERTY()
+	UWvAT_WaitKeyPress* WaitReleaseTask;
+
 
 	void HandleAIRemoveDelegate();
 };

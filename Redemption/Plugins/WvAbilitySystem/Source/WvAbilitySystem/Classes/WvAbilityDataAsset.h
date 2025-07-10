@@ -9,9 +9,6 @@
 #include "Engine/DataAsset.h"
 #include "Engine/DataTable.h"
 #include "AttributeSet.h"
-//#include "Components/SkeletalMeshComponent.h"
-//#include "GameFramework/Character.h"
-//#include "LegacyCameraShake.h"
 #include "WvAbilityBase.h"
 #include "WvAbilitySystemTypes.h"
 #include "WvAbilityDataAsset.generated.h"
@@ -40,21 +37,23 @@ public:
 	UPROPERTY(BlueprintReadWrite, EditAnywhere)
 	TSubclassOf<class UWvAbilityBase> AbilityClass;
 
-	UPROPERTY(BlueprintReadWrite, EditAnywhere)
-	FGameplayTagContainer AbilityTypeTag;
-
 	UPROPERTY(BlueprintReadWrite, VisibleDefaultsOnly)
 	float DamageMotion = 1.0f;
+
+
+#pragma region TagSetting
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = Tags)
+	FGameplayTagContainer AbilityTypeTag;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = Tags)
+	FGameplayTagContainer AbilityTags;
 
 	UPROPERTY(EditDefaultsOnly, Category = Triggers)
 	TArray<FAbilityTriggerData> AbilityTriggers;
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = Tags)
 	FGameplayTag ActiveTriggerTag;
-
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = Tags)
-	FGameplayTagContainer AbilityTags;
-
+	
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = Tags)
 	FGameplayTagContainer ActivationOwnedTags;
 
@@ -64,11 +63,25 @@ public:
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = Tags)
 	FGameplayTagContainer ActivationBlockedTags;
 
-	UPROPERTY(EditDefaultsOnly, Category = Tags)
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = Tags)
 	FGameplayTagContainer CancelAbilitiesWithTag;
 
-	UPROPERTY(EditDefaultsOnly, Category = Tags)
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = Tags)
 	FGameplayTagContainer BlockAbilitiesWithTag;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Tags|Secondary")
+	FGameplayTagContainer SourceRequiredTags;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Tags|Secondary")
+	FGameplayTagContainer SourceBlockedTags;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Tags|Secondary")
+	FGameplayTagContainer TargetRequiredTags;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Tags|Secondary")
+	FGameplayTagContainer TargetBlockedTags;
+#pragma endregion
+
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = Cost)
 	FGameplayAttribute CostAttribute;
@@ -93,56 +106,4 @@ public:
 	class UTexture2D* AbilityIcon;
 };
 
-
-UCLASS(BlueprintType, Blueprintable)
-class WVABILITYSYSTEM_API UMagicAbilityDataAsset : public UWvAbilityDataAsset
-{
-	GENERATED_BODY()
-public:
-
-	UPROPERTY(BlueprintReadWrite, VisibleDefaultsOnly)
-	EMagicAttackType AttackType;
-
-	UPROPERTY(BlueprintReadWrite, VisibleDefaultsOnly)
-	EMagicType MagicType;
-
-	UPROPERTY(BlueprintReadWrite, VisibleDefaultsOnly)
-	EMagicSubType MagicSubType;
-
-	UPROPERTY(BlueprintReadWrite, VisibleDefaultsOnly)
-	EMagicElementType Type;
-
-	UPROPERTY(BlueprintReadWrite, VisibleDefaultsOnly)
-	EMagicUseTargetPloy TargetPloy;
-
-	UPROPERTY(BlueprintReadWrite, VisibleDefaultsOnly)
-	EMagicUseRangeType RangeType;
-
-	UPROPERTY(BlueprintReadWrite, VisibleDefaultsOnly)
-	EMagicUseRangeSize RangeSize;
-
-	UPROPERTY(BlueprintReadWrite, VisibleDefaultsOnly)
-	EMagicUseCondition UseCondition;
-
-	UPROPERTY(BlueprintReadWrite, VisibleDefaultsOnly)
-	bool UseWhenDangling;
-
-	UPROPERTY(BlueprintReadWrite, VisibleDefaultsOnly)
-	float SingDuration;
-
-	UPROPERTY(BlueprintReadWrite, VisibleDefaultsOnly)
-	TArray<FName> EffectIdx;
-
-	UPROPERTY(BlueprintReadWrite, VisibleDefaultsOnly)
-	FString MagicCostAttribute = TEXT("MP");
-
-	UPROPERTY(BlueprintReadWrite, VisibleDefaultsOnly)
-	float MagicCostValue = 0.f;
-
-	UPROPERTY(BlueprintReadWrite, VisibleDefaultsOnly)
-	bool bCanSwitchTarget = false;
-
-public:
-	void UpdateDataAsset(FMagicAbilityRow RowData);
-};
 

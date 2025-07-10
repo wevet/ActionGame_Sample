@@ -6,7 +6,7 @@
 #include "Character/BaseCharacter.h"
 #include "Locomotion/LocomotionComponent.h"
 
-
+#include "Components/CapsuleComponent.h"
 #include "NavigationPath.h"
 #include "BehaviorTree/BlackboardComponent.h"
 #include "BehaviorTree/Blackboard/BlackboardKeyType_Object.h"
@@ -78,18 +78,20 @@ void UBTTask_WvMoveTo::TickTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMe
 {
 	auto* Memory = reinterpret_cast<FMoveTaskMemory*>(NodeMemory);
 	AWvAIController* AICon = Cast<AWvAIController>(OwnerComp.GetAIOwner());
-	ABaseCharacter* PawnOwner = AICon ? Cast<ABaseCharacter>(AICon->GetPawn()) : nullptr;
+	ABaseCharacter* Character = AICon ? Cast<ABaseCharacter>(AICon->GetPawn()) : nullptr;
 
-	if (!PawnOwner || !AICon)
+	if (!Character || !AICon)
 	{
 		FinishLatentTask(OwnerComp, EBTNodeResult::Failed);
 		return;
 	}
 
+	const float CapsuleRadius = Character->GetCapsuleComponent()->GetUnscaledCapsuleRadius();
+
 	// ── 1) パスが未初期化なら一度だけ計算 ──
 	if (!Memory->bPathInitialized)
 	{
-		if (!InitializePath(PawnOwner, *Memory, OwnerComp.GetBlackboardComponent()))
+		if (!InitializePath(Character, *Memory, OwnerComp.GetBlackboardComponent()))
 		{
 			FinishLatentTask(OwnerComp, EBTNodeResult::Succeeded);
 			return;
@@ -106,9 +108,9 @@ void UBTTask_WvMoveTo::TickTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMe
 		}
 	}
 
-	// ── 2) 到着判定（Destination との距離） ──
-	const float Dist2ToDest = FVector::DistSquared(PawnOwner->GetActorLocation(), Memory->Dest);
-	if (Dist2ToDest <= FMath::Square(AcceptableRadius))
+	// ── 2) 到着判定（CapsuleRadiusより小さい場合は終了） ──
+	const float Dist2ToDest = FVector::DistSquared(Character->GetActorLocation(), Memory->Dest);
+	if (Dist2ToDest <= FMath::Square(CapsuleRadius))
 	{
 		UE_LOG(LogTemp, Warning, TEXT("Arrival decision: Pawn's current location and Dest are within AcceptableRadius.: [%s]"), *FString(__FUNCTION__));
 		FinishLatentTask(OwnerComp, EBTNodeResult::Succeeded);
@@ -118,35 +120,34 @@ void UBTTask_WvMoveTo::TickTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMe
 	// ── 3) タスク開始からの累積時間を更新 ──
 	Memory->TimeSinceStart += DeltaSeconds;
 
-
 	// ── 4) スタック検出（ただし、初期 Delay の間は検出しない） ──
 	if (Memory->TimeSinceStart > StackDetectionInitialDelay)
 	{
 		// スタック検出
-		const float Moved2 = FVector::DistSquared(PawnOwner->GetActorLocation(), Memory->LastLocation);
+		const float Moved2 = FVector::DistSquared(Character->GetActorLocation(), Memory->LastLocation);
 		if (Moved2 < FMath::Square(MinMoveDistance))
 		{
 			Memory->StuckTime += DeltaSeconds;
 
 			if (Memory->StuckTime > ReplanDelay)
 			{
-				UE_LOG(LogTemp, Warning, TEXT("WvMoveTo: Replan due to stuck: [%s]"), *GetNameSafe(PawnOwner));
+				UE_LOG(LogTemp, Warning, TEXT("WvMoveTo: Replan due to stuck: [%s]"), *GetNameSafe(Character));
 				//FinishLatentTask(OwnerComp, EBTNodeResult::Succeeded);
-				InitializePath(PawnOwner, *Memory, OwnerComp.GetBlackboardComponent());
+				InitializePath(Character, *Memory, OwnerComp.GetBlackboardComponent());
 				return;
 			}
 		}
 		else
 		{
 			Memory->StuckTime = 0.f;
-			Memory->LastLocation = PawnOwner->GetActorLocation();
+			Memory->LastLocation = Character->GetActorLocation();
 		}
 	}
 
-
+	// 不整合の場合は終了
 	if (!Memory->PathPoints.IsValidIndex(Memory->CurrentPointIndex))
 	{
-		UE_LOG(LogTemp, Log, TEXT("WvMoveTo: not valid index PathPoints : [%s]"), *GetNameSafe(PawnOwner));
+		UE_LOG(LogTemp, Log, TEXT("WvMoveTo: not valid index PathPoints : [%s]"), *GetNameSafe(Character));
 		FinishLatentTask(OwnerComp, EBTNodeResult::Succeeded);
 		return;
 	}
@@ -154,7 +155,7 @@ void UBTTask_WvMoveTo::TickTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMe
 
 	// ── 5) 現在のチェックポイント到達判定 ──
 	const FVector TargetPoint = Memory->PathPoints[Memory->CurrentPointIndex];
-	const float Dist2ToPoint = FVector::DistSquared(PawnOwner->GetActorLocation(), TargetPoint);
+	const float Dist2ToPoint = FVector::DistSquared(Character->GetActorLocation(), TargetPoint);
 
 	// 許容半径内か
 	if (Dist2ToPoint <= FMath::Square(AcceptableRadius))
@@ -164,7 +165,7 @@ void UBTTask_WvMoveTo::TickTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMe
 		if (Memory->CurrentPointIndex >= Memory->PathPoints.Num())
 		{
 			// 全ポイント通過でゴール
-			UE_LOG(LogTemp, Log, TEXT("WvMoveTo: Goal with all points passed : [%s]"), *GetNameSafe(PawnOwner));
+			UE_LOG(LogTemp, Log, TEXT("WvMoveTo: Goal with all points passed : [%s]"), *GetNameSafe(Character));
 			FinishLatentTask(OwnerComp, EBTNodeResult::Succeeded);
 			return;
 		}
@@ -174,19 +175,18 @@ void UBTTask_WvMoveTo::TickTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMe
 	const FVector NextPoint = Memory->PathPoints[Memory->CurrentPointIndex];
 
 	// 小さな回転差分なら回転処理をスキップ
-	const FVector ToTarget = NextPoint - PawnOwner->GetActorLocation();
+	const FVector ToTarget = NextPoint - Character->GetActorLocation();
 	const FRotator DesiredRot = ToTarget.Rotation();
-	const float YawDiff = FMath::Abs(FRotator::NormalizeAxis(DesiredRot.Yaw - PawnOwner->GetActorRotation().Yaw));
+	const float YawDiff = FMath::Abs(FRotator::NormalizeAxis(DesiredRot.Yaw - Character->GetActorRotation().Yaw));
 	// YawDiffThreshold度以内なら回転不要
 	if (YawDiff > YawDiffThreshold)
 	{
-		//AICon->SmoothMoveToLocation(NextPoint, RotationInterp);
-		//return;
+		AICon->SmoothMoveToLocation(NextPoint, RotationInterp);
+		return;
 	}
 
-	AICon->SmoothMoveToLocation(NextPoint, RotationInterp);
 	// 向き調整はせず，加速のみ
-	//PawnOwner->AddMovementInput(ToTarget.GetSafeNormal());
+	Character->AddMovementInput(ToTarget.GetSafeNormal());
 	
 }
 

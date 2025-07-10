@@ -365,10 +365,8 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion|AimOffset")
 	bool bLookAtAimOffset{ false };
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion|AimOffset")
 	TWeakObjectPtr<AActor> LookAtTarget{ nullptr };
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion|AimOffset")
 	TWeakObjectPtr<USceneComponent> LookAtTargetComponent{ nullptr };
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion|AimOffset")
@@ -387,6 +385,9 @@ public:
 	float VelocityDifference{ 0.f };
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
+	bool bIsBackwardInputEnable{false};
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
 	float RotationDifference{ 0.f };
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
@@ -401,9 +402,6 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
 	FRotator JumpRotation{ FRotator::ZeroRotator };
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
-	FRotator TargetRotation{ FRotator::ZeroRotator };
-
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion")
 	ELSMovementMode LSMovementMode = ELSMovementMode::Grounded;
 
@@ -417,7 +415,7 @@ public:
 	ELSRotationMode LSRotationMode = ELSRotationMode::VelocityDirection;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
-	ELSCardinalDirection CardinalDirection = ELSCardinalDirection::East;
+	ELSCardinalDirection CardinalDirection = ELSCardinalDirection::North;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
 	ELSOverlayState OverlayState = ELSOverlayState::None;

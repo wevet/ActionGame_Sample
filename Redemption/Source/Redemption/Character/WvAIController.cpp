@@ -316,7 +316,7 @@ bool AWvAIController::IsAttackAllowed() const
 	return true;
 }
 
-void AWvAIController::OnReceiveAbilityAttack(AActor* Actor, const FWvBattleDamageAttackSourceInfo SourceInfo, const float Damage)
+void AWvAIController::OnReceiveAbilityAttack(AActor* Actor, const FWvBattleDamageAttackSourceInfo& SourceInfo, const float Damage)
 {
 	// controlled pawn is damaged !
 	OnReceiveTeamHandleAttackCallback.Broadcast(Actor, SourceInfo, Damage);
@@ -705,6 +705,12 @@ void AWvAIController::DoFriendlyActionState(AActor* Actor)
 		return;
 	}
 
+	// Œx‰ú‚©í“¬’†‚Ìê‡‚ÍŽÀs‚µ‚È‚¢
+	if (SightTask.IsRunning() || HearTask.IsRunning())
+	{
+		return;
+	}
+
 	if (!BaseCharacter->IsFriendlyActionPlaying())
 	{
 		if (ABaseCharacter* FriendCharacter = Cast<ABaseCharacter>(Actor))
@@ -713,25 +719,13 @@ void AWvAIController::DoFriendlyActionState(AActor* Actor)
 			const FVector FriendEnterPoint = BaseCharacter->GetActorLocation() + (BaseCharacter->GetActorForwardVector() * CapsuleRadius);
 
 			// self controlled character apply
-			{
-				const auto LookAt = UKismetMathLibrary::FindLookAtRotation(BaseCharacter->GetActorLocation(), FriendCharacter->GetActorLocation());
-				auto Rot = BaseCharacter->GetActorRotation();
-				Rot.Yaw = LookAt.Yaw;
-				BaseCharacter->SetActorRotation(Rot);
-
-				SetBlackboardFriend(FriendCharacter);
-				SetBlackboardFriendLocation(BaseCharacter->GetActorLocation());
-				StartFriendlyTask();
-			}
+			SetBlackboardFriend(FriendCharacter);
+			SetBlackboardFriendLocation(BaseCharacter->GetActorLocation());
+			StartFriendlyTask();
 
 			auto AIC = Cast<AWvAIController>(FriendCharacter->GetController());
 			if (AIC)
 			{
-				const auto LookAt = UKismetMathLibrary::FindLookAtRotation(FriendCharacter->GetActorLocation(), BaseCharacter->GetActorLocation());
-				auto Rot = FriendCharacter->GetActorRotation();
-				Rot.Yaw = LookAt.Yaw;
-				FriendCharacter->SetActorRotation(Rot);
-
 				AIC->SetBlackboardFriend(BaseCharacter.Get());
 				AIC->SetBlackboardFriendLocation(FriendEnterPoint);
 				AIC->StartFriendlyTask();
@@ -811,38 +805,50 @@ void AWvAIController::HandleSprint(const bool bEnable)
 
 void AWvAIController::HandleTargetLock(const bool bLockTarget)
 {
-	if (bLockTarget)
+	if (BaseCharacter.IsValid())
 	{
-		BaseCharacter->DoTargetLockOn();
+		if (bLockTarget)
+		{
+			BaseCharacter->DoTargetLockOn();
+		}
+		else
+		{
+			BaseCharacter->DoTargetLockOff();
+		}
 	}
-	else
-	{
-		BaseCharacter->DoTargetLockOff();
-	}
+
 }
 
 void AWvAIController::HandleAiming(const bool bEnable)
 {
-	if (bEnable)
+	if (BaseCharacter.IsValid())
 	{
-		BaseCharacter->DoStartAiming();
+		if (bEnable)
+		{
+			BaseCharacter->DoStartAiming();
+		}
+		else
+		{
+			BaseCharacter->DoStopAiming();
+		}
 	}
-	else
-	{
-		BaseCharacter->DoStopAiming();
-	}
+
 }
 
 void AWvAIController::HandleStrafeMovement(const bool bEnableStrafeMovement)
 {
-	if (bEnableStrafeMovement)
+	if (BaseCharacter.IsValid())
 	{
-		BaseCharacter->StrafeMovement();
+		if (bEnableStrafeMovement)
+		{
+			BaseCharacter->StrafeMovement();
+		}
+		else
+		{
+			BaseCharacter->VelocityMovement();
+		}
 	}
-	else
-	{
-		BaseCharacter->VelocityMovement();
-	}
+
 }
 
 void AWvAIController::AbortTasks(bool bIsForce /*= false*/)
@@ -1450,6 +1456,8 @@ void AWvAIController::CancelFriendlyActionAbility()
 		UE_LOG(LogWvAI, Error, TEXT("nullptr FriendCharacter => [%s]"), *FString(__FUNCTION__));
 	}
 #endif
+
+	EndFriendlyAbility_Callback();
 }
 
 bool AWvAIController::IsFriendlyActionPlaying() const
@@ -1463,6 +1471,23 @@ void AWvAIController::ApplyFriendlyCoolDown()
 }
 #pragma endregion
 
+
+void AWvAIController::UpdateFriendlyLootAt()
+{
+	if (!BaseCharacter.IsValid())
+	{
+		return;
+	}
+
+	if (ABaseCharacter* FriendCharacter = GetBlackboardFriendAsCharacter())
+	{
+		const auto LookAt = UKismetMathLibrary::FindLookAtRotation(BaseCharacter->GetActorLocation(), FriendCharacter->GetActorLocation());
+		auto Rot = BaseCharacter->GetActorRotation();
+		Rot.Yaw = LookAt.Yaw;
+		BaseCharacter->SetActorRotation(Rot);
+
+	}
+}
 
 void AWvAIController::SmoothMoveToLocation(const FVector& Direction, const float RotationInterp)
 {

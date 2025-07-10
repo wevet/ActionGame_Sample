@@ -9,6 +9,7 @@ using namespace UE::Tasks;
 
 DEFINE_LOG_CATEGORY(LogWvAI)
 
+
 #pragma region PerceptionTask
 bool FAIPerceptionTask::IsRunning() const
 {
@@ -32,8 +33,7 @@ void FAIPerceptionTask::Abort(const bool bIsForce)
 	}
 }
 
-
-void FAIPerceptionTask::Begin(const ETaskType InTaskType, const float InTimer, TFunction<void(void)> InFinishDelegate)
+void FAIPerceptionTask::Begin(const ETaskType InTaskType, const float InTimer, TUniqueFunction<void(void)> InFinishDelegate)
 {
 	TaskType = InTaskType;
 	Timer = InTimer;
@@ -91,7 +91,6 @@ FString FAIPerceptionTask::TaskTypeToString(ETaskType Type)
 	return TEXT("Unknown");
 }
 
-
 void FAIPerceptionTask::End()
 {
 	if (!bIsTaskPlaying)
@@ -105,12 +104,11 @@ void FAIPerceptionTask::End()
 	if (FinishDelegate)
 	{
 		FinishDelegate();
-		FinishDelegate = nullptr;
+		FinishDelegate.Reset();
 	}
 
 	UE_LOG(LogWvAI, Log, TEXT("TaskEnd:[%d] function:[%s]"), (uint8)TaskType, *FString(__FUNCTION__));
 }
-
 
 void FAIPerceptionTask::AddLength(const float AddTimer)
 {
@@ -189,6 +187,8 @@ void FAILeaderTask::Notify()
 
 
 #pragma region CloseCombat
+TArray<float>  FAICloseCombatData::BaseRandomSeeds = { 80.0f, 60.0f, 30.0f, 10.0f, 8.0f, 5.0f, 2.0f };
+
 FAICloseCombatData::FAICloseCombatData()
 {
 	bIsComboCheckEnded = false;
@@ -196,11 +196,11 @@ FAICloseCombatData::FAICloseCombatData()
 	CurSeeds = 0.f;
 }
 
-void FAICloseCombatData::Initialize(const int32 InComboTypeIndex, const int32 MaxComboCount)
+void FAICloseCombatData::Initialize(const int32 InComboTypeIndex, const int32 InMaxComboCount)
 {
 	bIsPlaying = true;
 	CurAttackComboCount = 0;
-	AttackComboCount = FMath::Clamp(FMath::RandRange(0, MaxComboCount), 0, BaseRandomSeeds.Num() - 1);
+	AttackComboCount = FMath::Clamp(FMath::RandRange(0, InMaxComboCount), 0, BaseRandomSeeds.Num() - 1);
 	ComboTypeIndex = InComboTypeIndex;
 
 	const FVector2D SeedsRange { 0.1f, 0.3f};
@@ -217,15 +217,14 @@ void FAICloseCombatData::Initialize(const int32 InComboTypeIndex, const int32 Ma
 		IntervalSeeds.Add(IntervalSeed);
 	}
 
-	UE_LOG(LogWvAI, Warning, TEXT("[%s]"), *FString(__FUNCTION__));
-	UE_LOG(LogWvAI, Warning, TEXT("AttackComboCount => %d"), AttackComboCount);
-	UE_LOG(LogWvAI, Warning, TEXT("MaxComboCount => %d"), MaxComboCount);
+	UE_LOG(LogWvAI, Verbose, TEXT("[%s]"), *FString(__FUNCTION__));
+	UE_LOG(LogWvAI, Verbose, TEXT("AttackComboCount => %d"), AttackComboCount);
 }
 
 void FAICloseCombatData::Deinitialize()
 {
 	bIsPlaying = false;
-	UE_LOG(LogWvAI, Warning, TEXT("[%s]"), *FString(__FUNCTION__));
+	UE_LOG(LogWvAI, Verbose, TEXT("[%s]"), *FString(__FUNCTION__));
 }
 
 bool FAICloseCombatData::IsOverAttack() const
@@ -233,19 +232,21 @@ bool FAICloseCombatData::IsOverAttack() const
 	return CurAttackComboCount >= AttackComboCount;
 }
 
-void FAICloseCombatData::ComboSeedBegin(TFunction<void(void)> InFinishDelegate)
+void FAICloseCombatData::ComboSeedBegin(TUniqueFunction<void(void)> InFinishDelegate)
 {
 	if (IsOverAttack())
 	{
 		return;
 	}
 
-	FinishDelegate = InFinishDelegate;
+	FinishDelegate = MoveTemp(InFinishDelegate);
 	CurInterval = 0.f;
 	bIsComboCheckEnded = false;
-	CurSeeds = ModifySeeds[CurAttackComboCount];
-	CurIntervalSeeds = IntervalSeeds[CurAttackComboCount];
-	UE_LOG(LogWvAI, Log, TEXT("[%s]"), *FString(__FUNCTION__));
+
+	const int32 Index = FMath::Clamp(CurAttackComboCount, 0, ModifySeeds.Num() - 1);
+	CurSeeds = ModifySeeds[Index];
+	CurIntervalSeeds = IntervalSeeds[Index];
+	UE_LOG(LogWvAI, Verbose, TEXT("[%s]"), *FString(__FUNCTION__));
 }
 
 void FAICloseCombatData::ComboSeedUpdate(const float DeltaTime)
@@ -265,6 +266,8 @@ void FAICloseCombatData::ComboSeedUpdate(const float DeltaTime)
 			if (FinishDelegate)
 			{
 				FinishDelegate();
+
+				FinishDelegate.Reset();
 				this->Internal_Update();
 			}
 		}
@@ -287,7 +290,7 @@ void FAICloseCombatData::Internal_Update()
 	}
 
 	CurInterval = 0.f;
-	UE_LOG(LogWvAI, Log, TEXT("[%s] => %d/%d"), *FString(__FUNCTION__), CurAttackComboCount, AttackComboCount);
+	UE_LOG(LogWvAI, Verbose, TEXT("[%s] => %d/%d"), *FString(__FUNCTION__), CurAttackComboCount, AttackComboCount);
 }
 
 void FAICloseCombatData::ComboSeedEnd()

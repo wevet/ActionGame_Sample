@@ -102,6 +102,8 @@ public:
 
 	static FName MantleSyncPoint;
 	static FName ClimbSyncPoint;
+	static FName BackwardInputSyncPoint;
+
 
 	bool HasFallEdge() const { return bHasFallEdge; }
 	void UpdateCharacterMovementSettings(const bool bHasStanding);
@@ -115,11 +117,12 @@ public:
 
 
 	// ~Start Traversal
-	FTraversalDataCheckInputs GetTraversalDataCheckInputs() const;
+	//
+	void SetTraversalDataCheckInput(FTraversalDataCheckInputs& OutInput);
 	const bool TryTraversalAction();
 	void OnTraversalStart();
 	void OnTraversalEnd();
-	const TArray<UObject*> GetAnimMontageFromChooserTable(const TSubclassOf<UObject> ObjectClass, UPARAM(Ref) FTraversalActionDataInputs& Input, FTraversalActionDataOutputs& Output);
+	const TArray<UObject*> GetAnimMontageFromChooserTable(const TSubclassOf<UObject> ObjectClass, FTraversalActionDataInputs& Input, FTraversalActionDataOutputs& Output);
 	void SetTraversalPressed(const bool bIsNewTraversalPressed);
 	// ~End Traversal
 
@@ -171,7 +174,7 @@ protected:
 	float MinLedgeWidth{ 70.0f };
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Character Movement: Traversal")
-	float MinFrontLedgeDepth{ 37.522631f };
+	float MinFrontLedgeDepth{ 35.0f };
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Character Movement: Traversal")
 	bool bIsTraversalTraceComplex{ true };
@@ -315,6 +318,8 @@ private:
 	UPROPERTY()
 	TObjectPtr<class UMantleAnimationDataAsset> MantleDAInstance;
 	TSharedPtr<FStreamableHandle> MantleStreamableHandle;
+
+	FTraversalDataCheckInputs TraversalDataCheckInput;
 	void OnMantleAssetLoadComplete();
 	void OnLoadMantleDA();
 	// ~End AsyncLoadMantle
@@ -328,12 +333,12 @@ private:
 	const bool TryEnterWallCheckAngle(const bool bIsCheckGround) const;
 	const bool TraceWidth(const FHitResult& Hit, const FVector Direction);
 	const bool TraceAlongHitPlane(const FHitResult& Hit, const float TraceLength, const FVector TraceDirection, FHitResult& OutHit);
-	void SetTraceHitPoint(UPARAM(ref) FHitResult& OutHit, const FVector NewImpactPoint);
-	void NudgeHitTowardsObjectOrigin(UPARAM(ref) FHitResult& Hit);
+	void SetTraceHitPoint(FHitResult& OutHit, const FVector NewImpactPoint);
+	void NudgeHitTowardsObjectOrigin(FHitResult& Hit);
 	void Traversal_TraceCorners(const FHitResult& Hit, const FVector TraceDirection, const float TraceLength, FVector& OffsetCenterPoint, bool& bCloseToCorner, float& DistanceToCorner);
 	void PhysTraversaling(float deltaTime, int32 Iterations);
 
-	void TryAndCalculateTraversal(UPARAM(ref) FHitResult& HitResult, UPARAM(ref) FTraversalActionData& OutTraversalActionData);
+	void TryAndCalculateTraversal(FHitResult& HitResult, FTraversalActionData& OutTraversalActionData);
 	float CalcurateLedgeOffsetHeight(const FTraversalActionData& InTraversalActionData) const;
 	void PrintTraversalActionData();
 	// ~End Traversal

@@ -51,22 +51,30 @@ void UWvAbility_Melee::ActivateAbility(const FGameplayAbilitySpecHandle Handle, 
 
 		if (HasComboTrigger())
 		{
-			UE_LOG(LogTemp, Error, TEXT("playing combo melee => %s, GAS => %s, [%s]"), 
+			UE_LOG(LogTemp, Error, TEXT("playing combo melee => %s, GAS => %s, [%s]"),
 				*GetComboTriggerTag().GetTagName().ToString(),
 				*GetNameSafe(this),
 				*FString(__FUNCTION__));
 		}
 		else
 		{
-			UE_LOG(LogTemp, Warning, TEXT("playing first melee Tag => %s, GAS => %s, [%s]"), 
-				*GetComboTriggerTag().GetTagName().ToString(), 
+			UE_LOG(LogTemp, Warning, TEXT("playing first melee Tag => %s, GAS => %s, [%s]"),
+				*GetComboTriggerTag().GetTagName().ToString(),
 				*GetNameSafe(this),
 				*FString(__FUNCTION__));
 		}
 	}
 
+	// Combo’†‚É”w–Ê‚ÖStick‚ðŒX‚¯‚½
 	const auto& LocomotionEssencialVariables = Character->GetLocomotionComponent()->GetLocomotionEssencialVariables();
+	CombatInputData.SetBackwardInputResult(LocomotionEssencialVariables.bIsBackwardInputEnable);
+
 	UAnimMontage* CurAnimMontage = (IsValid(SprintToMontage) && LocomotionEssencialVariables.LSGait == ELSGait::Sprinting) ? SprintToMontage : Montage;
+
+	if (CombatInputData.GetBackwardInputResult())
+	{
+
+	}
 
 	float PlayRate = 1.0f;
 
@@ -79,8 +87,8 @@ void UWvAbility_Melee::ActivateAbility(const FGameplayAbilitySpecHandle Handle, 
 		auto DA = GetWvAbilityDataChecked();
 		if (DA)
 		{
-			auto Tags = DA->ActivationRequiredTags;
-			for (const FGameplayTag Tag : Tags)
+			const FGameplayTagContainer& TagContainer = DA->ActivationRequiredTags;
+			for (const FGameplayTag& Tag : TagContainer)
 			{
 				if (Tag.ToString().Contains("Combo") && !Tag.ToString().Contains("ComboRequire"))
 				{
@@ -114,8 +122,14 @@ void UWvAbility_Melee::ActivateAbility(const FGameplayAbilitySpecHandle Handle, 
 	}
 
 
-	MontageTask = UWvAT_PlayMontageAndWaitForEvent::PlayMontageAndWaitForEvent(this, FName("Melee"), CurAnimMontage, 
-		FGameplayTagContainer(), PlayRate, 0.f, FName("Default"), true, 1.0f);
+	MontageTask = UWvAT_PlayMontageAndWaitForEvent::PlayMontageAndWaitForEvent(
+		this, 
+		FName("Melee"), 
+		CurAnimMontage, 
+		FGameplayTagContainer(), 
+		PlayRate, 
+		0.f, 
+		FName("Default"), true, 1.0f);
 
 	MontageTask->OnCancelled.AddDynamic(this, &UWvAbility_Melee::OnPlayMontageCompleted_Event);
 	MontageTask->OnInterrupted.AddDynamic(this, &UWvAbility_Melee::OnPlayMontageCompleted_Event);

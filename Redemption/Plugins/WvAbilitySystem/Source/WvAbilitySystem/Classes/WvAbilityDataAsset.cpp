@@ -31,23 +31,5 @@ void UWvAbilityDataAsset::PostLoad()
 }
 #endif
 
-void UMagicAbilityDataAsset::UpdateDataAsset(FMagicAbilityRow RowData)
-{
-	DamageMotion = RowData.DamageMotion;
-	AttackType = RowData.AttackType;
-	MagicType = RowData.MagicType;
-	MagicSubType = RowData.MagicSubType;
-	Type = RowData.Type;
-	TargetPloy = RowData.TargetPloy;
-	RangeType = RowData.RangeType;
-	RangeSize = RowData.RangeSize;
-	UseCondition = RowData.UseCondition;
-	UseWhenDangling = RowData.UseWhenDangling;
-	SingDuration = RowData.SingDuration;
-	EffectIdx = RowData.EffectIdx;
-	bCanSwitchTarget = RowData.bCanSwitchTarget;
-	MagicCostAttribute = RowData.MagicCostAttribute;
-	MagicCostValue = RowData.MagicCostValue;
-}
 
 

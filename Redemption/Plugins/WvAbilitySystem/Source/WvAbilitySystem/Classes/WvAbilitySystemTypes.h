@@ -190,89 +190,6 @@ enum class EBodyShapeType : uint8
 	Under  UMETA(DisplayName = "Under"),
 };
 
-UENUM(BlueprintType)
-enum class EMagicAttackType : uint8
-{
-	Magic = 0,
-	Other
-};
-
-UENUM(BlueprintType)
-enum class EMagicType : uint8
-{
-	None = 0,
-	Buff,
-	DeBuff,
-	//Assist
-	Auxiliary,
-	Attack,
-	Shield,
-	Recover,
-	// weapon enchantment
-	WeaponEnchantment,
-	AbnormalStatus
-};
-
-UENUM(BlueprintType)
-enum class EMagicSubType : uint8
-{
-	None = 0,
-	Ninjutsu,
-	TopMagic,
-	MiddleMagic,
-	LowMagic,
-	Throw,
-	Trap,
-	SummonMagic
-};
-
-UENUM(BlueprintType)
-enum class EMagicElementType : uint8
-{
-	None = 0,
-	Drak,
-	Wind,
-	Bright,
-	Fire,
-	Wood,
-	Water,
-	Earth,
-	Moon,
-};
-
-UENUM(BlueprintType)
-enum class EMagicUseTargetPloy : uint8
-{
-	HostileCamp,
-	FriendlyCamp,
-	OnlySelf
-};
-
-UENUM(BlueprintType)
-enum class EMagicUseRangeType : uint8
-{
-	RangeOne,
-	RangeTwo,
-	RangeThree,
-	RangeFour,
-	RangeFive,
-	RangeSix
-};
-
-UENUM(BlueprintType)
-enum class EMagicUseRangeSize : uint8
-{
-	LargeRange,
-	MiddleRange,
-	SmallRange
-};
-
-UENUM(BlueprintType)
-enum class EMagicUseCondition : uint8
-{
-	OnlyInBattle = 0,
-	Any
-};
 
 UENUM(BlueprintType)
 enum class EAIActionState : uint8
@@ -407,60 +324,6 @@ struct FWvAbilityRow : public FTableRowBase
 
 
 USTRUCT(BlueprintType)
-struct FMagicAbilityRow : public FTableRowBase
-{
-	GENERATED_BODY()
-
-	UPROPERTY(BlueprintReadWrite, EditAnywhere)
-	float DamageMotion = 1.0f;
-
-	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly)
-	EMagicAttackType AttackType{ EMagicAttackType::Magic};
-
-	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly)
-	EMagicType MagicType{ EMagicType::None};
-
-	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly)
-	EMagicSubType MagicSubType{ EMagicSubType::None};
-
-	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly)
-	EMagicElementType Type{ EMagicElementType::None};
-
-	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly)
-	EMagicUseTargetPloy TargetPloy{EMagicUseTargetPloy::HostileCamp };
-
-	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly)
-	EMagicUseRangeType RangeType{EMagicUseRangeType::RangeOne };
-
-	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly)
-	EMagicUseRangeSize RangeSize{ EMagicUseRangeSize::SmallRange};
-
-	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly)
-	EMagicUseCondition UseCondition{ EMagicUseCondition::Any};
-
-	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly)
-	bool UseWhenDangling{false};
-
-	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly)
-	float SingDuration{0.f};
-
-	UPROPERTY(BlueprintReadWrite, EditAnywhere)
-	TArray<FName> EffectIdx;
-
-	UPROPERTY(BlueprintReadWrite, EditAnywhere)
-	FString MagicCostAttribute = TEXT("MP");
-
-	UPROPERTY(BlueprintReadWrite, EditAnywhere)
-	float MagicCostValue{ 0.f };
-
-	UPROPERTY(BlueprintReadWrite, EditAnywhere)
-	bool bCanSwitchTarget{ false };
-
-	UPROPERTY(BlueprintReadWrite, EditAnywhere)
-	class UMagicAbilityDataAsset* AbilityData{nullptr};
-};
-
-USTRUCT(BlueprintType)
 struct FWvAbilitySystemAvatarData
 {
 	GENERATED_BODY()
@@ -491,27 +354,6 @@ struct FWvAbilitySystemAvatarData
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "AbilitySystem")
 	UWvHitReactDataAsset* HitReactData{ nullptr };
-};
-
-USTRUCT(BlueprintType)
-struct FHitOscillatorData
-{
-	GENERATED_BODY()
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = VOscillator)
-	float OscillatorDuration{0.f};
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = VOscillator)
-	bool bShakeBody = false;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = VOscillator)
-	struct FFOscillator X;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = VOscillator)
-	struct FFOscillator Y;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = VOscillator)
-	struct FFOscillator Z;
 };
 
 USTRUCT(BlueprintType)
@@ -574,68 +416,6 @@ public:
 	TArray<FWvGameplayEffectParamSet> ParamSet;
 };
 
-USTRUCT()
-struct FAbilityMeshMontage
-{
-	GENERATED_BODY()
-
-public:
-	UPROPERTY()
-	class USkeletalMeshComponent* Mesh;
-
-	UPROPERTY()
-	class UAnimMontage* Montage;
-
-	FAbilityMeshMontage() : Mesh(nullptr), Montage(nullptr)
-	{}
-
-	FAbilityMeshMontage(class USkeletalMeshComponent* InMesh, class UAnimMontage* InMontage)
-		: Mesh(InMesh), Montage(InMontage)
-	{}
-};
-
-USTRUCT()
-struct FGameplayAbilityLocalAnimMontageForMesh
-{
-	GENERATED_BODY()
-
-public:
-	UPROPERTY()
-	USkeletalMeshComponent* Mesh;
-
-	UPROPERTY()
-	FGameplayAbilityLocalAnimMontage LocalMontageInfo;
-
-	FGameplayAbilityLocalAnimMontageForMesh() : Mesh(nullptr), LocalMontageInfo()
-	{}
-
-	FGameplayAbilityLocalAnimMontageForMesh(USkeletalMeshComponent* InMesh) : Mesh(InMesh), LocalMontageInfo()
-	{}
-
-	FGameplayAbilityLocalAnimMontageForMesh(USkeletalMeshComponent* InMesh, FGameplayAbilityLocalAnimMontage& InLocalMontageInfo) : Mesh(InMesh), LocalMontageInfo(InLocalMontageInfo)
-	{}
-};
-
-USTRUCT()
-struct FGameplayAbilityRepAnimMontageForMesh
-{
-	GENERATED_BODY();
-
-public:
-	UPROPERTY()
-	USkeletalMeshComponent* Mesh;
-
-	UPROPERTY()
-	FGameplayAbilityRepAnimMontage RepMontageInfo;
-
-	FGameplayAbilityRepAnimMontageForMesh() : Mesh(nullptr), RepMontageInfo()
-	{
-	}
-
-	FGameplayAbilityRepAnimMontageForMesh(USkeletalMeshComponent* InMesh) : Mesh(InMesh), RepMontageInfo()
-	{
-	}
-};
 
 
 USTRUCT(BlueprintType)
@@ -808,7 +588,7 @@ class WVABILITYSYSTEM_API UWvHitFeedback : public UObject
 
 public:
 
-	virtual void DoFeedback(FGameplayEffectContextHandle EffectContextHandle, AActor* Target);
+	virtual void DoFeedback(const FGameplayEffectContextHandle& EffectContextHandle, AActor* Target);
 };
 
 UCLASS(BlueprintType)
@@ -1443,7 +1223,7 @@ public:
 USTRUCT(BlueprintType)
 struct FWvWeaknessInfo
 {
-	GENERATED_USTRUCT_BODY()
+	GENERATED_BODY()
 
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
@@ -1474,5 +1254,50 @@ public:
 };
 
 
+
+/// <summary>
+/// comboì¸óÕéûÇÃDataClass
+/// </summary>
+USTRUCT(BlueprintType)
+struct WVABILITYSYSTEM_API FCombatInputData
+{
+	GENERATED_BODY()
+
+public:
+
+	/// <summary>
+	/// êiçsï˚å¸Ç©ÇÁîwñ Ç÷ÇÃì¸óÕÇ™Ç†Ç¡ÇΩèÍçá
+	/// </summary>
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	bool bIsBackwardInputResult;
+
+	/// <summary>
+	/// space keyÇÃì¸óÕÇ™Ç†Ç¡ÇΩèÍçáÇÕtrue
+	/// </summary>
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	bool bIsJumpInputResult;
+
+	/// <summary>
+	/// í∑âüÇµì¸óÕÇ™Ç†Ç¡ÇΩèÍçáÇÕtrue
+	/// </summary>
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	bool bIsButtonHoldResult;
+
+	FCombatInputData() : 
+		bIsBackwardInputResult(false),
+		bIsJumpInputResult(false),
+		bIsButtonHoldResult(false)
+	{
+
+	}
+
+	void SetBackwardInputResult(const bool bIsNewBackwardInputResult);
+	void SetHoldResult(const bool bIsNewButtonHoldResult);
+	bool GetBackwardInputResult() const;
+
+	void Reset();
+
+
+};
 
 

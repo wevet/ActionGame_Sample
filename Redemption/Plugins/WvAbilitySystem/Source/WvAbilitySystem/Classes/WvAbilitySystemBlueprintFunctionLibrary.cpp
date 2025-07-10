@@ -7,6 +7,7 @@
 #include "WvAbilityDataAsset.h"
 #include "WvAbilityAttributeSet.h"
 #include "Interface/WvAbilityTargetInterface.h"
+#include "WvAbilitySystem.h"
 
 #include "Kismet/KismetSystemLibrary.h"
 #include "Components/CapsuleComponent.h"
@@ -488,6 +489,26 @@ FVector UWvAbilitySystemBlueprintFunctionLibrary::GetAttackDirection(FGameplayEf
 	}
 
 	return *AttackDirectionPtr;
+}
+
+
+void UWvAbilitySystemBlueprintFunctionLibrary::LogTagContainer(const FGameplayTagContainer& Container)
+{
+	if (Container.IsEmpty())
+	{
+		//UE_LOG(LogWvAbility, Log, TEXT("GameplayTagContainer is empty."));
+		return;
+	}
+
+	TArray<FString> TagStrings;
+	TagStrings.Reserve(Container.Num());
+	for (const FGameplayTag& Tag : Container)
+	{
+		TagStrings.Add(Tag.ToString());
+	}
+
+	const FString JoinedTags = FString::Join(TagStrings, TEXT(", "));
+	UE_LOG(LogWvAbility, Log, TEXT("GameplayTagContainer (%d tags): %s"), Container.Num(), *JoinedTags);
 }
 
 

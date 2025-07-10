@@ -66,7 +66,7 @@ void AEnemyCharacter::UnFreeze()
 	Super::UnFreeze();
 }
 
-void AEnemyCharacter::OnReceiveHitReact(FGameplayEffectContextHandle Context, const bool IsInDead, const float Damage)
+void AEnemyCharacter::OnReceiveHitReact(FGameplayEffectContextHandle& Context, const bool IsInDead, const float Damage)
 {
 	Super::OnReceiveHitReact(Context, IsInDead, Damage);
 }

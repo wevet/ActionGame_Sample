@@ -26,15 +26,17 @@ UWvAbilitySystemComponentBase::UWvAbilitySystemComponentBase() : Super()
 FGameplayAbilitySpecHandle UWvAbilitySystemComponentBase::ApplyGiveAbility(class UWvAbilityDataAsset* AbilityData, float DamageMotion)
 {
 	check(AbilityData)
-	AbilityData->DamageMotion = DamageMotion;
-	return GiveAbility(FGameplayAbilitySpec(AbilityData->AbilityClass, 1, INDEX_NONE, AbilityData));
-}
+	//AbilityData->DamageMotion = DamageMotion;
+	FGameplayAbilitySpecHandle Handle = GiveAbility(FGameplayAbilitySpec(AbilityData->AbilityClass, 1, INDEX_NONE, AbilityData));
 
-FGameplayAbilitySpecHandle UWvAbilitySystemComponentBase::ApplyGiveMagicAbility(FMagicAbilityRow RowData)
-{
-	check(RowData.AbilityData)
-	RowData.AbilityData->UpdateDataAsset(RowData);
-	return GiveAbility(FGameplayAbilitySpec(RowData.AbilityData->AbilityClass, 1, INDEX_NONE, RowData.AbilityData));
+	//if (UGameplayAbility* GA = GetAbilityInstanceFromHandle(Handle))
+	//{
+	//	if (UWvAbilityBase* WV = Cast<UWvAbilityBase>(GA))
+	//	{
+	//		WV->InitFromDataAsset(AbilityData, DamageMotion);
+	//	}
+	//}
+	return Handle;
 }
 
 float UWvAbilitySystemComponentBase::AbilityGetCooldownTimeRemaining(const UGameplayAbility* AbilityIns)
@@ -141,11 +143,14 @@ int32 UWvAbilitySystemComponentBase::PressTriggerInputEvent(FGameplayTag Tag, bo
 	for (FGameplayAbilitySpec& Spec : ActivatableAbilities.Items)
 	{
 		if (Spec.Ability == nullptr)
+		{
+			UE_LOG(LogWvAbility, Error, TEXT("Spec.Ability == nullptr. path:%s"), *FString(__FUNCTION__));
 			continue;
+		}
 
 		if (!Spec.SourceObject.Get())
 		{
-			UE_LOG(LogWvAbility, Error, TEXT("AbilitySystemComponent. ActivatableAbilitie SourceObject is nil. path:%s"), *Spec.Ability->GetPathName());
+			UE_LOG(LogWvAbility, Error, TEXT("AbilitySystemComponent. ActivatableAbilitie Spec.SourceObject is nullptr. path:%s"), *Spec.Ability->GetPathName());
 			continue;
 		}
 
@@ -157,7 +162,9 @@ int32 UWvAbilitySystemComponentBase::PressTriggerInputEvent(FGameplayTag Tag, bo
 		}
 
 		if (AbilityData->ActiveTriggerTag != Tag)
+		{
 			continue;
+		}
 
 		Spec.InputPressed = !FromCache ? true : StillPressingIfFromCache;
 
@@ -269,6 +276,7 @@ void UWvAbilitySystemComponentBase::OnAbilityActivePredictiveRejected(const UWvA
 	AbilityResetCooldown(Ability);
 }
 
+
 UGameplayAbility* UWvAbilitySystemComponentBase::CreateNewInstanceOfAbility(FGameplayAbilitySpec& Spec, const UGameplayAbility* Ability)
 {
 	check(Ability);
@@ -277,48 +285,12 @@ UGameplayAbility* UWvAbilitySystemComponentBase::CreateNewInstanceOfAbility(FGam
 	AActor* Owner = GetOwner();
 	check(Owner);
 
-
 	UWvAbilityBase* AbilityInstance = NewObject<UWvAbilityBase>(Owner, Ability->GetClass());
 	check(AbilityInstance);
 
-	//set tag
-	UWvAbilityDataAsset* AbilityData = CastChecked<UWvAbilityDataAsset>(Spec.SourceObject);
-	if (AbilityData)
+	if (UWvAbilityDataAsset* AbilityData = CastChecked<UWvAbilityDataAsset>(Spec.SourceObject.Get()))
 	{
-		AbilityInstance->DamageMotion = AbilityData->DamageMotion;
-
-
-PRAGMA_DISABLE_DEPRECATION_WARNINGS
-		AbilityInstance->AbilityTags = AbilityData->AbilityTags;
-PRAGMA_ENABLE_DEPRECATION_WARNINGS
-
-
-		AbilityInstance->ActivationOwnedTags = AbilityData->ActivationOwnedTags;
-		AbilityInstance->ActivationRequiredTags = AbilityData->ActivationRequiredTags;
-		AbilityInstance->ActivationBlockedTags = AbilityData->ActivationBlockedTags;
-		AbilityInstance->CancelAbilitiesWithTag = AbilityData->CancelAbilitiesWithTag;
-		AbilityInstance->BlockAbilitiesWithTag = AbilityData->BlockAbilitiesWithTag;
-		AbilityInstance->AbilityTriggers += AbilityData->AbilityTriggers;
-
-		const int32 LastIndex = (AbilityInstance->AbilityTriggers.Num() - 1);
-		for (int32 Index = LastIndex; Index >= 0; Index--)
-		{
-			if (!AbilityInstance->AbilityTriggers[Index].TriggerTag.IsValid())
-			{
-				AbilityInstance->AbilityTriggers.RemoveAt(Index);
-			}
-		}
-
-PRAGMA_DISABLE_DEPRECATION_WARNINGS
-		TArray<FGameplayTag> AbilityTypeTags;
-		AbilityData->AbilityTypeTag.GetGameplayTagArray(AbilityTypeTags);
-		for (const FGameplayTag& OtherTag : AbilityTypeTags)
-		{
-			AbilityInstance->AbilityTags.AddTag(OtherTag);
-		}
-PRAGMA_ENABLE_DEPRECATION_WARNINGS
-
-
+		AbilityInstance->CopyDataAssetTags(AbilityData);
 	}
 
 	// Add it to one of our instance lists so that it doesn't GC.
@@ -333,6 +305,7 @@ PRAGMA_ENABLE_DEPRECATION_WARNINGS
 	}
 	return AbilityInstance;
 }
+
 
 bool UWvAbilitySystemComponentBase::SetGameplayEffectDuration(FActiveGameplayEffectHandle Handle, float NewDuration)
 {
@@ -738,7 +711,11 @@ void UWvAbilitySystemComponentBase::AddRegisterAbilityDA(class UWvAbilityDataAss
 		return;
 	}
 
-	RegisterAbilityDAs.Add(InDA);
+	if (!RegisterAbilityDAs.Contains(InDA))
+	{
+		RegisterAbilityDAs.Add(InDA);
+	}
+
 }
 
 void UWvAbilitySystemComponentBase::GiveAllRegisterAbility()

@@ -1,4 +1,4 @@
-// Copyright 2022 wevet works All Rights Reserved.
+﻿// Copyright 2022 wevet works All Rights Reserved.
 
 
 #include "UI/POIMarkerWidget.h"
@@ -115,36 +115,28 @@ void UPOIMarkerWidget::Renderer(const float DeltaTime)
 /// <param name="DeltaTime"></param>
 void UPOIMarkerWidget::Renderer_Player(const float DeltaTime)
 {
-	const auto Rotation = Owner->GetActorRotation();
-	float Yaw = Rotation.Yaw;
-
-	if (Yaw < 0.0f)
+	if (!Character.IsValid())
 	{
-		Yaw += 360.0f;
+		return;
 	}
 
-	CurrentYaw = FMath::FInterpTo(CurrentYaw, Yaw, DeltaTime, InterpSpeed);
+	const auto Rotation = Owner->GetActorRotation();
+	const float YawNorm = FRotator::NormalizeAxis(Rotation.Yaw);
+	CurrentYaw = FMath::FInterpTo(CurrentYaw, YawNorm, DeltaTime, InterpSpeed);
 
 	// player update
 	if (bIsIconRotationEnable)
 	{
-		if (IsValid(PawnIcon) && IsValid(PawnThrobber))
+		if (IsValid(Icon_Overlay))
 		{
-			PawnIcon->SetRenderTransformAngle(CurrentYaw);
-			PawnThrobber->SetRenderTransformAngle(CurrentYaw);
+			Icon_Overlay->SetRenderTransformAngle(CurrentYaw);
 		}
 	}
 
 	if (IsValid(PawnView))
 	{
-		if (Character.IsValid())
-		{
-			const auto CtrlYaw = (Character->GetControlRotation().Yaw);
-			//float CtrlYaw = Character->GetControlRotation().Yaw;
-			//CtrlYaw = FMath::Fmod(CtrlYaw + 360.f, 360.f);
-			//CtrlYaw = -CtrlYaw;
-			PawnView->SetRenderTransformAngle(CtrlYaw);
-		}
+		const auto CtrlYaw = (Character->GetControlRotation().Yaw);
+		PawnView->SetRenderTransformAngle(CtrlYaw);
 	}
 
 }
@@ -163,27 +155,18 @@ void UPOIMarkerWidget::Renderer_Bot(const float DeltaTime)
 	}
 
 	const auto Rotation = Owner->GetActorRotation();
-	float Yaw = Rotation.Yaw;
+	const float YawNorm = FRotator::NormalizeAxis(Rotation.Yaw);
+	CurrentYaw = FMath::FInterpTo(CurrentYaw, YawNorm, DeltaTime, InterpSpeed);
 
-	if (Yaw < 0.0f)
+	if (IsValid(Icon_Overlay))
 	{
-		Yaw += 360.0f;
-	}
-
-
-	if (IsValid(PawnIcon))
-	{
-		PawnIcon->SetRenderTransformAngle(Yaw);
-	}
-
-	if (IsValid(PawnThrobber))
-	{
-		PawnThrobber->SetRenderTransformAngle(Yaw);
+		Icon_Overlay->SetRenderTransformAngle(CurrentYaw);
 	}
 
 	if (IsValid(PawnView))
 	{
-		PawnView->SetRenderTransformAngle(Yaw);
+		const auto CtrlYaw = (Character->GetControlRotation().Yaw);
+		PawnView->SetRenderTransformAngle(CtrlYaw);
 	}
 }
 

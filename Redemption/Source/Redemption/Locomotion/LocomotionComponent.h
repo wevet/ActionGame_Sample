@@ -81,10 +81,6 @@ protected:
 public:
 #pragma region LS_Interface
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Component|LocomotionInterface")
-	void SetLSCharacterRotation(const FRotator AddAmount);
-	virtual void SetLSCharacterRotation_Implementation(const FRotator AddAmount) override;
-
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Component|LocomotionInterface")
 	void SetLSMovementMode(const ELSMovementMode NewLSMovementMode);
 	virtual void SetLSMovementMode_Implementation(const ELSMovementMode NewLSMovementMode) override;
 
@@ -182,30 +178,6 @@ protected:
 	bool bAllowCustomAcceleration = true;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion", meta = (EditCondition = "bAllowCustomAcceleration"))
-	float WalkingAcceleration;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion", meta = (EditCondition = "bAllowCustomAcceleration"))
-	float RunningAcceleration;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion", meta = (EditCondition = "bAllowCustomAcceleration"))
-	float WalkingDeceleration;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion", meta = (EditCondition = "bAllowCustomAcceleration"))
-	float RunningDeceleration;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion", meta = (EditCondition = "bAllowCustomAcceleration"))
-	float WalkingGroundFriction;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion", meta = (EditCondition = "bAllowCustomAcceleration"))
-	float RunningGroundFriction;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion", meta = (EditCondition = "bAllowCustomAcceleration"))
-	float WalkingBrakingFriction;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion", meta = (EditCondition = "bAllowCustomAcceleration"))
-	float RunningBrakingFriction;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion", meta = (EditCondition = "bAllowCustomAcceleration"))
 	FVector2D AccelerationRange = FVector2D(0.5f, 1.0f);
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion", meta = (EditCondition = "bAllowCustomAcceleration"))
@@ -272,7 +244,7 @@ protected:
 	float CrouchingSpeed;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion")
-	ULocomotionStateDataAsset* LocomotionStateDataAsset;
+	TObjectPtr <class ULocomotionStateDataAsset> LocomotionStateDataAsset;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion|MotionMatching")
 	UCurveFloat* StafeSpeedCurve = nullptr;
@@ -292,7 +264,6 @@ protected:
 #pragma endregion
 
 public:
-	bool bIsMotionMatchingEnable = false;
 
 	void DoTick();
 	void DoTick(const float DeltaTime);
@@ -321,9 +292,8 @@ public:
 	float ChooseMaxAcceleration() const;
 	float ChooseBrakingDeceleration() const;
 	float ChooseGroundFriction() const;
-	float ChooseBrakingFrictionFactor() const;
 
-	FLocomotionEssencialVariables GetLocomotionEssencialVariables() const { return LocomotionEssencialVariables; }
+	const FLocomotionEssencialVariables& GetLocomotionEssencialVariables() { return LocomotionEssencialVariables; }
 
 	UAnimMontage* GetCurrentMontage() const;
 

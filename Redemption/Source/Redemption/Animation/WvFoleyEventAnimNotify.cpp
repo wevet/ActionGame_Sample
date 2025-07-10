@@ -64,7 +64,7 @@ void UWvFoleyEventAnimNotify::Notify(USkeletalMeshComponent* MeshComp, UAnimSequ
 		{
 			FVector HitLocation = HitResult.Location;
 			EPhysicalSurface HitSurfaceType = SurfaceTypeInEditor;
-			TriggerEffect(OwnerActor, Animation, HitResult);
+			//TriggerEffect(OwnerActor, Animation, HitResult);
 		}
 		else
 		{

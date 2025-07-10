@@ -67,7 +67,7 @@ public:
 
 	UFUNCTION()
 	bool OnCheckCost(const FGameplayAttribute& Attribute, float CostValue) const;
-	
+
 	UFUNCTION()
 	void OnCommitCost(const FGameplayAttribute& Attribute, float CostValue) const;
 
@@ -97,4 +97,9 @@ private:
 	FGameplayTag ComboTriggerTag;
 
 	bool HasComboTriggerTag;
+
+public:
+	void CopyDataAssetTags(const UWvAbilityDataAsset* InAbilityDataAsset);
+
+
 };

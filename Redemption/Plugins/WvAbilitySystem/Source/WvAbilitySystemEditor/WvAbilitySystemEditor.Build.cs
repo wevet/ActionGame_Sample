@@ -9,15 +9,18 @@ public class WvAbilitySystemEditor : ModuleRules
 		PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
 		bUseUnity = false;
 
+		bLegacyPublicIncludePaths = true;
+		IncludeOrderVersion = EngineIncludeOrderVersion.Latest;
+
 		PublicIncludePaths.AddRange(
-			new string[] 
+			new string[]
 			{
 				// ... add public include paths required here ...
 			}
 		);
 
 		PrivateIncludePaths.AddRange(
-			new string[] 
+			new string[]
 			{
 				// ... add other private include paths required here ...
 			}
@@ -37,6 +40,7 @@ public class WvAbilitySystemEditor : ModuleRules
 				"Projects",
 				"InputCore",
 				"UnrealEd",
+				"Blutility",
 				"ToolMenus",
 				"LevelEditor",
 				"CoreUObject",
@@ -47,6 +51,15 @@ public class WvAbilitySystemEditor : ModuleRules
 				"AssetRegistry",
 				"PropertyEditor",
 				"EditorStyle",
+				"KismetCompiler",
+				"EditorSubsystem",
+				"EditorWidgets",
+				"UMGEditor",
+				"UMG",
+				"ContentBrowser",
+				"ContentBrowserData",
+				"BlueprintEditorLibrary",
+				//"EditorScriptingUtilities",
 				// ... add private dependencies that you statically link with here ...	
 			}
 		);

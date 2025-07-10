@@ -7,7 +7,7 @@
 #include "Character/WvPlayerController.h"
 #include "Level/FieldInstanceSubsystem.h"
 #include "GameExtension.h"
-
+#include "Redemption.h"
 
 #include "Components/OverlaySlot.h"
 #include "Kismet/KismetMathLibrary.h"
@@ -134,7 +134,10 @@ void UMinimapUIController::CreatePOIIconWidgets()
 		Widget->Initializer(Act);
 		Widget->SetEnableAnimate(true);
 		Widget->SetImageColor(SlateColor);
-		Widget->ShowPawnIcon(bIsPawn);
+		
+		WEVET_COMMENT("Tempolary Pawn Hidden Icon")
+		Widget->ShowPawnIcon(false);
+
 		Widget->ShowPawnView(false);
 		auto ChildSlot = Main_Overlay->AddChildToOverlay(Widget);
 		Widget->SetOverlaySlot(ChildSlot);

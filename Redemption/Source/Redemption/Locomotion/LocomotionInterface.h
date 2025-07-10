@@ -21,9 +21,6 @@ class REDEMPTION_API ILocomotionInterface
 
 public:
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "LocomotionInterface")
-	void SetLSCharacterRotation(const FRotator AddAmount);
-
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "LocomotionInterface")
 	void SetLSMovementMode(const ELSMovementMode NewLSMovementMode);
 
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "LocomotionInterface")

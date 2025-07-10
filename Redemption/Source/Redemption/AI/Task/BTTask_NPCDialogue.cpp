@@ -41,9 +41,10 @@ EBTNodeResult::Type UBTTask_NPCDialogue::ExecuteTask(UBehaviorTreeComponent& Own
 	}
 
 	// 移動開始
-	if (AAIController* AICon = OwnerComp.GetAIOwner())
+	if (AWvAIController* AIC = Cast<AWvAIController>(OwnerComp.GetAIOwner()))
 	{
-		AICon->MoveToActor(Memory->TargetActor, 50.f);
+		//AICon->MoveToActor(Memory->TargetActor, 50.f);
+		AIC->SmoothMoveToLocation(Memory->TargetActor->GetActorLocation(), RotationInterp);
 		return EBTNodeResult::InProgress;
 	}
 
@@ -92,7 +93,8 @@ void UBTTask_NPCDialogue::TickTask(UBehaviorTreeComponent& OwnerComp, uint8* Nod
 		else if (Status == EPathFollowingStatus::Waiting || Status == EPathFollowingStatus::Paused)
 		{
 			// 障害などでスタックしている場合、再度MoveToActor
-			AIC->MoveToActor(Memory->TargetActor, 50.f);
+			//AIC->MoveToActor(Memory->TargetActor, 50.f);
+			AIC->SmoothMoveToLocation(Memory->TargetActor->GetActorLocation(), RotationInterp);
 		}
 	}
 	else
@@ -109,6 +111,13 @@ void UBTTask_NPCDialogue::TickTask(UBehaviorTreeComponent& OwnerComp, uint8* Nod
 			UE_LOG(LogWvAI, Log, TEXT("TalkDuration Finish: [% s] "), *FString(__FUNCTION__));
 			Character->CancelAnimatingAbility();
 			FinishLatentTask(OwnerComp, EBTNodeResult::Succeeded);
+		}
+		else
+		{
+			if (AbilityToTag == TAG_Character_AI_Friend_Action)
+			{
+				AIC->UpdateFriendlyLootAt();
+			}
 		}
 	}
 }

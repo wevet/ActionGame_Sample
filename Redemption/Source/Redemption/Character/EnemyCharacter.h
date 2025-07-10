@@ -26,7 +26,7 @@ public:
 	virtual void OnReceiveKillTarget(AActor* Actor, const float Damage) override;
 	virtual void Freeze() override;
 	virtual void UnFreeze() override;
-	virtual void OnReceiveHitReact(FGameplayEffectContextHandle Context, const bool IsInDead, const float Damage) override;
+	virtual void OnReceiveHitReact(FGameplayEffectContextHandle& Context, const bool IsInDead, const float Damage) override;
 #pragma endregion
 	
 

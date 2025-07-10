@@ -9,8 +9,12 @@ public class RedemptionEditor : ModuleRules
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 
 		bLegacyPublicIncludePaths = true;
-		IncludeOrderVersion = EngineIncludeOrderVersion.Latest;
+		//IncludeOrderVersion = EngineIncludeOrderVersion.Latest;
 		OverridePackageType = PackageOverrideType.GameUncookedOnly;
+		DefaultBuildSettings = BuildSettingsVersion.V5;
+		IncludeOrderVersion = EngineIncludeOrderVersion.Unreal5_5;
+		CppStandard = CppStandardVersion.Cpp20;
+
 
 		PublicDependencyModuleNames.AddRange(
 			new string[]
@@ -49,7 +53,6 @@ public class RedemptionEditor : ModuleRules
 				"SlateCore",
 				"AssetTools",
 				"EditorStyle",
-				"EditorScriptingUtilities"
 			}
 		);
 

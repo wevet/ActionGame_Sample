@@ -66,7 +66,7 @@ public:
 	virtual void UnFreeze() override;
 	virtual bool IsAttackAllowed() const override;
 	virtual void BuildRunAI() override;
-	virtual void OnReceiveAbilityAttack(AActor* Actor, const FWvBattleDamageAttackSourceInfo SourceInfo, const float Damage) override;
+	virtual void OnReceiveAbilityAttack(AActor* Actor, const FWvBattleDamageAttackSourceInfo& SourceInfo, const float Damage) override;
 	virtual void OnChangeGenericTeamIdFromInt(const int32 NewTeamID) override;
 
 #pragma endregion
@@ -212,6 +212,8 @@ public:
 	void NotifyCloseCombatEnd();
 
 	void OnPerceptionTaskFinished(const ETaskType InTaskType);
+
+	void UpdateFriendlyLootAt();
 
 	UFUNCTION(BlueprintCallable, Category = AI)
 	void ModifyCloseCombatNearlestTarget();

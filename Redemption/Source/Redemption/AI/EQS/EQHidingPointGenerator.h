@@ -35,10 +35,6 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Generator")
 	float StartZOffset = -10.f;
 
-	/** SphereTrace ‚Ì”¼Œa */
-	UPROPERTY(EditAnywhere, Category = "Generator")
-	float TraceRadius = 50.f;
-
 	/** ƒqƒbƒg‚µ‚½Û‚É–@ü•ûŒü‚Ö‰Ÿ‚µ–ß‚·‹——£ */
 	UPROPERTY(EditAnywhere, Category = "Generator")
 	float OffsetFromWall = 50.f;

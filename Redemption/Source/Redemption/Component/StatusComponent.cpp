@@ -142,6 +142,7 @@ const bool UStatusComponent::SetFullSkill()
 	{
 		return false;
 	}
+
 	UWvAbilitySystemBlueprintFunctionLibrary::FullSkill(Character.Get());
 	//AAS->SetSkill(AAS->GetSkillMax());
 	return true;
@@ -288,12 +289,12 @@ FCharacterInfo UStatusComponent::GetCharacterInfo() const
 #pragma endregion
 
 
-void UStatusComponent::OnSendAbilityAttack(AActor* Actor, const FWvBattleDamageAttackSourceInfo SourceInfo, const float Damage)
+void UStatusComponent::OnSendAbilityAttack(AActor* Actor, const FWvBattleDamageAttackSourceInfo& SourceInfo, const float Damage)
 {
 	// if owner actor attack other actor attack
 }
 
-void UStatusComponent::OnSendWeaknessAttack(AActor* Actor, const FName WeaknessName, const float Damage)
+void UStatusComponent::OnSendWeaknessAttack(AActor* Actor, const FName& WeaknessName, const float Damage)
 {
 	if (AAS.IsValid())
 	{
@@ -301,14 +302,14 @@ void UStatusComponent::OnSendWeaknessAttack(AActor* Actor, const FName WeaknessN
 	}
 }
 
-void UStatusComponent::OnReceiveAbilityAttack(AActor* Actor, const FWvBattleDamageAttackSourceInfo SourceInfo, const float Damage)
+void UStatusComponent::OnReceiveAbilityAttack(AActor* Actor, const FWvBattleDamageAttackSourceInfo& SourceInfo, const float Damage)
 {
 	//const auto WeaponState = (EAttackWeaponState)SourceInfo.WeaponID;
 	//const FString CategoryName = *FString::Format(TEXT("WeaponState => {0}"), { *GETENUMSTRING("/Script/Redemption.EAttackWeaponState", WeaponState) });
 	//UE_LOG(LogTemp, Warning, TEXT("Weapon %s function => %s"), *CategoryName, *FString(__FUNCTION__));
 }
 
-void UStatusComponent::OnReceiveWeaknessAttack(AActor* Actor, const FName WeaknessName, const float Damage)
+void UStatusComponent::OnReceiveWeaknessAttack(AActor* Actor, const FName& WeaknessName, const float Damage)
 {
 }
 

@@ -76,16 +76,16 @@ private:
 	FCharacterInfo CharacterInfo;
 
 	UFUNCTION()
-	void OnSendAbilityAttack(AActor* Actor, const FWvBattleDamageAttackSourceInfo SourceInfo, const float Damage);
+	void OnSendAbilityAttack(AActor* Actor, const FWvBattleDamageAttackSourceInfo& SourceInfo, const float Damage);
 
 	UFUNCTION()
-	void OnSendWeaknessAttack(AActor* Actor, const FName WeaknessName, const float Damage);
+	void OnSendWeaknessAttack(AActor* Actor, const FName& WeaknessName, const float Damage);
 
 	UFUNCTION()
-	void OnReceiveAbilityAttack(AActor* Actor, const FWvBattleDamageAttackSourceInfo SourceInfo, const float Damage);
+	void OnReceiveAbilityAttack(AActor* Actor, const FWvBattleDamageAttackSourceInfo& SourceInfo, const float Damage);
 
 	UFUNCTION()
-	void OnReceiveWeaknessAttack(AActor* Actor, const FName WeaknessName, const float Damage);
+	void OnReceiveWeaknessAttack(AActor* Actor, const FName& WeaknessName, const float Damage);
 
 	UFUNCTION()
 	void OnReceiveKillTarget(AActor* Actor, const float Damage);

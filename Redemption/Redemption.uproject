@@ -24,7 +24,8 @@
 			"LoadingPhase": "Default",
 			"AdditionalDependencies": [
 				"Engine",
-				"UnrealEd"
+				"UnrealEd",
+				"Blutility"
 			]
 		}
 	],

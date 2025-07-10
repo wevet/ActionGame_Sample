@@ -41,7 +41,6 @@ namespace CharacterDebug
 
 	extern TAutoConsoleVariable<int32> CVarDebugFallEdgeSystem;
 	extern TAutoConsoleVariable<int32> CVarDebugMantlingSystem;
-	extern TAutoConsoleVariable<int32> CVarDebugWallClimbingSystem;
 
 	extern TAutoConsoleVariable<int32> CVarDebugVaultingSystem;
 	extern TAutoConsoleVariable<int32> CVarDebugCombatSystem;
@@ -140,14 +139,14 @@ public:
 	virtual bool IsTargetable() const override;
 	virtual bool IsInBattled() const override;
 
-	virtual void OnSendAbilityAttack(AActor* Actor, const FWvBattleDamageAttackSourceInfo SourceInfo, const float Damage) override;
-	virtual void OnSendWeaknessAttack(AActor* Actor, const FName WeaknessName, const float Damage) override;
+	virtual void OnSendAbilityAttack(AActor* Actor, const FWvBattleDamageAttackSourceInfo& SourceInfo, const float Damage) override;
+	virtual void OnSendWeaknessAttack(AActor* Actor, const FName& WeaknessName, const float Damage) override;
 	virtual void OnSendKillTarget(AActor* Actor, const float Damage) override;
 
-	virtual void OnReceiveAbilityAttack(AActor* Actor, const FWvBattleDamageAttackSourceInfo SourceInfo, const float Damage) override;
-	virtual void OnReceiveWeaknessAttack(AActor* Actor, const FName WeaknessName, const float Damage) override;
+	virtual void OnReceiveAbilityAttack(AActor* Actor, const FWvBattleDamageAttackSourceInfo& SourceInfo, const float Damage) override;
+	virtual void OnReceiveWeaknessAttack(AActor* Actor, const FName& WeaknessName, const float Damage) override;
 	virtual void OnReceiveKillTarget(AActor* Actor, const float Damage) override;
-	virtual void OnReceiveHitReact(FGameplayEffectContextHandle Context, const bool IsInDead, const float Damage) override;
+	virtual void OnReceiveHitReact(FGameplayEffectContextHandle& Context, const bool IsInDead, const float Damage) override;
 
 	virtual void Freeze() override;
 	virtual void UnFreeze() override;
@@ -528,8 +527,6 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Locomotion|Ragdoll")
 	void Test_StopRagdoll();
 
-	bool IsMotionMatchingEnable() const;
-
 	// ~Start Traversal
 	FTraversalActionData GetTraversalActionData() const;
 	void ResetTraversalActionData();
@@ -539,6 +536,9 @@ public:
 
 	// ~End Traversal
 
+	// backward input 
+	void CalculateBackwardInputRotation();
+
 
 #pragma region NearlestAction
 	void CalcurateNearlestTarget(const float SyncPointWeight);
@@ -546,15 +546,16 @@ public:
 	void FindNearlestTarget(AActor* Target, const float SyncPointWeight);
 	void FindNearlestTarget(const FVector TargetPosition, const float SyncPointWeight);
 
-	void FindNearlestTarget(const FAttackMotionWarpingData AttackMotionWarpingData);
-	void BuildFinisherAbility(const FGameplayTag RequireTag);
-	void BuildFinisherAnimationSender(const FGameplayTag RequireTag, FFinisherAnimation& OutFinisherAnimation, int32 &OutIndex);
+	void FindNearlestTarget(const FAttackMotionWarpingData& AttackMotionWarpingData);
+	void BuildFinisherAbility(const FGameplayTag& RequireTag);
+	void BuildFinisherAnimationSender(const FGameplayTag& RequireTag, FFinisherAnimation& OutFinisherAnimation, int32 &OutIndex);
+
 	const bool BuildFinisherAnimationReceiver(const FGameplayTag RequireTag, const int32 Index, FFinisherAnimation &OutFinisherAnimation);
 	void BuildFinisherAnimationData(UAnimMontage* InMontage, const bool IsTurnAround, AActor* TurnActor, float PlayRate = 1.0f);
 	void ResetFinisherAnimationData();
 	FRequestAbilityAnimationData GetFinisherAnimationData() const;
 
-	bool HasFinisherIgnoreTag(const ABaseCharacter* Target, const FGameplayTag RequireTag) const;
+	bool HasFinisherIgnoreTag(const ABaseCharacter* Target, const FGameplayTag& RequireTag) const;
 #pragma endregion
 
 #pragma region VehicleAction

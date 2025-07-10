@@ -15,8 +15,8 @@
 
 DECLARE_MULTICAST_DELEGATE_OneParam(FAbilityDeadAnimProcessForEventDelegate, AActor* /*Actor*/);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnTeamIndexChangedDelegate, UObject*, ObjectChangingTeam, int32, OldTeamID, int32, NewTeamID);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnTeamHandleAttackDelegate, AActor*, Actor, FWvBattleDamageAttackSourceInfo, SourceInfo, float, Damage);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnTeamWeaknessHandleAttackDelegate, AActor*, Actor, FName, WeaknessName, float, Damage);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnTeamHandleAttackDelegate, AActor*, Actor, const FWvBattleDamageAttackSourceInfo&, SourceInfo, float, Damage);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnTeamWeaknessHandleAttackDelegate, AActor*, Actor, const FName&, WeaknessName, float, Damage);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnTeamHandleKillDelegate, AActor*, Actor, float, Damage);
 
 
@@ -53,13 +53,13 @@ public:
 	virtual FGameplayTag GetAvatarTag() const;
 	virtual FGameplayEffectQuery GetHitEffectQuery();
 
-	virtual void OnSendAbilityAttack(AActor* Actor, const FWvBattleDamageAttackSourceInfo SourceInfo, const float Damage);
-	virtual void OnSendWeaknessAttack(AActor* Actor, const FName WeaknessName, const float Damage);
+	virtual void OnSendAbilityAttack(AActor* Actor, const FWvBattleDamageAttackSourceInfo& SourceInfo, const float Damage);
+	virtual void OnSendWeaknessAttack(AActor* Actor, const FName& WeaknessName, const float Damage);
 	virtual void OnSendKillTarget(AActor* Actor, const float Damage);
 
-	virtual void OnReceiveAbilityAttack(AActor* Actor, const FWvBattleDamageAttackSourceInfo SourceInfo, const float Damage);
-	virtual void OnReceiveWeaknessAttack(AActor* Actor, const FName WeaknessName, const float Damage);
-	virtual void OnReceiveHitReact(FGameplayEffectContextHandle Context, const bool IsInDead, const float Damage);
+	virtual void OnReceiveAbilityAttack(AActor* Actor, const FWvBattleDamageAttackSourceInfo& SourceInfo, const float Damage);
+	virtual void OnReceiveWeaknessAttack(AActor* Actor, const FName& WeaknessName, const float Damage);
+	virtual void OnReceiveHitReact(FGameplayEffectContextHandle& Context, const bool IsInDead, const float Damage);
 	virtual void OnReceiveKillTarget(AActor* Actor, const float Damage);
 
 	virtual bool IsAttackAllowed() const;
@@ -68,10 +68,10 @@ public:
 	virtual bool IsTargetable() const;
 	virtual bool IsInBattled() const;
 	virtual bool IsSprintingMovement() const;
+	virtual bool IsFreezing() const;
 
 	virtual void Freeze() {};
 	virtual void UnFreeze() {};
-	virtual bool IsFreezing() const;
 
 	virtual void DoAttack() {};
 	virtual void DoResumeAttack() {};

@@ -154,7 +154,7 @@ void AMassCharacter::UnFreeze()
 	StateTreeComponent->ResumeLogic(K_REASON_UNFREEZE);
 }
 
-void AMassCharacter::OnReceiveHitReact(FGameplayEffectContextHandle Context, const bool IsInDead, const float Damage)
+void AMassCharacter::OnReceiveHitReact(FGameplayEffectContextHandle& Context, const bool IsInDead, const float Damage)
 {
 	if (!bWasInitHit)
 	{
