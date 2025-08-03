@@ -303,21 +303,15 @@ void ABaseCharacter::BeginPlay()
 	AnimInstance = Cast<UWvAnimInstance>(GetMesh()->GetAnimInstance());
 	FaceAnimInstance = Cast<UWvFaceAnimInstance>(Face->GetAnimInstance());
 
-	USkeletalMeshComponent* SkelMesh = GetMesh();
-	SkelMesh->AddTickPrerequisiteActor(this);
-	Face->AddTickPrerequisiteActor(this);
-
-	CombatComponent->AddTickPrerequisiteActor(this);
-	PawnNoiseEmitterComponent->AddTickPrerequisiteActor(this);
-	ItemInventoryComponent->AddTickPrerequisiteActor(this);
-	ClimbingComponent->AddTickPrerequisiteActor(this);
-	PredictionFootIKComponent->AddTickPrerequisiteActor(this);
-	HeldObjectRoot->AddTickPrerequisiteActor(this);
-	WeaknessComponent->AddTickPrerequisiteActor(this);
-	StatusComponent->AddTickPrerequisiteActor(this);
-	MotionWarpingComponent->AddTickPrerequisiteActor(this);
-	CharacterTrajectoryComponent->AddTickPrerequisiteActor(this);
-
+	TArray<UActorComponent*> Components;
+	Owner->GetComponents(UActorComponent::StaticClass(), Components, true);
+	for (UActorComponent* Component : Components)
+	{
+		if (IsValid(Component))
+		{
+			Component->AddTickPrerequisiteActor(this);
+		}
+	}
 
 	if (!IsValid(Other1->GetSkeletalMeshAsset()))
 	{
@@ -326,14 +320,14 @@ void ABaseCharacter::BeginPlay()
 
 	WEVET_COMMENT("Must Async Function CMC")
 	UWvCharacterMovementComponent* CMC = GetWvCharacterMovementComponent();
-	CMC->OnTraversalBeginDelegate.AddDynamic(this, &ThisClass::OnTraversalBegin_Callback);
-	CMC->OnTraversalEndDelegate.AddDynamic(this, &ThisClass::OnTraversalEnd_Callback);
+	CMC->OnTraversalBeginDelegate.AddUniqueDynamic(this, &ThisClass::OnTraversalBegin_Callback);
+	CMC->OnTraversalEndDelegate.AddUniqueDynamic(this, &ThisClass::OnTraversalEnd_Callback);
 
 	CMC->AddTickPrerequisiteComponent(CharacterMovementHelperComponent);
 
-	LocomotionComponent->OnRotationModeChangeDelegate.AddDynamic(this, &ThisClass::OnRoationChange_Callback);
-	LocomotionComponent->OnGaitChangeDelegate.AddDynamic(this, &ThisClass::OnGaitChange_Callback);
-	LocomotionComponent->AddTickPrerequisiteActor(this);
+	LocomotionComponent->OnRotationModeChangeDelegate.AddUniqueDynamic(this, &ThisClass::OnRoationChange_Callback);
+	LocomotionComponent->OnGaitChangeDelegate.AddUniqueDynamic(this, &ThisClass::OnGaitChange_Callback);
+
 
 	if (AWvAIController* AIC = Cast<AWvAIController>(GetController()))
 	{
@@ -2730,7 +2724,7 @@ void ABaseCharacter::HandleMeshUpdateRateOptimizations(const bool IsInEnableURO,
 		else
 		{
 			SkelMesh->bEnableUpdateRateOptimizations = false;
-			SkelMesh->VisibilityBasedAnimTickOption = EVisibilityBasedAnimTickOption::AlwaysTickPose;
+			SkelMesh->VisibilityBasedAnimTickOption = EVisibilityBasedAnimTickOption::AlwaysTickPoseAndRefreshBones;
 		}
 	}
 }

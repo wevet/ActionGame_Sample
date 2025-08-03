@@ -11,11 +11,10 @@
 #include "PostProcess/SceneFilterRendering.h"
 #include "PostProcess/PostProcessing.h"
 
-DECLARE_GPU_STAT(LensFlaresWv)
+DECLARE_GPU_STAT(LensFlaresWv);
 
-#define CUSTOM_LENSFLARE_TEX 1
 
-namespace
+namespace 
 {
 	// RDG buffer input shared by all passes
 	BEGIN_SHADER_PARAMETER_STRUCT(FCustomLensFlarePassParameters, )
@@ -278,6 +277,7 @@ namespace
 }
 
 
+
 template<typename TShaderParameters, typename TShaderClassVertex, typename TShaderClassPixel>
 inline void DrawShaderPass(FRDGBuilder& GraphBuilder, const FString& PassName, TShaderParameters* PassParameters, TShaderMapRef<TShaderClassVertex> VertexShader, TShaderMapRef<TShaderClassPixel> PixelShader, FRHIBlendState* BlendState, const FIntRect& Viewport)
 {
@@ -469,11 +469,7 @@ void UWvPostProcessSubsystem::RenderLensFlare(FRDGBuilder& GraphBuilder, const F
 		FVector2D BufferSize = FVector2D(MixViewport.Width(), MixViewport.Height());
 
 		// Create buffer
-#if CUSTOM_LENSFLARE_TEX
 		FRDGTextureDesc Description = Inputs.Bloom.TextureSRV->GetParent()->Desc;
-#else
-		FRDGTextureDesc Description;
-#endif
 		Description.Reset();
 		Description.Extent = MixViewport.Size();
 		Description.Format = PF_FloatRGBA;
@@ -510,11 +506,7 @@ void UWvPostProcessSubsystem::RenderLensFlare(FRDGBuilder& GraphBuilder, const F
 
 		if (Inputs.bCompositeWithBloom && MixBloomPass)
 		{
-#if CUSTOM_LENSFLARE_TEX
 			PassParameters->BloomTexture = Inputs.Bloom.TextureSRV->GetParent();
-#else
-			PassParameters->BloomTexture = nullptr;
-#endif
 		}
 		else
 		{

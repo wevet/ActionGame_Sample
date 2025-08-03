@@ -55,11 +55,11 @@ void UWvAnimNotifyState_ComboEnable::AbilityNotifyBegin(USkeletalMeshComponent* 
 
 
 	const FGameplayTagContainer EventTagContainer = FGameplayTagContainer::CreateFromArray(TagArray);
-	//IsImmediatelyExecute = (ExecuteTime <= 0.f);
-	IsImmediatelyExecute = false;
+	IsImmediatelyExecute = (ExecuteTime <= 0.f);
 	WaitReleaseTask = UWvAT_WaitKeyPress::WaitKeyPress(Ability, FName(TEXT("WaitKeyInput_ComboEnable")), EventTagContainer);
-	WaitReleaseTask->OnActive.__Internal_AddDynamic(this, &ThisClass::OnPressed, FName(TEXT("OnPressed")));
-	WaitReleaseTask->OnHoldingCallback.__Internal_AddDynamic(this, &ThisClass::OnHolding, FName(TEXT("OnHolding")));
+
+	WaitReleaseTask->OnActive.AddUniqueDynamic(this, &ThisClass::OnPressed);
+	WaitReleaseTask->OnHoldingCallback.AddUniqueDynamic(this, &ThisClass::OnHolding);
 	WaitReleaseTask->ReadyForActivation();
 
 
@@ -108,6 +108,9 @@ void UWvAnimNotifyState_ComboEnable::AbilityNotifyEnd(USkeletalMeshComponent* Me
 {
 	if (WaitReleaseTask)
 	{
+		WaitReleaseTask->OnActive.RemoveDynamic(this, &ThisClass::OnPressed);
+		WaitReleaseTask->OnHoldingCallback.RemoveDynamic(this, &ThisClass::OnHolding);
+
 		WaitReleaseTask->EndTask();
 		WaitReleaseTask = nullptr;
 	}
@@ -121,6 +124,11 @@ void UWvAnimNotifyState_ComboEnable::AbilityNotifyEnd(USkeletalMeshComponent* Me
 
 	Character.Reset();
 	LocomotionComponent.Reset();
+
+	if (Ability)
+	{
+		Ability->SetComboTriggerTag(FGameplayTag::EmptyTag);
+	}
 }
 
 FGameplayTag UWvAnimNotifyState_ComboEnable::GetInputCombo(const class UWvAbilityDataAsset* AbilityData) const
@@ -172,6 +180,7 @@ void UWvAnimNotifyState_ComboEnable::TryCombo()
 	IsImmediatelyExecute = true;
 }
 
+
 void UWvAnimNotifyState_ComboEnable::PressedToCombo()
 {
 	// @TODO
@@ -187,6 +196,7 @@ void UWvAnimNotifyState_ComboEnable::PressedToCombo()
 	const bool Result = AbilitySystemComponent->TryActivateAbilityByDataAsset(SelectedDA);
 	const auto TagName = LastPressedTag.GetTagName().ToString();
 
+	bool bIsFailed = false;
 	if (Result)
 	{
 		UWvAbilityBase* CurrentAbility = AbilitySystemComponent->FindAbilityFromDataAsset(SelectedDA);
@@ -196,12 +206,19 @@ void UWvAnimNotifyState_ComboEnable::PressedToCombo()
 		}
 		else
 		{
+			bIsFailed = true;
 			UE_LOG(LogTemp, Warning, TEXT("nullptr CurrentAbility : [LastPressedTag => %s, function => %s]"), *TagName, *FString(__FUNCTION__));
 		}
 	}
 	else
 	{
+		bIsFailed = true;
 		UE_LOG(LogTemp, Error, TEXT("AbilityCall Failer : [LastPressedTag => %s, function => %s]"), *TagName, *FString(__FUNCTION__));
+	}
+
+	if (bIsFailed && Ability)
+	{
+		Ability->SetComboTriggerTag(FGameplayTag::EmptyTag);
 	}
 }
 

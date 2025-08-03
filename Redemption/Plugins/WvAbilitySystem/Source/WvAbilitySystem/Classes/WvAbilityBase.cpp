@@ -293,9 +293,8 @@ TArray <FGameplayTag> UWvAbilityBase::GetComboRequiredTag() const
 	return ComboTagArray;
 }
 
-void UWvAbilityBase::SetComboTriggerTag(const FGameplayTag Tag) 
+void UWvAbilityBase::SetComboTriggerTag(const FGameplayTag Tag)
 {
-	HasComboTriggerTag = true;
 	ComboTriggerTag = Tag;
 }
 
@@ -306,7 +305,7 @@ FGameplayTag& UWvAbilityBase::GetComboTriggerTag()
 
 bool UWvAbilityBase::HasComboTrigger() const
 {
-	return HasComboTriggerTag;
+	return ComboTriggerTag.IsValid();
 }
 
 void UWvAbilityBase::OnGameplayTaskInitialized(UGameplayTask& Task)

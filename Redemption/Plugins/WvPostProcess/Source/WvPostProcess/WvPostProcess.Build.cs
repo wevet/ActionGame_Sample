@@ -21,10 +21,10 @@ public class WvPostProcess : ModuleRules
 			new string[] 
 			{
 				// Needed to include the engine Lens Flare post-process header
-				EngineDirectory + "/Source/Runtime/Renderer/Private"
+				EngineDirectory + "/Source/Runtime/Renderer/Internal",
+				EngineDirectory + "/Source/Runtime/Renderer/Private",
 			}
 		);
-
 
 		PublicDependencyModuleNames.AddRange(
 			new string[]

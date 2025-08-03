@@ -27,8 +27,6 @@ void UWvInputEventComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	FTimerManager& TM = GetWorld()->GetTimerManager();
 	TM.ClearTimer(ClearCacheInput_TimerHandle);
 
-	PlayerCharacter.Reset();
-	ASC.Reset();
 	Super::EndPlay(EndPlayReason);
 }
 
@@ -47,9 +45,9 @@ void UWvInputEventComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 
 void UWvInputEventComponent::PostASCInitialize(UAbilitySystemComponent* NewASC)
 {
-	if (ASC.IsValid())
+	if (IsValid(ASC))
 	{
-		ASC.Reset();
+		ASC = nullptr;
 	}
 
 	ASC = Cast<UWvAbilitySystemComponent>(NewASC);
@@ -123,26 +121,11 @@ void UWvInputEventComponent::DynamicRegistInputKey(const FName Name, FWvInputEve
 
 	if (!InputComponent)
 	{
-		if (WaitDynamicRegistInputDict.Contains(Name))
-		{
-			WaitDynamicRegistInputDict[Name] = InputEvent;
-		}
-		else
-		{
-			WaitDynamicRegistInputDict.Add(Name, InputEvent);
-		}
+		WaitDynamicRegistInputDict.FindOrAdd(Name, InputEvent);
 		return;
 	}
 
-	if (DynamicRegistInputDict.Contains(Name))
-	{
-		DynamicRegistInputDict[Name] = InputEvent;
-	}
-	else
-	{
-		DynamicRegistInputDict.Add(Name, InputEvent);
-	}
-
+	DynamicRegistInputDict.FindOrAdd(Name, InputEvent);
 	BindTableInput(Name, InputEvent);
 	BindTablePluralInput(Name, InputEvent);
 }
@@ -187,11 +170,7 @@ void UWvInputEventComponent::BindTableInput(const FName Key, FWvInputEvent& Inpu
 		return;
 	}
 
-	FName TagName = InputEvent.EventTag.GetTagName();
-	if (InputEvent.GetIsUseExtend())
-	{
-		TagName = FName(InputEvent.GetEventTagNameWithExtend());
-	}
+	const FName TagName = InputEvent.GetIsUseExtend() ? FName(InputEvent.GetEventTagNameWithExtend()) : InputEvent.EventTag.GetTagName();
 
 	//register
 	if (InputEvent.TriggerKey.IsValid())
@@ -294,7 +273,7 @@ void UWvInputEventComponent::AddRegisterInputKey(const FName Key, const FWvKey K
 void UWvInputEventComponent::TriggerCacheInputEvent(UGameplayAbility* CallFromAbility)
 {
 	//only local has valid data
-	if (!ASC.IsValid() || !PlayerController.Get())
+	if (!IsValid(ASC) || !IsValid(PlayerController))
 	{
 		return;
 	}
@@ -335,18 +314,16 @@ void UWvInputEventComponent::InputCallBack(const FKey InputKey, const FName Key,
 	//Time filtering is required here to comprehensively consider key combination, current input mode and other issues
 	//After that, proceed to message broadcast. Cuttently, above issues are not considered here and message will be broadcasted directly
 
-	if (!PlayerController.Get())
+	if (!IsValid(PlayerController))
 	{
 		return;
 	}
 
-	if (PlayerCharacter.Get())
+	if (PlayerCharacter->IsInputKeyDisable())
 	{
-		if (PlayerCharacter->IsInputKeyDisable())
-		{
-			return;
-		}
+		return;
 	}
+
 
 	FWvInputEvent* InputEvent = FindInputEvent(Key);
 	if (!InputEvent)
@@ -372,7 +349,7 @@ void UWvInputEventComponent::InputCallBack(const FKey InputKey, const FName Key,
 
 	if (InputEvent->bCheckStateTag)
 	{
-		if (ASC.IsValid() && ASC->HasMatchingGameplayTag(TAG_Character_ActionMelee_ComboRequire))
+		if (IsValid(ASC) && ASC->HasMatchingGameplayTag(TAG_Character_ActionMelee_ComboRequire))
 		{
 			//UE_LOG(LogTemp, Warning, TEXT("Enable ComboRequire Tag => %s"), *FString(__FUNCTION__));
 			//return;
@@ -422,7 +399,7 @@ EWvInputMode UWvInputEventComponent::GetInputModeType() const
 	return InputMode;
 }
 
-void UWvInputEventComponent::InputKey(const FInputKeyParams& Params)
+void UWvInputEventComponent::InputKey(const FInputKeyEventArgs& Params)
 {
 	EInputEvent InputEvent = Params.Event;
 	FKey InputKey = Params.Key;
@@ -445,9 +422,10 @@ void UWvInputEventComponent::InputKey(const FInputKeyParams& Params)
 	}
 }
 
+
 void UWvInputEventComponent::PluralInputCallBack(const FKey InputKey, const FName Key, const bool bPress)
 {
-	if (PlayerCharacter.Get())
+	if (IsValid(PlayerCharacter))
 	{
 		if (PlayerCharacter->IsInputKeyDisable())
 		{
@@ -626,7 +604,7 @@ void UWvInputEventComponent::PluralInputCallBack(const FKey InputKey, const FNam
 
 void UWvInputEventComponent::PluralInputCallBackExecute(FGameplayTag EventTag, bool bPress)
 {
-	if (!PlayerController.Get() || !ASC.Get())
+	if (!IsValid(PlayerController) || !IsValid(ASC))
 	{
 		return;
 	}
@@ -638,7 +616,7 @@ void UWvInputEventComponent::PluralInputCallBackExecute(FGameplayTag EventTag, b
 
 void UWvInputEventComponent::OnHoldingInputCallBackExecute(FGameplayTag EventTag, bool bPress)
 {
-	if (!PlayerController.Get() || !ASC.Get())
+	if (!IsValid(PlayerController) || !IsValid(ASC))
 	{
 		return;
 	}
@@ -650,7 +628,7 @@ void UWvInputEventComponent::OnHoldingInputCallBackExecute(FGameplayTag EventTag
 
 void UWvInputEventComponent::OnDoubleClickCallBackExecute(FGameplayTag EventTag, bool bPress)
 {
-	if (!PlayerController.Get() || !ASC.Get())
+	if (!IsValid(PlayerController) || !IsValid(ASC))
 	{
 		return;
 	}
@@ -661,7 +639,7 @@ void UWvInputEventComponent::OnDoubleClickCallBackExecute(FGameplayTag EventTag,
 
 void UWvInputEventComponent::UpdateCachePluralInput()
 {
-	if (CachePluralInputArray.Num() <= 0)
+	if (CachePluralInputArray.IsEmpty())
 	{
 		return;
 	}
@@ -721,7 +699,7 @@ FWvInputEvent* UWvInputEventComponent::FindInputEvent(const FName Key)
 
 void UWvInputEventComponent::ProcessGameEvent(const FGameplayTag& Tag, const bool bPress)
 {
-	if (!PlayerController.Get() || !ASC.IsValid())
+	if (!IsValid(PlayerController) || !IsValid(ASC))
 	{
 		return;
 	}
@@ -809,13 +787,13 @@ void UWvInputEventComponent::ResetWaitTillEnd(UGameplayAbility* WaitEndAbility)
 {
 	FScopeLock ScopeLock(&WaitMutex);
 
-	if (WaitCacheInputResetHandle.IsValid() && ASC.IsValid())
+	if (WaitCacheInputResetHandle.IsValid() && IsValid(ASC))
 	{
 		ASC->OnAbilityEnded.Remove(WaitCacheInputResetHandle);
 		WaitCacheInputResetHandle.Reset();
 	}
 
-	if (WaitEndAbility && ASC.IsValid())
+	if (WaitEndAbility && IsValid(ASC))
 	{
 		auto WaitEndAbilityPtr = MakeWeakObjectPtr<UGameplayAbility>(WaitEndAbility);
 		WaitCacheInputResetHandle = ASC->OnAbilityEnded.AddLambda([this, WaitEndAbilityPtr](const FAbilityEndedData& EndedData)
@@ -830,7 +808,7 @@ void UWvInputEventComponent::ResetWaitTillEnd(UGameplayAbility* WaitEndAbility)
 
 void UWvInputEventComponent::WaitAbilityEnd(UGameplayAbility* CallFromAbility, const FAbilityEndedData& EndedData)
 {
-	if (!ASC.IsValid())
+	if (!IsValid(ASC))
 	{
 		return;
 	}

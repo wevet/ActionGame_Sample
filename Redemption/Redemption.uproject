@@ -31,6 +31,22 @@
 	],
 	"Plugins": [
 		{
+			"Name": "QuadrupedIK",
+			"Enabled": true
+		},
+		{
+			"Name": "RopeCutting",
+			"Enabled": true
+		},
+		{
+			"Name": "WvAbilitySystem",
+			"Enabled": true
+		},
+		{
+			"Name": "WvPostProcess",
+			"Enabled": true
+		},
+		{
 			"Name": "ChaosCarGlass",
 			"Enabled": true
 		},
@@ -185,31 +201,11 @@
 			"Enabled": true
 		},
 		{
-			"Name": "QuadrupedIK",
-			"Enabled": true
-		},
-		{
-			"Name": "RopeCutting",
-			"Enabled": true
-		},
-		{
-			"Name": "WvAbilitySystem",
-			"Enabled": true
-		},
-		{
-			"Name": "WvPostProcess",
-			"Enabled": true
-		},
-		{
 			"Name": "MassAI",
 			"Enabled": true
 		},
 		{
 			"Name": "MassCrowd",
-			"Enabled": true
-		},
-		{
-			"Name": "MassEntity",
 			"Enabled": true
 		},
 		{
@@ -254,10 +250,6 @@
 		},
 		{
 			"Name": "SignificanceManager",
-			"Enabled": true
-		},
-		{
-			"Name": "StructUtils",
 			"Enabled": true
 		},
 		{

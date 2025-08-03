@@ -67,7 +67,6 @@ Saved/*
 # Compiled source files for the engine to use
 Intermediate/*
 Plugins/*/Intermediate/*
-Plugins/MotoricaStudio/*
 Plugins/HoudiniEngine/*
 Plugins/HoudiniNiagara/*
 
@@ -77,12 +76,12 @@ DerivedDataCache/*
 
 Content/MetaHumans/*
 Content/CitySampleCrowd/*
-Content/CitySampleBuildings/*
 Content/CitySampleVehicles/*
 Content/Ignore_Assets/*
 Content/Assets/Environment_Set/*
 Content/Characters/UEFN_Mannequin/*
 Content/Characters/MetaHuman/MM/*
+
 
 .vsconfig
 

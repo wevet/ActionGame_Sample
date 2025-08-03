@@ -27,11 +27,13 @@ protected:
 	virtual void AbilityNotifyTick(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, float FrameDeltaTime, const FAnimNotifyEventReference& EventReference);
 	virtual void AbilityNotifyEnd(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, const FAnimNotifyEventReference& EventReference);
 
-protected:
-	UPROPERTY(BlueprintReadWrite)
-	UWvAbilitySystemComponent* AbilitySystemComponent {	nullptr };
 
-	UPROPERTY(BlueprintReadWrite)
-	UWvAbilityBase* Ability { nullptr };
+protected:
+	UPROPERTY()
+	TObjectPtr<UWvAbilitySystemComponent> AbilitySystemComponent{ nullptr };
+
+	UPROPERTY()
+	TObjectPtr<UWvAbilityBase> Ability{ nullptr };
+
 };
 

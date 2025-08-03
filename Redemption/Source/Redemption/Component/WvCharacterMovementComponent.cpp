@@ -2612,7 +2612,7 @@ const bool UWvCharacterMovementComponent::TryTraversalAction()
 	FPoseSearchBlueprintResult Result;
 	UPoseSearchLibrary::MotionMatch(AnimInst, ValidObjects, FName(TEXT("PoseHistory")), ContinuingProperties, FutureProps, Result);
 
-	auto Montage = Cast<UAnimMontage>(Result.SelectedAnimation);
+	auto Montage = Cast<UAnimMontage>(Result.SelectedAnim);
 	if (!IsValid(Montage))
 	{
 		UE_LOG(LogTemp, Error, TEXT("not valid Montage: [%s]"), *FString(__FUNCTION__));

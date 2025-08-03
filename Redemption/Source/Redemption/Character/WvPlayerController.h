@@ -51,7 +51,7 @@ protected:
 	virtual void OnPossess(APawn* InPawn) override;
 	virtual void OnUnPossess() override;
 	virtual void InitInputSystem() override;
-	virtual bool InputKey(const FInputKeyParams& Params) override;
+	virtual bool InputKey(const FInputKeyEventArgs& Params) override;
 
 public:
 	void PostASCInitialize(UAbilitySystemComponent* ASC);

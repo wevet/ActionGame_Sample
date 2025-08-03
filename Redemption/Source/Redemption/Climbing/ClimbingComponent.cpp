@@ -2341,12 +2341,13 @@ const bool UClimbingComponent::CheckLedgeDown()
 	const FVector BaseLocation = Character->GetActorLocation() + FVector(0.0f, 0.0f, OutHeight);
 	const FVector2D Axis = GetCharacterInputAxis(true);
 	FVector Input = (Character->GetActorForwardVector() * Axis.Y) + (Character->GetActorRightVector() * Axis.X);
-	Input.GetClampedToSize(-1.0f, 1.0f);
+	const FVector CalcInput = Input.GetClampedToSize(-1.0f, 1.0f);
 
-	const FVector Direction = Input;
+
+	const FVector Direction = CalcInput;
 	const FVector InputsDirection = Direction;
-	const FVector TraceStart = BaseLocation + (Input * 10.0f);
-	const FVector TraceEnd = BaseLocation + (Input * 50.0f);
+	const FVector TraceStart = BaseLocation + (CalcInput * 10.0f);
+	const FVector TraceEnd = BaseLocation + (CalcInput * 50.0f);
 
 	const EDrawDebugTrace::Type TraceType = bDrawDebugTrace ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None;
 

@@ -23,7 +23,7 @@ public:
 
 	void PostASCInitialize(class UAbilitySystemComponent* NewASC);
 	void BindInputEvent(UInputComponent* InInputComponent);
-	void InputKey(const FInputKeyParams& Params);
+	void InputKey(const FInputKeyEventArgs& Params);
 
 	void ProcessGameEvent(const FGameplayTag& Tag, const bool bPress);
 	void ProcessGameEventUI(const FGameplayTag& Tag, const bool bPress);
@@ -89,11 +89,17 @@ protected:
 	TArray<UDataTable*> CustomActionEventTable;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, config)
-	float CacheInputDuration;
+	float CacheInputDuration{0.f};
 
 private:
 	UPROPERTY()
 	TObjectPtr<class AWvPlayerController> PlayerController;
+
+	UPROPERTY()
+	TObjectPtr<class APlayerCharacter> PlayerCharacter;
+
+	UPROPERTY()
+	TObjectPtr<class UWvAbilitySystemComponent> ASC;
 
 	UPROPERTY()
 	TArray<UDataTable*> AllRegistTables;
@@ -102,22 +108,27 @@ private:
 	TMap<FString, UDataTable*> Name2RegistTableDict;
 
 	UPROPERTY()
-	TWeakObjectPtr <class APlayerCharacter> PlayerCharacter;
+	TObjectPtr<class UInputComponent> InputComponent;
 
 	UPROPERTY()
-	TWeakObjectPtr<class UWvAbilitySystemComponent> ASC;
-
-	UPROPERTY()
-	class UInputComponent* InputComponent;
-
-	UPROPERTY()
-	class UInputSettings* InputSettingsCDO;
+	TObjectPtr<class UInputSettings> InputSettingsCDO;
 
 	UPROPERTY()
 	TArray<UWvInputEventCallbackInfo*> CachePluralInputArray;
 
+	UPROPERTY()
+	TMap<FName, FWvInputEvent> DynamicRegistInputDict;
+
+	UPROPERTY()
+	TMap<FName, FWvInputEvent> WaitDynamicRegistInputDict;
+
+	UPROPERTY()
+	TMap<FName, UWvInputEventCallbackInfo*> InputEventCallbackInfoMap;
+
+	TMap<FKey, TArray<FName>> RegisterInputKeyMap;
+
 	bool IsNeedForceRebuildKeymaps{ false };
-	bool bPermanentCacheInput = false;
+	bool bPermanentCacheInput{ false };
 
 	FGameplayTagContainer RestrictInputEventTags;
 	FGameplayTag CacheInput = FGameplayTag::EmptyTag;
@@ -125,12 +136,6 @@ private:
 	FCriticalSection WaitMutex;
 	FDelegateHandle WaitCacheInputResetHandle;
 
-	TMap<FName, FWvInputEvent> DynamicRegistInputDict;
-	TMap<FName, FWvInputEvent> WaitDynamicRegistInputDict;
-
-	UPROPERTY()
-	TMap<FName, UWvInputEventCallbackInfo*> InputEventCallbackInfoMap;
-	TMap<FKey, TArray<FName>> RegisterInputKeyMap;
 
 	FTimerHandle ClearCacheInput_TimerHandle;
 	float InputDelayTime = 0.1f; //s

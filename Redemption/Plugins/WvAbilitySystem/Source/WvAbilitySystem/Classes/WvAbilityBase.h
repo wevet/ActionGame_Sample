@@ -94,9 +94,8 @@ public:
 	float DamageMotion = 1.0f;
 
 private:
-	FGameplayTag ComboTriggerTag;
+	FGameplayTag ComboTriggerTag{FGameplayTag::EmptyTag};
 
-	bool HasComboTriggerTag;
 
 public:
 	void CopyDataAssetTags(const UWvAbilityDataAsset* InAbilityDataAsset);

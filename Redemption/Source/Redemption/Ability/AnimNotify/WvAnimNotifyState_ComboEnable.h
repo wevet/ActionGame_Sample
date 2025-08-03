@@ -32,11 +32,13 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	FGameplayTagContainer RequiredGameplayTags;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	UWvAbilityDataAsset* NextAbilityDA;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	UWvAbilityDataAsset* BackwardInputAbilityDA;
+	TObjectPtr<UWvAbilityDataAsset> NextAbilityDA;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	TObjectPtr<UWvAbilityDataAsset> BackwardInputAbilityDA;
+
 
 
 private:

@@ -144,6 +144,8 @@ void UWvAbility_Melee::EndAbility(const FGameplayAbilitySpecHandle Handle, const
 
 void UWvAbility_Melee::OnPlayMontageCompleted_Event(FGameplayTag EventTag, FGameplayEventData EventData)
 {
+
+
 	K2_EndAbility();
 }
 

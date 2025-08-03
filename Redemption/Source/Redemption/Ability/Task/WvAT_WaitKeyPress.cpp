@@ -48,31 +48,51 @@ void UWvAT_WaitKeyPress::HoldingInputOnCallback(FGameplayTag GameplayTag, bool I
 
 void UWvAT_WaitKeyPress::Activate()
 {
-	if (!IsLocallyControlled())
+	if (IsLocallyControlled())
 	{
-		return;
+		ABaseCharacter* Character = Cast<ABaseCharacter>(GetAvatarActor());
+		if (Character)
+		{
+			if (AWvPlayerController* PC = Cast<AWvPlayerController>(Character->GetController()))
+			{
+				PC->OnInputEventGameplayTagTrigger_Game.AddUniqueDynamic(this, &ThisClass::SingleInputOnCallback);
+				PC->OnPluralInputEventTrigger.AddUniqueDynamic(this, &ThisClass::PluralInputOnCallback);
+				PC->OnHoldingInputEventTrigger.AddUniqueDynamic(this, &ThisClass::HoldingInputOnCallback);
+			}
+
+			if (AWvAIController* AIC = Cast<AWvAIController>(Character->GetController()))
+			{
+				AIC->OnInputEventGameplayTagTrigger.AddUniqueDynamic(this, &ThisClass::SingleInputOnCallback);
+			}
+		}
 	}
 
-	ABaseCharacter* Character = Cast<ABaseCharacter>(GetAvatarActor());
-	if (Character)
-	{	
-		if (AWvPlayerController* PC = Cast<AWvPlayerController>(Character->GetController()))
-		{
-			PC->OnInputEventGameplayTagTrigger_Game.AddDynamic(this, &ThisClass::SingleInputOnCallback);
-			PC->OnPluralInputEventTrigger.AddDynamic(this, &ThisClass::PluralInputOnCallback);
-			PC->OnHoldingInputEventTrigger.AddDynamic(this, &ThisClass::HoldingInputOnCallback);
-		}
-		
-		if (AWvAIController* AIC = Cast<AWvAIController>(Character->GetController()))
-		{
-			AIC->OnInputEventGameplayTagTrigger.AddDynamic(this, &ThisClass::SingleInputOnCallback);
-		}
-	}
 
 }
 
 void UWvAT_WaitKeyPress::BeginDestroy()
 {
+	if (IsLocallyControlled())
+	{
+		ABaseCharacter* Character = Cast<ABaseCharacter>(GetAvatarActor());
+		if (Character)
+		{
+			if (AWvPlayerController* PC = Cast<AWvPlayerController>(Character->GetController()))
+			{
+				PC->OnInputEventGameplayTagTrigger_Game.RemoveDynamic(this, &ThisClass::SingleInputOnCallback);
+				PC->OnPluralInputEventTrigger.RemoveDynamic(this, &ThisClass::PluralInputOnCallback);
+				PC->OnHoldingInputEventTrigger.RemoveDynamic(this, &ThisClass::HoldingInputOnCallback);
+			}
+
+			if (AWvAIController* AIC = Cast<AWvAIController>(Character->GetController()))
+			{
+				AIC->OnInputEventGameplayTagTrigger.RemoveDynamic(this, &ThisClass::SingleInputOnCallback);
+			}
+		}
+
+	}
+
+
 	Super::BeginDestroy();
 }
 

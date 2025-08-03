@@ -136,7 +136,7 @@ void AWvPlayerController::InitInputSystem()
 	InputEventComponent->BindInputEvent(InputComponent.Get());
 }
 
-bool AWvPlayerController::InputKey(const FInputKeyParams& Params)
+bool AWvPlayerController::InputKey(const FInputKeyEventArgs& Params)
 {
 	InputEventComponent->InputKey(Params);
 	return Super::InputKey(Params);

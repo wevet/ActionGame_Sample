@@ -46,7 +46,6 @@ public class Redemption : ModuleRules
 				"SkeletalMerging",
 				"HairStrandsCore",
 				"MassActors",
-				"StructUtils",
 				"HairStrandsCore",
 				"ContextualAnimation",
 				"Media",
@@ -57,10 +56,11 @@ public class Redemption : ModuleRules
 				"Gauntlet",
 				"MassZoneGraphNavigation",
 				"Niagara",
+				"StateTreeModule",
+				// custom plugin
 				"WvAbilitySystem",
 				"QuadrupedIK",
 				"RopeCutting",
-				"StateTreeModule",
 			}
 		);
 
