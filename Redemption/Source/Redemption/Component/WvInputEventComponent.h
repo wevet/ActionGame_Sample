@@ -76,6 +76,8 @@ protected:
 
 	EWvInputMode InputMode;
 
+	void BuildKeyEventMap();
+
 	UPROPERTY(EditDefaultsOnly, Category = "Table")
 	UDataTable* GeneralActionEventTable;
 
@@ -126,6 +128,8 @@ private:
 	TMap<FName, UWvInputEventCallbackInfo*> InputEventCallbackInfoMap;
 
 	TMap<FKey, TArray<FName>> RegisterInputKeyMap;
+
+	TMap<FGameplayTag, TArray<FKey>> TagToKeys;
 
 	bool IsNeedForceRebuildKeymaps{ false };
 	bool bPermanentCacheInput{ false };

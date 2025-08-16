@@ -7,22 +7,6 @@ ULocomotionInterface::ULocomotionInterface(const class FObjectInitializer& Objec
 {
 }
 
-void ILocomotionInterface::SetWalkingSpeed(const float InWalkingSpeed)
-{
-}
-
-void ILocomotionInterface::SetRunningSpeed(const float InRunningSpeed)
-{
-}
-
-void ILocomotionInterface::SetSprintingSpeed(const float InSprintingSpeed)
-{
-}
-
-void ILocomotionInterface::SetCrouchingSpeed(const float InCrouchingSpeed)
-{
-}
-
 void ILocomotionInterface::SetSwimmingSpeed(const float InSwimmingSpeed)
 {
 }

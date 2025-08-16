@@ -302,7 +302,7 @@ void UClimbingAnimInstance::CreateProperties()
 
 	LocomotionComponent = Cast<ULocomotionComponent>(Character->GetComponentByClass(ULocomotionComponent::StaticClass()));
 
-	LadderComponent = Cast<ULadderComponent>(Character->GetComponentByClass(ULadderComponent::StaticClass()));
+	LadderComponent = Character->FindComponentByClass<ULadderComponent>();
 
 	CharacterMovementComponent = Cast<UWvCharacterMovementComponent>(Character->GetCharacterMovement());
 

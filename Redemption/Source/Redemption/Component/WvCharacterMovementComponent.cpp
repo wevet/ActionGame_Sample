@@ -119,8 +119,8 @@ UWvCharacterMovementComponent::UWvCharacterMovementComponent(const FObjectInitia
 	bRunPhysicsWithNoController = true;
 
 	GroundFriction = 4.0f;
-	MaxWalkSpeed = K_WALK_SPEED;
-	MaxWalkSpeedCrouched = K_CROUCHING_SPEED;
+	MaxWalkSpeed = 500.0f;
+	MaxWalkSpeedCrouched = 250.0f;
 
 	MinAnalogWalkSpeed = 25.0f;
 	bCanWalkOffLedgesWhenCrouching = true;
@@ -1495,9 +1495,7 @@ const bool UWvCharacterMovementComponent::FallingMantling()
 {
 	if (!IsValid(MantleDAInstance))
 		return false;
-
-	//return MantleCheck(MantleDAInstance->FallingTraceSettings);
-	return false;
+	return MantleCheck(MantleDAInstance->FallingTraceSettings);
 }
 
 const bool UWvCharacterMovementComponent::MantleCheck(const FMantleTraceSettings InTraceSetting)
@@ -2187,6 +2185,7 @@ void UWvCharacterMovementComponent::SetUseAccelerationForPathFollowing(const boo
 	//}
 }
 
+
 #pragma region LadderSystem
 /// <summary>
 /// apply to LadderComponent
@@ -2323,10 +2322,10 @@ void UWvCharacterMovementComponent::SetTraversalDataCheckInput(FTraversalDataChe
 	if (IsFalling() || IsFlying())
 	{
 		OutInput.TraceForwardDirection = CharacterOwner->GetActorForwardVector();
-		OutInput.TraceForwardDistance = 80.0f;
+		OutInput.TraceForwardDistance = TraversalTraceRange.X;
 		OutInput.TraceOriginOffset = FVector::ZeroVector;
 		OutInput.TraceEndOffset = FVector(0.f, 0.f, 50.0f);
-		OutInput.TraceRadius = CapsuleRadius;
+		OutInput.TraceRadius = CapsuleRadius * ForwardTraceRadiusScale;
 		OutInput.TraceHalfHeight = CapsuleHalfHeight;
 		OutInput.bIsValidData = true;
 	}
@@ -2334,11 +2333,13 @@ void UWvCharacterMovementComponent::SetTraversalDataCheckInput(FTraversalDataChe
 	{
 		const FRotator ActorRotation = CharacterOwner->GetActorRotation();
 		const FVector RotateVec = ActorRotation.UnrotateVector(Velocity);
+
+		const float Alpha = FMath::GetRangePct(0.f, MaxSpeed, FMath::Max(0.f, RotateVec.X));
 		OutInput.TraceForwardDirection = CharacterOwner->GetActorForwardVector();
-		OutInput.TraceForwardDistance = UKismetMathLibrary::MapRangeClamped(RotateVec.X, 0.f, MaxSpeed, 80.0f, 350.0f);
+		OutInput.TraceForwardDistance = FMath::Lerp(TraversalTraceRange.X, TraversalTraceRange.Y, Alpha);
 		OutInput.TraceOriginOffset = FVector::ZeroVector;
-		OutInput.TraceEndOffset = FVector::ZeroVector; //FVector(0.f, 0.f, MaxStepHeight);
-		OutInput.TraceRadius = CapsuleRadius;
+		OutInput.TraceEndOffset = FVector::ZeroVector;
+		OutInput.TraceRadius = CapsuleRadius * ForwardTraceRadiusScale;
 		OutInput.TraceHalfHeight = CapsuleHalfHeight;
 		OutInput.bIsValidData = true;
 	}
@@ -2454,23 +2455,32 @@ const bool UWvCharacterMovementComponent::TryTraversalAction()
 			IgnoreActors, TraceType, HitResult, true, 
 			FLinearColor::Red, FLinearColor::Green, DrawTime);
 
+		bool bLocalHitResult = true;
 
-		// 貫通もブロックもしていないことが条件 !(A || B)
-		const bool bLocalHitResult = !(HitResult.bBlockingHit || HitResult.bStartPenetrating);
+		// 強い接触のみNG。軽い接触は許容
+		if (HitResult.bBlockingHit)
+		{
+			// 例えば ImpactNormal がほぼ水平面（Z高い）なら通す、などの緩和も可
+			// 早期ヒットは手前すぎる＝塞がれてる
+			const bool bHardBlock = HitResult.Time < 0.2f;
+			if (bHardBlock)
+			{
+				bLocalHitResult = false;
+			}
+		}
 
-		float MaxAllowedPenetration = 10.0f;
-		// 「貫通判定だけ NG」
-		//if (HitResult.bBlockingHit && HitResult.PenetrationDepth > MaxAllowedPenetration)
-		//{
-		//}
+		// 軽微な貫通は許容
+		if (HitResult.bStartPenetrating && HitResult.PenetrationDepth > AllowedPenetration)
+		{
+			bLocalHitResult = false;
+		}
 
 		if (!bLocalHitResult)
 		{
 			TraversalCheckResult.bHasFrontLedge = false;
-			UE_LOG(LogTemp, Error, TEXT("CapsuleTraceSingle is not hit: [%s]"), *FString(__FUNCTION__));
+			UE_LOG(LogTemp, Log, TEXT("HasRoom blocked: Time=%.2f PenDepth=%.2f"), HitResult.Time, HitResult.PenetrationDepth);
 			return false;
 		}
-
 	}
 
 	// --- Step 3.3: 障害物の高さを計測 ---
@@ -2577,15 +2587,7 @@ const bool UWvCharacterMovementComponent::TryTraversalAction()
 		LogString += FString::Printf(TEXT("Obstacle Height: %.2f\n"), Input.ObstacleHeight);
 		LogString += FString::Printf(TEXT("Obstacle Depth: %.2f\n"), Input.ObstacleDepth);
 		LogString += FString::Printf(TEXT("Back Ledge Height: %.2f\n"), Input.BackLedgeHeight);
-		UE_LOG(LogTemp, Log, TEXT("[Traversal Log]\n%s"), *LogString);
-
-#if false
-		if (GEngine)
-		{
-			GEngine->AddOnScreenDebugMessage(-1, 6.0f, FColor::Red, LogString);
-		}
-#endif
-
+		UE_LOG(LogTemp, Error, TEXT("[Traversal Log]\n%s"), *LogString);
 		return false;
 	}
 
@@ -2814,8 +2816,11 @@ const bool UWvCharacterMovementComponent::TraceWidth(const FHitResult& Hit, cons
 		return false;
 	}
 
-	const FVector LedgeDepth = Hit.ImpactNormal * MinFrontLedgeDepth;
-	const FVector Local_Dir = Direction * (MinLedgeWidth / 2.0f);
+	const float MinWidth = MinLedgeWidth;
+	const float MinDepth = MinFrontLedgeDepth;
+
+	const FVector LedgeDepth = Hit.ImpactNormal * MinDepth;
+	const FVector Local_Dir = Direction * (MinWidth / 2.0f);
 	const FVector TraceStart = (Hit.ImpactPoint + Local_Dir) + LedgeDepth;
 	const FVector TraceEnd = (Hit.ImpactPoint + Local_Dir) - LedgeDepth;
 
@@ -2926,11 +2931,13 @@ void UWvCharacterMovementComponent::Traversal_TraceCorners(const FHitResult& Hit
 		return;
 	}
 
+	const float MinWidth = MinLedgeWidth;
 	DistanceToCorner = (OutHit.ImpactPoint - Hit.ImpactPoint).Size();
-	bCloseToCorner = (DistanceToCorner < (MinLedgeWidth / 2.0f));
+	bCloseToCorner = (DistanceToCorner < (MinWidth / 2.0f));
 
 	FVector InvTraceDirection = UKismetMathLibrary::NegateVector(TraceDirection);
-	InvTraceDirection *= (MinLedgeWidth / 2.0f);
+	InvTraceDirection *= (MinWidth / 2.0f);
+
 	OffsetCenterPoint = (OutHit.ImpactPoint + InvTraceDirection);
 }
 
@@ -3015,10 +3022,10 @@ void UWvCharacterMovementComponent::TryAndCalculateTraversal(FHitResult& HitResu
 	float SphereRadius;
 	UKismetSystemLibrary::GetComponentBounds(HitResult.GetComponent(), Origin, BoxExtent, SphereRadius);
 
-	const float WalkSpeed = LocomotionComponent->GetWalkingSpeed();
-	const float SprintSpeed = LocomotionComponent->GetSprintingSpeed();
+	const float CurSpeed = Velocity.Size2D();
+	const float MaxSpeed = GetMaxSpeed();
 
-	const float RadiusOffset = UKismetMathLibrary::MapRangeClamped(Velocity.Size2D(), WalkSpeed, SprintSpeed, 0.5f, 2.0f);
+	const float RadiusOffset = UKismetMathLibrary::MapRangeClamped(Velocity.Size2D(), CurSpeed, MaxSpeed, 0.5f, 2.0f);
 	const float TraceLength = SphereRadius * RadiusOffset;
 
 	// 逆さまになっているオブジェクトをMantleできるようにするため、アップベクトルが常にプレーヤーのアップを指すようにする。

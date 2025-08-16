@@ -60,6 +60,39 @@ void UWvInputEventComponent::PostASCInitialize(UAbilitySystemComponent* NewASC)
 	PlayerCharacter = Cast<APlayerCharacter>(ASC->GetAvatarActor());
 }
 
+void UWvInputEventComponent::BuildKeyEventMap()
+{
+	TArray<UDataTable*> Tables = { GeneralActionEventTable, FieldActionEventTable, BattleActionEventTable };
+	Tables.Append(CustomActionEventTable);
+
+	for (UDataTable* Table : Tables)
+	{
+		if (!Table)
+		{
+			continue;
+		}
+
+		TArray<FWvInputEvent*> Rows;
+		Table->GetAllRows<FWvInputEvent>(TEXT(""), Rows);
+
+		for (FWvInputEvent* Ev : Rows)
+		{
+			if (Ev->TriggerKey.IsValid())
+			{
+				TagToKeys.FindOrAdd(Ev->EventTag).AddUnique(Ev->TriggerKey);
+			}
+			if (Ev->GamepadKey.IsValid())
+			{
+				TagToKeys.FindOrAdd(Ev->EventTag).AddUnique(Ev->GamepadKey);
+			}
+		}
+	}
+}
+
+/// <summary>
+/// initialize once
+/// </summary>
+/// <param name="InInputComponent"></param>
 void UWvInputEventComponent::BindInputEvent(UInputComponent* InInputComponent)
 {
 	InputComponent = InInputComponent;
@@ -76,6 +109,8 @@ void UWvInputEventComponent::BindInputEvent(UInputComponent* InInputComponent)
 	InputTables.Add(BattleActionEventTable);
 	InputTables += CustomActionEventTable;
 
+	BuildKeyEventMap();
+
 	for (int32 Index = 0; Index < InputTables.Num(); Index++)
 	{
 		UDataTable* InputTable = InputTables[Index];
@@ -84,7 +119,7 @@ void UWvInputEventComponent::BindInputEvent(UInputComponent* InInputComponent)
 			continue;
 		}
 
-		AllRegistTables.Add(InputTable);
+		//AllRegistTables.Add(InputTable);
 		Name2RegistTableDict.Add(InputTable->GetName(), InputTable);
 
 		TArray<FWvInputEvent*> InputEvents;
@@ -94,7 +129,7 @@ void UWvInputEventComponent::BindInputEvent(UInputComponent* InInputComponent)
 		for (int32 JIndex = 0; JIndex < InputEvents.Num(); ++JIndex)
 		{
 			FWvInputEvent InputEvent = *InputEvents[JIndex];
-			FName TotalKey = FName(InputTable->GetName() + ";" + InputEventNames[JIndex].ToString());
+			const FName TotalKey = FName(InputTable->GetName() + ";" + InputEventNames[JIndex].ToString());
 			BindTableInput(TotalKey, InputEvent);
 			BindTablePluralInput(TotalKey, InputEvent);
 		}
@@ -869,6 +904,18 @@ bool UWvInputEventComponent::InputKeyDownControl(const FGameplayTag Tag) const
 
 	bool bIsFoundKey = false;
 
+	if (const TArray<FKey>* Keys = TagToKeys.Find(Tag))
+	{
+		for (const FKey& Key : *Keys)
+		{
+			if (PlayerController->IsInputKeyDown(Key))
+			{
+				return true;
+			}
+		}
+	}
+
+#if false
 	for (int32 Index = 0; Index < AllRegistTables.Num(); Index++)
 	{
 		UDataTable* InputTable = AllRegistTables[Index];
@@ -885,8 +932,10 @@ bool UWvInputEventComponent::InputKeyDownControl(const FGameplayTag Tag) const
 			}
 		}
 	}
-
 	return bIsFoundKey;
+#endif
+
+	return false;
 }
 
 void UWvInputEventComponent::SetPermanentCacheInput(bool Enable)

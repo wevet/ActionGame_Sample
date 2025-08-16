@@ -84,7 +84,7 @@ void UClimbingComponent::BeginPlay()
 		LocomotionComponent = Character->GetLocomotionComponent();
 		LocomotionComponent->OnRotationModeChangeDelegate.AddDynamic(this, &ThisClass::ChangeRotationMode_Callback);
 		
-		LadderComponent = Cast<ULadderComponent>(Character->GetComponentByClass(ULadderComponent::StaticClass()));
+		LadderComponent = Character->FindComponentByClass<ULadderComponent>();
 		QTEActionComponent = Cast<UQTEActionComponent>(Character->GetComponentByClass(UQTEActionComponent::StaticClass()));
 
 		bOwnerPlayerController = bool(Cast<APlayerController>(Character->GetController()));

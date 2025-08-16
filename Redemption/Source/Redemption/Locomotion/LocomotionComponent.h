@@ -137,10 +137,6 @@ public:
 	virtual bool HasMovementInput() const override;
 	virtual bool HasMoving() const override;
 
-	virtual void SetWalkingSpeed(const float InWalkingSpeed) override;
-	virtual void SetRunningSpeed(const float InRunningSpeed) override;
-	virtual void SetSprintingSpeed(const float InSprintingSpeed) override;
-	virtual void SetCrouchingSpeed(const float InCrouchingSpeed) override;
 	virtual void SetSwimmingSpeed(const float InSwimmingSpeed) override;
 
 	virtual float GetWalkingSpeed() const override;
@@ -232,22 +228,10 @@ protected:
 	FName RagdollPoseSnapshot;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion")
-	float WalkingSpeed;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion")
-	float RunningSpeed;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion")
-	float SprintingSpeed;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion")
-	float CrouchingSpeed;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion")
 	TObjectPtr <class ULocomotionStateDataAsset> LocomotionStateDataAsset;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion|MotionMatching")
-	UCurveFloat* StafeSpeedCurve = nullptr;
+	TObjectPtr<UCurveFloat> StafeSpeedCurve = nullptr;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion|MotionMatching")
 	FVector WalkSpeeds{ 200.0f, 180.0f, 150.0f };
@@ -298,7 +282,7 @@ public:
 	UAnimMontage* GetCurrentMontage() const;
 
 	void StartRagdollAction();
-	void StopRagdollAction(TFunction<void(void)> Callback);
+	void StopRagdollAction(TFunctionRef<void()> Callback);
 
 	bool IsRagdollingFaceDown() const;
 

@@ -104,7 +104,6 @@ public:
 	static FName ClimbSyncPoint;
 	static FName BackwardInputSyncPoint;
 
-
 	bool HasFallEdge() const { return bHasFallEdge; }
 	void UpdateCharacterMovementSettings(const bool bHasStanding);
 
@@ -115,19 +114,20 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void MantleEnd();
 
+	UFUNCTION(BlueprintCallable, Category = "CharacterMovement|Misc")
+	void CheckGroundOrFalling();
 
-	// ~Start Traversal
-	//
+
+#pragma region Traversal
 	void SetTraversalDataCheckInput(FTraversalDataCheckInputs& OutInput);
 	const bool TryTraversalAction();
 	void OnTraversalStart();
 	void OnTraversalEnd();
 	const TArray<UObject*> GetAnimMontageFromChooserTable(const TSubclassOf<UObject> ObjectClass, FTraversalActionDataInputs& Input, FTraversalActionDataOutputs& Output);
 	void SetTraversalPressed(const bool bIsNewTraversalPressed);
-	// ~End Traversal
+#pragma endregion
 
-	UFUNCTION(BlueprintCallable, Category = "CharacterMovement|Misc")
-	void CheckGroundOrFalling();
+
 
 protected:
 	virtual void InitializeComponent() override;
@@ -169,15 +169,24 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Character Movement: Mantle")
 	TSoftObjectPtr<UMantleAnimationDataAsset> MantleDA;
 
-	// ~Start Traversal
+
+#pragma region Traversal
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Character Movement: Traversal")
+	FVector2D TraversalTraceRange{80.0f, 250.0f};
+
+	// ÉJÉvÉZÉãîºåaÇ…ä|ÇØÇÈägí£
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Character Movement: Traversal")
+	float ForwardTraceRadiusScale = 1.2f;
+
+	// ãñóeä—í ÅicmÅj
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Character Movement: Traversal")
+	float AllowedPenetration = 12.f;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Character Movement: Traversal")
 	float MinLedgeWidth{ 70.0f };
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Character Movement: Traversal")
-	float MinFrontLedgeDepth{ 35.0f };
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Character Movement: Traversal")
-	bool bIsTraversalTraceComplex{ true };
+	float MinFrontLedgeDepth{ 80.0f };
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Character Movement: Traversal")
 	TObjectPtr<class UChooserTable> TraversalChooserTable{ nullptr };
@@ -185,8 +194,10 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Character Movement: Traversal")
 	TArray<TSubclassOf<AActor>> ExcludedClasses;
 
+	bool bIsTraversalTraceComplex{ true };
 	bool bIsTraversalPressed{ false };
-	// ~End Traversal
+#pragma endregion
+
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Character Movement: Falling")
 	bool bIsDrawGroundTrace{ false };
@@ -197,8 +208,10 @@ protected:
 	*/
 	float MinInputForwardAngle = 5.0f;
 
-
 	FTimeline* MantleTimeline;
+
+
+
 
 #pragma region LedgeEndParameters
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Character Movement: Ledge")

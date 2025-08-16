@@ -685,8 +685,11 @@ void UWvAnimInstance::DrawDebugSkeleton(UAnimationAsset* AnimationAsset)
 		auto CurSK = GetSkelMeshComponent()->GetSkeletalMeshAsset()->GetSkeleton();
 		if (CurSK != Skeleton)
 		{
-			UE_LOG(LogTemp, Error, TEXT("Diff Skeleton : [%s], Cur Anim :[%s], func :[%s]"),
-				*Skeleton->GetName(), *AnimationAsset->GetName(), *FString(__FUNCTION__));
+			UE_LOG(LogTemp, Error, TEXT("Diff Skeleton : [%s], Cur Anim :[%s], func :[%s]"), *Skeleton->GetName(), *AnimationAsset->GetName(), *FString(__FUNCTION__));
+		}
+		else
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Cur Anim :[%s], func :[%s]"), *AnimationAsset->GetName(), *FString(__FUNCTION__));
 		}
 	}
 #endif

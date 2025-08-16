@@ -23,10 +23,7 @@
 //#include "PhysicsEngine/PhysicsSettings.h"
 //#include "PhysicalMaterials/PhysicalMaterial.h"
 
-// ragdoll define speeds
-#define WALK_SPEED 200.f
-#define RUN_SPEED 400.f
-#define SPRINT_SPEED 600.f
+
 
 namespace LocomotionDebug
 {
@@ -100,11 +97,6 @@ ULocomotionComponent::ULocomotionComponent(const FObjectInitializer& ObjectIniti
 	bDoSprint = false;
 	bDoRunning = false;
 
-	// LS
-	WalkingSpeed = K_WALK_SPEED;
-	RunningSpeed = K_RUNNING_SPEED;
-	SprintingSpeed = K_SPRINTING_SPEED;
-	CrouchingSpeed = K_CROUCHING_SPEED;
 
 	LocomotionEssencialVariables.bAiming = false;
 	LocomotionEssencialVariables.bRagdollOnGround = false;
@@ -180,8 +172,10 @@ void ULocomotionComponent::TickComponent(float DeltaTime, ELevelTick TickType, F
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
-	AsyncWork = TGraphTask<FLocomotionTask>::CreateTask().ConstructAndDispatchWhenReady(this);
-	ThisTickFunction->GetCompletionHandle()->DontCompleteUntil(AsyncWork);
+	//AsyncWork = TGraphTask<FLocomotionTask>::CreateTask().ConstructAndDispatchWhenReady(this);
+	//ThisTickFunction->GetCompletionHandle()->DontCompleteUntil(AsyncWork);
+
+	DoTick(DeltaTime);
 }
 
 void ULocomotionComponent::DoTick()
@@ -422,25 +416,6 @@ bool ULocomotionComponent::HasMoving() const
 	return LocomotionEssencialVariables.bWasMoving;
 }
 
-void ULocomotionComponent::SetWalkingSpeed(const float InWalkingSpeed)
-{
-	WalkingSpeed = InWalkingSpeed;
-}
-
-void ULocomotionComponent::SetRunningSpeed(const float InRunningSpeed)
-{
-	RunningSpeed = InRunningSpeed;
-}
-
-void ULocomotionComponent::SetSprintingSpeed(const float InSprintingSpeed)
-{
-	SprintingSpeed = InSprintingSpeed;
-}
-
-void ULocomotionComponent::SetCrouchingSpeed(const float InCrouchingSpeed)
-{
-	CrouchingSpeed = InCrouchingSpeed;
-}
 
 void ULocomotionComponent::SetSwimmingSpeed(const float InSwimmingSpeed)
 {
@@ -452,22 +427,22 @@ void ULocomotionComponent::SetSwimmingSpeed(const float InSwimmingSpeed)
 
 float ULocomotionComponent::GetWalkingSpeed() const
 {
-	return WalkingSpeed;
+	return WalkSpeeds.GetMax();
 }
 
 float ULocomotionComponent::GetRunningSpeed() const
 {
-	return RunningSpeed;
+	return RunSpeeds.GetMax();
 }
 
 float ULocomotionComponent::GetSprintingSpeed() const
 {
-	return SprintingSpeed;
+	return SprintSpeeds.GetMax();
 }
 
 float ULocomotionComponent::GetCrouchingSpeed() const
 {
-	return CrouchingSpeed;
+	return CrouchSpeeds.GetMax();
 }
 
 float ULocomotionComponent::GetSwimmingSpeed() const
@@ -491,9 +466,7 @@ FVector ULocomotionComponent::ChooseVelocity() const
 	{
 		if (SkeletalMeshComponent.IsValid())
 		{
-			const FName RootBone = FName(TEXT("root"));
-			//return SkeletalMeshComponent->GetPhysicsLinearVelocity(PelvisBoneName);
-			return SkeletalMeshComponent->GetPhysicsLinearVelocity(RootBone);
+			return SkeletalMeshComponent->GetPhysicsLinearVelocity(PelvisBoneName);
 		}
 	}
 	if (Character.IsValid())
@@ -507,20 +480,7 @@ const float ULocomotionComponent::ChooseMaxWalkSpeed()
 {
 	if (!IsValid(StafeSpeedCurve))
 	{
-		float Speed = 0.0f;
-		switch (LocomotionEssencialVariables.LSGait)
-		{
-		case ELSGait::Walking:
-			Speed = WalkingSpeed;
-			break;
-		case ELSGait::Running:
-			Speed = RunningSpeed;
-			break;
-		case ELSGait::Sprinting:
-			Speed = SprintingSpeed;
-			break;
-		}
-		return Speed;
+		return 0.f;
 	}
 
 	const float Value = FMath::Abs(UKismetAnimationLibrary::CalculateDirection(CharacterMovementComponent->Velocity, Character->GetActorRotation()));
@@ -540,7 +500,7 @@ const float ULocomotionComponent::ChooseMaxWalkSpeed()
 	}
 
 	const float A = UKismetMathLibrary::MapRangeClamped(StrafeSpeedMap, 0.f, 1.0f, CurSpeeds.X, CurSpeeds.Y);
-	const float B = UKismetMathLibrary::MapRangeClamped(StrafeSpeedMap, 0.f, 2.0f, CurSpeeds.Y, CurSpeeds.Z);
+	const float B = UKismetMathLibrary::MapRangeClamped(StrafeSpeedMap, 1.f, 2.0f, CurSpeeds.Y, CurSpeeds.Z);
 
 	return (StrafeSpeedMap < 1.0f) ? A : B;
 }
@@ -549,20 +509,7 @@ const float ULocomotionComponent::ChooseMaxWalkSpeedCrouched()
 {
 	if (!IsValid(StafeSpeedCurve))
 	{
-		float Speed = CrouchingSpeed;
-		float CrouchOffset = 0.f;
-		switch (LocomotionEssencialVariables.LSGait)
-		{
-		case ELSGait::Walking:
-			CrouchOffset = 70.f;
-			Speed -= CrouchOffset;
-			break;
-		case ELSGait::Running:
-			CrouchOffset = 50.f;
-			Speed -= CrouchOffset;
-			break;
-		}
-		return Speed;
+		return 0.f;
 	}
 
 	const float Value = FMath::Abs(UKismetAnimationLibrary::CalculateDirection(CharacterMovementComponent->Velocity, Character->GetActorRotation()));
@@ -571,7 +518,7 @@ const float ULocomotionComponent::ChooseMaxWalkSpeedCrouched()
 	const float StrafeSpeedMap = CharacterMovementComponent->bOrientRotationToMovement ? Cur : 0.f;
 
 	const float A = UKismetMathLibrary::MapRangeClamped(StrafeSpeedMap, 0.f, 1.0f, CrouchSpeeds.X, CrouchSpeeds.Y);
-	const float B = UKismetMathLibrary::MapRangeClamped(StrafeSpeedMap, 0.f, 2.0f, CrouchSpeeds.Y, CrouchSpeeds.Z);
+	const float B = UKismetMathLibrary::MapRangeClamped(StrafeSpeedMap, 1.f, 2.0f, CrouchSpeeds.Y, CrouchSpeeds.Z);
 
 	return (StrafeSpeedMap < 1.0f) ? A : B;
 }
@@ -703,11 +650,11 @@ bool ULocomotionComponent::IsRagdollingFaceDown() const
 {
 	const FRotator Rotation = SkeletalMeshComponent->GetSocketRotation(PelvisBoneName);
 	//UE_LOG(LogTemp, Log, TEXT("Rotation => %s, function => %s"), *Rotation.ToString(), *FString(__FUNCTION__));
-	return (Rotation.Roll > 0.0f);
+	//return (Rotation.Roll > 0.0f);
 
-	//auto R_Vec = UKismetMathLibrary::GetRightVector(Rotation);
-	//auto Dot = FVector::DotProduct(R_Vec, FVector(0.f, 0.f, 1.0f));
-	//return Dot >= 0.f;
+	auto R_Vec = UKismetMathLibrary::GetRightVector(Rotation);
+	auto Dot = FVector::DotProduct(R_Vec, FVector(0.f, 0.f, 1.0f));
+	return Dot >= 0.f;
 }
 
 void ULocomotionComponent::StartRagdollAction()
@@ -726,10 +673,11 @@ void ULocomotionComponent::StartRagdollAction()
 	SkeletalMeshComponent->SetAllBodiesBelowSimulatePhysics(PelvisBoneName, true, true);
 }
 
-void ULocomotionComponent::StopRagdollAction(TFunction<void(void)> Callback)
+void ULocomotionComponent::StopRagdollAction(TFunctionRef<void()> Callback)
 {
 	Character->SetReplicateMovement(true);
-	CharacterMovementComponent->SetMovementMode(LocomotionEssencialVariables.bRagdollOnGround ? EMovementMode::MOVE_Walking : EMovementMode::MOVE_Falling);
+
+	CharacterMovementComponent->CheckGroundOrFalling();
 	CharacterMovementComponent->Velocity = LocomotionEssencialVariables.RagdollVelocity;
 	Character->WakeUpPoseSnapShot();
 
@@ -745,10 +693,7 @@ void ULocomotionComponent::StopRagdollAction(TFunction<void(void)> Callback)
 	SkeletalMeshComponent->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 	SkeletalMeshComponent->SetAllBodiesSimulatePhysics(false);
 
-	if (Callback)
-	{
-		Callback();
-	}
+	Callback();
 }
 
 void ULocomotionComponent::DoWhileRagdolling()
@@ -909,13 +854,13 @@ void ULocomotionComponent::RagdollMovementInput()
 	switch (LocomotionEssencialVariables.LSGait)
 	{
 		case ELSGait::Walking:
-			Speed = WALK_SPEED;
+			Speed = WalkSpeeds.GetMax();
 			break;
 		case ELSGait::Running:
-			Speed = RUN_SPEED;
+			Speed = RunSpeeds.GetMax();
 			break;
 		case ELSGait::Sprinting:
-			Speed = SPRINT_SPEED;
+			Speed = SprintSpeeds.GetMax();
 			break;
 	}
 	const FVector Torque = Position * Speed;

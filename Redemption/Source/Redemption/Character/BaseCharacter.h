@@ -815,10 +815,10 @@ protected:
 	virtual void OnSyncLoadCompleteHandler();
 
 	template<typename T>
-	T* OnAsyncLoadDataAsset(const FGameplayTag Tag) const;
+	T* OnAsyncLoadDataAsset(const FGameplayTag Tag);
 
 	template<typename T>
-	T* OnSyncLoadDataAsset(const FGameplayTag Tag) const;
+	T* OnSyncLoadDataAsset(const FGameplayTag Tag);
 
 #pragma endregion
 

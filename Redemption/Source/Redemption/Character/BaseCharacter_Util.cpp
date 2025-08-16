@@ -170,8 +170,16 @@ void ABaseCharacter::HairStrandsLODSetUp()
 	{
 		// Get eyelashes material on higher LODs
 		UMaterialInstanceDynamic* MID_Ten = Cast<UMaterialInstanceDynamic>(Face->GetMaterial(10));
+		if (!IsValid(MID_Ten))
+		{
+			MID_Ten = Face->CreateDynamicMaterialInstance(10);
+		}
 		// Get eyelashes material on lower LODs
 		UMaterialInstanceDynamic* MID_Six = Cast<UMaterialInstanceDynamic>(Face->GetMaterial(6));
+		if (!IsValid(MID_Six))
+		{
+			MID_Six = Face->CreateDynamicMaterialInstance(6);
+		}
 
 		if (MID_Ten && MID_Six)
 		{

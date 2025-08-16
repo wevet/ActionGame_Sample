@@ -74,14 +74,20 @@ Plugins/HoudiniNiagara/*
 DerivedDataCache/*
 
 
+Content/Assets/Environment_Set/*
+Content/Assets/Deko_MatrixDemo/*
+Content/Assets/Safe_House/*
+
 Content/MetaHumans/*
 Content/CitySampleCrowd/*
 Content/CitySampleVehicles/*
-Content/Ignore_Assets/*
-Content/Assets/Environment_Set/*
+
 Content/Characters/UEFN_Mannequin/*
 Content/Characters/MetaHuman/MM/*
 
+Content/PCC_Icons/*
+Content/ProceduralBuildingGenerator/*
+Content/ProceduralCityCreator/*
 
 .vsconfig
 

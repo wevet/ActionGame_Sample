@@ -303,15 +303,22 @@ void ABaseCharacter::BeginPlay()
 	AnimInstance = Cast<UWvAnimInstance>(GetMesh()->GetAnimInstance());
 	FaceAnimInstance = Cast<UWvFaceAnimInstance>(Face->GetAnimInstance());
 
-	TArray<UActorComponent*> Components;
-	Owner->GetComponents(UActorComponent::StaticClass(), Components, true);
-	for (UActorComponent* Component : Components)
-	{
-		if (IsValid(Component))
-		{
-			Component->AddTickPrerequisiteActor(this);
-		}
-	}
+	// AddTickPrerequisiteActor is fixed
+	USkeletalMeshComponent* SkelMesh = GetMesh();
+	SkelMesh->AddTickPrerequisiteActor(this);
+	Face->AddTickPrerequisiteActor(this);
+
+	CombatComponent->AddTickPrerequisiteActor(this);
+	PawnNoiseEmitterComponent->AddTickPrerequisiteActor(this);
+	ItemInventoryComponent->AddTickPrerequisiteActor(this);
+	ClimbingComponent->AddTickPrerequisiteActor(this);
+	PredictionFootIKComponent->AddTickPrerequisiteActor(this);
+	HeldObjectRoot->AddTickPrerequisiteActor(this);
+	WeaknessComponent->AddTickPrerequisiteActor(this);
+	StatusComponent->AddTickPrerequisiteActor(this);
+	MotionWarpingComponent->AddTickPrerequisiteActor(this);
+	CharacterTrajectoryComponent->AddTickPrerequisiteActor(this);
+
 
 	if (!IsValid(Other1->GetSkeletalMeshAsset()))
 	{
@@ -327,7 +334,7 @@ void ABaseCharacter::BeginPlay()
 
 	LocomotionComponent->OnRotationModeChangeDelegate.AddUniqueDynamic(this, &ThisClass::OnRoationChange_Callback);
 	LocomotionComponent->OnGaitChangeDelegate.AddUniqueDynamic(this, &ThisClass::OnGaitChange_Callback);
-
+	LocomotionComponent->AddTickPrerequisiteActor(this);
 
 	if (AWvAIController* AIC = Cast<AWvAIController>(GetController()))
 	{
@@ -364,6 +371,13 @@ void ABaseCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	WvAbilitySystemComponent->AbilityFailedCallbacks.Remove(AbilityFailedDelegateHandle);
 
 	ResetFinisherAnimationData();
+
+	if (AsyncLoadStreamer.IsValid())
+	{
+		AsyncLoadStreamer->CancelHandle();
+		AsyncLoadStreamer.Reset();
+	}
+
 
 	CloseCombatDA = nullptr;
 	FinisherSenderDA = nullptr;
@@ -1245,7 +1259,7 @@ void ABaseCharacter::Jump()
 					break;
 					case CUSTOM_MOVE_Ladder:
 					{
-						ULadderComponent* LadderComponent = Cast<ULadderComponent>(GetComponentByClass(ULadderComponent::StaticClass()));
+						ULadderComponent* LadderComponent = FindComponentByClass<ULadderComponent>();
 						if (LadderComponent)
 						{
 							LadderComponent->SetJumpInputPressed(true);
@@ -1285,7 +1299,7 @@ void ABaseCharacter::StopJumping()
 		CMC->SetTraversalPressed(false);
 	}
 
-	ULadderComponent* LadderComponent = Cast<ULadderComponent>(GetComponentByClass(ULadderComponent::StaticClass()));
+	ULadderComponent* LadderComponent = FindComponentByClass<ULadderComponent>();
 	if (LadderComponent)
 	{
 		LadderComponent->SetJumpInputPressed(false);
@@ -1482,7 +1496,7 @@ void ABaseCharacter::AbortLaddering()
 
 	}
 
-	ULadderComponent* LadderComponent = Cast<ULadderComponent>(GetComponentByClass(ULadderComponent::StaticClass()));
+	ULadderComponent* LadderComponent = FindComponentByClass<ULadderComponent>();
 	if (LadderComponent && LadderComponent->IsLadderState())
 	{
 		LadderComponent->ExitLadderApply();
@@ -2283,10 +2297,12 @@ void ABaseCharacter::RequestAsyncLoad()
 		TempPaths.Add(Pair.Value.ToSoftObjectPath());
 	}
 
+
 	AsyncLoadStreamer = StreamableManager.RequestAsyncLoad(TempPaths, [this]
 	{
 		this->OnAsyncLoadCompleteHandler();
-	});
+
+	}, FStreamableManager::AsyncLoadHighPriority);
 
 	RequestComponentsAsyncLoad();
 }
@@ -2325,6 +2341,12 @@ void ABaseCharacter::OnAsyncLoadCompleteHandler()
 	// player only load
 	CharacterVFXDA = OnAsyncLoadDataAsset<UCharacterVFXDataAsset>(TAG_Game_Asset_CharacterVFX);
 
+
+	if (AsyncLoadStreamer.IsValid() && AsyncLoadStreamer->IsActive())
+	{
+		AsyncLoadStreamer->CancelHandle();
+	}
+
 	AsyncLoadStreamer.Reset();
 	AsyncLoadCompleteDelegate.Broadcast();
 }
@@ -2335,52 +2357,46 @@ void ABaseCharacter::OnSyncLoadCompleteHandler()
 }
 
 template<typename T>
-T* ABaseCharacter::OnAsyncLoadDataAsset(const FGameplayTag Tag) const
+T* ABaseCharacter::OnAsyncLoadDataAsset(const FGameplayTag Tag)
 {
-	T* DataAsset = nullptr;
-	if (GameDataAssets.Contains(Tag))
+	if (auto SoftPtr = GameDataAssets.Find(Tag))
 	{
-		bool bIsResult = false;
-		do
+		if (!SoftPtr->IsValid())
 		{
-			auto Inst = GameDataAssets[Tag].LoadSynchronous();
-			DataAsset = Cast<T>(Inst);
-			if (DataAsset)
-			{
-				bIsResult = (IsValid(DataAsset));
-			}
-			else
-			{
-				break;
-			}
-
-		} while (!bIsResult);
-
-		if (bIsResult)
-		{
-			UE_LOG(LogTemp, Warning, TEXT("%s Asset Load Complete %s => [%s]"), *GetNameSafe(this), *GetNameSafe(DataAsset), *FString(__FUNCTION__));
-		}
-		else
-		{
-			UE_LOG(LogTemp, Error, TEXT("%s Asset Load Fail %s => [%s]"), *GetNameSafe(this), *GetNameSafe(DataAsset), *FString(__FUNCTION__));
+			UE_LOG(LogTemp, Warning, TEXT("DataAsset for tag %s not yet loaded."), *Tag.ToString());
+			return nullptr;
 		}
 
+		UObject* Obj = (*SoftPtr).Get();
+		if (!IsValid(Obj))
+		{
+			UE_LOG(LogTemp, Error, TEXT("Loaded asset is invalid for tag %s."), *Tag.ToString());
+			return nullptr;
+		}
+
+		T* DataAsset = Cast<T>(Obj);
+		if (!DataAsset)
+		{
+			UE_LOG(LogTemp, Error, TEXT("Failed to cast DataAsset for tag %s to desired type."), *Tag.ToString());
+		}
+		return DataAsset;
 	}
-	return DataAsset;
+	return nullptr;
+
 }
 
 template<typename T>
-T* ABaseCharacter::OnSyncLoadDataAsset(const FGameplayTag Tag) const
+T* ABaseCharacter::OnSyncLoadDataAsset(const FGameplayTag Tag) 
 {
 	T* DataAsset = nullptr;
 
-	if (GameDataAssets.Contains(Tag))
+	if (auto Ptr = GameDataAssets.Find(Tag))
 	{
-		auto Obj = UKismetSystemLibrary::LoadAsset_Blocking(GameDataAssets[Tag]);
+		auto Obj = UKismetSystemLibrary::LoadAsset_Blocking(Ptr);
 		DataAsset = Cast<T>(Obj);
 	}
 
-	if (DataAsset)
+	if (IsValid(DataAsset))
 	{
 		UE_LOG(LogTemp, Warning, TEXT("%s Asset Load Complete %s => [%s]"), *GetNameSafe(this), *GetNameSafe(DataAsset), *FString(__FUNCTION__));
 	}
@@ -2769,7 +2785,6 @@ void ABaseCharacter::PreTickLocomotion()
 	CMC->MaxAcceleration = LocomotionComponent->ChooseMaxAcceleration();
 	CMC->BrakingDecelerationWalking = LocomotionComponent->ChooseBrakingDeceleration();
 	CMC->GroundFriction = LocomotionComponent->ChooseGroundFriction();
-
 	CMC->MaxWalkSpeed = LocomotionComponent->ChooseMaxWalkSpeed();
 	CMC->MaxWalkSpeedCrouched = LocomotionComponent->ChooseMaxWalkSpeedCrouched();
 
