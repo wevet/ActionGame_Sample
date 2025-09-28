@@ -82,20 +82,20 @@ void APlayerCharacter::BeginPlay()
 	P_Controller = Cast<AWvPlayerController>(Controller);
 
 	//Add Input Mapping Context
-	if (P_Controller.IsValid())
+	if (IsValid(P_Controller))
 	{
-		P_Controller->OnInputEventGameplayTagTrigger_Game.AddDynamic(this, &ThisClass::GameplayTagTrigger_Callback);
-		P_Controller->OnPluralInputEventTrigger.AddDynamic(this, &ThisClass::OnPluralInputEventTrigger_Callback);
-		P_Controller->OnHoldingInputEventTrigger.AddDynamic(this, &ThisClass::OnHoldingInputEventTrigger_Callback);
-		P_Controller->OnDoubleClickInputEventTrigger.AddDynamic(this, &ThisClass::OnDoubleClickInputEventTrigger_Callback);
+		P_Controller->OnInputEventGameplayTagTrigger_Game.AddUniqueDynamic(this, &ThisClass::GameplayTagTrigger_Callback);
+		P_Controller->OnPluralInputEventTrigger.AddUniqueDynamic(this, &ThisClass::OnPluralInputEventTrigger_Callback);
+		P_Controller->OnHoldingInputEventTrigger.AddUniqueDynamic(this, &ThisClass::OnHoldingInputEventTrigger_Callback);
+		P_Controller->OnDoubleClickInputEventTrigger.AddUniqueDynamic(this, &ThisClass::OnDoubleClickInputEventTrigger_Callback);
 	}
 
-	WvCameraFollowComponent->OnTargetLockedOn.AddDynamic(this, &ThisClass::OnTargetLockedOn_Callback);
-	WvCameraFollowComponent->OnTargetLockedOff.AddDynamic(this, &ThisClass::OnTargetLockedOff_Callback);
-	LocomotionComponent->OnOverlayChangeDelegate.AddDynamic(this, &ThisClass::OverlayStateChange_Callback);
+	WvCameraFollowComponent->OnTargetLockedOn.AddUniqueDynamic(this, &ThisClass::OnTargetLockedOn_Callback);
+	WvCameraFollowComponent->OnTargetLockedOff.AddUniqueDynamic(this, &ThisClass::OnTargetLockedOff_Callback);
+	LocomotionComponent->OnOverlayChangeDelegate.AddUniqueDynamic(this, &ThisClass::OverlayStateChange_Callback);
 
-	QTEActionComponent->QTEBeginDelegate.AddDynamic(this, &ThisClass::OnQTEBegin_Callback);
-	QTEActionComponent->QTEEndDelegate.AddDynamic(this, &ThisClass::OnQTEEnd_Callback);
+	QTEActionComponent->QTEBeginDelegate.AddUniqueDynamic(this, &ThisClass::OnQTEBegin_Callback);
+	QTEActionComponent->QTEEndDelegate.AddUniqueDynamic(this, &ThisClass::OnQTEEnd_Callback);
 
 
 }
@@ -104,15 +104,13 @@ void APlayerCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	Clear_BulletTimer();
 
-	if (P_Controller.IsValid())
+	if (IsValid(P_Controller))
 	{
 		P_Controller->OnInputEventGameplayTagTrigger_Game.RemoveDynamic(this, &ThisClass::GameplayTagTrigger_Callback);
 		P_Controller->OnPluralInputEventTrigger.RemoveDynamic(this, &ThisClass::OnPluralInputEventTrigger_Callback);
 		P_Controller->OnHoldingInputEventTrigger.RemoveDynamic(this, &ThisClass::OnHoldingInputEventTrigger_Callback);
 		P_Controller->OnDoubleClickInputEventTrigger.RemoveDynamic(this, &ThisClass::OnDoubleClickInputEventTrigger_Callback);
 	}
-
-	P_Controller.Reset();
 
 	WvCameraFollowComponent->OnTargetLockedOn.RemoveDynamic(this, &ThisClass::OnTargetLockedOn_Callback);
 	WvCameraFollowComponent->OnTargetLockedOff.RemoveDynamic(this, &ThisClass::OnTargetLockedOff_Callback);
@@ -195,7 +193,7 @@ void APlayerCharacter::OnReceiveKillTarget(AActor* Actor, const float Damage)
 
 void APlayerCharacter::Freeze()
 {
-	if (P_Controller.IsValid())
+	if (IsValid(P_Controller))
 	{
 		P_Controller->Freeze();
 	}
@@ -205,7 +203,7 @@ void APlayerCharacter::Freeze()
 
 void APlayerCharacter::UnFreeze()
 {
-	if (P_Controller.IsValid())
+	if (IsValid(P_Controller))
 	{
 		P_Controller->UnFreeze();
 	}
@@ -278,10 +276,17 @@ void APlayerCharacter::MouseWheelAxis(const FInputActionValue& Value)
 		return;
 	}
 
+
 	if (IsTargetLock())
 	{
-		const FVector2D WheelAxis = Value.Get<FVector2D>();
-		WvCameraFollowComponent->TargetActorWithAxisInput(FMath::Abs(WheelAxis.X));
+		if (const UWorld* World = GetWorld())
+		{
+			const FVector2D WheelAxis = Value.Get<FVector2D>();
+			const float DT = World->GetDeltaSeconds();
+			WvCameraFollowComponent->TargetActorWithAxisInput(FMath::Abs(WheelAxis.X), DT);
+
+		}
+
 	}
 
 	//UE_LOG(LogTemp, Log, TEXT("WheelAxis => %s"), *WheelAxis.ToString());
@@ -378,29 +383,21 @@ void APlayerCharacter::OnDoubleClickInputEventTrigger_Callback(const FGameplayTa
 #pragma region HandleEvent
 void APlayerCharacter::HandleJump(const bool bIsPress)
 {
-	const auto CMC = GetWvCharacterMovementComponent();
+	//const auto CMC = GetWvCharacterMovementComponent();
 
 	if (bIsPress)
 	{
-		if (OnJumpChangeDelegate.IsBound())
-		{
-			OnJumpChangeDelegate.Broadcast(bIsPress);
-		}
-
-		if (!CMC->IsTraversaling())
-		{
-			Super::Jump();
-		}
+		Super::Jump();
 	}
 	else
 	{
-		if (!CMC->IsTraversaling())
-		{
-			Super::StopJumping();
-		}
-
+		Super::StopJumping();
 	}
 
+	if (OnJumpChangeDelegate.IsBound())
+	{
+		OnJumpChangeDelegate.Broadcast(bIsPress);
+	}
 }
 
 void APlayerCharacter::HandleSprinting(const bool bIsPress)

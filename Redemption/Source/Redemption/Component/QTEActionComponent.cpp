@@ -45,6 +45,12 @@ void UQTEActionComponent::BeginPlay()
 
 void UQTEActionComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
+	if (ComponentStreamableHandle.IsValid())
+	{
+		ComponentStreamableHandle->CancelHandle();
+		ComponentStreamableHandle.Reset();
+	}
+
 	QTEWidgetComponent.Reset();
 
 	Super::EndPlay(EndPlayReason);
@@ -227,7 +233,7 @@ void UQTEActionComponent::RequestAsyncLoad()
 		FStreamableManager& StreamableManager = UWvGameInstance::GetStreamableManager();
 		const FSoftObjectPath ObjectPath = QTEWidgetClass.ToSoftObjectPath();
 
-		QTEStreamableHandle = StreamableManager.RequestAsyncLoad(ObjectPath, [this] 
+		ComponentStreamableHandle = StreamableManager.RequestAsyncLoad(ObjectPath, [this] 
 		{
 			this->OnLoadWidgetComplete();
 		});
@@ -241,7 +247,7 @@ void UQTEActionComponent::RequestAsyncLoad()
 
 void UQTEActionComponent::OnLoadWidgetComplete()
 {
-	UObject* LoadedObj = QTEStreamableHandle.Get()->GetLoadedAsset();
+	UObject* LoadedObj = ComponentStreamableHandle.Get()->GetLoadedAsset();
 	if (LoadedObj)
 	{
 		UClass* WidgetClass = Cast<UClass>(LoadedObj);
@@ -260,7 +266,7 @@ void UQTEActionComponent::OnLoadWidgetComplete()
 
 		}
 	}
-	QTEStreamableHandle.Reset();
+	ComponentStreamableHandle.Reset();
 }
 
 

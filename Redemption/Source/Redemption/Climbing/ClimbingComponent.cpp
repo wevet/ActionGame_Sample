@@ -99,6 +99,12 @@ void UClimbingComponent::BeginPlay()
 
 void UClimbingComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
+	if (ComponentStreamableHandle.IsValid())
+	{
+		ComponentStreamableHandle->CancelHandle();
+		ComponentStreamableHandle.Reset();
+	}
+
 	if (GetOwner())
 	{
 		FTimerManager& TimerManager = GetOwner()->GetWorldTimerManager();
@@ -5390,14 +5396,14 @@ void UClimbingComponent::RequestAsyncLoad()
 	{
 		FStreamableManager& StreamableManager = UWvGameInstance::GetStreamableManager();
 		const FSoftObjectPath ObjectPath = ClimbingCurveDA.ToSoftObjectPath();
-		ClimbingStreamableHandle = StreamableManager.RequestAsyncLoad(ObjectPath, FStreamableDelegate::CreateUObject(this, &ThisClass::OnDataAssetLoadComplete));
+		ComponentStreamableHandle = StreamableManager.RequestAsyncLoad(ObjectPath, FStreamableDelegate::CreateUObject(this, &ThisClass::OnDataAssetLoadComplete));
 	}
 }
 
 void UClimbingComponent::OnDataAssetLoadComplete()
 {
 	OnLoadDA();
-	ClimbingStreamableHandle.Reset();
+	ComponentStreamableHandle.Reset();
 }
 
 void UClimbingComponent::OnLoadDA()

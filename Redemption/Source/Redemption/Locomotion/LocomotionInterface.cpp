@@ -7,10 +7,6 @@ ULocomotionInterface::ULocomotionInterface(const class FObjectInitializer& Objec
 {
 }
 
-void ILocomotionInterface::SetSwimmingSpeed(const float InSwimmingSpeed)
-{
-}
-
 float ILocomotionInterface::GetWalkingSpeed() const
 {
 	return 0.f;
@@ -31,10 +27,6 @@ float ILocomotionInterface::GetCrouchingSpeed() const
 	return 0.f;
 }
 
-float ILocomotionInterface::GetSwimmingSpeed() const
-{
-	return 0.f;
-}
 
 void ILocomotionInterface::SetLSAiming(const bool NewLSAiming)
 {

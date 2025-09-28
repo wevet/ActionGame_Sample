@@ -76,6 +76,29 @@ public:
 	UCameraTargetDataAsset() {}
 };
 
+USTRUCT()
+struct FCameraLerpInfo
+{
+	GENERATED_BODY()
+
+public:
+	TObjectPtr<class UCurveFloat> LerpCurve{ nullptr };
+	FCameraSettings CurCameraSettings;
+	bool IsBattle{ false };
+};
+
+USTRUCT()
+struct FTargetInfo
+{
+	GENERATED_BODY()
+public:
+
+	bool bIsSwitching{ false };
+	bool bIsDesireToSwitch{ false };
+	float TargetRotatingStack{ 0.f };
+};
+
+
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class REDEMPTION_API UWvCameraFollowComponent : public UActorComponent, public IAsyncComponentInterface
 {
@@ -98,83 +121,85 @@ protected:
 	UPROPERTY(BlueprintReadOnly)
 	TObjectPtr<class UCameraComponent> CameraComponent;
 
+
 #pragma region TargetParameter
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Target System")
 	TSoftObjectPtr<UCameraTargetDataAsset> CameraTargetDA;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Target System")
-	float MinimumDistanceToEnable = 1200.0f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Target System")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Target System")
 	TEnumAsByte<ECollisionChannel> TargetableCollisionChannel;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Target System")
-	bool bShouldControlRotation = false;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Target System")
+	float MinimumDistanceToEnable = 1200.0f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Target System")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Target System")
+	float MaintainDistanceToKeep = 1500.f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Target System")
 	bool bIgnoreLookInput = true;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Target System")
-	bool bEnableStickyTarget = false;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Target System")
-	bool bEnableStickyTargetComponent = false;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Target System")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Target System")
 	bool bDrawDebug = true;
 
 	// The amount of time to break line of sight when actor gets behind an Object.
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Target System")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Target System")
 	float BreakLineOfSightDelay = 2.0f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Target System")
+	float YawDeltaThreshold{75.0f};
 
 	// Setting this to true will tell the Target System to adjust the Pitch Offset (the Y axis) when locked on,
 	// depending on the distance to the target actor.
 	// It will ensure that the Camera will be moved up vertically the closer this Actor gets to its target.
-	// Formula:
-	//   (DistanceToTarget * PitchDistanceCoefficient + PitchDistanceOffset) * -1.0f
-	// Then Clamped by PitchMin / PitchMax
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Target System|Pitch Offset")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Target System|Pitch Offset")
 	bool bAdjustPitchBasedOnDistanceToTarget = true;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Target System|Pitch Offset")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Target System|Pitch Offset")
 	float PitchDistanceCoefficient = -0.2f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Target System|Pitch Offset")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Target System|Pitch Offset")
 	float PitchDistanceOffset = 60.0f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Target System|Pitch Offset")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Target System|Pitch Offset")
 	float PitchMin = -50.0f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Target System|Pitch Offset")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Target System|Pitch Offset")
 	float PitchMax = -20.0f;
-#pragma endregion
 
-#pragma region SwitchTarget
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Target System|Switch Actor")
+	bool bEnableStickyTarget = false;
+
 	// Lower this value is, easier it will be to switch new target on right or left. Must be < 1.0f if controlling with gamepad stick
 	// When using Sticky Feeling feature, it has no effect (see StickyRotationThreshold)
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Target System|Sticky Feeling on Target Switch")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Target System|Switch Actor")
 	float StartRotatingThreshold = 0.75f;
 
 	// This value gets multiplied to the AxisValue to check against StickyRotationThreshold.
 	// Only used when Sticky Target is enabled.
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Target System|Sticky Feeling on Target Switch", meta = (EditCondition = "bEnableStickyTarget"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Target System|Switch Actor", meta = (EditCondition = "bEnableStickyTarget"))
 	float AxisMultiplier = 1.0f;
 
 	// Lower this value is, easier it will be to switch new target on right or left.
 	// This is similar to StartRotatingThreshold, but you should set this to a much higher value.
 	// Only used when Sticky Target is enabled.
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Target System|Sticky Feeling on Target Switch", meta = (EditCondition = "bEnableStickyTarget"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Target System|Switch Actor", meta = (EditCondition = "bEnableStickyTarget"))
 	float StickyRotationThreshold = 30.0f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Target System|Sticky Feeling on Component Switch")
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Target System|Switch Component")
+	bool bEnableStickyTargetComponent = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Target System|Switch Component")
 	float StartRotatingComponentThreshold = 0.5f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Target System|Sticky Feeling on Component Switch", meta = (EditCondition = "bEnableStickyTargetComponent"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Target System|Switch Component", meta = (EditCondition = "bEnableStickyTargetComponent"))
 	float AxisComponentMultiplier = 1.0f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Target System|Sticky Feeling on Component Switch", meta = (EditCondition = "bEnableStickyTargetComponent"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Target System|Switch Component", meta = (EditCondition = "bEnableStickyTargetComponent"))
 	float StickyRotationComponentThreshold = 20.0f;
 #pragma endregion
+
 
 	void OnCameraChange();
 
@@ -187,19 +212,19 @@ public:
 	/*
 	* Function to call to manually untarget.
 	*/
-	void TargetLockOff();
+	void TargetLockOff(bool bIsForce = true);
 
 	/**
 	* Function to call to switch with X-Axis mouse / controller stick movement.
 	* @param AxisValue Pass in the float value of your Input Axis
 	*/
-	void TargetActorWithAxisInput(const float AxisValue);
+	void TargetActorWithAxisInput(const float AxisValue, const float DeltaSeconds);
 
 	/**
 	* Function to call to switch with Y-Axis mouse / controller stick movement.
 	* @param AxisValue Pass in the float value of your Input Axis
 	*/
-	void TargetComponentWithAxisInput(const float AxisValue);
+	void TargetComponentWithAxisInput(const float AxisValue, const float DeltaSeconds);
 
 	/*
 	* Returns the reference to currently targeted Actor if any
@@ -231,25 +256,20 @@ public:
 
 private:
 	UPROPERTY()
-	TWeakObjectPtr<class APlayerCharacter> Character;
+	TObjectPtr<class APlayerCharacter> Character;
 
 	UPROPERTY()
-	TWeakObjectPtr<class ULocomotionComponent> LocomotionComponent;
+	TObjectPtr<class ULocomotionComponent> LocomotionComponent;
 
 	UPROPERTY()
-	TWeakObjectPtr<class APlayerController> PlayerController;
+	TObjectPtr<class APlayerController> PlayerController;
 
-	UPROPERTY()
+	TArray<TWeakObjectPtr<class UHitTargetComponent>> HitTargetComponents;
+
 	TWeakObjectPtr<class AActor> LockedOnTargetActor;
-
-	UPROPERTY()
 	TWeakObjectPtr<class UWidgetComponent> TargetLockedOnWidgetComponent;
-
-	UPROPERTY()
-	TArray<UHitTargetComponent*> HitTargetComponents;
-
-	UPROPERTY()
 	TWeakObjectPtr<class UHitTargetComponent> SelectHitTargetComponent;
+
 
 	FTimerHandle LineOfSightBreakTimerHandle;
 	FTimerHandle SwitchingTargetTimerHandle;
@@ -257,34 +277,28 @@ private:
 	FTimerHandle CameraLerpTimerHandle;
 
 	FGraphEventRef AsyncWork;
-	float CameraLerpTimerTotalTime;
-	float CameraLerpTimerCurTime;
-	float RotationSensitiveValue;
+	float CameraLerpTimerTotalTime{0.f};
+	float CameraLerpTimerCurTime{ 0.f };
+	float RotationSensitiveValue{ 0.f };
 
-	bool bIsBreakingLineOfSight = false;
-	bool bIsSwitchingTarget = false;
-	bool bIsSwitchingTargetComponent = false;
 	bool bTargetLocked = false;
-	float ClosestTargetDistance = 0.0f;
-
-	bool bDesireToSwitch = false;
-	bool bDesireToSwitchComponent = false;
-	float TargetActorRotatingStack = 0.0f;
-	float TargetComponentRotatingStack = 0.0f;
+	bool bIsBreakingLineOfSight = false;
 	int32 FocusIndex = 0;
 	int32 FocusLastIndex = 0;
 
-	struct FCameraLerpInfo
-	{
-		class UCurveFloat* LerpCurve;
-		FCameraSettings CurCameraSettings;
-		bool IsBattle;
-	} CameraLerpTimerLerpInfo;
+	UPROPERTY()
+	FTargetInfo ActorInfo;
+
+	UPROPERTY()
+	FTargetInfo ComponentInfo;
+
+	UPROPERTY()
+	FCameraLerpInfo CameraLerpInfo;
 
 	UPROPERTY()
 	TObjectPtr<UCameraTargetDataAsset> CameraTargetDAInstance;
 
-	TSharedPtr<FStreamableHandle>  CameraTargetStreamableHandle;
+	TSharedPtr<FStreamableHandle>  ComponentStreamableHandle;
 
 	
 
@@ -293,7 +307,7 @@ private:
 
 	UFUNCTION()
 	void LerpUpdateCameraTimerCallback();
-	const bool LerpCameraSettings(float LerpAlpha);
+	const bool LerpCameraSettings(const float LerpAlpha);
 	const bool ChooseCameraSettings(FCameraSettings& CameraSettings);
 
 	UFUNCTION()
@@ -306,8 +320,8 @@ private:
 	void DoTick(const float DeltaTime);
 	TArray<AActor*> GetAllTargetableOfClass() const;
 	TArray<AActor*> FindTargetsInRange(TArray<AActor*> ActorsToLook, float RangeMin, float RangeMax) const;
-	AActor* FindNearestTarget(TArray<AActor*> Actors) const;
-	AActor* FindNearestDistanceTarget(TArray<AActor*> Actors) const;
+	AActor* FindNearestTarget(const TArray<AActor*>& Actors) const;
+	AActor* FindNearestDistanceTarget(const TArray<AActor*>& Actors) const;
 	bool LineTrace(FHitResult& OutHitResult, const AActor* OtherActor, const TArray<AActor*>& ActorsToIgnore) const;
 	bool ShouldBreakLineOfSight() const;
 	float GetDistanceFromCharacter(const AActor* OtherActor) const;
@@ -331,19 +345,20 @@ private:
 	void TargetLockOn(AActor* TargetToLockOn, UHitTargetComponent* TargetComponent);
 	void ResetIsSwitchingTarget();
 	void ResetIsSwitchingTargetComponent();
-	const bool ShouldSwitchTargetActor(float AxisValue);
-	const bool ShouldSwitchTargetComponent(float AxisValue);
+	const bool ShouldSwitchTargetActor(const float AxisValue, const float DeltaSeconds);
+	const bool ShouldSwitchTargetComponent(const float AxisValue, const float DeltaSeconds);
 	static bool TargetIsTargetable(const AActor* Actor);
 
-	/**
-	*  Sets up cached Owner PlayerController from Owner Pawn.
-	*  For local split screen, Pawn's Controller may not have been setup already when this component begins play.
-	*/
-	void SetupLocalPlayerController();
 
 	void LineOfSightBreakHandler();
 
 	void ModifyHitTargetComponents();
+
+	static float YawDeltaSigned(const FRotator A, const FRotator B);
+
+	AActor* PickByScreenSide(const TArray<AActor*>& Candidates, float AxisValue) const;
+
+	void ReleaseTargetLockOnWidget();
 };
 
 
@@ -378,6 +393,7 @@ struct TStructOpsTypeTraits<FCameraTargetPostPhysicsTickFunction> : public TStru
 		WithCopy = false
 	};
 };
+
 
 class FWvCameraTargetTask
 {

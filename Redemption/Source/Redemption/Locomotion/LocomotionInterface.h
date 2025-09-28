@@ -60,13 +60,10 @@ public:
 	virtual bool HasMovementInput() const { return false; };
 	virtual bool HasMoving() const { return false; };
 
-	virtual void SetSwimmingSpeed(const float InSwimmingSpeed);
-
 	virtual float GetWalkingSpeed() const;
 	virtual float GetRunningSpeed() const;
 	virtual float GetSprintingSpeed() const;
 	virtual float GetCrouchingSpeed() const;
-	virtual float GetSwimmingSpeed() const;
 
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "LocomotionInterface")
 	const FTransform GetPivotOverlayTansform();

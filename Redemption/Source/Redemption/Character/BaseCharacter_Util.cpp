@@ -571,8 +571,8 @@ void ABaseCharacter::OnLoadAndSetMeshes_Callback()
 	// 1 Body
 	// 2 Face
 	// 3 Top
-	// 4 BottomMesh
-	// 5 FeetMesh
+	// 4 Bottom
+	// 5 Feet
 
 	if (!IsInGameThread())
 	{

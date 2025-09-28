@@ -104,7 +104,7 @@ private:
 
 	TMap<EAttackWeaponState, TArray<AWeaponBaseActor*>> WeaponActorMap;
 
-	TSharedPtr<FStreamableHandle>  InventoryStreamableHandle;
+	TSharedPtr<FStreamableHandle>  ComponentStreamableHandle;
 
 	TArray<AWeaponBaseActor*> FindOverlayWeaponArray(const ELSOverlayState InLSOverlayState) const;
 

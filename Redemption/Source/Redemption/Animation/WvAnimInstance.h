@@ -183,7 +183,14 @@ public:
 
 protected:
 	UPROPERTY()
-	TWeakObjectPtr<class ABaseCharacter> Character;
+	TObjectPtr<class ABaseCharacter> Character;
+
+	UPROPERTY()
+	TObjectPtr<class UCapsuleComponent> CapsuleComponent;
+
+	UPROPERTY()
+	TObjectPtr<class ULocomotionComponent> LocomotionComponent;
+
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<class UWvCharacterMovementComponent> CharacterMovementComponent;
@@ -383,11 +390,6 @@ protected:
 	virtual void TagChangeEvent(const FGameplayTag CallBackTag, int32 NewCount);
 
 private:
-	UPROPERTY()
-	TWeakObjectPtr<class UCapsuleComponent> CapsuleComponent;
-
-	UPROPERTY()
-	TWeakObjectPtr<class ULocomotionComponent> LocomotionComponent;
 
 	void DoWhileGrounded();
 	void CalculateGaitValue();

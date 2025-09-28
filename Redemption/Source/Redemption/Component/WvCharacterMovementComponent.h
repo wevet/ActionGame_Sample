@@ -14,14 +14,6 @@
 #include "WvCharacterMovementComponent.generated.h"
 
 
-namespace CharacterMovementDebug
-{
-#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
-
-	extern TAutoConsoleVariable<int32> CVarDebugCharacterTraversal;
-
-#endif
-}
 
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FMovementActionDelegate);
@@ -70,6 +62,7 @@ public:
 	void SetReplicatedAcceleration(const FVector& InAcceleration);
 
 
+
 public:
 	virtual void RequestAsyncLoad() override;
 
@@ -87,6 +80,8 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Character|Components|CharacterMovement")
 	bool IsTraversaling() const;
+
+	bool IsCustomMovementMode() const;
 
 	UPROPERTY(BlueprintAssignable)
 	FHandleImpact OnHandleImpact;
@@ -119,6 +114,7 @@ public:
 
 
 #pragma region Traversal
+	void PerformTraversalAction();
 	void SetTraversalDataCheckInput(FTraversalDataCheckInputs& OutInput);
 	const bool TryTraversalAction();
 	void OnTraversalStart();
@@ -172,21 +168,21 @@ protected:
 
 #pragma region Traversal
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Character Movement: Traversal")
-	FVector2D TraversalTraceRange{80.0f, 250.0f};
+	FVector2D TraversalTraceRange{80.0f, 350.0f};
 
 	// ÉJÉvÉZÉãîºåaÇ…ä|ÇØÇÈägí£
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Character Movement: Traversal")
-	float ForwardTraceRadiusScale = 1.2f;
+	float ForwardTraceRadiusScale{ 1.5f };
 
 	// ãñóeä—í ÅicmÅj
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Character Movement: Traversal")
-	float AllowedPenetration = 12.f;
+	float AllowedPenetration{ 20.f };
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Character Movement: Traversal")
 	float MinLedgeWidth{ 70.0f };
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Character Movement: Traversal")
-	float MinFrontLedgeDepth{ 80.0f };
+	float MinFrontLedgeDepth{ 37.522631f };
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Character Movement: Traversal")
 	TObjectPtr<class UChooserTable> TraversalChooserTable{ nullptr };
@@ -196,6 +192,15 @@ protected:
 
 	bool bIsTraversalTraceComplex{ true };
 	bool bIsTraversalPressed{ false };
+	bool bTraversalPlaneLock = false;
+
+	FVector TraversalPlaneOrigin = FVector::ZeroVector;
+	FVector TraversalPlaneNormal = FVector::ForwardVector;
+
+	float TraversalPlaneUnlockAtTime{ 0.f };
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Character Movement: Traversal")
+	float TraversalPlaneLockDuration = 0.20f;
 #pragma endregion
 
 
@@ -206,7 +211,7 @@ protected:
 	* Input direction and forward direction minimum angle, when the angle between the two is too small,
 	* the movement state can be automatic climbing detection judgment
 	*/
-	float MinInputForwardAngle = 5.0f;
+	float MinInputForwardAngle{ 5.0f };
 
 	FTimeline* MantleTimeline;
 
@@ -303,7 +308,6 @@ private:
 	FMantleAsset GetMantleAsset(const EMantleType InMantleType) const;
 	FVector GetCapsuleBaseLocation(const float ZOffset) const;
 	FVector GetCapsuleLocationFromBase(const FVector BaseLocation, const float ZOffset) const;
-	bool CapsuleHasRoomCheck(const FVector TargetLocation, const float HeightOffset, const float RadiusOffset) const;
 
 	// MantleCheck Details
 	void TraceForwardToFindWall(const FMantleTraceSettings InTraceSetting, FVector& OutInitialTraceImpactPoint, FVector& OutInitialTraceNormal, bool& OutHitResult);
@@ -330,7 +334,7 @@ private:
 	// ~Start AsyncLoadMantle
 	UPROPERTY()
 	TObjectPtr<class UMantleAnimationDataAsset> MantleDAInstance;
-	TSharedPtr<FStreamableHandle> MantleStreamableHandle;
+	TSharedPtr<FStreamableHandle> ComponentStreamableHandle;
 
 	FTraversalDataCheckInputs TraversalDataCheckInput;
 	void OnMantleAssetLoadComplete();
@@ -348,12 +352,13 @@ private:
 	const bool TraceAlongHitPlane(const FHitResult& Hit, const float TraceLength, const FVector TraceDirection, FHitResult& OutHit);
 	void SetTraceHitPoint(FHitResult& OutHit, const FVector NewImpactPoint);
 	void NudgeHitTowardsObjectOrigin(FHitResult& Hit);
-	void Traversal_TraceCorners(const FHitResult& Hit, const FVector TraceDirection, const float TraceLength, FVector& OffsetCenterPoint, bool& bCloseToCorner, float& DistanceToCorner);
+	void TraceCorners(const FHitResult& Hit, const FVector TraceDirection, const float TraceLength, FVector& OffsetCenterPoint, bool& bCloseToCorner, float& DistanceToCorner);
 	void PhysTraversaling(float deltaTime, int32 Iterations);
 
-	void TryAndCalculateTraversal(FHitResult& HitResult, FTraversalActionData& OutTraversalActionData);
+	void TryAndCalculateLedges(FHitResult& HitResult, FTraversalActionData& OutTraversalActionData);
 	float CalcurateLedgeOffsetHeight(const FTraversalActionData& InTraversalActionData) const;
 	void PrintTraversalActionData();
+
 	// ~End Traversal
 
 };

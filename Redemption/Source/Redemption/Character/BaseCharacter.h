@@ -46,6 +46,8 @@ namespace CharacterDebug
 	extern TAutoConsoleVariable<int32> CVarDebugCombatSystem;
 	extern TAutoConsoleVariable<int32> CVarDebugLadderSystem;
 	extern TAutoConsoleVariable<int32> CVarDebugClimbingSystem;
+
+	extern TAutoConsoleVariable<int32> CVarDebugCharacterTraversal;
 #endif
 }
 
@@ -520,6 +522,8 @@ public:
 
 	void PreTickLocomotion();
 
+	UWvAnimInstance* GetWvAnimInstance() const;
+
 
 	UFUNCTION(BlueprintCallable, Category = "Locomotion|Ragdoll")
 	void Test_StartRagdoll();
@@ -528,11 +532,16 @@ public:
 	void Test_StopRagdoll();
 
 	// ~Start Traversal
+	UFUNCTION(BlueprintCallable, Category = "Traversal")
+	void StopTraversalAbility();
+
 	FTraversalActionData GetTraversalActionData() const;
 	void ResetTraversalActionData();
 
-	UFUNCTION(BlueprintCallable, Server, Reliable)
+	UFUNCTION(Server, Reliable)
 	void Traversal_Server(const FTraversalActionData& TraversalActionDataRep);
+
+	void SetTraversalActionData(const FTraversalActionData& Data, bool bExecute = true);
 
 	// ~End Traversal
 
@@ -649,7 +658,7 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "BaseCharacter|Config")
 	FCustomWvAbilitySystemAvatarData AbilitySystemData;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, ReplicatedUsing = OnRep_TraversalActionData, Category = "BaseCharacter|Config")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, ReplicatedUsing = OnRep_TraversalActionData, Category = "BaseCharacter|Config")
 	FTraversalActionData TraversalActionData;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "BaseCharacter|Config")

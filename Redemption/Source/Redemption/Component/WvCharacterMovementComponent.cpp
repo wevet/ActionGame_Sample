@@ -76,14 +76,6 @@ FName UWvCharacterMovementComponent::MantleSyncPoint = FName(TEXT("MantleSyncPoi
 FName UWvCharacterMovementComponent::BackwardInputSyncPoint = FName(TEXT("BackwardInputSyncPoint"));
 
 
-namespace CharacterMovementDebug
-{
-#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
-
-	TAutoConsoleVariable<int32> CVarDebugCharacterTraversal(TEXT("wv.CharacterTraversalSystem.Debug"), 0, TEXT("CharacterTraversalSystem Debug .\n") TEXT("<=0: off\n") TEXT("  1: on\n"), ECVF_Default);
-
-#endif
-}
 
 namespace WvCharacter
 {
@@ -91,7 +83,8 @@ namespace WvCharacter
 	FAutoConsoleVariableRef CVar_GroundTraceDistance(TEXT("wv.GroundTraceDistance"), GroundTraceDistance, TEXT("Distance to trace down when generating ground information."), ECVF_Cheat);
 };
 
-using namespace CharacterMovementDebug;
+
+using namespace CharacterDebug;
 
 const FName NAME_MantleEnd(TEXT("OnMantleEnd"));
 const FName NAME_MantleUpdate(TEXT("OnMantleUpdate"));
@@ -181,6 +174,12 @@ void UWvCharacterMovementComponent::BeginPlay()
 
 void UWvCharacterMovementComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
+	if (ComponentStreamableHandle.IsValid())
+	{
+		ComponentStreamableHandle->CancelHandle();
+		ComponentStreamableHandle.Reset();
+	}
+
 	MantleDAInstance = nullptr;
 
 	if (MantleTimeline) 
@@ -354,7 +353,12 @@ void UWvCharacterMovementComponent::TickComponent(float DeltaTime, enum ELevelTi
 				MantleTimeline->TickTimeline(DeltaTime);
 			}
 
-			if (bIsTraversalPressed && !IsTraversaling())
+			if (IsTraversaling())
+			{
+				return;
+			}
+
+			if (bIsTraversalPressed && IsFalling() || IsFlying())
 			{
 				// if bot and not rendereing disable traversaling..
 				if (BaseCharacter->IsBotCharacter() && !UWvCommonUtils::IsInViewport(BaseCharacter))
@@ -362,7 +366,16 @@ void UWvCharacterMovementComponent::TickComponent(float DeltaTime, enum ELevelTi
 					return;
 				}
 
-				TryTraversalAction();
+				//const float CapsuleHalfHeight = BaseCharacter->GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
+				//const FWvCharacterGroundInfo& GroundInfo = GetGroundInfo();
+				//if (GroundInfo.GroundDistance < MaxStepHeight)
+				//{
+				//	return;
+				//}
+
+				if (TryTraversalAction())
+				{
+				}
 			}
 		}
 	}
@@ -821,6 +834,8 @@ float UWvCharacterMovementComponent::SlideAlongSurface(const FVector& Delta, flo
 	const float Dot = SlideDelta.GetSafeNormal() | Delta.GetSafeNormal();
 	//UE_LOG(LogTemp, Log, TEXT("Dot => %.3f, AllowSlideCosAngle => %.3f"), Dot, AllowSlideCosAngle);
 
+	const bool bWasIsTraversaling = IsTraversaling();
+
 	if (Dot >= AllowSlideCosAngle)
 	{
 		const FQuat Rotation = UpdatedComponent->GetComponentQuat();
@@ -837,8 +852,11 @@ float UWvCharacterMovementComponent::SlideAlongSurface(const FVector& Delta, flo
 				HandleImpact(Hit, FirstHitPercent * Time, SlideDelta);
 			}
 
-			// 複数のサーフェスに当たったときの新しいスライド法線を計算する。
-			TwoWallAdjust(SlideDelta, Hit, OldHitNormal);
+			if (!bWasIsTraversaling)
+			{
+				// 複数のサーフェスに当たったときの新しいスライド法線を計算する。
+				TwoWallAdjust(SlideDelta, Hit, OldHitNormal);
+			}
 
 			// 新しい方向が有意な長さで、最初に試みた動きと逆方向でない場合のみ進む。
 			if (!SlideDelta.IsNearlyZero(1e-3f) && (SlideDelta | Delta) > 0.f)
@@ -1555,73 +1573,6 @@ FVector UWvCharacterMovementComponent::GetCapsuleLocationFromBase(const FVector 
 	return Result;
 }
 
-bool UWvCharacterMovementComponent::CapsuleHasRoomCheck(const FVector TargetLocation, const float HeightOffset, const float RadiusOffset) const
-{
-	check(CharacterOwner->GetCapsuleComponent());
-
-	// Perform a trace to see if the capsule has room to be at the target location.
-	const float ZTarget = CharacterOwner->GetCapsuleComponent()->GetScaledCapsuleHalfHeight_WithoutHemisphere() - RadiusOffset + HeightOffset;
-	FVector TraceStart = TargetLocation;
-	TraceStart.Z += ZTarget;
-	FVector TraceEnd = TargetLocation;
-	TraceEnd.Z -= ZTarget;
-	const float Radius = CharacterOwner->GetCapsuleComponent()->GetUnscaledCapsuleRadius() + RadiusOffset;
-
-	//const float Hemisphere = CharacterOwner->GetCapsuleComponent()->GetScaledCapsuleHalfHeight_WithoutHemisphere();
-	//const float Offset = Hemisphere + (RadiusOffset * -1.f) + HeightOffset;
-
-	// Editor Settings
-	const FName ProfileName = K_CHARACTER_COLLISION_PRESET;
-	//const FVector OffsetPosition = FVector(0.0f, 0.0f, Offset);
-	//const FVector StartLocation = (TargetLocation + OffsetPosition);
-	//const FVector EndLocation = (TargetLocation - OffsetPosition);
-	const float TraceRadius = (CharacterOwner->GetCapsuleComponent()->GetScaledCapsuleRadius() + RadiusOffset);
-
-	FCollisionQueryParams Params;
-	Params.AddIgnoredActor(CharacterOwner);
-
-	FHitResult HitResult;
-	const FCollisionShape SphereCollisionShape = FCollisionShape::MakeSphere(Radius);
-
-	FHitResult HitData(ForceInit);
-	TArray<AActor*> Ignore;
-	const float DrawTime = 1.0f;
-
-	auto TraceType = EDrawDebugTrace::Type::None;
-#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
-	if (CVarDebugMantlingSystem.GetValueOnGameThread() > 0)
-	{
-		TraceType = EDrawDebugTrace::Type::ForDuration;
-	}
-#endif
-
-	const bool bHit = CharacterOwner->GetWorld()->SweepSingleByChannel(HitResult, TraceStart, TraceEnd, FQuat::Identity, ECC_Visibility, 
-		FCollisionShape::MakeSphere(Radius), Params);
-
-	const bool bIsHitResult = !(HitData.bBlockingHit || HitData.bStartPenetrating);
-	//const bool bIsHitResult = (HitData.bBlockingHit);
-
-#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
-	if (CVarDebugMantlingSystem.GetValueOnGameThread() > 0)
-	{
-		UWvCommonUtils::DrawDebugSphereTraceSingle(CharacterOwner->GetWorld(), TraceStart,
-			TraceEnd,
-			SphereCollisionShape,
-			bHit,
-			HitResult,
-			FLinearColor(0.130706f, 0.896269f, 0.144582f, 1.0f),  // light green
-			FLinearColor(0.932733f, 0.29136f, 1.0f, 1.0f),        // light purple
-			1.0f);
-
-		UE_LOG(LogTemp, Warning, TEXT("%s"), *FString(__FUNCTION__));
-		UE_LOG(LogTemp, Warning, TEXT("result => %s"), bIsHitResult ? TEXT("true") : TEXT("false"));
-	}
-#endif
-
-	return bIsHitResult;
-}
-
-
 // Step 1: キャラクターが歩くことができない壁やオブジェクトを見つけるために前方にトレース
 void UWvCharacterMovementComponent::TraceForwardToFindWall(const FMantleTraceSettings InTraceSetting, FVector& OutInitialTraceImpactPoint, FVector& OutInitialTraceNormal, bool& OutHitResult)
 {
@@ -1766,7 +1717,9 @@ void UWvCharacterMovementComponent::ConvertMantleHeight(const FVector DownTraceL
 	const FRotator RelativeRotation = UKismetMathLibrary::Conv_VectorToRotator(InitialTraceNormal * Offset);
 
 	// Result bool
-	OutRoomCheck = CapsuleHasRoomCheck(RelativeLocation, 0.0f, 0.0f);
+	const FHitResult& HitData = UWvCommonUtils::CapsuleHasRoomCheck(BaseCharacter, RelativeLocation, 0.0f, 0.0f);
+
+	OutRoomCheck = !(HitData.bBlockingHit || HitData.bStartPenetrating);
 
 	OutTargetTransform = FTransform::Identity;
 	OutTargetTransform.SetLocation(RelativeLocation);
@@ -2186,6 +2139,12 @@ void UWvCharacterMovementComponent::SetUseAccelerationForPathFollowing(const boo
 }
 
 
+bool UWvCharacterMovementComponent::IsCustomMovementMode() const
+{
+	return ((MovementMode == MOVE_Custom)) && UpdatedComponent;
+}
+
+
 #pragma region LadderSystem
 /// <summary>
 /// apply to LadderComponent
@@ -2265,7 +2224,7 @@ void UWvCharacterMovementComponent::RequestAsyncLoad()
 	if (!MantleDA.IsNull())
 	{
 		const FSoftObjectPath ObjectPath = MantleDA.ToSoftObjectPath();
-		MantleStreamableHandle = StreamableManager.RequestAsyncLoad(ObjectPath, FStreamableDelegate::CreateUObject(this, &ThisClass::OnMantleAssetLoadComplete));
+		ComponentStreamableHandle = StreamableManager.RequestAsyncLoad(ObjectPath, FStreamableDelegate::CreateUObject(this, &ThisClass::OnMantleAssetLoadComplete));
 	}
 
 }
@@ -2273,7 +2232,7 @@ void UWvCharacterMovementComponent::RequestAsyncLoad()
 void UWvCharacterMovementComponent::OnMantleAssetLoadComplete()
 {
 	OnLoadMantleDA();
-	MantleStreamableHandle.Reset();
+	ComponentStreamableHandle.Reset();
 }
 
 void UWvCharacterMovementComponent::OnLoadMantleDA()
@@ -2316,31 +2275,32 @@ void UWvCharacterMovementComponent::SetTraversalDataCheckInput(FTraversalDataChe
 {
 	const float CapsuleRadius = CharacterOwner->GetCapsuleComponent()->GetScaledCapsuleRadius();
 	const float CapsuleHalfHeight = CharacterOwner->GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
+	const float CapsuleHeight = CharacterOwner->GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight();
 
-	const float MaxSpeed = LocomotionComponent.IsValid() ? LocomotionComponent->GetSprintingSpeed() : GetMaxSpeed();
-	
-	if (IsFalling() || IsFlying())
+	OutInput.MovementMode = MovementMode;
+
+	const bool bWasFall = (IsFalling() || IsFlying());
+
+	if (bWasFall)
 	{
 		OutInput.TraceForwardDirection = CharacterOwner->GetActorForwardVector();
 		OutInput.TraceForwardDistance = TraversalTraceRange.X;
 		OutInput.TraceOriginOffset = FVector::ZeroVector;
-		OutInput.TraceEndOffset = FVector(0.f, 0.f, 50.0f);
-		OutInput.TraceRadius = CapsuleRadius * ForwardTraceRadiusScale;
-		OutInput.TraceHalfHeight = CapsuleHalfHeight;
+		OutInput.TraceEndOffset = FVector(0.f, 0.f, CapsuleHalfHeight);
+		OutInput.TraceRadius = CapsuleRadius;
+		OutInput.TraceHalfHeight = 86.0f;
 		OutInput.bIsValidData = true;
 	}
 	else if (IsMovingOnGround())
 	{
-		const FRotator ActorRotation = CharacterOwner->GetActorRotation();
-		const FVector RotateVec = ActorRotation.UnrotateVector(Velocity);
-
-		const float Alpha = FMath::GetRangePct(0.f, MaxSpeed, FMath::Max(0.f, RotateVec.X));
+		const auto RotVector = UKismetMathLibrary::LessLess_VectorRotator(Velocity, BaseCharacter->GetActorRotation());
+		const float Alpha = UKismetMathLibrary::MapRangeClamped(RotVector.X, 0.f, 500.0f, TraversalTraceRange.X, TraversalTraceRange.Y);
 		OutInput.TraceForwardDirection = CharacterOwner->GetActorForwardVector();
-		OutInput.TraceForwardDistance = FMath::Lerp(TraversalTraceRange.X, TraversalTraceRange.Y, Alpha);
+		OutInput.TraceForwardDistance = Alpha;
 		OutInput.TraceOriginOffset = FVector::ZeroVector;
 		OutInput.TraceEndOffset = FVector::ZeroVector;
-		OutInput.TraceRadius = CapsuleRadius * ForwardTraceRadiusScale;
-		OutInput.TraceHalfHeight = CapsuleHalfHeight;
+		OutInput.TraceRadius = CapsuleRadius;
+		OutInput.TraceHalfHeight = 60.0f;
 		OutInput.bIsValidData = true;
 	}
 	else
@@ -2361,7 +2321,12 @@ const bool UWvCharacterMovementComponent::TryTraversalAction()
 
 	if (IsTraversaling())
 	{
-		UE_LOG(LogTemp, Warning, TEXT("now playing traversaling..: [%s]"), *FString(__FUNCTION__));
+#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
+		if (CVarDebugCharacterTraversal.GetValueOnGameThread() > 0)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("now playing traversaling..: [%s]"), *FString(__FUNCTION__));
+		}
+#endif
 		return false;
 	}
 
@@ -2370,21 +2335,35 @@ const bool UWvCharacterMovementComponent::TryTraversalAction()
 		return false;
 	}
 
+	if (!TryEnterWallCheckAngle(false))
+	{
+		return false;
+	}
+
 	// Step 0: TraversalDataCheckInput を設定（Trace の距離・オフセットなどを算出）
 	SetTraversalDataCheckInput(TraversalDataCheckInput);
 	if (!TraversalDataCheckInput.bIsValidData)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("not valid TraversalDataCheckInputs: [%s]"), *FString(__FUNCTION__));
+#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
+		if (CVarDebugCharacterTraversal.GetValueOnGameThread() > 0)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("not valid TraversalDataCheckInputs: [%s]"), *FString(__FUNCTION__));
+		}
+#endif
 		return false;
 	}
+
+
+	const auto SelectedMovementMode = TraversalDataCheckInput.MovementMode;
 
 	// Step 1: キャラ位置・カプセルサイズをキャッシュ
 	const FVector ActorLocation = CharacterOwner->GetActorLocation();
 	const float CapsuleRadius = CharacterOwner->GetCapsuleComponent()->GetScaledCapsuleRadius();
 	const float CapsuleHalfHeight = CharacterOwner->GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
 
+
 #if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
-	const EDrawDebugTrace::Type TraceType = (CVarDebugCharacterTraversal.GetValueOnGameThread() > 0) ? EDrawDebugTrace::ForOneFrame : EDrawDebugTrace::None;
+	const EDrawDebugTrace::Type TraceType = (CVarDebugCharacterTraversal.GetValueOnGameThread() > 0) ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None;
 #else
 	const EDrawDebugTrace::Type TraceType = EDrawDebugTrace::None;
 #endif
@@ -2426,14 +2405,19 @@ const bool UWvCharacterMovementComponent::TryTraversalAction()
 		}
 
 		TraversalCheckResult.HitComponent = HitResult.Component.Get();
-		TryAndCalculateTraversal(HitResult, TraversalCheckResult);
+		TryAndCalculateLedges(HitResult, TraversalCheckResult);
 	}
 
 
 	// --- Step 3.1: フロントレッジが有効かチェック ---
 	if (!TraversalCheckResult.bHasFrontLedge)
 	{
-		UE_LOG(LogTemp, Error, TEXT("bHasFrontLedge is false: [%s]"), *FString(__FUNCTION__));
+#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
+		if (CVarDebugCharacterTraversal.GetValueOnGameThread() > 0)
+		{
+			UE_LOG(LogTemp, Error, TEXT("bHasFrontLedge is false: [%s]"), *FString(__FUNCTION__));
+		}
+#endif
 		return false;
 	}
 
@@ -2444,44 +2428,44 @@ const bool UWvCharacterMovementComponent::TryTraversalAction()
 	HasRoomCheck_FrontLedgeLocation += (FVector(0.f, 0.f, CapsuleHalfHeight + BaseOffset));
 	
 
+	const float CalcCapsuleHeight = CapsuleHalfHeight * 0.8f;
+
+	HitResult.Reset();
+	const bool bCapsuleHitResult = UKismetSystemLibrary::CapsuleTraceSingle(
+		GetWorld(), ActorLocation, HasRoomCheck_FrontLedgeLocation,
+		CapsuleRadius, CalcCapsuleHeight,
+		TraceTypeQuery, false,
+		IgnoreActors, TraceType, HitResult, true,
+		FLinearColor::Red, FLinearColor::Green, DrawTime);
+
+	bool bLocalHitResult = true;
+
+	// 強い接触のみNG。軽い接触は許容
+	if (HitResult.bBlockingHit)
 	{
-		const float CalcCapsuleHeight = CapsuleHalfHeight * 0.8f;
-
-		HitResult.Reset();
-		const bool bCapsuleHitResult = UKismetSystemLibrary::CapsuleTraceSingle(
-			GetWorld(), ActorLocation, HasRoomCheck_FrontLedgeLocation,
-			CapsuleRadius, CalcCapsuleHeight,
-			TraceTypeQuery, false,
-			IgnoreActors, TraceType, HitResult, true, 
-			FLinearColor::Red, FLinearColor::Green, DrawTime);
-
-		bool bLocalHitResult = true;
-
-		// 強い接触のみNG。軽い接触は許容
-		if (HitResult.bBlockingHit)
-		{
-			// 例えば ImpactNormal がほぼ水平面（Z高い）なら通す、などの緩和も可
-			// 早期ヒットは手前すぎる＝塞がれてる
-			const bool bHardBlock = HitResult.Time < 0.2f;
-			if (bHardBlock)
-			{
-				bLocalHitResult = false;
-			}
-		}
-
-		// 軽微な貫通は許容
-		if (HitResult.bStartPenetrating && HitResult.PenetrationDepth > AllowedPenetration)
+		// 例えば ImpactNormal がほぼ水平面（Z高い）なら通す
+		// 早期ヒットは手前すぎる＝塞がれてる
+		const bool bHardBlock = HitResult.Time < 0.2f;
+		if (bHardBlock)
 		{
 			bLocalHitResult = false;
 		}
-
-		if (!bLocalHitResult)
-		{
-			TraversalCheckResult.bHasFrontLedge = false;
-			UE_LOG(LogTemp, Log, TEXT("HasRoom blocked: Time=%.2f PenDepth=%.2f"), HitResult.Time, HitResult.PenetrationDepth);
-			return false;
-		}
 	}
+
+	// 軽微な貫通は許容
+	if (HitResult.bStartPenetrating && HitResult.PenetrationDepth > AllowedPenetration)
+	{
+		bLocalHitResult = false;
+	}
+
+	if (!bLocalHitResult)
+	{
+		TraversalCheckResult.bHasFrontLedge = false;
+		UE_LOG(LogTemp, Log, TEXT("HasRoom blocked: Time=%.2f PenDepth=%.2f"), HitResult.Time, HitResult.PenetrationDepth);
+		return false;
+	}
+
+
 
 	// --- Step 3.3: 障害物の高さを計測 ---
 	const auto Diff = ActorLocation - FVector(0.f, 0.f, CapsuleHalfHeight);
@@ -2502,8 +2486,6 @@ const bool UWvCharacterMovementComponent::TryTraversalAction()
 		IgnoreActors, TraceType, HitResult, true,
 		FLinearColor::Red, FLinearColor::Green, DrawTime);
 
-	//UKismetSystemLibrary::DrawDebugCapsule(GetWorld(), HasRoomCheck_FrontLedgeLocation, CapsuleHalfHeight, CapsuleRadius, BaseCharacter->GetActorRotation(), FLinearColor::Yellow, 5.0f);
-	//UKismetSystemLibrary::DrawDebugCapsule(GetWorld(), HasRoomCheck_BackLedgeLocation, CapsuleHalfHeight, CapsuleRadius, BaseCharacter->GetActorRotation(), FLinearColor::Red, 5.0f);
 
 	if (!bIsDepthHitResult)
 	{
@@ -2559,7 +2541,7 @@ const bool UWvCharacterMovementComponent::TryTraversalAction()
 	Input.ObstacleHeight = TraversalCheckResult.ObstacleHeight;
 	Input.ObstacleDepth = TraversalCheckResult.ObstacleDepth;
 	Input.BackLedgeHeight = TraversalCheckResult.BackLedgeHeight;
-	Input.MovementMode = MovementMode;
+	Input.MovementMode = SelectedMovementMode;
 	Input.LSGait = LocomotionComponent->GetLSGaitMode_Implementation();
 	Input.Speed = Velocity.Size2D();
 
@@ -2571,23 +2553,29 @@ const bool UWvCharacterMovementComponent::TryTraversalAction()
 		return M == nullptr;
 	});
 
-	TraversalCheckResult.ActionType = Output.ActionType;
 
+	TraversalCheckResult.ActionType = Output.ActionType;
+	TraversalCheckResult.MovementMode = SelectedMovementMode;
 
 	// Step 5.1: Continue if there is a valid action type. 
 	// If none of the conditions were met, no action can be performed, therefore exit the function.
 	if (TraversalCheckResult.ActionType == ETraversalType::None)
 	{
-		UE_LOG(LogTemp, Error, TEXT("not valid ActionType is None: [%s]"), *FString(__FUNCTION__));
-
-		FString LogString;
-		LogString += FString::Printf(TEXT("Has Front Ledge: %s\n"), Input.bHasFrontLedge ? TEXT("true") : TEXT("false"));
-		LogString += FString::Printf(TEXT("Has Back Ledge: %s\n"), Input.bHasBackLedge ? TEXT("true") : TEXT("false"));
-		LogString += FString::Printf(TEXT("Has Back Floor: %s\n"), Input.bHasBackFloor ? TEXT("true") : TEXT("false"));
-		LogString += FString::Printf(TEXT("Obstacle Height: %.2f\n"), Input.ObstacleHeight);
-		LogString += FString::Printf(TEXT("Obstacle Depth: %.2f\n"), Input.ObstacleDepth);
-		LogString += FString::Printf(TEXT("Back Ledge Height: %.2f\n"), Input.BackLedgeHeight);
-		UE_LOG(LogTemp, Error, TEXT("[Traversal Log]\n%s"), *LogString);
+#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
+		if (CVarDebugCharacterTraversal.GetValueOnGameThread() > 0)
+		{
+			FString LogString;
+			LogString += FString::Printf(TEXT("not valid ActionType is None: [%s]\n"), *FString(__FUNCTION__));
+			LogString += FString::Printf(TEXT("Has Front Ledge: %s\n"), Input.bHasFrontLedge ? TEXT("true") : TEXT("false"));
+			LogString += FString::Printf(TEXT("Has Back Ledge: %s\n"), Input.bHasBackLedge ? TEXT("true") : TEXT("false"));
+			LogString += FString::Printf(TEXT("Has Back Floor: %s\n"), Input.bHasBackFloor ? TEXT("true") : TEXT("false"));
+			LogString += FString::Printf(TEXT("Obstacle Height: %.2f\n"), Input.ObstacleHeight);
+			LogString += FString::Printf(TEXT("Obstacle Depth: %.2f\n"), Input.ObstacleDepth);
+			LogString += FString::Printf(TEXT("Back Ledge Height: %.2f\n"), Input.BackLedgeHeight);
+			LogString += FString::Printf(TEXT("MovementMode: %s\n"), *StaticEnum<EMovementMode>()->GetValueAsString(Input.MovementMode));
+			UE_LOG(LogTemp, Error, TEXT("[Traversal Log]\n%s"), *LogString);
+		}
+#endif
 		return false;
 	}
 
@@ -2599,17 +2587,10 @@ const bool UWvCharacterMovementComponent::TryTraversalAction()
 	UWvAnimInstance* AnimInst = Cast<UWvAnimInstance>(CharacterOwner->GetMesh()->GetAnimInstance());
 	AnimInst->SetTraversalInteractionTransform(InteractionTransform);
 
-	// Step 5.3: Perform a motion match on all montages selected by the selector to find the best result. 
-	// The match will select the best montage and the best entry frame (start time) based on the distance to the shelf and the current pose of the character. 
-	// If for some reason the montage is not found (motion match failed, perhaps because the database is invalid or there was a problem with the schema), 
-	// a warning is printed and the function exits.
 	FPoseSearchContinuingProperties ContinuingProperties;
 	FPoseSearchFutureProperties FutureProps;
-	// AnimationTime：検索時に「このくらい先まで」を考慮するフラグと思って使う
 	FutureProps.AnimationTime = 0.2f;
-	// IntervalTime：モンタージュ再生前の間隔（ここでは使わないのでゼロ）
 	FutureProps.IntervalTime = 0.f;
-
 
 	FPoseSearchBlueprintResult Result;
 	UPoseSearchLibrary::MotionMatch(AnimInst, ValidObjects, FName(TEXT("PoseHistory")), ContinuingProperties, FutureProps, Result);
@@ -2630,10 +2611,43 @@ const bool UWvCharacterMovementComponent::TryTraversalAction()
 
 	// Step 5.5: Finally, if the check is successful and the montage is found, trigger the traversal event.
 	TraversalCheckResult.FrontLedgeOffset = CalcurateLedgeOffsetHeight(TraversalCheckResult);
+
+	const bool bWasFalling = TraversalCheckResult.ActionType == ETraversalType::Mantle &&
+		(TraversalCheckResult.MovementMode == EMovementMode::MOVE_Falling) || (TraversalCheckResult.MovementMode == EMovementMode::MOVE_Flying);
+
+
+	if (bWasFalling)
+	{
+		// 壁法線のZ成分を落として（垂直方向成分を除去）、水平面内での壁法線を作る
+		FVector WallN = TraversalCheckResult.FrontLedgeNormal.GetSafeNormal();
+		FVector WallN_H = FVector(WallN.X, WallN.Y, 0.f);
+		if (WallN_H.IsNearlyZero())
+		{
+			// 万一水平成分が無い（天井/床）なら X を固定（任意の安定法線）
+			WallN_H = FVector(1.f, 0.f, 0.f);
+		}
+
+		TraversalPlaneNormal = WallN_H.GetSafeNormal();
+		TraversalPlaneOrigin = TraversalCheckResult.FrontLedgeLocation;
+		bTraversalPlaneLock = true;
+		TraversalPlaneUnlockAtTime = GetWorld()->GetTimeSeconds() + TraversalPlaneLockDuration;
+
+		// CMC の平面拘束をON
+		SetPlaneConstraintEnabled(true);
+		SetPlaneConstraintNormal(TraversalPlaneNormal);
+		SetPlaneConstraintOrigin(TraversalPlaneOrigin);
+	}
+
+
+	BaseCharacter->SetTraversalActionData(TraversalCheckResult, true);
 	BaseCharacter->Traversal_Server(TraversalCheckResult);
 
-	OnTraversalStart();
 	return true;
+}
+
+void UWvCharacterMovementComponent::PerformTraversalAction()
+{
+	OnTraversalStart();
 }
 
 void UWvCharacterMovementComponent::PrintTraversalActionData()
@@ -2650,6 +2664,7 @@ void UWvCharacterMovementComponent::PrintTraversalActionData()
 	LogString += FString::Printf(TEXT("Action Type: %s\n"), *UEnum::GetValueAsString(Data.ActionType));
 	LogString += FString::Printf(TEXT("Start Time: %.2f\n"), Data.StartTime);
 	LogString += FString::Printf(TEXT("Play Rate: %.2f\n"), Data.PlayRate);
+	LogString += FString::Printf(TEXT("MovementMode: %s\n"), *StaticEnum<EMovementMode>()->GetValueAsString(Data.MovementMode));
 
 	UE_LOG(LogTemp, Log, TEXT("[Traversal Log]\n%s"), *LogString);
 
@@ -2672,19 +2687,17 @@ const TArray<UObject*> UWvCharacterMovementComponent::GetAnimMontageFromChooserT
 
 void UWvCharacterMovementComponent::OnTraversalStart()
 {
+
 	if (IsTraversaling())
 	{
 		return;
 	}
 
 	UMotionWarpingComponent* MotionWarpingComponent = BaseCharacter->GetMotionWarpingComponent();
-	if (!MotionWarpingComponent)
-	{
-		return;
-	}
 
 	const FTraversalActionData& TraversalActionData = BaseCharacter->GetTraversalActionData();
 
+	const FName FrontCatchName("FrontLedge_Catch");
 	const FName FrontLedgeName(TEXT("FrontLedge"));
 	const FName BackLedgeName(TEXT("BackLedge"));
 	const FName BackFloorName(TEXT("BackFloor"));
@@ -2692,57 +2705,43 @@ void UWvCharacterMovementComponent::OnTraversalStart()
 
 	constexpr float DrawTime = 10.0f;
 
+	const bool bWasFalling = (TraversalActionData.MovementMode == EMovementMode::MOVE_Falling) || 
+		(TraversalActionData.MovementMode == EMovementMode::MOVE_Flying);
+
+	MotionWarpingComponent->RemoveWarpTarget(FrontCatchName);
 	MotionWarpingComponent->RemoveWarpTarget(FrontLedgeName);
 	MotionWarpingComponent->RemoveWarpTarget(BackLedgeName);
 	MotionWarpingComponent->RemoveWarpTarget(BackFloorName);
 
-
-	const FVector Offset = (BaseCharacter->GetActorUpVector() * TraversalActionData.FrontLedgeOffset);
+	const FVector Offset = BaseCharacter->GetActorUpVector() * TraversalActionData.FrontLedgeOffset;
 	const FVector TargetLocation = TraversalActionData.FrontLedgeLocation - Offset;
+
+	if (bWasFalling)
+	{
+		const FRotator FrontCatchRotation = UKismetMathLibrary::MakeRotFromX(-TraversalActionData.FrontLedgeNormal);
+		MotionWarpingComponent->AddOrUpdateWarpTargetFromLocationAndRotation(FrontCatchName, TraversalActionData.FrontLedgeLocation, FrontCatchRotation);
+	}
+
 	const FVector Normal = UKismetMathLibrary::NegateVector(TraversalActionData.FrontLedgeNormal);
 	const FRotator TargetRotation = UKismetMathLibrary::MakeRotFromX(Normal);
 	MotionWarpingComponent->AddOrUpdateWarpTargetFromLocationAndRotation(FrontLedgeName, TargetLocation, TargetRotation);
 
-#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
-	if (CVarDebugCharacterTraversal.GetValueOnGameThread() > 0)
-	{
-		UKismetSystemLibrary::DrawDebugSphere(GetWorld(), TargetLocation, 10.0f, 12, FLinearColor(FColor::Magenta), DrawTime, 1.0f);
-	}
-#endif
-
-
 	float AnimatedDistanceFromFrontLedgeToBackLedge = 0.f;
 	float AnimatedDistanceFromFrontLedgeToBackFloor = 0.f;
 
-	// If the action type was a hurdle or a vault, we need to also update the BackLedge target. If it is not a hurdle or vault, remove it.
 	if (TraversalActionData.ActionType == ETraversalType::Hurdle || TraversalActionData.ActionType == ETraversalType::Vault)
 	{
-		// Because the traversal animations move at different distances (no fixed metrics), 
-		// we need to know how far the animation moves in order to warp it properly. 
-		// Here we cache a curve value at the end of the Back Ledge warp window to determine 
-		// how far the animation is from the front ledge once the character reaches the back ledge location in the animation.
 		TArray<FMotionWarpingWindowData> MotionWarpingDatas;
 		UMotionWarpingUtilities::GetMotionWarpingWindowsForWarpTargetFromAnimation(TraversalActionData.ChosenMontage, BackLedgeName, MotionWarpingDatas);
 
 		if (!MotionWarpingDatas.IsEmpty())
 		{
 			const FMotionWarpingWindowData& Data = MotionWarpingDatas[0];
-
-			if (UAnimationWarpingLibrary::GetCurveValueFromAnimation(TraversalActionData.ChosenMontage, TraversalCurveName, Data.EndTime, AnimatedDistanceFromFrontLedgeToBackLedge))
-			{
-				// Update the BackLedge warp target.
-				MotionWarpingComponent->AddOrUpdateWarpTargetFromLocationAndRotation(BackLedgeName, TraversalActionData.BackLedgeLocation, FRotator::ZeroRotator);
-			}
-			else
-			{
-				UE_LOG(LogTemp, Error, TEXT("not have key !! Distance_From_Ledge: [%s]"), *FString(__FUNCTION__));
-			}
+			UAnimationWarpingLibrary::GetCurveValueFromAnimation(TraversalActionData.ChosenMontage, TraversalCurveName, Data.EndTime, AnimatedDistanceFromFrontLedgeToBackLedge);
+			MotionWarpingComponent->AddOrUpdateWarpTargetFromLocationAndRotation(BackLedgeName, TraversalActionData.BackLedgeLocation, FRotator::ZeroRotator);
 		}
 	}
 
-
-	// If the action type was a hurdle, we need to also update the BackFloor target. 
-	// If it is not a hurdle, remove it.
 	if (TraversalActionData.ActionType == ETraversalType::Hurdle)
 	{
 		TArray<FMotionWarpingWindowData> MotionWarpingDatas;
@@ -2751,19 +2750,10 @@ void UWvCharacterMovementComponent::OnTraversalStart()
 		if (!MotionWarpingDatas.IsEmpty())
 		{
 			const FMotionWarpingWindowData& Data = MotionWarpingDatas[0];
-
-			if (UAnimationWarpingLibrary::GetCurveValueFromAnimation(TraversalActionData.ChosenMontage, TraversalCurveName, Data.EndTime, AnimatedDistanceFromFrontLedgeToBackFloor))
-			{
-				// Update the BackLedge warp target.
-				MotionWarpingComponent->AddOrUpdateWarpTargetFromLocationAndRotation(BackFloorName, TraversalActionData.BackLedgeLocation, FRotator::ZeroRotator);
-			}
-			else
-			{
-				UE_LOG(LogTemp, Error, TEXT("not have key !! Distance_From_Ledge: [%s]"), *FString(__FUNCTION__));
-			}
+			UAnimationWarpingLibrary::GetCurveValueFromAnimation(TraversalActionData.ChosenMontage, TraversalCurveName, Data.EndTime, AnimatedDistanceFromFrontLedgeToBackFloor);
+			MotionWarpingComponent->AddOrUpdateWarpTargetFromLocationAndRotation(BackFloorName, TraversalActionData.BackLedgeLocation, FRotator::ZeroRotator);
 		}
 	}
-
 
 	const auto AbsDist = FMath::Abs(AnimatedDistanceFromFrontLedgeToBackLedge - AnimatedDistanceFromFrontLedgeToBackFloor);
 	const FVector ResultNormal = TraversalActionData.BackLedgeNormal * AbsDist;
@@ -2772,25 +2762,25 @@ void UWvCharacterMovementComponent::OnTraversalStart()
 
 	MotionWarpingComponent->AddOrUpdateWarpTargetFromLocationAndRotation(BackFloorName, BackFloorLocation, FRotator::ZeroRotator);
 
+
 #if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
 	if (CVarDebugCharacterTraversal.GetValueOnGameThread() > 0)
 	{
+		UKismetSystemLibrary::DrawDebugSphere(GetWorld(), TargetLocation, 10.0f, 12, FLinearColor(FColor::Magenta), DrawTime, 1.0f);
+		UKismetSystemLibrary::DrawDebugSphere(GetWorld(), TraversalActionData.FrontLedgeLocation, 20.0f, 12, FLinearColor(FColor::Black), DrawTime, 1.0f);
+
 		UKismetSystemLibrary::PrintString(GetWorld(), *GetNameSafe(TraversalActionData.ChosenMontage), true, true, FLinearColor::Red, 6.0f);
 
-		// show log
 		PrintTraversalActionData();
 	}
+
 #endif
 
 
 	bIgnoreClientMovementErrorChecksAndCorrection = 1;
 	bServerAcceptClientAuthoritativePosition = 1;
 
-	if (OnTraversalBeginDelegate.IsBound())
-	{
-		OnTraversalBeginDelegate.Broadcast();
-	}
-
+	OnTraversalBeginDelegate.Broadcast();
 	UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(CharacterOwner, TAG_Locomotion_Traversal, FGameplayEventData());
 	SetMovementMode(MOVE_Custom, CUSTOM_MOVE_Traversal);
 }
@@ -2801,11 +2791,7 @@ void UWvCharacterMovementComponent::OnTraversalEnd()
 	bServerAcceptClientAuthoritativePosition = 0;
 
 	CheckGroundOrFalling();
-
-	if (OnTraversalEndDelegate.IsBound())
-	{
-		OnTraversalEndDelegate.Broadcast();
-	}
+	OnTraversalEndDelegate.Broadcast();
 }
 
 
@@ -2858,9 +2844,8 @@ void UWvCharacterMovementComponent::NudgeHitTowardsObjectOrigin(FHitResult& Hit)
 	float SphereRadius;
 	UKismetSystemLibrary::GetComponentBounds(Hit.GetComponent(), Origin, BoxExtent, SphereRadius);
 
-	// 以下はコンフィグに置いておくと調整しやすい
 	static constexpr float NUDGE_SCALE = 0.05f;   // バウンス半径に対するスケール
-	static constexpr float NUDGE_MIN = 0.1f;    // 最小押し込み量（cm）
+	static constexpr float NUDGE_MIN = 1.0f;    // 最小押し込み量（cm）
 	static constexpr float NUDGE_MAX = 2.0f;    // 最大押し込み量（cm）
 
 	// 動的に押し込み量を決定
@@ -2900,29 +2885,29 @@ const bool UWvCharacterMovementComponent::TraceAlongHitPlane(const FHitResult& H
 	{
 		bIsTraversalTraceComplex = true;
 	}
-	const EDrawDebugTrace::Type TraceType = (CVarDebugCharacterTraversal.GetValueOnGameThread() > 0) ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None;
-
+	//const EDrawDebugTrace::Type TraceType = (CVarDebugCharacterTraversal.GetValueOnGameThread() > 0) ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None;
+	const EDrawDebugTrace::Type TraceType = EDrawDebugTrace::None;
 #else
 	bIsTraversalTraceComplex = false;
 	const EDrawDebugTrace::Type TraceType = EDrawDebugTrace::None;
 
 #endif
 
-	const auto Radius = BaseCharacter->GetCapsuleComponent()->GetUnscaledCapsuleRadius();
-	const auto HalfHeight = BaseCharacter->GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight();
-
 	OutHit.Reset();
-	//FCollisionQueryParams LineParams(SCENE_QUERY_STAT(KismetTraceComponent), bIsTraversalTraceComplex);
-	//const bool bIsResult = Hit.GetComponent()->LineTraceComponent(OutHit, TraceStart, TraceEnd, LineParams);
 
-	const ETraceTypeQuery TraceTypeQuery = UEngineTypes::ConvertToTraceType(ECC_Visibility);
-	const bool bIsResult = UKismetSystemLibrary::CapsuleTraceSingle(this, TraceStart, TraceEnd, Radius, HalfHeight, TraceTypeQuery, false, TArray<AActor*>({ CharacterOwner }), TraceType, OutHit, true, FLinearColor::Red, FLinearColor::Blue);
+	FCollisionQueryParams LineParams(SCENE_QUERY_STAT(KismetTraceComponent), bIsTraversalTraceComplex);
+	const bool bIsResult = Hit.GetComponent()->LineTraceComponent(OutHit, TraceStart, TraceEnd, LineParams);
+
+	//const auto Radius = BaseCharacter->GetCapsuleComponent()->GetUnscaledCapsuleRadius();
+	//const auto HalfHeight = BaseCharacter->GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight();
+	//const ETraceTypeQuery TraceTypeQuery = UEngineTypes::ConvertToTraceType(ECC_Visibility);
+	//const bool bIsResult = UKismetSystemLibrary::CapsuleTraceSingle(this, TraceStart, TraceEnd, Radius, HalfHeight, TraceTypeQuery, false, TArray<AActor*>({ CharacterOwner }), TraceType, OutHit, true, FLinearColor::Red, FLinearColor::Blue);
 
 	return bIsResult;
 
 }
 
-void UWvCharacterMovementComponent::Traversal_TraceCorners(const FHitResult& Hit, const FVector TraceDirection, const float TraceLength, FVector& OffsetCenterPoint, bool& bCloseToCorner, float& DistanceToCorner)
+void UWvCharacterMovementComponent::TraceCorners(const FHitResult& Hit, const FVector TraceDirection, const float TraceLength, FVector& OffsetCenterPoint, bool& bCloseToCorner, float& DistanceToCorner)
 {
 	FHitResult OutHit;
 	if (!TraceAlongHitPlane(Hit, TraceLength, TraceDirection, OutHit))
@@ -2951,51 +2936,75 @@ float UWvCharacterMovementComponent::CalcurateLedgeOffsetHeight(const FTraversal
 {
 	const float CapsuleHalfHeight = BaseCharacter->GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
 	const float CharacterFeetZ = BaseCharacter->GetCharacterFeetLocation().Z;
-	const float CapsuleTopZ = BaseCharacter->GetCharacterHeadLocation().Z;
+	const float CapsuleTopZ = BaseCharacter->GetActorLocation().Z + CapsuleHalfHeight;
+
+	const float CapsuleHeight = BaseCharacter->GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight();
 
 	const float LedgeZ = InTraversalActionData.FrontLedgeLocation.Z;
+	const float DeltaZ = (LedgeZ - CharacterFeetZ);
+	const float LowDeltaZ = (LedgeZ - BaseCharacter->GetActorLocation().Z);
 
-	const bool bIsLedgeHigherThanCapsule = LedgeZ > CapsuleTopZ;
+	const bool bIsLedgeHigherThanCapsule = LedgeZ >= CapsuleTopZ;
+	const bool bWasFalling = (InTraversalActionData.MovementMode == EMovementMode::MOVE_Falling) || 
+		(InTraversalActionData.MovementMode == EMovementMode::MOVE_Flying);
 
-	const bool bWasFalling = IsFalling();
+#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
+	if (CVarDebugCharacterTraversal.GetValueOnGameThread() > 0)
+	{
+		const FVector Pos = FVector(InTraversalActionData.FrontLedgeLocation.X, InTraversalActionData.FrontLedgeLocation.Y, DeltaZ);
+		UKismetSystemLibrary::DrawDebugLine(GetWorld(), BaseCharacter->GetCharacterFeetLocation(), InTraversalActionData.FrontLedgeLocation, FLinearColor::Red, 10.0f, 1.2f);
+		UKismetSystemLibrary::DrawDebugSphere(GetWorld(), InTraversalActionData.FrontLedgeLocation, 10.0f, 12, FLinearColor(FColor::Black), 10.0f, 1.0f);
+		UKismetSystemLibrary::DrawDebugSphere(GetWorld(), BaseCharacter->GetCharacterFeetLocation(), 10.0f, 12, FLinearColor(FColor::Magenta), 10.0f, 1.0f);
+		UKismetSystemLibrary::DrawDebugSphere(GetWorld(), BaseCharacter->GetActorLocation(), 10.0f, 12, FLinearColor(FColor::Blue), 10.0f, 1.0f);
+		UKismetSystemLibrary::DrawDebugSphere(GetWorld(), Pos, 10.0f, 12, FLinearColor(FColor::Cyan), 10.0f, 1.0f);
+
+		UE_LOG(LogTemp, Log, TEXT("[%s] => DeltaZ:[%.3f], LowDeltaZ:[%.3f], CapsuleHeight:[%.3f], CapsuleHalfHeight:[%.3f]"),
+			*FString(__FUNCTION__), DeltaZ, LowDeltaZ, CapsuleHeight, CapsuleHalfHeight);
+
+	}
+#endif
+
 
 	switch (InTraversalActionData.ActionType)
 	{
 	case ETraversalType::Vault:
-		return CapsuleHalfHeight * 1.7f;
+		return (CapsuleHalfHeight * 1.7f);
+		//return FMath::Clamp(DeltaZ, CapsuleHalfHeight * 0.8f, CapsuleHalfHeight * 1.2f);
 		break;
+
 	case ETraversalType::Mantle:
+
 		if (bWasFalling)
 		{
 			if (bIsLedgeHigherThanCapsule)
 			{
-				// Ledge is higher than character.
+				// 落下中に自分より高い棚を掴む → 安全に大きめのオフセット
 				UE_LOG(LogTemp, Log, TEXT("Falling Ledge is higher than character."));
-
+				return FMath::Clamp(DeltaZ, CapsuleHalfHeight, CapsuleHalfHeight * 2.0f);
 			}
 			else
 			{
-				// Ledge is in the character's capsule or low
+				// 足下に近い or 体内にある → DeltaZ優先
 				UE_LOG(LogTemp, Log, TEXT("Falling Ledge is in the character's capsule or low"));
+				return FMath::Max(DeltaZ, CapsuleHalfHeight);
 			}
-			return CapsuleHalfHeight * 2.0f;
 		}
 		else
 		{
 			if (bIsLedgeHigherThanCapsule)
 			{
-				// Ledge is higher than character.
+				// 地上からで、自分より高い棚
 				UE_LOG(LogTemp, Log, TEXT("Grounded Ledge is higher than character."));
-				return CapsuleHalfHeight * 2.0f;
+				return FMath::Clamp(DeltaZ, CapsuleHalfHeight, CapsuleHalfHeight * 1.8f);
 			}
 			else
 			{
-				// Ledge is in the character's capsule or low
+				// 地上からで、自分より低い棚（ジャンプ補正込み）
 				UE_LOG(LogTemp, Log, TEXT("Grounded Ledge is in the character's capsule or low"));
-				return CapsuleHalfHeight;
+				return FMath::Max(LowDeltaZ, CapsuleHalfHeight);
 			}
-		}
 
+		}
 		break;
 	}
 
@@ -3003,14 +3012,8 @@ float UWvCharacterMovementComponent::CalcurateLedgeOffsetHeight(const FTraversal
 }
 
 
-
-void UWvCharacterMovementComponent::TryAndCalculateTraversal(FHitResult& HitResult, FTraversalActionData& OutTraversalActionData)
+void UWvCharacterMovementComponent::TryAndCalculateLedges(FHitResult& HitResult, FTraversalActionData& OutTraversalActionData)
 {
-	if (!TryEnterWallCheckAngle(false))
-	{
-		return;
-	}
-
 	const FVector PlayerDirection = CharacterOwner->GetActorForwardVector();
 
 	NudgeHitTowardsObjectOrigin(HitResult);
@@ -3025,7 +3028,7 @@ void UWvCharacterMovementComponent::TryAndCalculateTraversal(FHitResult& HitResu
 	const float CurSpeed = Velocity.Size2D();
 	const float MaxSpeed = GetMaxSpeed();
 
-	const float RadiusOffset = UKismetMathLibrary::MapRangeClamped(Velocity.Size2D(), CurSpeed, MaxSpeed, 0.5f, 2.0f);
+	const float RadiusOffset = UKismetMathLibrary::MapRangeClamped(Velocity.Size2D(), CurSpeed, MaxSpeed, 2.0f, 3.0f);
 	const float TraceLength = SphereRadius * RadiusOffset;
 
 	// 逆さまになっているオブジェクトをMantleできるようにするため、アップベクトルが常にプレーヤーのアップを指すようにする。
@@ -3039,7 +3042,7 @@ void UWvCharacterMovementComponent::TryAndCalculateTraversal(FHitResult& HitResu
 	const auto TraceDirection = FVector::CrossProduct(HitResult.ImpactNormal, AbsoluteObjectUpVector);
 	FVector OutCornerPoint = FVector::ZeroVector;
 	bool bCloseToCorner = false;
-	Traversal_TraceCorners(HitResult, TraceDirection, TraceLength, OutCornerPoint, bCloseToCorner, RightEdgeDistance);
+	TraceCorners(HitResult, TraceDirection, TraceLength, OutCornerPoint, bCloseToCorner, RightEdgeDistance);
 
 	if (bCloseToCorner)
 	{
@@ -3050,7 +3053,7 @@ void UWvCharacterMovementComponent::TryAndCalculateTraversal(FHitResult& HitResu
 	FVector OutCornerPoint2nd = FVector::ZeroVector;
 	bool bCloseToCorner2nd = false;
 	float EdgeDistance = 0.f;
-	Traversal_TraceCorners(HitResult, TraceDirection2nd, TraceLength, OutCornerPoint2nd, bCloseToCorner2nd, EdgeDistance);
+	TraceCorners(HitResult, TraceDirection2nd, TraceLength, OutCornerPoint2nd, bCloseToCorner2nd, EdgeDistance);
 
 	if (bCloseToCorner2nd)
 	{
@@ -3089,19 +3092,11 @@ void UWvCharacterMovementComponent::TryAndCalculateTraversal(FHitResult& HitResu
 
 	// offset capsule
 	const float CapsuleHalfHeight = CharacterOwner->GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
+	const float CapsuleRadius = CharacterOwner->GetCapsuleComponent()->GetScaledCapsuleRadius();
 	const FVector StartLedge = NextHit.ImpactPoint;
 
 
 	constexpr float DrawTime = 10.0f;
-
-#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
-	if (CVarDebugCharacterTraversal.GetValueOnGameThread() > 0)
-	{
-		// debug
-		UKismetSystemLibrary::DrawDebugSphere(GetWorld(), StartLedge, 10.0f, 12, FLinearColor::Green, DrawTime, 1.0f);
-	}
-#endif
-
 
 	// 3. Reverse our trace to figure out the penetrating point of the backface of the object
 	const auto TraceStart = HitResult.ImpactPoint - (TraceLength * HitResult.ImpactNormal);
@@ -3125,14 +3120,16 @@ void UWvCharacterMovementComponent::TryAndCalculateTraversal(FHitResult& HitResu
 	}
 #endif
 
+
 	const bool bIsResult = HitResult.GetComponent()->K2_LineTraceComponent(TraceStart, TraceEnd, bTraceComplex, 
 		bShowTrace, bPersistentShowTrace,
 		FinalHitLocation, FinalHitNormal, BoneName, ThirdHit);
 
+
 	const bool bHasBackLedge = bIsResult;
 	if (!bHasBackLedge)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("bHasBackLedge is false: [%s]"), *FString(__FUNCTION__));
+		//UE_LOG(LogTemp, Warning, TEXT("bHasBackLedge is false: [%s]"), *FString(__FUNCTION__));
 		//return;
 	}
 
@@ -3147,15 +3144,9 @@ void UWvCharacterMovementComponent::TryAndCalculateTraversal(FHitResult& HitResu
 	OutTraversalActionData.FrontLedgeLocation = StartLedge;
 	OutTraversalActionData.FrontLedgeNormal = StartNormal;
 	OutTraversalActionData.bHasBackLedge = bHasBackLedge;
-	OutTraversalActionData.BackLedgeLocation = bHasBackLedge ? EndLedge : FVector::ZeroVector;
-	OutTraversalActionData.BackLedgeNormal = bHasBackLedge ? EndNormal : FVector::ZeroVector;
+	OutTraversalActionData.BackLedgeLocation = bHasBackLedge ? EndLedge : FinalHit.TraceEnd;
+	OutTraversalActionData.BackLedgeNormal = bHasBackLedge ? EndNormal : FinalHit.Normal;
 
-#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
-	if (CVarDebugCharacterTraversal.GetValueOnGameThread() > 0)
-	{
-		UKismetSystemLibrary::DrawDebugSphere(GetWorld(), EndLedge, 10.0f, 12, FLinearColor::Yellow, DrawTime, 1.0f);
-	}
-#endif
 
 }
 
@@ -3172,7 +3163,17 @@ void UWvCharacterMovementComponent::PhysTraversaling(float deltaTime, int32 Iter
 		return;
 	}
 
+	if (!BaseCharacter)
+	{
+		return;
+	}
+
 	RestorePreAdditiveRootMotionVelocity();
+
+	const auto& TraversalActionData = BaseCharacter->GetTraversalActionData();
+
+	const bool bFallingMantle = (TraversalActionData.ActionType == ETraversalType::Mantle) &&
+		(TraversalActionData.MovementMode == MOVE_Falling || TraversalActionData.MovementMode == MOVE_Flying);
 
 	if (!HasAnimRootMotion() && !CurrentRootMotion.HasOverrideVelocity())
 	{
@@ -3180,58 +3181,145 @@ void UWvCharacterMovementComponent::PhysTraversaling(float deltaTime, int32 Iter
 		{
 			Velocity = FVector::ZeroVector;
 		}
-		const float Friction = 0.5f;
-		CalcVelocity(deltaTime, Friction, false, GetMaxBrakingDeceleration());
 
-		//const float Friction = 0.5f * GetPhysicsVolume()->FluidFriction;
-		//CalcVelocity(deltaTime, Friction, true, GetMaxBrakingDeceleration());
+		const float Friction = bFallingMantle ? 0.0f : 0.5f;
+		CalcVelocity(deltaTime, Friction, false, GetMaxBrakingDeceleration());
 	}
 
 	ApplyRootMotionToVelocity(deltaTime);
+
+	if (bTraversalPlaneLock)
+	{
+		// 念のため CMC 側の平面拘束パラメータも同期
+		SetPlaneConstraintEnabled(true);
+		SetPlaneConstraintNormal(TraversalPlaneNormal);
+		SetPlaneConstraintOrigin(TraversalPlaneOrigin);
+
+		Velocity = ConstrainDirectionToPlane(Velocity);
+	}
 
 	Iterations++;
 	bJustTeleported = false;
 
 	FVector OldLocation = UpdatedComponent->GetComponentLocation();
-	const FVector Adjusted = Velocity * deltaTime;
+	FVector Adjusted = Velocity * deltaTime;
+
+	if (bTraversalPlaneLock)
+	{
+		Adjusted = ConstrainDirectionToPlane(Adjusted);
+	}
+
 	FHitResult Hit(1.f);
 	SafeMoveUpdatedComponent(Adjusted, UpdatedComponent->GetComponentQuat(), true, Hit);
 
 	if (Hit.Time < 1.f)
 	{
-		const FVector GravDir = FVector(0.f, 0.f, -1.f);
-		const FVector VelDir = Velocity.GetSafeNormal();
-		const float UpDown = GravDir | VelDir;
-
 		bool bSteppedUp = false;
-		if ((FMath::Abs(Hit.ImpactNormal.Z) < 0.2f) && (UpDown < 0.5f) && (UpDown > -0.2f) && CanStepUp(Hit))
-		{
-			//float stepZ = UpdatedComponent->GetComponentLocation().Z;
-			const FVector::FReal StepZ = GetGravitySpaceZ(UpdatedComponent->GetComponentLocation());
-			bSteppedUp = StepUp(GravDir, Adjusted * (1.f - Hit.Time), Hit);
-			if (bSteppedUp)
-			{
-				OldLocation.Z = UpdatedComponent->GetComponentLocation().Z + (OldLocation.Z - StepZ);
 
-				//const FVector::FReal LocationZ = GetGravitySpaceZ(UpdatedComponent->GetComponentLocation()) + (GetGravitySpaceZ(OldLocation) - StepZ);
-				//SetGravitySpaceZ(OldLocation, LocationZ);
+		if (!bFallingMantle && !bTraversalPlaneLock)
+		{
+			const float GravityZ = GetGravityZ();
+			const FVector GravDir = (FMath::Abs(GravityZ) > KINDA_SMALL_NUMBER) ? FVector(0.f, 0.f, GravityZ).GetSafeNormal() : FVector(0.f, 0.f, -1.f);
+			const FVector VelDir = Velocity.GetSafeNormal();
+			const float UpDown = GravDir | VelDir;
+
+			if ((FMath::Abs(Hit.ImpactNormal.Z) < 0.2f) && (UpDown < 0.5f) && (UpDown > -0.2f) && CanStepUp(Hit))
+			{
+				const float PreZ = UpdatedComponent->GetComponentLocation().Z;
+				bSteppedUp = StepUp(GravDir, Adjusted * (1.f - Hit.Time), Hit);
+				if (bSteppedUp)
+				{
+					OldLocation.Z = UpdatedComponent->GetComponentLocation().Z + (OldLocation.Z - PreZ);
+				}
 			}
 		}
 
+
 		if (!bSteppedUp)
 		{
-			//adjust and try again
 			HandleImpact(Hit, deltaTime, Adjusted);
-			SlideAlongSurface(Adjusted, (1.f - Hit.Time), Hit.Normal, Hit, true);
+
+			// 空中では SlideAlongSurface の代わりに一度だけ ComputeSlideVector
+			const float RemainingTime = (1.f - Hit.Time);
+			if (RemainingTime > KINDA_SMALL_NUMBER)
+			{
+				const FVector SlideDelta = ComputeSlideVector(Adjusted, RemainingTime, Hit.Normal, Hit);
+				if (!SlideDelta.IsNearlyZero())
+				{
+					FHitResult Hit2(1.f);
+					SafeMoveUpdatedComponent(SlideDelta, UpdatedComponent->GetComponentQuat(), true, Hit2);
+
+
+					if (Hit2.bBlockingHit)
+					{
+						const FVector N1 = Hit.Normal.GetSafeNormal();
+						const FVector N2 = Hit2.Normal.GetSafeNormal();
+						const FVector EdgeDir = FVector::CrossProduct(N1, N2); // 交線方向
+
+						if (!EdgeDir.IsNearlyZero())
+						{
+							// 一次スライド量を交線へ射影して、横押し出しを抑える
+							const FVector EdgeDirN = EdgeDir.GetSafeNormal();
+							const FVector EdgeMove = EdgeDirN * FVector::DotProduct(SlideDelta, EdgeDirN);
+
+							if (!EdgeMove.IsNearlyZero())
+							{
+								FHitResult Hit3(1.f);
+								SafeMoveUpdatedComponent(EdgeMove, UpdatedComponent->GetComponentQuat(), true, Hit3);
+							}
+						}
+					}
+				}
+			}
 		}
 	}
 
-
-	if (!bJustTeleported && !HasAnimRootMotion() && !CurrentRootMotion.HasOverrideVelocity())
+	if (bTraversalPlaneLock)
 	{
-		Velocity = (UpdatedComponent->GetComponentLocation() - OldLocation) / deltaTime;
+		const FVector Curr = UpdatedComponent->GetComponentLocation();
+		const FVector Constrained = ConstrainLocationToPlane(Curr);
+		const FVector Fix = Constrained - Curr;
+		if (!Fix.IsNearlyZero())
+		{
+			// 無衝突で微調整
+			MoveUpdatedComponent(Fix, UpdatedComponent->GetComponentQuat(), false);
+		}
 	}
+
+	// 速度再計算（条件を明示化）
+	if ((bFallingMantle || !bJustTeleported) && !HasAnimRootMotion() && !CurrentRootMotion.HasOverrideVelocity())
+	{
+		const FVector NewLocation = UpdatedComponent->GetComponentLocation();
+		Velocity = (NewLocation - OldLocation) / FMath::Max(deltaTime, SMALL_NUMBER);
+
+		// 空中時の微小XY成分を丸める
+		if (bFallingMantle)
+		{
+			const float Eps = 0.01f;
+			if (FMath::Abs(Velocity.X) < Eps)
+			{
+				Velocity.X = 0.f;
+			}
+
+			if (FMath::Abs(Velocity.Y) < Eps)
+			{
+				Velocity.Y = 0.f;
+			}
+		}
+	}
+
+	if (bTraversalPlaneLock)
+	{
+		const bool bTimeUp = (GetWorld()->GetTimeSeconds() >= TraversalPlaneUnlockAtTime);
+		if (bTimeUp)
+		{
+			bTraversalPlaneLock = false;
+			SetPlaneConstraintEnabled(false);
+		}
+	}
+
 }
+
 #pragma endregion
 
 

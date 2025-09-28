@@ -86,7 +86,7 @@ FGameplayTag ULocomotionStateDataAsset::FindGaitTag(const ELSGait LSGait) const
 ULocomotionComponent::ULocomotionComponent(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
 	PrimaryComponentTick.bCanEverTick = true;
-	PrimaryComponentTick.bRunOnAnyThread = true;
+	PrimaryComponentTick.bRunOnAnyThread = false;
 
 	RagdollPoseSnapshot = FName(TEXT("RagdollPose"));
 	PelvisBoneName = FName(TEXT("pelvis"));
@@ -180,18 +180,22 @@ void ULocomotionComponent::TickComponent(float DeltaTime, ELevelTick TickType, F
 
 void ULocomotionComponent::DoTick()
 {
-	if (IsInGameThread())
+	if (!IsInGameThread())
 	{
-		//const float DeltaTime = GetWorld()->GetDeltaSeconds();
-		//DoTick(DeltaTime);
 
-		//UE_LOG(LogTemp, Log, TEXT("safe thread => %s"), *FString(__FUNCTION__));
-	}
-	else
-	{
-		//UE_LOG(LogTemp, Warning, TEXT("not game thread => %s"), *FString(__FUNCTION__));
-	}
+#if false
+		AsyncTask(ENamedThreads::GameThread, [Self = TWeakObjectPtr<ULocomotionComponent>(this), World = GetWorld()]()
+		{
+			if (Self.IsValid() && World)
+			{
+				const float DeltaTime = World->GetDeltaSeconds();
+				Self->DoTick(DeltaTime);
+			}
+		});
+		return;
+#endif
 
+	}
 
 	const float DeltaTime = GetWorld()->GetDeltaSeconds();
 	DoTick(DeltaTime);
@@ -417,14 +421,6 @@ bool ULocomotionComponent::HasMoving() const
 }
 
 
-void ULocomotionComponent::SetSwimmingSpeed(const float InSwimmingSpeed)
-{
-	if (CharacterMovementComponent.IsValid())
-	{
-		CharacterMovementComponent->MaxSwimSpeed = InSwimmingSpeed;
-	}
-}
-
 float ULocomotionComponent::GetWalkingSpeed() const
 {
 	return WalkSpeeds.GetMax();
@@ -445,19 +441,6 @@ float ULocomotionComponent::GetCrouchingSpeed() const
 	return CrouchSpeeds.GetMax();
 }
 
-float ULocomotionComponent::GetSwimmingSpeed() const
-{
-	return CharacterMovementComponent->MaxSwimSpeed;
-}
-
-UAnimMontage* ULocomotionComponent::GetCurrentMontage() const
-{
-	if (AbilitySystemComponent.IsValid())
-	{
-		return AbilitySystemComponent->GetCurrentMontage();
-	}
-	return nullptr;
-}
 
 #pragma region CharacterSpeed
 FVector ULocomotionComponent::ChooseVelocity() const
@@ -1361,21 +1344,17 @@ ELSMovementMode ULocomotionComponent::GetPawnMovementModeChanged(const EMovement
 
 void ULocomotionComponent::CustomAcceleration()
 {
-	if (CharacterMovementComponent.IsValid())
+	const float VelocityDiff = FMath::Abs(LocomotionEssencialVariables.VelocityDifference);
+	const FVector2D Ranges{ 135.0f, 180.0f };
+
+	LocomotionEssencialVariables.bIsBackwardInputEnable = (UKismetMathLibrary::InRange_FloatFloat(VelocityDiff, Ranges.X, Ranges.Y));
+
+	if (UKismetMathLibrary::InRange_FloatFloat(VelocityDiff, Ranges.X, Ranges.Y))
 	{
-		const float VelocityDiff = FMath::Abs(LocomotionEssencialVariables.VelocityDifference);
-		const FVector2D Ranges{ 135.0f, 180.0f };
-
-		if (UKismetMathLibrary::InRange_FloatFloat(VelocityDiff, Ranges.X, Ranges.Y))
-		{
-			LocomotionEssencialVariables.bIsBackwardInputEnable = true;
-			//UE_LOG(LogTemp, Log, TEXT("backward input velocityDiff:[%.3f] : [%s]"), VelocityDiff, *FString(__FUNCTION__));
-		}
-		else
-		{
-			LocomotionEssencialVariables.bIsBackwardInputEnable = false;
-		}
-
+		//UE_LOG(LogTemp, Log, TEXT("backward input velocityDiff:[%.3f] : [%s]"), VelocityDiff, *FString(__FUNCTION__));
+	}
+	else
+	{
 	}
 
 }

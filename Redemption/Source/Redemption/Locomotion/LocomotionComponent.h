@@ -137,13 +137,10 @@ public:
 	virtual bool HasMovementInput() const override;
 	virtual bool HasMoving() const override;
 
-	virtual void SetSwimmingSpeed(const float InSwimmingSpeed) override;
-
 	virtual float GetWalkingSpeed() const override;
 	virtual float GetRunningSpeed() const override;
 	virtual float GetSprintingSpeed() const override;
 	virtual float GetCrouchingSpeed() const override;
-	virtual float GetSwimmingSpeed() const override;
 #pragma endregion
 
 	UPROPERTY(BlueprintAssignable)
@@ -252,23 +249,22 @@ public:
 	void DoTick();
 	void DoTick(const float DeltaTime);
 
-	void DoWhileRagdolling();
 	bool IsInRagdolling() const;
 
 	void SetLockUpdatingRotation(const bool NewLockUpdatingRotation);
 	bool GetLockUpdatingRotation() const;
 
+	void SetSprintPressed(const bool NewSprintPressed);
+	bool GetSprintPressed() const;
+
 	void ApplyCharacterRotation(const FRotator InTargetRotation, const bool bInterpRotation, const float InterpSpeed, const bool bIsModifyRotation);
 	void SetLookAimTarget(const bool NewLookAtAimOffset, AActor* NewLookAtTarget, UHitTargetComponent* HitTargetComponent);
 
 	void Move(const FVector2D InputAxis);
-	void SetSprintPressed(const bool NewSprintPressed);
-	bool GetSprintPressed() const;
+	void OnLanded();
 
 	void ToggleRightShoulder();
 	FVector ChooseVelocity() const;
-
-	void OnLanded();
 	ELSMovementMode GetPawnMovementModeChanged(const EMovementMode PrevMovementMode, const uint8 PrevCustomMode) const;
 
 	const float ChooseMaxWalkSpeed();
@@ -279,11 +275,8 @@ public:
 
 	const FLocomotionEssencialVariables& GetLocomotionEssencialVariables() { return LocomotionEssencialVariables; }
 
-	UAnimMontage* GetCurrentMontage() const;
-
 	void StartRagdollAction();
 	void StopRagdollAction(TFunctionRef<void()> Callback);
-
 	bool IsRagdollingFaceDown() const;
 
 	// apply to MassCharacter
@@ -297,7 +290,6 @@ public:
 	bool IsJustLanded() const;
 
 private:
-
 	void OnMovementModeChange();
 	void OnLSRotationModeChange();
 	void OnLSStanceChange();
@@ -309,6 +301,7 @@ private:
 	void OnLandedCallback();
 
 	void DoWhileGrounded();
+	void DoWhileRagdolling();
 	void SprintCheck();
 
 	void DoCharacterFalling();

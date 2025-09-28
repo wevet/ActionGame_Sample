@@ -8,6 +8,10 @@
 #include "Component/CombatComponent.h"
 
 #include "EnvironmentQuery/Items/EnvQueryItemType_Point.h"
+#include "EnvironmentQuery/EnvQueryTypes.h"
+#include "EQHidingPointGenerator.h"
+#include "EnvironmentQuery/Contexts/EnvQueryContext_Querier.h"
+
 #include "DrawDebugHelpers.h"
 #include "Engine/World.h"
 #include "GameFramework/Pawn.h"
@@ -35,6 +39,27 @@ FText UEQHidingPointGenerator::GetDescriptionTitle() const
 FText UEQHidingPointGenerator::GetDescriptionDetails() const
 {
 	return FText::Format(NSLOCTEXT("EQS", "HidingPointsDetails", "TraceRange={1}"), FText::AsNumber(TraceRange));
+}
+
+void UEQHidingPointGenerator::GenerateItems(FEnvQueryInstance& QueryInstance) const
+{
+	CachedQueryInstance = &QueryInstance;
+
+	TArray<FVector> ContextLocations;
+	QueryInstance.PrepareContext(Context, ContextLocations);
+
+
+	// 2) âBÇÍåÛï‚Ç UpdateHidingPoints() Ç≈ê∂ê¨
+	TArray<FVector> OutPositions;
+	UpdateHidingPoints(ContextLocations, OutPositions);
+
+	for (const FVector& Pos : OutPositions)
+	{
+		QueryInstance.AddItemData<UEnvQueryItemType_Point>(Pos);
+	}
+
+
+	CachedQueryInstance = nullptr;
 }
 
 
@@ -157,5 +182,12 @@ void UEQHidingPointGenerator::UpdateHidingPoints(const TArray<FVector>& ContextL
 		}
 	}
 
+}
+
+
+UObject* UEQHidingPointGenerator::GetQuerier() const
+{
+	check(CachedQueryInstance);
+	return CachedQueryInstance->Owner.Get();
 }
 

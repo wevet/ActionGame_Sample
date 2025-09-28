@@ -8,6 +8,7 @@
 #include "Component/TrailInteractionComponent.h"
 #include "GameExtension.h"
 #include "Game/RedemptionGameMode.h"
+#include "Redemption.h"
 
 #include "Kismet/KismetMathLibrary.h"
 #include "Kismet/KismetSystemLibrary.h"
@@ -15,6 +16,7 @@
 #include "NiagaraFunctionLibrary.h"
 #include "NiagaraComponent.h"
 #include "Components/SkeletalMeshComponent.h"
+#include "Components/CapsuleComponent.h"
 #include "Particles/ParticleSystem.h"
 #include "Particles/ParticleSystemComponent.h"
 #include "AIController.h"
@@ -372,10 +374,10 @@ const FName UWvCommonUtils::GetSurfaceName(TEnumAsByte<EPhysicalSurface> Surface
 	return TEXT("Default");
 }
 
-AActor* UWvCommonUtils::FindNearestDistanceTarget(AActor* Owner, TArray<AActor*> Actors, const float ClosestTargetDistance)
+AActor* UWvCommonUtils::FindNearestDistanceTarget(AActor* Owner, const TArray<AActor*>& Actors, const float ClosestTargetDistance)
 {
 	// From the hit actors, check distance and return the nearest
-	if (Actors.Num() <= 0)
+	if (Actors.IsEmpty())
 	{
 		return nullptr;
 	}
@@ -636,4 +638,66 @@ UClass* UWvCommonUtils::FindClassInChooserTable(UObject* ContextObject, UChooser
 	}
 	return nullptr;
 }
+
+
+FHitResult UWvCommonUtils::CapsuleHasRoomCheck(ABaseCharacter* Character, const FVector TargetLocation, const float HeightOffset, const float RadiusOffset)
+{
+
+	check(Character->GetCapsuleComponent());
+
+	// Perform a trace to see if the capsule has room to be at the target location.
+	const float ZTarget = Character->GetCapsuleComponent()->GetScaledCapsuleHalfHeight_WithoutHemisphere() - RadiusOffset + HeightOffset;
+	FVector TraceStart = TargetLocation;
+	TraceStart.Z += ZTarget;
+	FVector TraceEnd = TargetLocation;
+	TraceEnd.Z -= ZTarget;
+	const float Radius = Character->GetCapsuleComponent()->GetUnscaledCapsuleRadius() + RadiusOffset;
+
+	// Editor Settings
+	const FName ProfileName = K_CHARACTER_COLLISION_PRESET;
+	const float TraceRadius = (Character->GetCapsuleComponent()->GetScaledCapsuleRadius() + RadiusOffset);
+
+	FCollisionQueryParams Params;
+	Params.AddIgnoredActor(Character);
+
+	FHitResult HitResult;
+	const FCollisionShape SphereCollisionShape = FCollisionShape::MakeSphere(Radius);
+
+	FHitResult HitData(ForceInit);
+	TArray<AActor*> Ignore;
+	const float DrawTime = 1.0f;
+
+	auto TraceType = EDrawDebugTrace::Type::None;
+#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
+	if ((CharacterDebug::CVarDebugMantlingSystem.GetValueOnGameThread() > 0) || (CharacterDebug::CVarDebugCharacterTraversal.GetValueOnGameThread() > 0))
+	{
+		TraceType = EDrawDebugTrace::Type::ForDuration;
+	}
+#endif
+
+	const bool bHit = Character->GetWorld()->SweepSingleByChannel(HitResult, TraceStart, TraceEnd, FQuat::Identity, ECC_Visibility,
+		FCollisionShape::MakeSphere(Radius), Params);
+
+	const bool bIsHitResult = !(HitData.bBlockingHit || HitData.bStartPenetrating);
+
+#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
+	if ((CharacterDebug::CVarDebugMantlingSystem.GetValueOnGameThread() > 0) || (CharacterDebug::CVarDebugCharacterTraversal.GetValueOnGameThread() > 0))
+	{
+		UWvCommonUtils::DrawDebugSphereTraceSingle(Character->GetWorld(), TraceStart,
+			TraceEnd,
+			SphereCollisionShape,
+			bHit,
+			HitResult,
+			FLinearColor(0.130706f, 0.896269f, 0.144582f, 1.0f),  // light green
+			FLinearColor(0.932733f, 0.29136f, 1.0f, 1.0f),        // light purple
+			1.0f);
+
+		UE_LOG(LogTemp, Warning, TEXT("%s"), *FString(__FUNCTION__));
+		UE_LOG(LogTemp, Warning, TEXT("result => %s"), bIsHitResult ? TEXT("true") : TEXT("false"));
+	}
+#endif
+
+	return HitResult;
+}
+
 

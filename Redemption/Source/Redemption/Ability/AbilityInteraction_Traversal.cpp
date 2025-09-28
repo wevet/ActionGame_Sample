@@ -51,8 +51,9 @@ void UAbilityInteraction_Traversal::ActivateAbility(const FGameplayAbilitySpecHa
 #if WITH_EDITOR
 	if (TriggerEventData)
 	{
-		FString Msg = TriggerEventData->EventTag.ToString();
-		UE_LOG(LogTemp, Log, TEXT("TagName => %s, funcName => %s"), *Msg, *FString(__FUNCTION__));
+		const FString Msg = TriggerEventData->EventTag.ToString();
+		UE_LOG(LogTemp, Log, TEXT("TagName => %s, AnimationName => %s, funcName => %s"), *Msg, *GetNameSafe(TraversalActionData.ChosenMontage),
+			*FString(__FUNCTION__));
 	}
 #endif
 

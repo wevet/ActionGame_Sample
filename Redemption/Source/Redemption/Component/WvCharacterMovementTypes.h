@@ -372,6 +372,8 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float FrontLedgeOffset{0.f};
 
+	TEnumAsByte<EMovementMode> MovementMode{ EMovementMode::MOVE_None };
+
 	void Reset();
 };
 
@@ -436,7 +438,6 @@ struct FTraversalDataCheckInputs
 
 public:
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Traversal")
 	FVector TraceForwardDirection = FVector::ForwardVector;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Traversal")
@@ -455,6 +456,8 @@ public:
 	float TraceHalfHeight = 0.0f;
 
 	bool bIsValidData{ false };
+
+	TEnumAsByte<EMovementMode> MovementMode{ EMovementMode::MOVE_None };
 };
 #pragma endregion
 

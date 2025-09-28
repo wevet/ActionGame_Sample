@@ -693,7 +693,7 @@ private:
 	FTimerHandle WaitAxisTimer;
 	bool bOwnerPlayerController;
 
-	TSharedPtr<FStreamableHandle> AnimationStreamableHandle;
+	TSharedPtr<FStreamableHandle> ComponentStreamableHandle;
 
 	void OnAnimAssetLoadComplete();
 	void OnLoadAnimationDA();

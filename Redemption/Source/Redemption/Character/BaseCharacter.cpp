@@ -1,4 +1,4 @@
-// Copyright 2022 wevet works All Rights Reserved.
+ï»¿// Copyright 2022 wevet works All Rights Reserved.
 
 
 #include "BaseCharacter.h"
@@ -77,6 +77,8 @@ namespace CharacterDebug
 	TAutoConsoleVariable<int32> CVarDebugCombatSystem(TEXT("wv.CombatSystem.Debug"), 0, TEXT("CombatSystem Debug .\n") TEXT("<=0: off\n") TEXT("  1: on\n"), ECVF_Default);
 	TAutoConsoleVariable<int32> CVarDebugLadderSystem(TEXT("wv.LadderSystem.Debug"), 0, TEXT("LadderSystem Debug .\n") TEXT("<=0: off\n") TEXT("  1: on\n"), ECVF_Default);
 	TAutoConsoleVariable<int32> CVarDebugClimbingSystem(TEXT("wv.ClimbingSystem.Debug"), 0, TEXT("ClimbingSystem Debug .\n") TEXT("<=0: off\n") TEXT("  1: on\n"), ECVF_Default);
+
+	TAutoConsoleVariable<int32> CVarDebugCharacterTraversal(TEXT("wv.TraversalSystem.Debug"), 0, TEXT("TraversalSystem Debug .\n") TEXT("<=0: off\n") TEXT("  1: on\n"), ECVF_Default);
 #endif
 }
 
@@ -522,7 +524,8 @@ void ABaseCharacter::GetLifetimeReplicatedProps(TArray< FLifetimeProperty >& Out
 	DOREPLIFETIME_CONDITION(ThisClass, ReplicatedAcceleration, COND_SimulatedOnly);
 	DOREPLIFETIME(ThisClass, MyTeamID)
 
-	DOREPLIFETIME_CONDITION(ThisClass, TraversalActionData, COND_SimulatedOnly);
+	//DOREPLIFETIME_CONDITION(ThisClass, TraversalActionData, COND_SimulatedOnly);
+	DOREPLIFETIME_CONDITION(ThisClass, TraversalActionData, COND_SkipOwner);
 }
 
 void ABaseCharacter::PreReplication(IRepChangedPropertyTracker& ChangedPropertyTracker)
@@ -560,14 +563,34 @@ void ABaseCharacter::OnRep_ReplicatedAcceleration()
 
 void ABaseCharacter::OnRep_TraversalActionData()
 {
+	// æ‰€æœ‰è€…ã¯ãƒ­ãƒ¼ã‚«ãƒ«ã§æ—¢ã«å®Ÿè¡Œã™ã‚‹ã®ã§ã€ã“ã“ã§èµ°ã‚‰ã›ã‚‹ã®ã¯éæ‰€æœ‰ã‚¯ãƒ©ã‚¤ã‚¢ãƒ³ãƒˆã®ã¿
+	if (!IsLocallyControlled())
+	{
+		UWvCharacterMovementComponent* CMC = GetWvCharacterMovementComponent();
+		// ã“ã“ã§WarpTargetã‚’å„ã‚¯ãƒ©ã‚¤ã‚¢ãƒ³ãƒˆã«ã‚‚ç”Ÿæˆ
+		CMC->PerformTraversalAction();
+	}
 }
 
 void ABaseCharacter::Traversal_Server_Implementation(const FTraversalActionData& TraversalActionDataRep)
 {
-	TraversalActionData = TraversalActionDataRep;
+	// ã‚µãƒ¼ãƒãƒ¼ã§ã‚‚å®Ÿè¡Œ
+	SetTraversalActionData(TraversalActionDataRep, /*bExecute=*/true); 
+	// æ—©ã‚ã«é…ã‚‹
+	ForceNetUpdate();
+}
 
-	UWvCharacterMovementComponent* CMC = GetWvCharacterMovementComponent();
-	CMC->OnTraversalStart();
+void ABaseCharacter::SetTraversalActionData(const FTraversalActionData& Data, bool bExecute/* = true */)
+{
+	TraversalActionData = Data;
+	if (bExecute)
+	{
+		if (auto* CMC = GetWvCharacterMovementComponent())
+		{
+			// WarpTargetç”Ÿæˆãƒ»é–‹å§‹å‡¦ç†
+			CMC->PerformTraversalAction();
+		}
+	}
 }
 
 void ABaseCharacter::OnRep_MyTeamID(FGenericTeamId OldTeamID)
@@ -1033,23 +1056,23 @@ void ABaseCharacter::OnSignificanceLevelChanged_Implementation(int32 Significanc
 
 	if (ManuallySignificanceLevel != -1)
 	{
-		// SignificanceLevel ‚ªè“®‚Åİ’è‚³‚ê‚Ä‚¢‚éê‡‚ÍAİ’è’l‚ªg—p‚³‚ê‚éB
+		// SignificanceLevel ãŒæ‰‹å‹•ã§è¨­å®šã•ã‚Œã¦ã„ã‚‹å ´åˆã¯ã€è¨­å®šå€¤ãŒä½¿ç”¨ã•ã‚Œã‚‹ã€‚
 		SignificanceLevel = ManuallySignificanceLevel;
 	}
 	else if ((Controller != nullptr && Controller->IsLocalPlayerController()))
 	{
-		// ƒV[ƒPƒ“ƒT‚ª‘€ì‚·‚éƒLƒƒƒ‰ƒNƒ^[‚âƒvƒŒƒCƒ„[‚ª‘€ì‚·‚éƒLƒƒƒ‰ƒNƒ^[‚ÍƒŒƒxƒ‹ 0 ‚ÉŒÅ’è
+		// ã‚·ãƒ¼ã‚±ãƒ³ã‚µãŒæ“ä½œã™ã‚‹ã‚­ãƒ£ãƒ©ã‚¯ã‚¿ãƒ¼ã‚„ãƒ—ãƒ¬ã‚¤ãƒ¤ãƒ¼ãŒæ“ä½œã™ã‚‹ã‚­ãƒ£ãƒ©ã‚¯ã‚¿ãƒ¼ã¯ãƒ¬ãƒ™ãƒ« 0 ã«å›ºå®š
 		SignificanceLevel = 0;
 	}
 
 
-	// Å‘å’l‚ğ’´‚¦‚Ä‚Í‚È‚ç‚È‚¢
+	// æœ€å¤§å€¤ã‚’è¶…ãˆã¦ã¯ãªã‚‰ãªã„
 	if (SignificanceLevel > MaxSignificanceLevel)
 	{
 		SignificanceLevel = MaxSignificanceLevel;
 	}
 
-	// •ÏX‚ª‚ ‚Á‚½ê‡‚Ì‚İXV
+	// å¤‰æ›´ãŒã‚ã£ãŸå ´åˆã®ã¿æ›´æ–°
 	if (SignificanceComponent->SignificanceLevel != SignificanceLevel)
 	{
 		int32 LastSingificanceLevel = SignificanceComponent->SignificanceLevel;
@@ -1202,88 +1225,91 @@ void ABaseCharacter::Landed(const FHitResult& Hit)
 
 void ABaseCharacter::Jump()
 {
-	if (GetCharacterMovement()->IsCrouching())
+	UWvCharacterMovementComponent* CMC = GetWvCharacterMovementComponent();
+
+	if (CMC->IsCrouching())
 	{
 		UnCrouch();
+		return;
 	}
-	else
+
+
+	const EMovementMode MovementMode = CMC->MovementMode;
+	switch (MovementMode)
 	{
-		UWvCharacterMovementComponent* CMC = GetWvCharacterMovementComponent();
-		const EMovementMode MovementMode = CMC->MovementMode;
-		switch (MovementMode)
+		case MOVE_None:
+		break;
+		case MOVE_Walking:
+		case MOVE_NavWalking:
 		{
-			case MOVE_None:
-			break;
-			case MOVE_Walking:
-			case MOVE_NavWalking:
-			{
-				CMC->SetTraversalPressed(true);
-				if (!CMC->TryTraversalAction())
-				{
-					Super::Jump();
-				}
+			CMC->SetTraversalPressed(true);
+			ClimbingComponent->SetJumpInputPressed(true);
 
-			}
-			break;
-			case MOVE_Falling:
+			if (!CMC->TryTraversalAction())
 			{
-				CMC->SetTraversalPressed(true);
+				Super::Jump();
 			}
-			break;
-			case MOVE_Flying:
-			break;
-			case MOVE_Swimming:
-			break;
-			case MOVE_Custom:
-			{
-				const ECustomMovementMode CustomMovementMode = (ECustomMovementMode)CMC->CustomMovementMode;
-				switch (CustomMovementMode)
-				{
-					case CUSTOM_MOVE_Climbing:
-					{
-						//if (ClimbingComponent)
-						//{
-						//	ClimbingComponent->SetJumpInputPressed(true);
-						//}
-					}
-					break;
-					case CUSTOM_MOVE_Mantling:
-					{
-						//
-					}
-					case CUSTOM_MOVE_Traversal:
-					{
-						//
-					}
-					break;
-					break;
-					case CUSTOM_MOVE_Ladder:
-					{
-						ULadderComponent* LadderComponent = FindComponentByClass<ULadderComponent>();
-						if (LadderComponent)
-						{
-							LadderComponent->SetJumpInputPressed(true);
-						}
-					}
-					break;
-				}
-			}
-			break;
+
 		}
-
-
-		const auto& LocomotionEssencialVariables = LocomotionComponent->GetLocomotionEssencialVariables();
-		switch (LocomotionEssencialVariables.LSMovementMode)
+		break;
+		case MOVE_Falling:
 		{
-			case ELSMovementMode::Grounded:
-			case ELSMovementMode::Falling:
-			case ELSMovementMode::Climbing:
-			{
-				ClimbingComponent->SetJumpInputPressed(true);
-			}
-			break;
+			CMC->SetTraversalPressed(true);
+			ClimbingComponent->SetJumpInputPressed(true);
 		}
+		break;
+		case MOVE_Flying:
+			break;
+		case MOVE_Swimming:
+			break;
+		case MOVE_Custom:
+		{
+			const ECustomMovementMode CustomMovementMode = (ECustomMovementMode)CMC->CustomMovementMode;
+			switch (CustomMovementMode)
+			{
+				case CUSTOM_MOVE_Climbing:
+				{
+					ClimbingComponent->SetJumpInputPressed(true);
+				}
+				break;
+				case CUSTOM_MOVE_Mantling:
+				{
+					//
+				}
+				break;
+				case CUSTOM_MOVE_Traversal:
+				{
+					//
+				}
+				break;
+				case CUSTOM_MOVE_Ladder:
+				{
+					ULadderComponent* LadderComponent = FindComponentByClass<ULadderComponent>();
+					if (LadderComponent)
+					{
+						LadderComponent->SetJumpInputPressed(true);
+					}
+				}
+				break;
+			}
+		}
+		break;
 	}
+
+
+#if false
+	const auto& LocomotionEssencialVariables = LocomotionComponent->GetLocomotionEssencialVariables();
+	switch (LocomotionEssencialVariables.LSMovementMode)
+	{
+		case ELSMovementMode::Grounded:
+		case ELSMovementMode::Falling:
+		case ELSMovementMode::Climbing:
+		{
+			ClimbingComponent->SetJumpInputPressed(true);
+		}
+		break;
+	}
+#endif
 
 }
 
@@ -1613,11 +1639,11 @@ const bool ABaseCharacter::OverlayStateChange(const ELSOverlayState CurrentOverl
 	constexpr uint8 ELSOverlayState_Min = static_cast<uint8>(ELSOverlayState::None);
 	constexpr uint8 ELSOverlayState_Max = static_cast<uint8>(ELSOverlayState::Mass);
 
-	// ‚Ü‚¸ uint8 ‚ÉƒLƒƒƒXƒg
+	// ã¾ãš uint8 ã«ã‚­ãƒ£ã‚¹ãƒˆ
 	uint8 Raw = static_cast<uint8>(CurrentOverlay);
-	// None(0) ` Mass(Å‘å) ‚Ì”ÍˆÍ‚ÉƒNƒ‰ƒ“ƒv
+	// None(0) ï½ Mass(æœ€å¤§) ã®ç¯„å›²ã«ã‚¯ãƒ©ãƒ³ãƒ—
 	Raw = FMath::Clamp(Raw, ELSOverlayState_Min, ELSOverlayState_Max);
-	// Ä‚Ñ enum ‚ÉƒLƒƒƒXƒg‚µ‚Ä‘ã“ü
+	// å†ã³ enum ã«ã‚­ãƒ£ã‚¹ãƒˆã—ã¦ä»£å…¥
 	const ELSOverlayState ClampedOverlay = static_cast<ELSOverlayState>(Raw);
 
 	if (SelectableOverlayState == ClampedOverlay)
@@ -2558,15 +2584,18 @@ void ABaseCharacter::CalculateBackwardInputRotation()
 
 	const auto& LocomotionEssencialVariables = LocomotionComponent->GetLocomotionEssencialVariables();
 
+
 	const FVector Input = LocomotionEssencialVariables.MovementInput;
 	const FRotator TargetRotation = FRotationMatrix::MakeFromX(Input).Rotator();
 
-	//const float CurrentYaw = GetActorRotation().Yaw;
-	//const float TargetYaw = FRotator::NormalizeAxis(CurrentYaw + LocomotionEssencialVariables.VelocityDifference);
-	//const FRotator TargetRotation(0.f, TargetYaw, 0.f);
+	//auto LookRot = FRotator::ZeroRotator;
+	//LookRot.Yaw = LocomotionEssencialVariables.LookingRotation.Yaw;
 
 	MotionWarpingComponent->AddOrUpdateWarpTargetFromLocationAndRotation(
-		UWvCharacterMovementComponent::BackwardInputSyncPoint, FVector::ZeroVector, TargetRotation);
+		UWvCharacterMovementComponent::BackwardInputSyncPoint,
+		FVector::ZeroVector, 
+		TargetRotation);
+
 }
 #pragma endregion
 
@@ -2790,8 +2819,30 @@ void ABaseCharacter::PreTickLocomotion()
 
 }
 
+UWvAnimInstance* ABaseCharacter::GetWvAnimInstance() const
+{
+	return AnimInstance;
+}
 
 #pragma region Traversal
+void ABaseCharacter::StopTraversalAbility()
+{
+	auto AnimAbility = WvAbilitySystemComponent->GetAnimatingAbility();
+	if (IsValid(AnimAbility))
+	{
+		WvAbilitySystemComponent->CancelAbility(AnimAbility);
+		UE_LOG(LogTemp, Log, TEXT("Cancel Ability => %s"), *GetNameSafe(AnimAbility));
+	}
+
+	auto CMC = GetWvCharacterMovementComponent();
+	if (IsValid(CMC))
+	{
+		CMC->OnTraversalEnd();
+	}
+
+	ResetTraversalActionData();
+}
+
 FTraversalActionData ABaseCharacter::GetTraversalActionData() const
 {
 	return TraversalActionData;
@@ -2799,6 +2850,8 @@ FTraversalActionData ABaseCharacter::GetTraversalActionData() const
 
 void ABaseCharacter::ResetTraversalActionData()
 {
+	//GetCapsuleComponent()->IgnoreComponentWhenMoving(TraversalActionData.HitComponent, false);
+
 	TraversalActionData.Reset();
 
 	//UE_LOG(LogTemp, Error, TEXT("[%s]"), *FString(__FUNCTION__));

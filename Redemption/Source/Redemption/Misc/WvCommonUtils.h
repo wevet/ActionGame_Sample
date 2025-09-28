@@ -130,7 +130,7 @@ public:
 
 	static const FName GetSurfaceName(TEnumAsByte<EPhysicalSurface> SurfaceType);
 
-	static AActor* FindNearestDistanceTarget(AActor* Owner, TArray<AActor*> Actors, const float ClosestTargetDistance);
+	static AActor* FindNearestDistanceTarget(AActor* Owner, const TArray<AActor*>& Actors, const float ClosestTargetDistance);
 
 	static const FTransform GetSkeletonRefPosTransform(class USkeletalMesh* InSkMesh, FName BoneName);
 	static const FTransform GetRefPoseDecalTransform(class USkeletalMeshComponent* InSkMeshComp, FName BoneName, const FVector& InHitPos, const FRotator& DecalRot);
@@ -157,6 +157,8 @@ public:
 	static void SetAIControllerTickInterval(APawn* Actor, const float TickInterval);
 
 	static UClass* FindClassInChooserTable(UObject* ContextObject, UChooserTable* ChooserTable);
+
+	static FHitResult CapsuleHasRoomCheck(ABaseCharacter* Character, const FVector TargetLocation, const float HeightOffset, const float RadiusOffset);
 };
 
 

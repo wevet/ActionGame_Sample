@@ -102,7 +102,7 @@ void UWvAnimInstance::NativeInitializeAnimation()
 
 	Character = Cast<ABaseCharacter>(TryGetPawnOwner());
 
-	if (!Character.IsValid())
+	if (!IsValid(Character))
 	{
 		return;
 	}
@@ -131,7 +131,7 @@ void UWvAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 	const int32 RelevantConsoleValue = CVarDebugLocomotionSystem.GetValueOnAnyThread();
 	if (RelevantConsoleValue > 0 && RelevantConsoleValue < 2)
 	{
-		if (Character.IsValid())
+		if (IsValid(Character))
 		{
 			bOwnerPlayerController = bool(Cast<APlayerController>(Character->GetController()));
 			DrawRelevantAnimation();
@@ -144,7 +144,7 @@ void UWvAnimInstance::NativeThreadSafeUpdateAnimation(float DeltaSeconds)
 {
 	Super::NativeThreadSafeUpdateAnimation(DeltaSeconds);
 
-	if (Character.IsValid())
+	if (IsValid(Character))
 	{
 		if (UAbilitySystemComponent* ASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(Character.Get()))
 		{
@@ -172,7 +172,7 @@ void UWvAnimInstance::NativeThreadSafeUpdateAnimation(float DeltaSeconds)
 		//CharacterTransform = Character->GetActorTransform();
 	}
 
-	if (LocomotionComponent.IsValid())
+	if (IsValid(LocomotionComponent))
 	{
 		LocomotionEssencialVariables = LocomotionComponent->GetLocomotionEssencialVariables();
 		CharacterOverlayInfo.ChooseStanceMode(LocomotionEssencialVariables.LSStance == ELSStance::Standing);
@@ -214,19 +214,20 @@ void UWvAnimInstance::NativeThreadSafeUpdateAnimation(float DeltaSeconds)
 		RunningSpeed = LocomotionComponent->GetRunningSpeed();
 		SprintingSpeed = LocomotionComponent->GetSprintingSpeed();
 
-
 		LandingVelocity = LocomotionComponent->GetLandingVelocity();
 		bWasJustLanded = LocomotionComponent->IsJustLanded();
-
 		bIsInRagdolling = LocomotionComponent->IsInRagdolling();
 	}
 
-	if (GetOwningComponent())
+	if (bIsInRagdolling && GetOwningComponent())
 	{
 		const FName RootBone = TEXT("root");
-		RagdollFlailRate = UKismetMathLibrary::MapRangeClamped(GetOwningComponent()->GetPhysicsLinearVelocity(RootBone).Size(), 
-			0.f, 1000.0f, 0.f, 1.0);
+		const FVector2D LinearVelocityRange = FVector2D(0.f, 1000.0f);
+		const FVector2D RagdollRange = FVector2D(0.f, 1.0f);
+		const auto RagdollVelSize = GetOwningComponent()->GetPhysicsLinearVelocity(RootBone).Size();
+		RagdollFlailRate = UKismetMathLibrary::MapRangeClamped(RagdollVelSize, LinearVelocityRange.X, LinearVelocityRange.Y, RagdollRange.X, RagdollRange.Y);
 	}
+
 
 	switch (LSMovementMode)
 	{
@@ -347,7 +348,7 @@ void UWvAnimInstance::CalculateAimOffset()
 
 FVector2D UWvAnimInstance::GetAimSweepTimeToVector() const
 {
-	if (Character.IsValid())
+	if (IsValid(Character))
 	{
 		const auto Rot = Character->IsLocallyControlled() ? Character->GetControlRotation() : Character->GetBaseAimRotation();
 		const auto Alpha = GetCurveValue(FName(TEXT("Disable_AO")));

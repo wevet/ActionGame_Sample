@@ -10,6 +10,7 @@
 #include "Character/BaseCharacter.h"
 #include "Misc/WvCommonUtils.h"
 #include "Game/WvGameInstance.h"
+#include "WvCharacterMovementComponent.h"
 
 // built in
 #include "Camera/CameraComponent.h"
@@ -20,10 +21,10 @@
 #include "Engine/GameViewportClient.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
-#include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/PlayerController.h"
-#include "Kismet/KismetMathLibrary.h"
-#include "Kismet/KismetSystemLibrary.h"
+#include "Kismet/GameplayStatics.h"
+#include "Async/Async.h"
+
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(WvCameraFollowComponent)
 
@@ -52,6 +53,7 @@ FName FCameraTargetPostPhysicsTickFunction::DiagnosticContext(bool bDetailed)
 	return FName(TEXT("WvCameraFollowComponentPostPhysicsTick"));
 }
 
+
 UWvCameraFollowComponent::UWvCameraFollowComponent()
 {
 	PrimaryComponentTick.bCanEverTick = true;
@@ -73,27 +75,34 @@ void UWvCameraFollowComponent::BeginPlay()
 	SpringArmComponent = Character->GetCameraBoom();
 	CameraComponent = Character->GetFollowCamera();
 
-	CameraLerpTimerLerpInfo = FCameraLerpInfo();
-	CameraLerpTimerLerpInfo.CurCameraSettings = FCameraSettings();
-	CameraLerpTimerLerpInfo.CurCameraSettings.CameraLagSpeed = SpringArmComponent->CameraLagSpeed;
+	CameraLerpInfo = FCameraLerpInfo();
+	CameraLerpInfo.CurCameraSettings = FCameraSettings();
+	CameraLerpInfo.CurCameraSettings.CameraLagSpeed = SpringArmComponent->CameraLagSpeed;
 
 	LocomotionComponent = Character->GetLocomotionComponent();
 
-	LocomotionComponent->OnGaitChangeDelegate.AddDynamic(this, &UWvCameraFollowComponent::LocomotionMoveStateChangeCallback);
-	LocomotionComponent->OnStanceChangeDelegate.AddDynamic(this, &UWvCameraFollowComponent::LocomotionMoveStateChangeCallback);
-	LocomotionComponent->OnRotationModeChangeDelegate.AddDynamic(this, &UWvCameraFollowComponent::LocomotionMoveStateChangeCallback);
-	LocomotionComponent->OnAimingChangeDelegate.AddDynamic(this, &UWvCameraFollowComponent::LocomotionAimChangeCallback);
-
-	//RequestAsyncLoad();
+	LocomotionComponent->OnGaitChangeDelegate.AddUniqueDynamic(this, &UWvCameraFollowComponent::LocomotionMoveStateChangeCallback);
+	LocomotionComponent->OnStanceChangeDelegate.AddUniqueDynamic(this, &UWvCameraFollowComponent::LocomotionMoveStateChangeCallback);
+	LocomotionComponent->OnRotationModeChangeDelegate.AddUniqueDynamic(this, &UWvCameraFollowComponent::LocomotionMoveStateChangeCallback);
+	LocomotionComponent->OnAimingChangeDelegate.AddUniqueDynamic(this, &UWvCameraFollowComponent::LocomotionAimChangeCallback);
 
 	RotationSensitiveValue = CameraTargetDAInstance ? CameraTargetDAInstance->RotationSensitiveValue : 0.3f;
-	SetupLocalPlayerController();
+
+	PlayerController = Cast<APlayerController>(Character->GetController());
+
+
 }
 
 
 void UWvCameraFollowComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-	if (LocomotionComponent.IsValid())
+	if (ComponentStreamableHandle.IsValid())
+	{
+		ComponentStreamableHandle->CancelHandle();
+		ComponentStreamableHandle.Reset();
+	}
+
+	if (IsValid(LocomotionComponent))
 	{
 		LocomotionComponent->OnGaitChangeDelegate.RemoveDynamic(this, &UWvCameraFollowComponent::LocomotionMoveStateChangeCallback);
 		LocomotionComponent->OnStanceChangeDelegate.RemoveDynamic(this, &UWvCameraFollowComponent::LocomotionMoveStateChangeCallback);
@@ -107,15 +116,8 @@ void UWvCameraFollowComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	TM.ClearTimer(SwitchingTargetTimerHandle);
 	TM.ClearTimer(SwitchingTargetComponentTimerHandle);
 
-	if (TargetLockedOnWidgetComponent.IsValid())
-	{
-		TargetLockedOnWidgetComponent->DestroyComponent();
-	}
-	TargetLockedOnWidgetComponent.Reset();
+	ReleaseTargetLockOnWidget();
 
-	Character.Reset();
-	LocomotionComponent.Reset();
-	PlayerController.Reset();
 	LockedOnTargetActor.Reset();
 	SelectHitTargetComponent.Reset();
 
@@ -149,17 +151,25 @@ void UWvCameraFollowComponent::UpdateCamera(UCurveFloat* LerpCurve)
 
 	if (!IsInGameThread())
 	{
+		AsyncTask(ENamedThreads::GameThread, [Self = TWeakObjectPtr<UWvCameraFollowComponent>(this), Curve = TWeakObjectPtr<UCurveFloat>(LerpCurve)]()
+		{
+			if (Self.IsValid() && Curve.IsValid())
+			{
+				// ここはGameThreadで再入
+				Self->UpdateCamera(Curve.Get());
+			}
+		});
 		return;
 	}
 
-	float MinTime, MaxTime;
+	float MinTime = 0.f, MaxTime = 0.f;
 	LerpCurve->GetTimeRange(MinTime, MaxTime);
 
 	CameraLerpTimerTotalTime = MaxTime;
 	CameraLerpTimerCurTime = 0;
-	CameraLerpTimerLerpInfo.LerpCurve = LerpCurve;
-	CameraLerpTimerLerpInfo.CurCameraSettings.TargetArmLength = SpringArmComponent->TargetArmLength;
-	CameraLerpTimerLerpInfo.CurCameraSettings.SocketOffset = SpringArmComponent->SocketOffset;
+	CameraLerpInfo.LerpCurve = LerpCurve;
+	CameraLerpInfo.CurCameraSettings.TargetArmLength = SpringArmComponent->TargetArmLength;
+	CameraLerpInfo.CurCameraSettings.SocketOffset = SpringArmComponent->SocketOffset;
 
 	FTimerManager& TM = GetWorld()->GetTimerManager();
 	if (TM.IsTimerActive(CameraLerpTimerHandle))
@@ -170,12 +180,13 @@ void UWvCameraFollowComponent::UpdateCamera(UCurveFloat* LerpCurve)
 	TM.SetTimer(CameraLerpTimerHandle, this, &UWvCameraFollowComponent::LerpUpdateCameraTimerCallback, DT, true);
 }
 
+
 void UWvCameraFollowComponent::LerpUpdateCameraTimerCallback()
 {
 	const float DT = GetWorld()->GetDeltaSeconds();
 	CameraLerpTimerCurTime += DT;
 
-	const float LerpAlpha = CameraLerpTimerLerpInfo.LerpCurve->GetFloatValue(CameraLerpTimerCurTime);
+	const float LerpAlpha = CameraLerpInfo.LerpCurve->GetFloatValue(CameraLerpTimerCurTime);
 	if (!LerpCameraSettings(LerpAlpha))
 	{
 		CameraLerpTimerCurTime = CameraLerpTimerTotalTime;
@@ -188,7 +199,7 @@ void UWvCameraFollowComponent::LerpUpdateCameraTimerCallback()
 	}
 }
 
-const bool UWvCameraFollowComponent::LerpCameraSettings(float LerpAlpha)
+const bool UWvCameraFollowComponent::LerpCameraSettings(const float LerpAlpha)
 {
 	FCameraSettings CameraSettings;
 	if (!ChooseCameraSettings(CameraSettings))
@@ -196,11 +207,11 @@ const bool UWvCameraFollowComponent::LerpCameraSettings(float LerpAlpha)
 		return false;
 	}
 
-	const float TargetArmLength = UKismetMathLibrary::Lerp(CameraLerpTimerLerpInfo.CurCameraSettings.TargetArmLength, CameraSettings.TargetArmLength, LerpAlpha);
-	const float CameraLagSpeed = UKismetMathLibrary::Lerp(CameraLerpTimerLerpInfo.CurCameraSettings.CameraLagSpeed, CameraSettings.CameraLagSpeed, LerpAlpha);
+	const float TargetArmLength = UKismetMathLibrary::Lerp(CameraLerpInfo.CurCameraSettings.TargetArmLength, CameraSettings.TargetArmLength, LerpAlpha);
+	const float CameraLagSpeed = UKismetMathLibrary::Lerp(CameraLerpInfo.CurCameraSettings.CameraLagSpeed, CameraSettings.CameraLagSpeed, LerpAlpha);
 	const FVector SettingsVector = CameraSettings.SocketOffset;
 
-	const FVector SocketOffset = UKismetMathLibrary::VLerp(CameraLerpTimerLerpInfo.CurCameraSettings.SocketOffset, SettingsVector, LerpAlpha);
+	const FVector SocketOffset = UKismetMathLibrary::VLerp(CameraLerpInfo.CurCameraSettings.SocketOffset, SettingsVector, LerpAlpha);
 
 	SpringArmComponent->TargetArmLength = TargetArmLength;
 	SpringArmComponent->CameraLagSpeed = CameraLagSpeed;
@@ -293,8 +304,6 @@ const bool UWvCameraFollowComponent::ChooseCameraSettings(FCameraSettings& Camer
 		{
 			return false;
 		}
-
-
 	}
 
 	return true;
@@ -318,65 +327,50 @@ void UWvCameraFollowComponent::LocomotionAimChangeCallback()
 }
 #pragma endregion
 
-#pragma region TargetSystem_Public
-void UWvCameraFollowComponent::DoTick()
-{
-	//const float DeltaTime = GetWorld()->GetDeltaSeconds();
-	//DoTick(DeltaTime);
 
-	if (IsInGameThread())
-	{
-		//const float DeltaTime = GetWorld()->GetDeltaSeconds();
-		//DoTick(DeltaTime);
-
-		UE_LOG(LogTemp, Log, TEXT("safe thread => %s"), *FString(__FUNCTION__));
-	}
-	else
-	{
-		//UE_LOG(LogTemp, Warning, TEXT("not game thread => %s"), *FString(__FUNCTION__));
-	}
-}
-
+#pragma region TargetSystem
+/// <summary>
+/// ref HandleTargetLock
+/// </summary>
 void UWvCameraFollowComponent::TargetLockOn()
 {
-	// Recast PlayerController in case it wasn't already setup on Begin Play (local split screen)
-	SetupLocalPlayerController();
 
-	ClosestTargetDistance = MinimumDistanceToEnable;
-	const TArray<AActor*> Actors = GetAllTargetableOfClass();
-	LockedOnTargetActor = FindNearestTarget(Actors);
+	TArray<AActor*> ActorsToLook = GetAllTargetableOfClass();
+	LockedOnTargetActor = FindNearestTarget(ActorsToLook);
 	ModifyHitTargetComponents();
 	TargetLockOn(LockedOnTargetActor.Get(), nullptr);
 }
 
-void UWvCameraFollowComponent::TargetLockOff()
+
+void UWvCameraFollowComponent::TargetLockOff(bool bIsForce/* = true*/)
 {
-	// Recast PlayerController in case it wasn't already setup on Begin Play (local split screen)
-	SetupLocalPlayerController();
-
-	bTargetLocked = false;
-
-	if (TargetLockedOnWidgetComponent.IsValid())
+	if (!bIsForce)
 	{
-		TargetLockedOnWidgetComponent->DestroyComponent();
-		TargetLockedOnWidgetComponent.Reset();
+		bTargetLocked = false;
 	}
+
+	ReleaseTargetLockOnWidget();
+
 
 	if (LockedOnTargetActor.IsValid())
 	{
-		if (bShouldControlRotation)
+		if (bIsForce)
 		{
 			ControlRotation(false);
-		}
 
-		if (PlayerController.IsValid())
-		{
-			PlayerController->ResetIgnoreLookInput();
-		}
+			if (IsValid(PlayerController))
+			{
+				PlayerController->ResetIgnoreLookInput();
+			}
 
-		if (OnTargetLockedOff.IsBound())
+			if (OnTargetLockedOff.IsBound())
+			{
+				OnTargetLockedOff.Broadcast(LockedOnTargetActor.Get(), nullptr);
+			}
+		}
+		else
 		{
-			OnTargetLockedOff.Broadcast(LockedOnTargetActor.Get(), nullptr);
+			// Switch Target
 		}
 	}
 
@@ -386,133 +380,105 @@ void UWvCameraFollowComponent::TargetLockOff()
 	LockedOnTargetActor.Reset();
 }
 
-void UWvCameraFollowComponent::TargetActorWithAxisInput(const float AxisValue)
+
+/// <summary>
+/// targetをlockonする
+/// </summary>
+/// <param name="AxisValue"></param>
+/// <param name="DeltaSeconds"></param>
+void UWvCameraFollowComponent::TargetActorWithAxisInput(const float AxisValue, const float DeltaSeconds)
 {
 	// If we're not locked on, do nothing
-	if (!bTargetLocked)
-	{
-		return;
-	}
-
-	if (!LockedOnTargetActor.IsValid())
+	if (!bTargetLocked || !LockedOnTargetActor.IsValid())
 	{
 		return;
 	}
 
 	// If we're not allowed to switch target, do nothing 
-	if (!ShouldSwitchTargetActor(AxisValue))
+	if (!ShouldSwitchTargetActor(AxisValue, DeltaSeconds))
 	{
 		return;
 	}
 
 	// If we're switching target, do nothing for a set amount of time
 	// or Switching Target Component
-	if (bIsSwitchingTarget || bIsSwitchingTargetComponent)
+	if (ActorInfo.bIsSwitching)
 	{
 		return;
 	}
 
+	// For each of these actors, check line trace and ignore Current Target and build the list of actors to look from
+	TArray<AActor*> ActorsToLook = GetAllTargetableOfClass();
+	ActorsToLook.Remove(LockedOnTargetActor.Get());
+
+
+#if false
 	// Lock off target
 	AActor* CurrentTarget = LockedOnTargetActor.Get();
-
 	// Depending on Axis Value negative / positive, set Direction to Look for (negative: left, positive: right)
 	const float RangeMin = AxisValue < 0 ? 0 : 180;
 	const float RangeMax = AxisValue < 0 ? 180 : 360;
-
-	// Reset Closest Target Distance to Minimum Distance to Enable
-	ClosestTargetDistance = MinimumDistanceToEnable;
-
-	const TArray<UHitTargetComponent*> Components = GetTargetComponents();
-
-	// For each of these actors, check line trace and ignore Current Target and build the list of actors to look from
-	TArray<AActor*> ActorsToLook;
-
-	for (UHitTargetComponent* Component : Components)
-	{
-		AActor* Actor = Component->GetOwner();
-
-		if (Actor == CurrentTarget)
-		{
-			continue;
-		}
-
-		const bool bIsTargetable = TargetIsTargetable(Actor);
-		if (bIsTargetable && UWvCommonUtils::IsInViewport(Actor))
-		{
-			ActorsToLook.Add(Actor);
-		}
-	}
-
-	UWvCommonUtils::OrderByDistance(GetOwner(), ActorsToLook, true);
-
-	// Find Targets in Range (left or right, based on Character and CurrentTarget)
 	TArray<AActor*> TargetsInRange = FindTargetsInRange(ActorsToLook, RangeMin, RangeMax);
+#endif
 
-	if (TargetsInRange.Num() <= 0)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("Empty TargetsInRange => %s"), *FString(__FUNCTION__));
-		return;
-	}
 
 	if (bDrawDebug)
 	{
-		for (auto Actor : TargetsInRange)
+		for (auto Actor : ActorsToLook)
 		{
 			DrawDebugPoint(GetWorld(), Actor->GetActorLocation(), 20.0f, FColor::Blue, false, 2.0f);
 		}
 	}
 
-	AActor* ActorToTarget = FindNearestDistanceTarget(TargetsInRange);
+	AActor* ActorToTarget = PickByScreenSide(ActorsToLook, AxisValue);
 
 	if (ActorToTarget)
 	{
-		if (bDrawDebug)
-		{
-			DrawDebugPoint(GetWorld(), ActorToTarget->GetActorLocation(), 40.0f, FColor::Red, false, 4.0f);
-		}
-
 		FTimerManager& TM = GetWorld()->GetTimerManager();
 		if (TM.IsTimerActive(SwitchingTargetTimerHandle))
 		{
 			TM.ClearTimer(SwitchingTargetTimerHandle);
 		}
 
-		TargetLockOff();
+		// PlayerControllerの操作は行わない
+		TargetLockOff(false);
+
 		LockedOnTargetActor = ActorToTarget;
 		ModifyHitTargetComponents();
 		TargetLockOn(ActorToTarget, nullptr);
-		bIsSwitchingTarget = true;
+		ActorInfo.bIsSwitching = true;
 		TM.SetTimer(SwitchingTargetTimerHandle, this, &UWvCameraFollowComponent::ResetIsSwitchingTarget, SWITCH_TARGET_DELAY);
 	}
 }
 
-void UWvCameraFollowComponent::TargetComponentWithAxisInput(const float AxisValue)
+
+/// <summary>
+/// lockontargetのActorから更にComponentをlockする
+/// </summary>
+/// <param name="AxisValue"></param>
+/// <param name="DeltaSeconds"></param>
+void UWvCameraFollowComponent::TargetComponentWithAxisInput(const float AxisValue, const float DeltaSeconds)
 {
 	// If we're not locked on, do nothing
-	if (!bTargetLocked)
-	{
-		return;
-	}
-
-	if (!LockedOnTargetActor.IsValid())
+	if (!bTargetLocked || !LockedOnTargetActor.IsValid())
 	{
 		return;
 	}
 
 	// If we're not allowed to switch target, do nothing 
-	if (!ShouldSwitchTargetComponent(AxisValue))
+	if (!ShouldSwitchTargetComponent(AxisValue, DeltaSeconds))
 	{
 		return;
 	}
 
 	// If we're switching target, do nothing for a set amount of time
 	// or Switching Target Component
-	if (bIsSwitchingTarget || bIsSwitchingTargetComponent)
+	if (ComponentInfo.bIsSwitching)
 	{
 		return;
 	}
 
-	if (HitTargetComponents.Num() <= 0)
+	if (HitTargetComponents.IsEmpty())
 	{
 		return;
 	}
@@ -520,8 +486,10 @@ void UWvCameraFollowComponent::TargetComponentWithAxisInput(const float AxisValu
 	// draw debug
 	if (bDrawDebug)
 	{
-		for (UHitTargetComponent* Component : HitTargetComponents)
+		for (auto Component : HitTargetComponents)
 		{
+			if (!Component.IsValid())
+				continue;
 			DrawDebugLine(GetWorld(), GetOwner()->GetActorLocation(), Component->GetComponentLocation(), FColor::Green);
 		}
 	}
@@ -547,18 +515,15 @@ void UWvCameraFollowComponent::TargetComponentWithAxisInput(const float AxisValu
 		return;
 	}
 
-	if (TargetLockedOnWidgetComponent.IsValid())
-	{
-		TargetLockedOnWidgetComponent->DestroyComponent();
-		TargetLockedOnWidgetComponent.Reset();
-	}
+	ReleaseTargetLockOnWidget();
 
 	SelectHitTargetComponent.Reset();
 	SelectHitTargetComponent = HitTargetComponents[FocusIndex];
 	TargetLockOn(LockedOnTargetActor.Get(), SelectHitTargetComponent.Get());
-	bIsSwitchingTargetComponent = true;
+	ComponentInfo.bIsSwitching = true;
 	TM.SetTimer(SwitchingTargetComponentTimerHandle, this, &UWvCameraFollowComponent::ResetIsSwitchingTargetComponent, SWITCH_COMPONENT_DELAY);
 }
+
 
 AActor* UWvCameraFollowComponent::GetLockedOnTargetActor() const
 {
@@ -569,9 +534,27 @@ bool UWvCameraFollowComponent::IsLocked() const
 {
 	return bTargetLocked && LockedOnTargetActor.IsValid();
 }
-#pragma endregion
 
-#pragma region TargetSystem_Private
+
+void UWvCameraFollowComponent::DoTick()
+{
+	//const float DeltaTime = GetWorld()->GetDeltaSeconds();
+	//DoTick(DeltaTime);
+
+	if (IsInGameThread())
+	{
+		//const float DeltaTime = GetWorld()->GetDeltaSeconds();
+		//DoTick(DeltaTime);
+
+		UE_LOG(LogTemp, Log, TEXT("safe thread => %s"), *FString(__FUNCTION__));
+	}
+	else
+	{
+		//UE_LOG(LogTemp, Warning, TEXT("not game thread => %s"), *FString(__FUNCTION__));
+	}
+}
+
+
 void UWvCameraFollowComponent::DoTick(const float DeltaTime)
 {
 	if (!bTargetLocked || !LockedOnTargetActor.IsValid())
@@ -589,21 +572,14 @@ void UWvCameraFollowComponent::DoTick(const float DeltaTime)
 
 	// Target Locked Off based on Distance
 	const float Distance = GetDistanceFromCharacter(LockedOnTargetActor.Get());
-	if (Distance > MinimumDistanceToEnable)
+	if (Distance > MaintainDistanceToKeep)
 	{
 		TargetLockOff();
 	}
 
 	if (ShouldBreakLineOfSight() && !bIsBreakingLineOfSight)
 	{
-		if (BreakLineOfSightDelay <= 0)
-		{
-			TargetLockOff();
-		}
-		else
-		{
-			LineOfSightBreakHandler();
-		}
+		LineOfSightBreakHandler();
 	}
 }
 
@@ -618,20 +594,50 @@ void UWvCameraFollowComponent::LineOfSightBreakHandler()
 	TM.SetTimer(LineOfSightBreakTimerHandle, this, &UWvCameraFollowComponent::BreakLineOfSight, BreakLineOfSightDelay);
 }
 
+
+/// <summary>
+/// 左右スイッチ判定
+/// </summary>
+/// <param name="ActorsToLook"></param>
+/// <param name="RangeMin"></param>
+/// <param name="RangeMax"></param>
+/// <returns></returns>
 TArray<AActor*> UWvCameraFollowComponent::FindTargetsInRange(TArray<AActor*> ActorsToLook, const float RangeMin, const float RangeMax) const
 {
 	TArray<AActor*> ActorsInRange;
 
+	const FRotator CamRotation = CameraComponent ? CameraComponent->GetComponentRotation() : Character->GetActorRotation();
+
 	for (AActor* Actor : ActorsToLook)
 	{
-		const float Angle = GetAngleUsingCameraRotation(Actor);
-		if (Angle > RangeMin && Angle < RangeMax)
+		const FRotator LookAt = UKismetMathLibrary::FindLookAtRotation(
+			CameraComponent ? CameraComponent->GetComponentLocation() : Character->GetActorLocation(),
+			Actor->GetActorLocation());
+
+		const float YawDelta = YawDeltaSigned(CamRotation, LookAt); // 左:負 右:正
+		// ここでは "左右" だけで選別（RangeMin/Maxは不使用）
+		// 後方すぎるターゲットは除外（例: ±75°を超えたら候補外）
+		if (FMath::Abs(YawDelta) <= YawDeltaThreshold)	// 調整可
 		{
 			ActorsInRange.Add(Actor);
 		}
 	}
 	return ActorsInRange;
 }
+
+
+/// <summary>
+/// 
+/// </summary>
+void UWvCameraFollowComponent::ReleaseTargetLockOnWidget()
+{
+	if (TargetLockedOnWidgetComponent.IsValid())
+	{
+		TargetLockedOnWidgetComponent->DestroyComponent();
+		TargetLockedOnWidgetComponent.Reset();
+	}
+}
+
 
 float UWvCameraFollowComponent::GetAngleUsingCameraRotation(const AActor* ActorToLook) const
 {
@@ -672,92 +678,97 @@ FRotator UWvCameraFollowComponent::FindLookAtRotation(const FVector Start, const
 
 void UWvCameraFollowComponent::ResetIsSwitchingTarget()
 {
-	bIsSwitchingTarget = false;
-	bDesireToSwitch = false;
+	ActorInfo.bIsSwitching = false;
+	ActorInfo.bIsDesireToSwitch = false;
 	UE_LOG(LogTemp, Log, TEXT("%s"), *FString(__FUNCTION__));
 }
 
 void UWvCameraFollowComponent::ResetIsSwitchingTargetComponent()
 {
-	bIsSwitchingTargetComponent = false;
-	bDesireToSwitchComponent = false;
+	ComponentInfo.bIsSwitching = false;
+	ComponentInfo.bIsDesireToSwitch = false;
 	UE_LOG(LogTemp, Log, TEXT("%s"), *FString(__FUNCTION__));
 }
+
 
 void UWvCameraFollowComponent::BreakLineOfSight()
 {
 	bIsBreakingLineOfSight = false;
-	if (ShouldBreakLineOfSight())
-	{
-		TargetLockOff();
-	}
+	TargetLockOff();
 	UE_LOG(LogTemp, Log, TEXT("%s"), *FString(__FUNCTION__));
 }
 
-const bool UWvCameraFollowComponent::ShouldSwitchTargetActor(const float AxisValue)
+/// <summary>
+/// 
+/// </summary>
+/// <param name="AxisValue"></param>
+/// <returns></returns>
+const bool UWvCameraFollowComponent::ShouldSwitchTargetActor(const float AxisValue, const float DeltaSeconds)
 {
-	const float AM = AxisMultiplier;
+	const float AM = AxisMultiplier * DeltaSeconds;
 	const float SRT = StickyRotationThreshold;
 
 	if (bEnableStickyTarget)
 	{
-		TargetActorRotatingStack += (AxisValue != 0) ? AxisValue * AM : (TargetActorRotatingStack > 0 ? -AM : AM);
+		ActorInfo.TargetRotatingStack += (AxisValue != 0) ? AxisValue * AM : (ActorInfo.TargetRotatingStack > 0 ? -AM : AM);
+		ActorInfo.TargetRotatingStack = FMath::Clamp(ActorInfo.TargetRotatingStack, -SRT * 2.f, SRT * 2.f);
 
-		if (AxisValue == 0 && FMath::Abs(TargetActorRotatingStack) <= AM)
+		if (AxisValue == 0 && FMath::Abs(ActorInfo.TargetRotatingStack) <= AM)
 		{
-			TargetActorRotatingStack = 0.0f;
+			ActorInfo.TargetRotatingStack = 0.0f;
 		}
 
-		if (FMath::Abs(TargetActorRotatingStack) < SRT)
+		if (FMath::Abs(ActorInfo.TargetRotatingStack) < SRT)
 		{
-			bDesireToSwitch = false;
+			ActorInfo.bIsDesireToSwitch = false;
 			return false;
 		}
 
 		// Sticky when the target changes.
-		if (TargetActorRotatingStack * AxisValue > 0)
+		if (ActorInfo.TargetRotatingStack * AxisValue > 0)
 		{
-			TargetActorRotatingStack = TargetActorRotatingStack > 0 ? SRT : -SRT;
+			ActorInfo.TargetRotatingStack = ActorInfo.TargetRotatingStack > 0 ? SRT : -SRT;
 		}
-		else if (TargetActorRotatingStack * AxisValue < 0)
+		else if (ActorInfo.TargetRotatingStack * AxisValue < 0)
 		{
-			TargetActorRotatingStack = TargetActorRotatingStack * -1.0f;
+			ActorInfo.TargetRotatingStack = ActorInfo.TargetRotatingStack * -1.0f;
 		}
-		bDesireToSwitch = true;
+		ActorInfo.bIsDesireToSwitch = true;
 		return true;
 	}
 	return FMath::Abs(AxisValue) > StartRotatingThreshold;
 }
 
-const bool UWvCameraFollowComponent::ShouldSwitchTargetComponent(float AxisValue)
+const bool UWvCameraFollowComponent::ShouldSwitchTargetComponent(const float AxisValue, const float DeltaSeconds)
 {
-	const float ACM = AxisComponentMultiplier;
+	const float ACM = AxisComponentMultiplier * DeltaSeconds;
 	const float SRCT = StickyRotationComponentThreshold;
 
 	if (bEnableStickyTargetComponent)
 	{
-		TargetComponentRotatingStack += (AxisValue != 0) ? AxisValue * ACM : (TargetComponentRotatingStack > 0 ? -ACM : ACM);
+		ComponentInfo.TargetRotatingStack += (AxisValue != 0) ? AxisValue * ACM : (ComponentInfo.TargetRotatingStack > 0 ? -ACM : ACM);
+		ComponentInfo.TargetRotatingStack = FMath::Clamp(ComponentInfo.TargetRotatingStack, -SRCT * 2.f, SRCT * 2.f);
 
-		if (AxisValue == 0 && FMath::Abs(TargetComponentRotatingStack) <= ACM)
+		if (AxisValue == 0 && FMath::Abs(ComponentInfo.TargetRotatingStack) <= ACM)
 		{
-			TargetComponentRotatingStack = 0.0f;
+			ComponentInfo.TargetRotatingStack = 0.0f;
 		}
 
-		if (FMath::Abs(TargetComponentRotatingStack) < SRCT)
+		if (FMath::Abs(ComponentInfo.TargetRotatingStack) < SRCT)
 		{
-			bDesireToSwitchComponent = false;
+			ComponentInfo.bIsDesireToSwitch = false;
 			return false;
 		}
 
-		if (TargetComponentRotatingStack * AxisValue > 0)
+		if (ComponentInfo.TargetRotatingStack * AxisValue > 0)
 		{
-			TargetComponentRotatingStack = TargetComponentRotatingStack > 0 ? SRCT : -SRCT;
+			ComponentInfo.TargetRotatingStack = ComponentInfo.TargetRotatingStack > 0 ? SRCT : -SRCT;
 		}
-		else if (TargetComponentRotatingStack * AxisValue < 0)
+		else if (ComponentInfo.TargetRotatingStack * AxisValue < 0)
 		{
-			TargetComponentRotatingStack = TargetComponentRotatingStack * -1.0f;
+			ComponentInfo.TargetRotatingStack = ComponentInfo.TargetRotatingStack * -1.0f;
 		}
-		bDesireToSwitchComponent = true;
+		ComponentInfo.bIsDesireToSwitch = true;
 		return true;
 	}
 	return FMath::Abs(AxisValue) > StartRotatingComponentThreshold;
@@ -779,9 +790,10 @@ void UWvCameraFollowComponent::ModifyHitTargetComponents()
 			HitTargetComponents.Add(Cast<UHitTargetComponent>(Component));
 		}
 
-		HitTargetComponents.RemoveAll([](UHitTargetComponent* Component)
+		HitTargetComponents.RemoveAll([](TWeakObjectPtr<UHitTargetComponent> Component)
 		{
-			return Component == nullptr;
+			UHitTargetComponent* Comp = Component.Get();
+			return Comp == nullptr;
 		});
 
 		FocusLastIndex = (HitTargetComponents.Num() - 1);
@@ -809,14 +821,11 @@ void UWvCameraFollowComponent::TargetLockOn(AActor* TargetToLockOn, UHitTargetCo
 			CreateAndAttachTargetLockedOnWidgetComponent(TargetToLockOn, TargetComponent);
 		}
 
-		if (bShouldControlRotation)
-		{
-			ControlRotation(true);
-		}
+		ControlRotation(true);
 
 		if (bAdjustPitchBasedOnDistanceToTarget || bIgnoreLookInput)
 		{
-			if (PlayerController.IsValid())
+			if (IsValid(PlayerController))
 			{
 				PlayerController->SetIgnoreLookInput(true);
 			}
@@ -845,7 +854,7 @@ void UWvCameraFollowComponent::CreateAndAttachTargetLockedOnWidgetComponent(AAct
 	UMeshComponent* MeshComponent = TargetActor->FindComponentByClass<UMeshComponent>();
 	USceneComponent* ParentComponent = IsValid(TargetComponent) ? TargetComponent : MeshComponent && SocketName != NAME_None ? MeshComponent : TargetActor->GetRootComponent();
 
-	if (PlayerController.IsValid())
+	if (IsValid(PlayerController))
 	{
 		TargetLockedOnWidgetComponent->SetOwnerPlayer(PlayerController->GetLocalPlayer());
 	}
@@ -906,32 +915,6 @@ TArray<UHitTargetComponent*> UWvCameraFollowComponent::GetTargetComponents() con
 	return TargetComps;
 }
 
-UHitTargetComponent* UWvCameraFollowComponent::GetLockTargetComponent() const
-{
-	const TArray<UHitTargetComponent*> Components = GetTargetComponents();
-
-	if (Components.Num() <= 0)
-	{
-		return nullptr;
-	}
-
-	// Get the target with the smallest angle difference from the camera forward vector
-	float ClosestDotToCenter = 360.0f;
-	UHitTargetComponent* TargetComponent = nullptr;
-
-	for (int32 Index = 0; Index < Components.Num(); ++Index)
-	{
-		const FVector NormalizePos = (Components[Index]->GetComponentLocation() - Character->GetActorLocation()).GetSafeNormal();
-		const FVector Forward = Character->GetActorForwardVector();
-		const float Dot = UKismetMathLibrary::DegAcos(FVector::DotProduct(Forward, NormalizePos));
-		if (Dot < ClosestDotToCenter)
-		{
-			ClosestDotToCenter = Dot;
-			TargetComponent = Components[Index];
-		}
-	}
-	return TargetComponent;
-}
 
 bool UWvCameraFollowComponent::TargetIsTargetable(const AActor* Actor)
 {
@@ -948,67 +931,86 @@ bool UWvCameraFollowComponent::TargetIsTargetable(const AActor* Actor)
 	return false;
 }
 
-void UWvCameraFollowComponent::SetupLocalPlayerController()
-{
-	if (!Character.IsValid())
-	{
-		UE_LOG(LogTemp, Error, TEXT("[%s] UWvCameraFollowComponent is meant to be added to Pawn only ..."), *GetNameSafe(this));
-		return;
-	}
-
-	if (!PlayerController.IsValid())
-	{
-		PlayerController = Cast<APlayerController>(Character->GetController());
-	}
-}
 
 /// <summary>
-/// in game viewport and targettable actor
+/// dot の大小で最短を選ぶ
 /// </summary>
 /// <param name="Actors"></param>
 /// <returns></returns>
-AActor* UWvCameraFollowComponent::FindNearestTarget(TArray<AActor*> Actors) const
+UHitTargetComponent* UWvCameraFollowComponent::GetLockTargetComponent() const
 {
-	// From the hit actors, check distance and return the nearest
-	if (Actors.Num() <= 0)
+	const TArray<UHitTargetComponent*> Components = GetTargetComponents();
+
+	if (Components.IsEmpty())
 	{
 		return nullptr;
 	}
 
-	// 視野角にいるかどうかの判定
-	// targetの内積をとり、アークコサインをとる
-	float ClosestDotToCenter = 360.0f;
-	AActor* Target = nullptr;
-	for (int32 Index = 0; Index < Actors.Num(); ++Index)
+	const FVector From = Character->GetActorForwardVector();
+	float BestDot = -FLT_MAX;
+	UHitTargetComponent* Best = nullptr;
+
+	for (UHitTargetComponent* A : Components)
 	{
-		const FVector NormalizePos = (Actors[Index]->GetActorLocation() - Character->GetActorLocation()).GetSafeNormal();
-		const FVector Forward = Character->GetActorForwardVector();
-		const float Dot = UKismetMathLibrary::DegAcos(FVector::DotProduct(Forward, NormalizePos));
-		if (Dot < ClosestDotToCenter)
+		const FVector Dir = (A->GetComponentLocation() - Character->GetActorLocation()).GetSafeNormal();
+		const float Dot = FVector::DotProduct(From, Dir);
+		if (Dot > BestDot)
 		{
-			ClosestDotToCenter = Dot;
-			Target = Actors[Index];
+			BestDot = Dot;
+			Best = A;
 		}
 	}
-	return Target;
+	return Best;
+
 }
 
-AActor* UWvCameraFollowComponent::FindNearestDistanceTarget(TArray<AActor*> Actors) const
+
+/// <summary>
+/// dot の大小で最短を選ぶ
+/// </summary>
+/// <param name="Actors"></param>
+/// <returns></returns>
+AActor* UWvCameraFollowComponent::FindNearestTarget(const TArray<AActor*>& Actors) const
 {
-	return UWvCommonUtils::FindNearestDistanceTarget(Character.Get(), Actors, ClosestTargetDistance);
+	// From the hit actors, check distance and return the nearest
+	if (Actors.IsEmpty())
+	{
+		return nullptr;
+	}
+
+	const FVector From = Character->GetActorForwardVector();
+	float BestDot = -FLT_MAX;
+	AActor* Best = nullptr;
+
+	for (AActor* A : Actors)
+	{
+		const FVector Dir = (A->GetActorLocation() - Character->GetActorLocation()).GetSafeNormal();
+		const float Dot = FVector::DotProduct(From, Dir);
+		if (Dot > BestDot)
+		{
+			BestDot = Dot;
+			Best = A;
+		}
+	}
+	return Best;
+}
+
+AActor* UWvCameraFollowComponent::FindNearestDistanceTarget(const TArray<AActor*>& Actors) const
+{
+	return UWvCommonUtils::FindNearestDistanceTarget(Character.Get(), Actors, MinimumDistanceToEnable);
 }
 
 bool UWvCameraFollowComponent::LineTrace(FHitResult& OutHitResult, const AActor* OtherActor, const TArray<AActor*>& ActorsToIgnore) const
 {
-	if (!Character.IsValid())
+	if (!IsValid(Character))
 	{
-		UE_LOG(LogTemp, Warning, TEXT("UWvCameraFollowComponent::LineTrace - Called with invalid Character: %s"), *GetNameSafe(Character.Get()));
+		UE_LOG(LogTemp, Warning, TEXT("[%s] - Called with invalid Character: %s"), *FString(__FUNCTION__), *GetNameSafe(Character.Get()));
 		return false;
 	}
 
 	if (!IsValid(OtherActor))
 	{
-		UE_LOG(LogTemp, Warning, TEXT("UWvCameraFollowComponent::LineTrace - Called with invalid OtherActor: %s"), *GetNameSafe(OtherActor));
+		UE_LOG(LogTemp, Warning, TEXT("[%s] - Called with invalid OtherActor: %s"), *FString(__FUNCTION__), *GetNameSafe(OtherActor));
 		return false;
 	}
 
@@ -1020,20 +1022,26 @@ bool UWvCameraFollowComponent::LineTrace(FHitResult& OutHitResult, const AActor*
 	FCollisionQueryParams Params = FCollisionQueryParams(FName("LineTraceSingle"));
 	Params.AddIgnoredActors(IgnoredActors);
 
-	if (IsValid(GetWorld()))
+	if (const UWorld* World = GetWorld())
 	{
 		const auto Start = Character->GetActorLocation();
 		const auto End = OtherActor->GetActorLocation();
-		return GetWorld()->LineTraceSingleByChannel(OutHitResult, Start, End, TargetableCollisionChannel, Params);
+		return World->LineTraceSingleByChannel(OutHitResult, Start, End, TargetableCollisionChannel, Params);
 	}
 
-	UE_LOG(LogTemp, Warning, TEXT("UWvCameraFollowComponent::LineTrace - Called with invalid World: %s"), *GetNameSafe(GetWorld()));
+	UE_LOG(LogTemp, Warning, TEXT("[%s] - Called with invalid World: %s"), *FString(__FUNCTION__), *GetNameSafe(GetWorld()));
 	return false;
+}
+
+
+float UWvCameraFollowComponent::YawDeltaSigned(const FRotator A, const FRotator B)
+{
+	return UKismetMathLibrary::NormalizedDeltaRotator(A, B).Yaw;
 }
 
 FRotator UWvCameraFollowComponent::GetControlRotationOnTarget(const AActor* OtherActor) const
 {
-	if (!PlayerController.IsValid())
+	if (!IsValid(PlayerController))
 	{
 		UE_LOG(LogTemp, Error, TEXT("%s - OwnerPlayerController is not valid ..."), *FString(__FUNCTION__));
 		return FRotator::ZeroRotator;
@@ -1051,6 +1059,7 @@ FRotator UWvCameraFollowComponent::GetControlRotationOnTarget(const AActor* Othe
 	constexpr float InterpSpeed = 10.0f;
 	if (bAdjustPitchBasedOnDistanceToTarget)
 	{
+		// 距離に応じて ピッチを上下に補正（近いときは下げて、遠いときは上げるなど）
 		const float DistanceToTarget = GetDistanceFromCharacter(OtherActor);
 		const float PitchInRange = (DistanceToTarget * PitchDistanceCoefficient + PitchDistanceOffset) * -1.0f;
 		const float PitchOffset = FMath::Clamp(PitchInRange, PitchMin, PitchMax);
@@ -1061,10 +1070,12 @@ FRotator UWvCameraFollowComponent::GetControlRotationOnTarget(const AActor* Othe
 	{
 		if (bIgnoreLookInput)
 		{
+			// lock pitch yaw
 			TargetRotation = FRotator(Pitch, LookRotation.Yaw, ControlRotation.Roll);
 		}
 		else
 		{
+			// lock yaw only
 			TargetRotation = FRotator(ControlRotation.Pitch, LookRotation.Yaw, ControlRotation.Roll);
 		}
 	}
@@ -1073,7 +1084,7 @@ FRotator UWvCameraFollowComponent::GetControlRotationOnTarget(const AActor* Othe
 
 void UWvCameraFollowComponent::SetControlRotationOnTarget(AActor* TargetActor) const
 {
-	if (!PlayerController.IsValid())
+	if (!IsValid(PlayerController))
 	{
 		return;
 	}
@@ -1103,11 +1114,11 @@ bool UWvCameraFollowComponent::ShouldBreakLineOfSight() const
 		return true;
 	}
 
-	TArray<AActor*> ActorsToIgnore = GetAllTargetableOfClass();
-	ActorsToIgnore.Remove(LockedOnTargetActor.Get());
+	TArray<AActor*> ActorsToLook = GetAllTargetableOfClass();
+	ActorsToLook.Remove(LockedOnTargetActor.Get());
 
 	FHitResult HitResult;
-	const bool bHitResult = LineTrace(HitResult, LockedOnTargetActor.Get(), ActorsToIgnore);
+	const bool bHitResult = LineTrace(HitResult, LockedOnTargetActor.Get(), ActorsToLook);
 	if (bHitResult && HitResult.GetActor() != LockedOnTargetActor)
 	{
 		return true;
@@ -1117,7 +1128,7 @@ bool UWvCameraFollowComponent::ShouldBreakLineOfSight() const
 
 void UWvCameraFollowComponent::ControlRotation(const bool bStrafeMovement) const
 {
-	if (!Character.IsValid() || !IsValid(Character->GetCharacterMovement()))
+	if (!IsValid(Character))
 	{
 		return;
 	}
@@ -1131,9 +1142,74 @@ void UWvCameraFollowComponent::ControlRotation(const bool bStrafeMovement) const
 		Character->VelocityMovement();
 	}
 }
+
+AActor* UWvCameraFollowComponent::PickByScreenSide(const TArray<AActor*>& Candidates, float AxisValue) const
+{
+	if (Candidates.IsEmpty() || !IsValid(PlayerController) || !IsValid(Character))
+	{
+		return nullptr;
+	}
+
+	int32 SizeX = 0, SizeY = 0;
+	PlayerController->GetViewportSize(SizeX, SizeY);
+	if (SizeX <= 0 || SizeY <= 0)
+	{
+		return nullptr;
+	}
+
+	const float CenterX = SizeX * 0.5f;
+
+	AActor* Best = nullptr;
+	float BestScore = -FLT_MAX;
+
+	for (AActor* Cand : Candidates)
+	{
+		if (!IsValid(Cand))
+		{
+			continue;
+		}
+
+		// 画面座標へ投影
+		FVector2D Screen;
+		const bool bProjected = UGameplayStatics::ProjectWorldToScreen(PlayerController.Get(), Cand->GetActorLocation(), Screen, true);
+		if (!bProjected)
+		{
+			continue;
+		}
+
+		// 入力方向の側だけ対象（AxisValue<0=左 / >0=右）
+		const float Dist = (Screen.X - CenterX); // 左<0, 右>0
+		if (AxisValue < 0.f && Dist > 0.f)
+		{
+			continue;
+		}
+		if (AxisValue > 0.f && Dist < 0.f)
+		{
+			continue;
+		}
+
+		// スコア：画面中心に近いほど↑ + 距離が近いほど↑
+		const float ScreenScore = 1.f / (FMath::Abs(Dist) + 1.f);
+		const float CurDist = Character->GetDistanceTo(Cand);
+		const float DistScore = 1.f / (CurDist + 1.f);
+
+		// 多少の重みはお好みで
+		const float Score = ScreenScore * 0.7f + DistScore * 0.3f;
+
+		if (Score > BestScore)
+		{
+			BestScore = Score;
+			Best = Cand;
+		}
+	}
+
+	return Best;
+}
+
 #pragma endregion
 
 
+#pragma region AsyncLoad
 void UWvCameraFollowComponent::RequestAsyncLoad()
 {
 	FStreamableManager& StreamableManager = UWvGameInstance::GetStreamableManager();
@@ -1141,14 +1217,14 @@ void UWvCameraFollowComponent::RequestAsyncLoad()
 	if (!CameraTargetDA.IsNull())
 	{
 		const FSoftObjectPath ObjectPath = CameraTargetDA.ToSoftObjectPath();
-		CameraTargetStreamableHandle = StreamableManager.RequestAsyncLoad(ObjectPath, FStreamableDelegate::CreateUObject(this, &ThisClass::OnDataAssetLoadComplete));
+		ComponentStreamableHandle = StreamableManager.RequestAsyncLoad(ObjectPath, FStreamableDelegate::CreateUObject(this, &ThisClass::OnDataAssetLoadComplete));
 	}
 }
 
 void UWvCameraFollowComponent::OnDataAssetLoadComplete()
 {
 	OnLoadCameraTargetSettingsDA();
-	CameraTargetStreamableHandle.Reset();
+	ComponentStreamableHandle.Reset();
 }
 
 void UWvCameraFollowComponent::OnLoadCameraTargetSettingsDA()
@@ -1162,5 +1238,5 @@ void UWvCameraFollowComponent::OnLoadCameraTargetSettingsDA()
 	} while (!bIsResult);
 	UE_LOG(LogTemp, Log, TEXT("Complete %s => [%s]"), *GetNameSafe(CameraTargetDAInstance), *FString(__FUNCTION__));
 }
-
+#pragma endregion
 

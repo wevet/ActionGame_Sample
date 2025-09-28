@@ -87,7 +87,7 @@ private:
 
 	bool bQTEEndCallbackResult;
 
-	TSharedPtr<FStreamableHandle>  QTEStreamableHandle;
+	TSharedPtr<FStreamableHandle>  ComponentStreamableHandle;
 
 	void OnLoadWidgetComplete();
 

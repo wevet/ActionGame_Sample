@@ -71,6 +71,12 @@ void ULadderComponent::BeginPlay()
 
 void ULadderComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
+	if (ComponentStreamableHandle.IsValid())
+	{
+		ComponentStreamableHandle->CancelHandle();
+		ComponentStreamableHandle.Reset();
+	}
+
 	if (GetOwner())
 	{
 		FTimerManager& TimerManager = GetOwner()->GetWorldTimerManager();
@@ -1524,14 +1530,14 @@ void ULadderComponent::RequestAsyncLoad()
 	if (!AnimationDA.IsNull())
 	{
 		const FSoftObjectPath ObjectPath = AnimationDA.ToSoftObjectPath();
-		AnimationStreamableHandle = StreamableManager.RequestAsyncLoad(ObjectPath, FStreamableDelegate::CreateUObject(this, &ThisClass::OnAnimAssetLoadComplete));
+		ComponentStreamableHandle = StreamableManager.RequestAsyncLoad(ObjectPath, FStreamableDelegate::CreateUObject(this, &ThisClass::OnAnimAssetLoadComplete));
 	}
 }
 
 void ULadderComponent::OnAnimAssetLoadComplete()
 {
 	OnLoadAnimationDA();
-	AnimationStreamableHandle.Reset();
+	ComponentStreamableHandle.Reset();
 }
 
 void ULadderComponent::OnLoadAnimationDA()

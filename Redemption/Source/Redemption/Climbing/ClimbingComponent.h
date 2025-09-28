@@ -738,7 +738,7 @@ private:
 	UPROPERTY()
 	TObjectPtr<UClimbingCurveDataAsset> ClimbingCurveDAInstance;
 
-	TSharedPtr<FStreamableHandle>  ClimbingStreamableHandle;
+	TSharedPtr<FStreamableHandle>  ComponentStreamableHandle;
 
 	void HandleTickWhileEvent(const bool bIsFinished);
 	void DoWhileTrueChangeClimbingEvent();

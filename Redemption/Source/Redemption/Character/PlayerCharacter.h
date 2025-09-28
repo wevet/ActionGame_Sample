@@ -150,7 +150,7 @@ private:
 	void OnQTEEnd_Callback(const bool bIsSuccess);
 
 	UPROPERTY()
-	TWeakObjectPtr<AWvPlayerController> P_Controller;
+	TObjectPtr<AWvPlayerController> P_Controller;
 
 public:
 	FORCEINLINE class UWvSpringArmComponent* GetCameraBoom() const { return CameraBoom; }

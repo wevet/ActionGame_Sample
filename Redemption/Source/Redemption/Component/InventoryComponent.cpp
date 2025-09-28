@@ -31,11 +31,18 @@ void UInventoryComponent::BeginPlay()
 
 void UInventoryComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-	Super::EndPlay(EndPlayReason);
+	if (ComponentStreamableHandle.IsValid())
+	{
+		ComponentStreamableHandle->CancelHandle();
+		ComponentStreamableHandle.Reset();
+	}
+
 	ItemArray.Empty();
 	WeaponActorMap.Empty();
 	Character.Reset();
 	CurrentWeaponActor.Reset();
+
+	Super::EndPlay(EndPlayReason);
 }
 
 void UInventoryComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
@@ -503,14 +510,14 @@ void UInventoryComponent::RequestAsyncLoad()
 	{
 		FStreamableManager& StreamableManager = UWvGameInstance::GetStreamableManager();
 		const FSoftObjectPath ObjectPath = InventoryDA.ToSoftObjectPath();
-		InventoryStreamableHandle = StreamableManager.RequestAsyncLoad(ObjectPath, FStreamableDelegate::CreateUObject(this, &ThisClass::OnDataAssetLoadComplete));
+		ComponentStreamableHandle = StreamableManager.RequestAsyncLoad(ObjectPath, FStreamableDelegate::CreateUObject(this, &ThisClass::OnDataAssetLoadComplete));
 	}
 }
 
 void UInventoryComponent::OnDataAssetLoadComplete()
 {
 	OnLoadInventoryDA();
-	InventoryStreamableHandle.Reset();
+	ComponentStreamableHandle.Reset();
 	//UE_LOG(LogTemp, Log, TEXT("[%s]"), *FString(__FUNCTION__));
 }
 
