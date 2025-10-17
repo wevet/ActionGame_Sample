@@ -14,6 +14,7 @@
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(WvAbility_Melee)
 
+
 UWvAbility_Melee::UWvAbility_Melee(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
 	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
@@ -131,9 +132,9 @@ void UWvAbility_Melee::ActivateAbility(const FGameplayAbilitySpecHandle Handle, 
 		0.f, 
 		FName("Default"), true, 1.0f);
 
-	MontageTask->OnCancelled.AddDynamic(this, &UWvAbility_Melee::OnPlayMontageCompleted_Event);
-	MontageTask->OnInterrupted.AddDynamic(this, &UWvAbility_Melee::OnPlayMontageCompleted_Event);
-	MontageTask->OnCompleted.AddDynamic(this, &UWvAbility_Melee::OnPlayMontageCompleted_Event);
+	MontageTask->OnCancelled.AddDynamic(this, &ThisClass::OnPlayMontageCompleted_Event);
+	MontageTask->OnInterrupted.AddDynamic(this, &ThisClass::OnPlayMontageCompleted_Event);
+	MontageTask->OnCompleted.AddDynamic(this, &ThisClass::OnPlayMontageCompleted_Event);
 	MontageTask->ReadyForActivation();
 }
 

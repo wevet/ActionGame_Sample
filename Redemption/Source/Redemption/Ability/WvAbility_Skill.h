@@ -37,7 +37,7 @@ private:
 	void OnPlayMontageCompleted_Event(FGameplayTag EventTag, FGameplayEventData EventData);
 
 	UPROPERTY()
-	class UWvAT_PlayMontageAndWaitForEvent* MontageTask;
+	TObjectPtr<class UWvAT_PlayMontageAndWaitForEvent> MontageTask{ nullptr };
 
 	const FSkillAnimMontage& GetSkillAnimMontage();
 };

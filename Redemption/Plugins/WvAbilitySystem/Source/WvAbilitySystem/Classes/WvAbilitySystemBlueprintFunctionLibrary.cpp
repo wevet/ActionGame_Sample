@@ -33,7 +33,8 @@ UWvAbilityDataAsset* UWvAbilitySystemBlueprintFunctionLibrary::GetAbilityData(co
 	return CastChecked<UWvAbilityDataAsset>(SourceObj);
 }
 
-UGameplayEffect* UWvAbilitySystemBlueprintFunctionLibrary::NewModifyAttributeGE(FGameplayAttribute Attribute, float Magnitude, FGameplayTag GETag, UObject* Outer /*= nullptr*/)
+UGameplayEffect* UWvAbilitySystemBlueprintFunctionLibrary::NewModifyAttributeGE(FGameplayAttribute& Attribute, const float Magnitude, 
+	const FGameplayTag& GETag, UObject* Outer /*= nullptr*/)
 {
 	if (Outer == nullptr)
 	{
@@ -75,21 +76,21 @@ void UWvAbilitySystemBlueprintFunctionLibrary::FilterOverlaps(const TArray<FWvOv
 
 		AActor* HitActor = Overlap.Actor.Get();
 
-		FWvOverlapResult** findRes = OverlapActors.Find(HitActor);
-		if (!findRes)
+		FWvOverlapResult** FindRes = OverlapActors.Find(HitActor);
+		if (!FindRes)
 		{
 			if (SourceObj == nullptr || TargetDataFilter.FilterPassesForActor(SourceObj, HitActor))
 			{
-				FWvOverlapResult& newItem = OutOverlaps.Add_GetRef(Overlap);
-				OverlapActors.Add(HitActor, &newItem);
+				FWvOverlapResult& NewItem = OutOverlaps.Add_GetRef(Overlap);
+				OverlapActors.Add(HitActor, &NewItem);
 			}
 		}
 		else
 		{
-			if ((*findRes)->ItemIndex == INDEX_NONE && Overlap.ItemIndex != INDEX_NONE)
+			if ((*FindRes)->ItemIndex == INDEX_NONE && Overlap.ItemIndex != INDEX_NONE)
 			{
-				(*findRes)->Component = Overlap.GetComponent();
-				(*findRes)->ItemIndex = Overlap.ItemIndex;
+				(*FindRes)->Component = Overlap.GetComponent();
+				(*FindRes)->ItemIndex = Overlap.ItemIndex;
 			}
 
 		}

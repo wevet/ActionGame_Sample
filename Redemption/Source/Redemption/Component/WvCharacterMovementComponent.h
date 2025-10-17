@@ -58,6 +58,8 @@ public:
 	virtual float SlideAlongSurface(const FVector& Delta, float Time, const FVector& InNormal, FHitResult& Hit, bool bHandleImpact) override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
+	virtual void ProcessLanded(const FHitResult& Hit, float remainingTime, int32 Iterations) override;
+
 	const FWvCharacterGroundInfo& GetGroundInfo();
 	void SetReplicatedAcceleration(const FVector& InAcceleration);
 
@@ -164,6 +166,15 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Character Movement: Mantle")
 	TSoftObjectPtr<UMantleAnimationDataAsset> MantleDA;
+
+
+	/** 高さしきい値(cm)。落下開始Z - 着地Z がこれ以上ならロール */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Character Movement: Landing", meta = (ClampMin = "0"))
+	float HardLandingMinFallHeight = 600.f;
+
+	float LastFallHeight = 0.f;	// 直近の落下高さ（cm)
+	float FallStartZ = 0.f;  // 落下開始時のZ
+	bool bLastLandingWasHard = false;
 
 
 #pragma region Traversal

@@ -32,11 +32,8 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
 	float TraceEndDistance = 20.0f;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
-	float Volume = 1.0f;
+	float Volume{ 1.0f };
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
-	bool bIsDisableTrace{false};
 
 
 protected:

@@ -7,12 +7,21 @@
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(WvAT_ComponentDamage)
 
-UWvAT_ComponentDamage::UWvAT_ComponentDamage(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
+
+UWvAT_ComponentDamage::UWvAT_ComponentDamage(const FObjectInitializer& ObjectInitializer) 
+	: Super(ObjectInitializer)
 {
 	bTickingTask = true;
 }
 
-UWvAT_ComponentDamage* UWvAT_ComponentDamage::ComponentFrameAction(UGameplayAbility* OwningAbility, FName TaskName, float TotalDuration, float IntervalTime, FName BoneName, TArray<int32> EffectIdxs, TArray<int32> EffectCompIdxs, TArray<UShapeComponent*> Shapes)
+UWvAT_ComponentDamage* UWvAT_ComponentDamage::ComponentFrameAction(UGameplayAbility* OwningAbility, 
+	FName TaskName, 
+	float TotalDuration, 
+	float IntervalTime, 
+	FName BoneName, 
+	TArray<int32> EffectIdxs, 
+	TArray<int32> EffectCompIdxs, 
+	TArray<UShapeComponent*> Shapes)
 {
 	UWvAT_ComponentDamage* DamageTask = NewAbilityTask<UWvAT_ComponentDamage>(OwningAbility, TaskName);
 	DamageTask->SourceName = BoneName;
@@ -46,7 +55,7 @@ bool UWvAT_ComponentDamage::GetCurTransForm(FTransform& OutBoneTransform, const 
 
 void UWvAT_ComponentDamage::Activate()
 {
-	if (ShapeComponents.Num() > 0)
+	if (!ShapeComponents.IsEmpty())
 	{
 		NotifyTime = 0.0f;
 		NextTraceTime = 0.0f;
@@ -86,6 +95,18 @@ void UWvAT_ComponentDamage::TickTask(float DeltaTime)
 		Execute();
 		NextTraceTime += IntervalTime;
 	}
+}
+
+
+void UWvAT_ComponentDamage::OnDestroy(bool bInOwnerFinished)
+{
+	CombatComponent = nullptr;
+	SkelMeshComp = nullptr;
+	ShapeComponents.Empty();
+	HitActors.Empty();
+	ActorsToIgnore.Empty();
+
+	Super::OnDestroy(bInOwnerFinished);
 }
 
 

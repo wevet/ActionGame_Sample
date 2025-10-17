@@ -86,9 +86,9 @@ void UWvAbility_Skill::ActivateAbility(const FGameplayAbilitySpecHandle Handle, 
 		FGameplayTagContainer(),
 		PlayRate, 0.f, FName("Default"), true, 1.0f);
 
-	MontageTask->OnCancelled.AddDynamic(this, &UWvAbility_Skill::OnPlayMontageCompleted_Event);
-	MontageTask->OnInterrupted.AddDynamic(this, &UWvAbility_Skill::OnPlayMontageCompleted_Event);
-	MontageTask->OnCompleted.AddDynamic(this, &UWvAbility_Skill::OnPlayMontageCompleted_Event);
+	MontageTask->OnCancelled.AddDynamic(this, &ThisClass::OnPlayMontageCompleted_Event);
+	MontageTask->OnInterrupted.AddDynamic(this, &ThisClass::OnPlayMontageCompleted_Event);
+	MontageTask->OnCompleted.AddDynamic(this, &ThisClass::OnPlayMontageCompleted_Event);
 	MontageTask->ReadyForActivation();
 }
 

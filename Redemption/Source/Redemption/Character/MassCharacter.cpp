@@ -70,9 +70,6 @@ void AMassCharacter::BeginPlay()
 	WvAbilitySystemComponent->AddGameplayTag(TAG_Weapon_HoldUp_Ignore, 1);
 	WvAbilitySystemComponent->AddGameplayTag(TAG_Weapon_KnockOut_Ignore, 1);
 
-	// loco convert velocity 
-	LocomotionComponent->EnableMassAgentMoving(true);
-
 	// temp remove delegate
 	if (AWvAIController* AIC = Cast<AWvAIController>(GetController()))
 	{

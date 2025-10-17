@@ -22,7 +22,7 @@ protected:
 	virtual void EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled) override;
 
 	UPROPERTY(EditDefaultsOnly)
-	UAnimMontage* AnimationMontage;
+	TObjectPtr<class UAnimMontage> AnimationMontage;
 
 	UPROPERTY(EditDefaultsOnly)
 	bool bIsDriveEndEvent = false;
@@ -32,18 +32,13 @@ private:
 	void OnPlayMontageCompleted_Event(FGameplayTag EventTag, FGameplayEventData EventData);
 
 	UPROPERTY()
-	class UWvAT_PlayMontageAndWaitForEvent* MontageTask;
+	TObjectPtr<class UWvAT_PlayMontageAndWaitForEvent> MontageTask{ nullptr };
 
 	void PlayMontage();
 	bool bDebugTrace = false;
 
-	UPROPERTY()
 	TWeakObjectPtr<APawn> Instigator;
-
-	UPROPERTY()
 	TWeakObjectPtr<APawn> Target;
-
-	UPROPERTY()
 	TWeakObjectPtr<AController> Controller;
 
 	void DriveEndAction();

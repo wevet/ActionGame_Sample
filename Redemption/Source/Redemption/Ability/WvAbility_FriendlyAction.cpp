@@ -52,6 +52,14 @@ void UWvAbility_FriendlyAction::ActivateAbility(const FGameplayAbilitySpecHandle
 
 	const int32 LastIndex = (Montages.Num() - 1);
 	const int32 Count = FMath::RandRange(0, LastIndex);
+
+	if (!Montages.IsValidIndex(Count))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[%s : Montages not valid Index.]"), *FString(__FUNCTION__));
+		CancelAbility(Handle, ActorInfo, ActivationInfo, false);
+		return;
+	}
+
 	UAnimMontage* TargetMontage = Montages[Count];
 
 	if (!IsValid(TargetMontage))
@@ -77,7 +85,8 @@ void UWvAbility_FriendlyAction::ActivateAbility(const FGameplayAbilitySpecHandle
 		FName("FriendlyAction"),
 		TargetMontage,
 		FGameplayTagContainer(),
-		1.0, 0.f, FName("Default"), true, 1.0f);
+		1.0, 0.f, 
+		FName("Default"), true, 1.0f);
 
 	MontageTask->OnCancelled.AddDynamic(this, &UWvAbility_FriendlyAction::OnPlayMontageCompleted_Event);
 	MontageTask->OnInterrupted.AddDynamic(this, &UWvAbility_FriendlyAction::OnPlayMontageCompleted_Event);

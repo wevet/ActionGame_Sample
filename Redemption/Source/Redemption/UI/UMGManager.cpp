@@ -17,12 +17,15 @@ UUMGManager::UUMGManager(const FObjectInitializer& ObjectInitializer) : Super(Ob
 void UUMGManager::NativeConstruct()
 {
 	Super::NativeConstruct();
+
+	// @NOTE
+	// •s—v‚È‚Ì‚Åˆê’U”ñ•\Ž¦
+	VisibleMinimapUI(false);
 }
 
 void UUMGManager::BeginDestroy()
 {
 	CombatUIController = nullptr;
-	MinimapUIController = nullptr;
 
 	Super::BeginDestroy();
 }
@@ -47,12 +50,12 @@ void UUMGManager::Initializer(ABaseCharacter* NewCharacter)
 
 void UUMGManager::RemoveFromParent()
 {
-	if (CombatUIController)
+	if (IsValid(CombatUIController))
 	{
 		CombatUIController->RemoveFromParent();
 	}
 
-	if (MinimapUIController)
+	if (IsValid(MinimapUIController))
 	{
 		MinimapUIController->RemoveFromParent();
 	}
@@ -64,12 +67,12 @@ void UUMGManager::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
 {
 	Super::NativeTick(MyGeometry, InDeltaTime);
 
-	if (CombatUIController)
+	if (IsValid(CombatUIController))
 	{
 		CombatUIController->Renderer(InDeltaTime);
 	}
 
-	if (MinimapUIController)
+	if (IsValid(MinimapUIController))
 	{
 		MinimapUIController->Renderer(InDeltaTime);
 	}
@@ -77,7 +80,7 @@ void UUMGManager::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
 
 void UUMGManager::SetTickableWhenPaused()
 {
-	if (CombatUIController)
+	if (IsValid(CombatUIController))
 	{
 		CombatUIController->SetTickableWhenPaused();
 	}
@@ -86,7 +89,7 @@ void UUMGManager::SetTickableWhenPaused()
 
 void UUMGManager::VisibleCombatUI(const bool bIsVisible)
 {
-	if (CombatUIController)
+	if (IsValid(CombatUIController))
 	{
 		CombatUIController->SetVisibility(bIsVisible ? ESlateVisibility::Visible : ESlateVisibility::Hidden);
 	}
@@ -95,7 +98,7 @@ void UUMGManager::VisibleCombatUI(const bool bIsVisible)
 
 void UUMGManager::VisibleMinimapUI(const bool bIsVisible)
 {
-	if (MinimapUIController)
+	if (IsValid(MinimapUIController))
 	{
 		MinimapUIController->SetVisibility(bIsVisible ? ESlateVisibility::Visible : ESlateVisibility::Hidden);
 	}

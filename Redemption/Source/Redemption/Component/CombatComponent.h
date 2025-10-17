@@ -37,7 +37,7 @@ protected:
 	float DrawTime = 0.5f;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Combat|Config")
-	class UHitReactBoneShakeDataAsset* HitReactBoneShakeDA;
+	TObjectPtr<class UHitReactBoneShakeDataAsset> HitReactBoneShakeDA{nullptr};
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Combat|AI")
 	EAttackWeaponState AttackWeaponState = EAttackWeaponState::EmptyWeapon;
@@ -158,18 +158,19 @@ private:
 	FTimerHandle TimerHandle;
 	FTimerHandle ShakeBone_TimerHandle;
 
-	bool IsFixedHitReactFeature{ false };
-	FGameplayTag HitReactFeature;
-	FGameplayTag WeaknessHitReactFeature;
-	FGameplayTag StateDead;
-	FGameplayTag StateHitReact;
-
 	bool IsDead{ false };
+	bool IsFixedHitReactFeature{ false };
+	FGameplayTag HitReactFeature{ FGameplayTag::EmptyTag };
+	FGameplayTag WeaknessHitReactFeature{ FGameplayTag::EmptyTag };
+	FGameplayTag StateDead{ FGameplayTag::EmptyTag };
+	FGameplayTag StateHitReact{ FGameplayTag::EmptyTag };
+
 
 	UPROPERTY()
-	class USkeletalMeshBoneShakeExecuteData* SkeletalMeshBoneShakeExecuteData;
+	TObjectPtr<class USkeletalMeshBoneShakeExecuteData> SkeletalMeshBoneShakeExecuteData{ nullptr };
 
 	UPROPERTY()
 	struct FComboChainSystem ComboChainSystem;
-	bool bIsChainWidgetShown = false;
+	bool bIsChainWidgetShown{ false };
 };
+

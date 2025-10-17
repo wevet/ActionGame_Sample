@@ -15,35 +15,14 @@ UCombatUIController::UCombatUIController(const FObjectInitializer& ObjectInitial
 {
 	PrevWeaponIndex = INDEX_NONE;
 	CharacterOwner = nullptr;
-	BasePanelWidget = nullptr;
-	PlayerHealthWidget = nullptr;
-	WeaponFocusWidget = nullptr;
 
 	bTickEventWhenPaused = false;
-
-	/* RootWidget */
-	BasePanelKeyName = FName(TEXT("BasePanel"));
-
-	/* PlayerHealth */
-	PlayerHealthKeyName = FName(TEXT("PlayerHealth"));
-
-	/* PlayerSkill */
-	PlayerSkillKeyName = FName(TEXT("PlayerSkill"));
-
-	/* WeaponFocus */
-	WeaponFocusKeyName = FName(TEXT("WeaponFocus"));
-
-	// @TODO
-	/* WeaponWindow */
-	WeaponWindowKeyName = FName(TEXT("WeaponWindow"));
 }
 
 void UCombatUIController::NativeConstruct()
 {
 	Super::NativeConstruct();
 
-	BasePanelWidget = Cast<UCanvasPanel>(GetWidgetFromName(BasePanelKeyName));
-	WeaponFocusWidget = Cast<UWeaponFocus>(GetWidgetFromName(WeaponFocusKeyName));
 
 	if (WeaponFocusWidget)
 	{
@@ -70,19 +49,16 @@ void UCombatUIController::Initializer(ABaseCharacter* NewCharacter)
 
 	if (CharacterOwner)
 	{
-		CharacterOwner->AimingChangeDelegate.AddDynamic(this, &ThisClass::OnAiming_Callback);
-		CharacterOwner->OverlayChangeDelegate.AddDynamic(this, &ThisClass::OnOverlayChange_Callback);
-		CharacterOwner->GetLocomotionComponent()->OnRotationModeChangeDelegate.AddDynamic(this, &ThisClass::OnRotationModeChange_Callback);
+		CharacterOwner->AimingChangeDelegate.AddUniqueDynamic(this, &ThisClass::OnAiming_Callback);
+		CharacterOwner->OverlayChangeDelegate.AddUniqueDynamic(this, &ThisClass::OnOverlayChange_Callback);
+		CharacterOwner->GetLocomotionComponent()->OnRotationModeChangeDelegate.AddUniqueDynamic(this, &ThisClass::OnRotationModeChange_Callback);
 	}
 
-	PlayerHealthWidget = Cast<UPlayerHealth>(GetWidgetFromName(PlayerHealthKeyName));
 
 	if (PlayerHealthWidget)
 	{
 		PlayerHealthWidget->Initializer(CharacterOwner);
 	}
-
-	PlayerSkillWidget = Cast<UPlayerSkill>(GetWidgetFromName(PlayerSkillKeyName));
 
 	if (PlayerSkillWidget)
 	{

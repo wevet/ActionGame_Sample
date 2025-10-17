@@ -76,6 +76,7 @@ void AWvPlayerController::OnPossess(APawn* InPawn)
 		Manager = Cast<AWvPlayerCameraManager>(PlayerCameraManager);
 	}
 
+
 	if (InPawn->IsA(APlayerCharacter::StaticClass()))
 	{
 		PC = Cast<APlayerCharacter>(InPawn);
@@ -87,6 +88,7 @@ void AWvPlayerController::OnPossess(APawn* InPawn)
 		OnVehilcePossess(InPawn);
 	}
 
+#if false
 	if (!IsValid(MinimapCaptureActor))
 	{
 		AsyncLoadMinimapActor(InPawn);
@@ -96,6 +98,7 @@ void AWvPlayerController::OnPossess(APawn* InPawn)
 		MinimapCaptureActor->Initializer(InPawn);
 		AddMinimapHiddenActor(InPawn);
 	}
+#endif
 
 }
 

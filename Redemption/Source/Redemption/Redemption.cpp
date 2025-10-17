@@ -70,6 +70,10 @@ UE_DEFINE_GAMEPLAY_TAG(TAG_Character_ActionWalk_Forbid, "Character.Action.Walk.F
 UE_DEFINE_GAMEPLAY_TAG(TAG_Character_ActionCrouch, "Character.Action.Crouch");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Character_ActionCrouch_Forbid, "Character.Action.Crouch.Forbid");
 
+// Roll
+UE_DEFINE_GAMEPLAY_TAG(TAG_Character_ActionRoll, "Character.Action.Roll");
+UE_DEFINE_GAMEPLAY_TAG(TAG_Character_ActionRoll_Forbid, "Character.Action.Roll.Forbid");
+
 // Drive
 UE_DEFINE_GAMEPLAY_TAG(TAG_Character_ActionDrive, "Character.Action.Drive");
 UE_DEFINE_GAMEPLAY_TAG(TAG_Character_ActionDrive_Forbid, "Character.Action.Drive.Forbid");

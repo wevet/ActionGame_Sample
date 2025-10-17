@@ -9,6 +9,7 @@
 #include "GameplayTagContainer.h"
 #include "Engine/DataAsset.h"
 #include "Async/TaskGraphInterfaces.h"
+#include "Logging/LogMacros.h"
 #include "LocomotionComponent.generated.h"
 
 class UWvCharacterMovementComponent;
@@ -29,6 +30,7 @@ namespace LocomotionDebug
 #endif
 }
 
+DECLARE_LOG_CATEGORY_EXTERN(LogLocomotion, All, All)
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FLocomotionStateChangeDelegate);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FLocomotionOverlayChangeDelegate, const ELSOverlayState, PrevOverlay, const ELSOverlayState, CurrentOverlay);
@@ -227,6 +229,9 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion")
 	TObjectPtr <class ULocomotionStateDataAsset> LocomotionStateDataAsset;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion")
+	float SprintYawLimit{50.0f};
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion|MotionMatching")
 	TObjectPtr<UCurveFloat> StafeSpeedCurve = nullptr;
 
@@ -264,7 +269,7 @@ public:
 	void OnLanded();
 
 	void ToggleRightShoulder();
-	FVector ChooseVelocity() const;
+	const FVector ChooseVelocity();
 	ELSMovementMode GetPawnMovementModeChanged(const EMovementMode PrevMovementMode, const uint8 PrevCustomMode) const;
 
 	const float ChooseMaxWalkSpeed();
@@ -279,8 +284,6 @@ public:
 	void StopRagdollAction(TFunctionRef<void()> Callback);
 	bool IsRagdollingFaceDown() const;
 
-	// apply to MassCharacter
-	void EnableMassAgentMoving(const bool bIsEnable);
 	void UpdateCharacterMovementSettings();
 
 	void DrawLocomotionDebug();
@@ -340,22 +343,24 @@ private:
 
 
 	FVector LandingVelocity = FVector::ZeroVector;
-	bool bWasJustLanded = false;
-	bool bDoSprint;
-	bool bDoRunning;
-	bool bShouldSprint;
-	bool bLockUpdatingRotation;
-	bool bIsOwnerPlayerController = false;
-	float ForwardAxisValue;
-	float RightAxisValue;
+	bool bWasJustLanded{ false };
+	bool bDoSprint{false};
+	bool bDoRunning{ false };
+	bool bShouldSprint{ false };
+	bool bLockUpdatingRotation{ false };
+	bool bIsOwnerPlayerController{ false };
+	float ForwardAxisValue{0.f};
+	float RightAxisValue{ 0.f };
 
-	bool bDebugTrace;
+	bool bDebugTrace{ false };
 	int32 bDebugIndex = 0;
 
 	FTimerHandle Landing_CallbackHandle;
 	FGraphEventRef AsyncWork;
 
 
+	FVector PrevPos = FVector::ZeroVector;
+	FVector PrevVel = FVector::ZeroVector;
 };
 
 

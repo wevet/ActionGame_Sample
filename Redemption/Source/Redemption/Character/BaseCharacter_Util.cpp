@@ -9,11 +9,8 @@
 #include "Locomotion/LocomotionComponent.h"
 #include "Component/CombatComponent.h"
 #include "Component/StatusComponent.h"
-#include "WvPlayerController.h"
-#include "Animation/WvAnimInstance.h"
 #include "Game/WvGameInstance.h"
 #include "GameExtension.h"
-#include "Level/FieldInstanceSubsystem.h"
 
 
 #include "Components/CapsuleComponent.h"
@@ -168,17 +165,27 @@ void ABaseCharacter::HairStrandsLODSetUp()
 	const int32 ConsoleValue = CVar->GetInt();
 	if (!(ConsoleValue > 0))
 	{
+		UMaterialInstanceDynamic* MID_Ten = nullptr;
+		UMaterialInstanceDynamic* MID_Six = nullptr;
+
 		// Get eyelashes material on higher LODs
-		UMaterialInstanceDynamic* MID_Ten = Cast<UMaterialInstanceDynamic>(Face->GetMaterial(10));
-		if (!IsValid(MID_Ten))
+		if (Face->GetMaterials().IsValidIndex(10))
 		{
-			MID_Ten = Face->CreateDynamicMaterialInstance(10);
+			MID_Ten = Cast<UMaterialInstanceDynamic>(Face->GetMaterial(10));
+			if (!IsValid(MID_Ten))
+			{
+				MID_Ten = Face->CreateDynamicMaterialInstance(10);
+			}
 		}
+
 		// Get eyelashes material on lower LODs
-		UMaterialInstanceDynamic* MID_Six = Cast<UMaterialInstanceDynamic>(Face->GetMaterial(6));
-		if (!IsValid(MID_Six))
+		if (Face->GetMaterials().IsValidIndex(6))
 		{
-			MID_Six = Face->CreateDynamicMaterialInstance(6);
+			MID_Six = Cast<UMaterialInstanceDynamic>(Face->GetMaterial(6));
+			if (!IsValid(MID_Six))
+			{
+				MID_Six = Face->CreateDynamicMaterialInstance(6);
+			}
 		}
 
 		if (MID_Ten && MID_Six)
@@ -310,6 +317,9 @@ FCharacterInfo ABaseCharacter::GetCharacterInfo() const
 	return StatusComponent->GetCharacterInfo();
 }
 
+/// <summary>
+/// ëÃån
+/// </summary>
 void ABaseCharacter::GenerateRandomBodyShapeType()
 {
 	const uint8 Index = (uint8)FMath::RandRange(0, 2);
@@ -317,7 +327,9 @@ void ABaseCharacter::GenerateRandomBodyShapeType()
 	SetBodyShapeType((EBodyShapeType)Index);
 }
 
-
+/// <summary>
+/// ê´ï 
+/// </summary>
 void ABaseCharacter::GenerateRandomGenderType()
 {
 	const uint8 Index = (uint8)FMath::RandRange(0, 1);
@@ -440,6 +452,7 @@ void ABaseCharacter::SetOverlayMaterials(const bool IsEnable, TArray<USkeletalMe
 	}
 
 	auto MID = CharacterVFXDA->OverlayMaterial;
+
 	if (IsValid(MID))
 	{
 		TArray<USkeletalMeshComponent*> Components = GetBodyMeshComponents();
@@ -551,7 +564,9 @@ void ABaseCharacter::LoadAndSetMeshes(const bool bIsBlockLoadAssets, TSoftObject
 
 	TArray<TSoftObjectPtr<USkeletalMesh>> SoftSKMeshes({ BaseMesh, BodyMesh, FaceMesh, TopMesh, BottomMesh, FeetMesh});
 
-	InitialBodyMeshesPath.Reset(0);
+	InitialBodyMeshesPath.Reset();
+	InitialBodyMeshesPath.Reserve(SoftSKMeshes.Num());
+
 	for (auto SoftMesh : SoftSKMeshes)
 	{
 		InitialBodyMeshesPath.Add(SoftMesh.ToSoftObjectPath());

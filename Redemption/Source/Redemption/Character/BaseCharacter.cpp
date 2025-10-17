@@ -58,10 +58,13 @@
 #include "SignificanceManager.h"
 #include "Algo/Transform.h"
 #include "ChooserFunctionLibrary.h"
+#include "BehaviorTree/BehaviorTree.h"
 
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(BaseCharacter)
 
+
+DEFINE_LOG_CATEGORY(LogBaseCharacter)
 
 
 namespace CharacterDebug
@@ -321,6 +324,11 @@ void ABaseCharacter::BeginPlay()
 	MotionWarpingComponent->AddTickPrerequisiteActor(this);
 	CharacterTrajectoryComponent->AddTickPrerequisiteActor(this);
 
+	LadderComponent = FindComponentByClass<ULadderComponent>();
+	if (IsValid(LadderComponent))
+	{
+		LadderComponent->AddTickPrerequisiteActor(this);
+	}
 
 	if (!IsValid(Other1->GetSkeletalMeshAsset()))
 	{
@@ -425,7 +433,7 @@ void ABaseCharacter::UnPossessed()
 	MyTeamID = DetermineNewTeamAfterPossessionEnds(OldTeamID);
 	ConditionalBroadcastTeamChanged(this, OldTeamID, MyTeamID);
 
-	//UE_LOG(LogTemp, Log, TEXT("%s"), *FString(__FUNCTION__));
+	//UE_LOG(LogBaseCharacter, Log, TEXT("%s"), *FString(__FUNCTION__));
 }
 
 void ABaseCharacter::Tick(float DeltaTime)
@@ -488,7 +496,7 @@ void ABaseCharacter::OnEndCrouch(float HalfHeightAdjust, float ScaledHalfHeightA
 
 void ABaseCharacter::MoveBlockedBy(const FHitResult& Impact)
 {
-	//UE_LOG(LogTemp, Log, TEXT("%s"), *FString(__FUNCTION__));
+	//UE_LOG(LogBaseCharacter, Log, TEXT("%s"), *FString(__FUNCTION__));
 }
 
 void ABaseCharacter::InitAbilitySystemComponent()
@@ -717,12 +725,12 @@ void ABaseCharacter::SetGenericTeamId(const FGenericTeamId& NewTeamID)
 		}
 		else
 		{
-			UE_LOG(LogTemp, Error, TEXT("You can't set the team ID on a character (%s) except on the authority"), *GetNameSafe(this));
+			UE_LOG(LogBaseCharacter, Error, TEXT("You can't set the team ID on a character (%s) except on the authority"), *GetNameSafe(this));
 		}
 	}
 	else
 	{
-		UE_LOG(LogTemp, Error, TEXT("You can't set the team ID on a possessed character (%s); it's driven by the associated controller"), *GetNameSafe(this));
+		UE_LOG(LogBaseCharacter, Error, TEXT("You can't set the team ID on a possessed character (%s); it's driven by the associated controller"), *GetNameSafe(this));
 	}
 }
 
@@ -882,7 +890,7 @@ bool ABaseCharacter::IsFreezing() const
 bool ABaseCharacter::IsSprintingMovement() const
 {
 	const FGameplayTag SprintTag = FGameplayTag::RequestGameplayTag(TEXT("Character.Locomotion.Gait.Sprinting"));
-	//UE_LOG(LogTemp, Log, TEXT("IsSprinting => %s"), WvAbilitySystemComponent->HasMatchingGameplayTag(SprintTag) ? TEXT("true") : TEXT("false"));
+	//UE_LOG(LogBaseCharacter, Log, TEXT("IsSprinting => %s"), WvAbilitySystemComponent->HasMatchingGameplayTag(SprintTag) ? TEXT("true") : TEXT("false"));
 	const bool bResult = IsValid(WvAbilitySystemComponent) ? WvAbilitySystemComponent->HasMatchingGameplayTag(SprintTag) : false;
 	return bResult || LocomotionComponent->GetLSGaitMode_Implementation() == ELSGait::Sprinting;
 }
@@ -894,7 +902,7 @@ void ABaseCharacter::DoAttack()
 {
 	if (WvAbilitySystemComponent->HasMatchingGameplayTag(TAG_Character_ActionMelee_Forbid))
 	{
-		UE_LOG(LogTemp, Warning, TEXT("has tag TAG_Character_StateMelee_Forbid => %s"), *FString(__FUNCTION__));
+		UE_LOG(LogBaseCharacter, Warning, TEXT("has tag TAG_Character_StateMelee_Forbid => %s"), *FString(__FUNCTION__));
 		return;
 	}
 
@@ -926,7 +934,7 @@ void ABaseCharacter::DoBulletAttack()
 {
 	if (WvAbilitySystemComponent->HasMatchingGameplayTag(TAG_Character_ActionMelee_Forbid))
 	{
-		UE_LOG(LogTemp, Warning, TEXT("has tag TAG_Character_StateMelee_Forbid => %s"), *FString(__FUNCTION__));
+		UE_LOG(LogBaseCharacter, Warning, TEXT("has tag TAG_Character_StateMelee_Forbid => %s"), *FString(__FUNCTION__));
 		return;
 	}
 
@@ -948,7 +956,7 @@ void ABaseCharacter::DoThrowAttack()
 {
 	if (WvAbilitySystemComponent->HasMatchingGameplayTag(TAG_Character_ActionMelee_Forbid))
 	{
-		UE_LOG(LogTemp, Warning, TEXT("has tag TAG_Character_StateMelee_Forbid => %s"), *FString(__FUNCTION__));
+		UE_LOG(LogBaseCharacter, Warning, TEXT("has tag TAG_Character_StateMelee_Forbid => %s"), *FString(__FUNCTION__));
 		return;
 	}
 
@@ -1284,11 +1292,7 @@ void ABaseCharacter::Jump()
 				break;
 				case CUSTOM_MOVE_Ladder:
 				{
-					ULadderComponent* LadderComponent = FindComponentByClass<ULadderComponent>();
-					if (LadderComponent)
-					{
-						LadderComponent->SetJumpInputPressed(true);
-					}
+					LadderComponent->SetJumpInputPressed(true);
 				}
 				break;
 			}
@@ -1317,19 +1321,15 @@ void ABaseCharacter::StopJumping()
 {
 	Super::StopJumping();
 
-	ClimbingComponent->SetJumpInputPressed(false);
-
 	UWvCharacterMovementComponent* CMC = GetWvCharacterMovementComponent();
 	if (CMC)
 	{
 		CMC->SetTraversalPressed(false);
 	}
 
-	ULadderComponent* LadderComponent = FindComponentByClass<ULadderComponent>();
-	if (LadderComponent)
-	{
-		LadderComponent->SetJumpInputPressed(false);
-	}
+	ClimbingComponent->SetJumpInputPressed(false);
+
+	LadderComponent->SetJumpInputPressed(false);
 
 }
 
@@ -1449,12 +1449,12 @@ void ABaseCharacter::DoTargetLockOff()
 
 void ABaseCharacter::OnTraversalBegin_Callback()
 {
-	//UE_LOG(LogTemp, Log, TEXT("Character => %s, function => %s"), *GetName(), *FString(__FUNCTION__));
+	//UE_LOG(LogBaseCharacter, Log, TEXT("Character => %s, function => %s"), *GetName(), *FString(__FUNCTION__));
 }
 
 void ABaseCharacter::OnTraversalEnd_Callback()
 {
-	//UE_LOG(LogTemp, Log, TEXT("Character => %s, function => %s"), *GetName(), *FString(__FUNCTION__));
+	//UE_LOG(LogBaseCharacter, Log, TEXT("Character => %s, function => %s"), *GetName(), *FString(__FUNCTION__));
 }
 
 /// <summary>
@@ -1492,12 +1492,12 @@ void ABaseCharacter::HandleGuardAction(const bool bGuardEnable, bool& OutResult)
 	}
 }
 
-const bool ABaseCharacter::HandleAttackPawnPrepare()
+const bool ABaseCharacter::HasAttackReady()
 {
 	const auto Weapon = ItemInventoryComponent->GetEquipWeapon();
 	if (Weapon)
 	{
-		return Weapon->HandleAttackPrepare();
+		return Weapon->HasAttackReady();
 	}
 	return false;
 }
@@ -1522,7 +1522,6 @@ void ABaseCharacter::AbortLaddering()
 
 	}
 
-	ULadderComponent* LadderComponent = FindComponentByClass<ULadderComponent>();
 	if (LadderComponent && LadderComponent->IsLadderState())
 	{
 		LadderComponent->ExitLadderApply();
@@ -1639,11 +1638,9 @@ const bool ABaseCharacter::OverlayStateChange(const ELSOverlayState CurrentOverl
 	constexpr uint8 ELSOverlayState_Min = static_cast<uint8>(ELSOverlayState::None);
 	constexpr uint8 ELSOverlayState_Max = static_cast<uint8>(ELSOverlayState::Mass);
 
-	// まず uint8 にキャスト
+
 	uint8 Raw = static_cast<uint8>(CurrentOverlay);
-	// None(0) ～ Mass(最大) の範囲にクランプ
 	Raw = FMath::Clamp(Raw, ELSOverlayState_Min, ELSOverlayState_Max);
-	// 再び enum にキャストして代入
 	const ELSOverlayState ClampedOverlay = static_cast<ELSOverlayState>(Raw);
 
 	if (SelectableOverlayState == ClampedOverlay)
@@ -1666,20 +1663,20 @@ const bool ABaseCharacter::OverlayStateChange(const ELSOverlayState CurrentOverl
 		}
 		else
 		{
-			UE_LOG(LogTemp, Warning, TEXT("OverlayAnimClass not class UAnimInstance: [%s]"), *FString(__FUNCTION__));
+			UE_LOG(LogBaseCharacter, Warning, TEXT("OverlayAnimClass not class UAnimInstance: [%s]"), *FString(__FUNCTION__));
 		}
 	}
 	else
 	{
 		const FString CategoryName = *FString::Format(TEXT("{0}"), { *GETENUMSTRING("/Script/Redemption.ELSOverlayState", SelectableOverlayState) });
-		UE_LOG(LogTemp, Warning, TEXT("OverlayAnimClass not found:[%s] FindClassInChooserTable: [%s]"), *CategoryName, *FString(__FUNCTION__));
+		UE_LOG(LogBaseCharacter, Warning, TEXT("OverlayAnimClass not found:[%s] FindClassInChooserTable: [%s]"), *CategoryName, *FString(__FUNCTION__));
 	}
 
 
 	if (!bIsOverlayChange)
 	{
 		SelectableOverlayState = PrevOverlay;
-		UE_LOG(LogTemp, Error, TEXT("Overlay Change Failed, function: [%s]"), *FString(__FUNCTION__));
+		UE_LOG(LogBaseCharacter, Error, TEXT("Overlay Change Failed, function: [%s]"), *FString(__FUNCTION__));
 	}
 
 	return bIsOverlayChange;
@@ -1847,7 +1844,7 @@ void ABaseCharacter::OnGaitChange_Callback()
 
 void ABaseCharacter::OnAbilityFailed_Callback(const UGameplayAbility* Ability, const FGameplayTagContainer& GameplayTags)
 {
-	//UE_LOG(LogTemp, Error, TEXT("Ability: [%s] \n function:[%s]"), *GetNameSafe(Ability), *FString(__FUNCTION__));
+	//UE_LOG(LogBaseCharacter, Error, TEXT("Ability: [%s] \n function:[%s]"), *GetNameSafe(Ability), *FString(__FUNCTION__));
 }
 
 /// <summary>
@@ -1992,7 +1989,7 @@ void ABaseCharacter::FindNearlestTarget(const FAttackMotionWarpingData& AttackMo
 	auto Target = FindNearlestTarget(AttackMotionWarpingData.NearlestDistance, AttackMotionWarpingData.AngleThreshold, false);
 	if (!Target)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("not found FindNearlestTarget => %s"), *FString(__FUNCTION__));
+		UE_LOG(LogBaseCharacter, Warning, TEXT("not found FindNearlestTarget => %s"), *FString(__FUNCTION__));
 		return;
 	}
 	
@@ -2094,7 +2091,7 @@ const bool ABaseCharacter::CanFiniherSender()
 {
 	if (!IsValid(FinisherSenderDA))
 	{
-		FinisherSenderDA = OnAsyncLoadDataAsset<UFinisherDataAsset>(TAG_Game_Asset_FinisherSender);
+		//FinisherSenderDA = OnAsyncLoadDataAsset<UFinisherDataAsset>(TAG_Game_Asset_FinisherSender);
 		return false;
 	}
 	return true;
@@ -2104,7 +2101,7 @@ const bool ABaseCharacter::CanFiniherReceiver()
 {
 	if (!IsValid(FinisherReceinerDA))
 	{
-		FinisherReceinerDA = OnAsyncLoadDataAsset<UFinisherDataAsset>(TAG_Game_Asset_FinisherReceiver);
+		//FinisherReceinerDA = OnAsyncLoadDataAsset<UFinisherDataAsset>(TAG_Game_Asset_FinisherReceiver);
 		return false;
 	}
 	return true;
@@ -2141,14 +2138,14 @@ void ABaseCharacter::BuildFinisherAbility(const FGameplayTag& RequireTag)
 	auto Target = FindNearlestTarget(FinisherConfig.NearlestDistance, FinisherConfig.AngleThreshold, false);
 	if (!Target)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("not found FindNearlestTarget => %s"), *FString(__FUNCTION__));
+		UE_LOG(LogBaseCharacter, Warning, TEXT("not found FindNearlestTarget => %s"), *FString(__FUNCTION__));
 		return;
 	}
 
 	ABaseCharacter* TargetCharacter = Cast<ABaseCharacter>(Target);
 	if (!TargetCharacter)
 	{
-		UE_LOG(LogTemp, Error, TEXT("cast faild TargetCharacter => %s"), *FString(__FUNCTION__));
+		UE_LOG(LogBaseCharacter, Error, TEXT("cast faild TargetCharacter => %s"), *FString(__FUNCTION__));
 		return;
 	}
 
@@ -2180,7 +2177,7 @@ void ABaseCharacter::BuildFinisherAbility(const FGameplayTag& RequireTag)
 		{
 			if (bHasForward)
 			{
-				UE_LOG(LogTemp, Warning, TEXT("target is front => %s"), *FString(__FUNCTION__));
+				UE_LOG(LogBaseCharacter, Warning, TEXT("target is front => %s"), *FString(__FUNCTION__));
 				return;
 			}
 		}
@@ -2189,7 +2186,7 @@ void ABaseCharacter::BuildFinisherAbility(const FGameplayTag& RequireTag)
 		{
 			if (!bHasForward)
 			{
-				UE_LOG(LogTemp, Warning, TEXT("target is backward => %s"), *FString(__FUNCTION__));
+				UE_LOG(LogBaseCharacter, Warning, TEXT("target is backward => %s"), *FString(__FUNCTION__));
 				return;
 			}
 		}
@@ -2202,12 +2199,14 @@ void ABaseCharacter::BuildFinisherAbility(const FGameplayTag& RequireTag)
 
 	if (!bIsResult)
 	{
-		UE_LOG(LogTemp, Error, TEXT("invalid BuildFinisherAnimationReceiver => %s"), *FString(__FUNCTION__));
+		UE_LOG(LogBaseCharacter, Error, TEXT("invalid BuildFinisherAnimationReceiver => %s"), *FString(__FUNCTION__));
 		return;
 	}
 
 	TargetCharacter->BuildFinisherAnimationData(Receiver.Montage, Receiver.IsTurnAround, this);
-	UE_LOG(LogTemp, Log, TEXT("Finisher Sender => %s, Receiver => %s, Acos => %.3f, Dot => %.3f"), *GetPathName(Sender.Montage), *GetPathName(Receiver.Montage), Acos, Dot);
+
+	UE_LOG(LogBaseCharacter, Log, TEXT("Finisher Sender => %s, Receiver => %s, Acos => %.3f, Dot => %.3f"), 
+		*GetNameSafe(Sender.Montage), *GetNameSafe(Receiver.Montage), Acos, Dot);
 
 	// sender only
 	{
@@ -2247,7 +2246,7 @@ void ABaseCharacter::BuildFinisherAnimationSender(const FGameplayTag& RequireTag
 {
 	if (!IsValid(FinisherSenderDA))
 	{
-		UE_LOG(LogTemp, Warning, TEXT("not valid FinisherSender"));
+		UE_LOG(LogBaseCharacter, Warning, TEXT("not valid FinisherSender"));
 		return;
 	}
 
@@ -2270,17 +2269,22 @@ const bool ABaseCharacter::BuildFinisherAnimationReceiver(const FGameplayTag Req
 {
 	if (!IsValid(FinisherReceinerDA))
 	{
-		UE_LOG(LogTemp, Warning, TEXT("not valid FinisherReceiner"));
+		UE_LOG(LogBaseCharacter, Warning, TEXT("not valid FinisherReceiner"));
 		return false;
 	}
 
 	FFinisherAnimationContainer AnimationContainer = FinisherReceinerDA->FindContainer(RequireTag);
-	if (AnimationContainer.Montages.Num() <= 0)
+	if (AnimationContainer.Montages.IsEmpty())
 	{
 		return false;
 	}
-	OutFinisherAnimation = AnimationContainer.Montages[Index];
-	return true;
+
+	if (AnimationContainer.Montages.IsValidIndex(Index))
+	{
+		OutFinisherAnimation = AnimationContainer.Montages[Index];
+		return true;
+	}
+	return false;
 }
 
 void ABaseCharacter::BuildFinisherAnimationData(UAnimMontage* InMontage, const bool IsTurnAround, AActor* TurnActor, float PlayRate/* = 1.0f*/)
@@ -2389,21 +2393,21 @@ T* ABaseCharacter::OnAsyncLoadDataAsset(const FGameplayTag Tag)
 	{
 		if (!SoftPtr->IsValid())
 		{
-			UE_LOG(LogTemp, Warning, TEXT("DataAsset for tag %s not yet loaded."), *Tag.ToString());
+			UE_LOG(LogBaseCharacter, Warning, TEXT("DataAsset for tag %s not yet loaded."), *Tag.ToString());
 			return nullptr;
 		}
 
 		UObject* Obj = (*SoftPtr).Get();
 		if (!IsValid(Obj))
 		{
-			UE_LOG(LogTemp, Error, TEXT("Loaded asset is invalid for tag %s."), *Tag.ToString());
+			UE_LOG(LogBaseCharacter, Error, TEXT("Loaded asset is invalid for tag %s."), *Tag.ToString());
 			return nullptr;
 		}
 
 		T* DataAsset = Cast<T>(Obj);
 		if (!DataAsset)
 		{
-			UE_LOG(LogTemp, Error, TEXT("Failed to cast DataAsset for tag %s to desired type."), *Tag.ToString());
+			UE_LOG(LogBaseCharacter, Error, TEXT("Failed to cast DataAsset for tag %s to desired type."), *Tag.ToString());
 		}
 		return DataAsset;
 	}
@@ -2424,11 +2428,11 @@ T* ABaseCharacter::OnSyncLoadDataAsset(const FGameplayTag Tag)
 
 	if (IsValid(DataAsset))
 	{
-		UE_LOG(LogTemp, Warning, TEXT("%s Asset Load Complete %s => [%s]"), *GetNameSafe(this), *GetNameSafe(DataAsset), *FString(__FUNCTION__));
+		UE_LOG(LogBaseCharacter, Warning, TEXT("%s Asset Load Complete %s => [%s]"), *GetNameSafe(this), *GetNameSafe(DataAsset), *FString(__FUNCTION__));
 	}
 	else
 	{
-		UE_LOG(LogTemp, Error, TEXT("%s Asset Load Fail %s => [%s]"), *GetNameSafe(this), *GetNameSafe(DataAsset), *FString(__FUNCTION__));
+		UE_LOG(LogBaseCharacter, Error, TEXT("%s Asset Load Fail %s => [%s]"), *GetNameSafe(this), *GetNameSafe(DataAsset), *FString(__FUNCTION__));
 	}
 
 	return DataAsset;
@@ -2473,7 +2477,7 @@ void ABaseCharacter::HandleDriveAction()
 		return;
 	}
 
-	const FVehicleTraceConfig VehicleTraceConfig = ASC_GLOBAL()->VehicleTraceConfig;
+	const FVehicleTraceConfig& VehicleTraceConfig = ASC_GLOBAL()->VehicleTraceConfig;
 	const float ClosestTargetDistance = VehicleTraceConfig.ClosestTargetDistance;
 	const float NearestDistance = VehicleTraceConfig.NearestDistance;
 	const FVector2D ViewRange = VehicleTraceConfig.ViewRange;
@@ -2501,12 +2505,12 @@ void ABaseCharacter::HandleDriveAction()
 	const float Angle = UKismetMathLibrary::DegAcos(FVector::DotProduct(Forward, NormalizePos));
 	const float Yaw = FMath::Abs(DeltaRot.Yaw);
 
-	UE_LOG(LogTemp, Log, TEXT("Angle => %.3f"), Angle);
-	UE_LOG(LogTemp, Log, TEXT("Yaw => %.3f"), Yaw);
+	UE_LOG(LogBaseCharacter, Log, TEXT("Angle => %.3f"), Angle);
+	UE_LOG(LogBaseCharacter, Log, TEXT("Yaw => %.3f"), Yaw);
 
 	if (ViewRange.X <= Yaw && ViewRange.Y >= Yaw)
 	{
-		UE_LOG(LogTemp, Log, TEXT("DriveIn => %s"), *FString(__FUNCTION__));
+		UE_LOG(LogBaseCharacter, Log, TEXT("DriveIn => %s"), *FString(__FUNCTION__));
 		FGameplayEventData EventData;
 		EventData.Instigator = this;
 		EventData.Target = VehicleTarget;
@@ -2651,7 +2655,7 @@ void ABaseCharacter::CencelActiveAbilities(const FGameplayTagContainer Container
 	for (UGameplayAbility* Ability : Abilities)
 	{
 		WvAbilitySystemComponent->CancelAbility(Ability);
-		UE_LOG(LogWvAI, Log, TEXT("Cancel Ability => %s"), *GetNameSafe(Ability));
+		UE_LOG(LogWvAI, Log, TEXT("[%s] => %s"), *FString(__FUNCTION__), *GetNameSafe(Ability));
 	}
 
 }
@@ -2706,6 +2710,11 @@ void ABaseCharacter::SetFullSkill()
 }
 #pragma endregion
 
+
+void ABaseCharacter::RollAction()
+{
+	WvAbilitySystemComponent->TryActivateAbilityByTag(TAG_Character_ActionRoll);
+}
 
 bool ABaseCharacter::IsFriendlyActionPlaying() const
 {
@@ -2802,7 +2811,7 @@ void ABaseCharacter::PreTickLocomotion()
 		bHasAnimatingAbility = Ability->HasComboTrigger();
 	}
 
-	if (CMC->IsFalling() || bHasAnimatingAbility)
+	if (CMC->IsFalling())//  || bHasAnimatingAbility
 	{
 		CMC->RotationRate = FRotator(0.f, 200.f, 0.0f);
 	}
@@ -2831,7 +2840,7 @@ void ABaseCharacter::StopTraversalAbility()
 	if (IsValid(AnimAbility))
 	{
 		WvAbilitySystemComponent->CancelAbility(AnimAbility);
-		UE_LOG(LogTemp, Log, TEXT("Cancel Ability => %s"), *GetNameSafe(AnimAbility));
+		UE_LOG(LogBaseCharacter, Log, TEXT("Cancel Ability => %s"), *GetNameSafe(AnimAbility));
 	}
 
 	auto CMC = GetWvCharacterMovementComponent();
@@ -2854,7 +2863,7 @@ void ABaseCharacter::ResetTraversalActionData()
 
 	TraversalActionData.Reset();
 
-	//UE_LOG(LogTemp, Error, TEXT("[%s]"), *FString(__FUNCTION__));
+	//UE_LOG(LogBaseCharacter, Error, TEXT("[%s]"), *FString(__FUNCTION__));
 }
 
 

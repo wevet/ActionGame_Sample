@@ -171,6 +171,16 @@ bool FWvOverlapResult::IsValid() const
 	return Actor.IsValid() && Component.IsValid();
 }
 
+AActor* FWvOverlapResult::GetActor() const
+{
+	return Actor.Get();
+}
+
+UPrimitiveComponent* FWvOverlapResult::GetComponent() const
+{
+	return Component.Get();
+}
+
 bool FWvOverlapResult::NetSerialize(FArchive& Ar, class UPackageMap* Map, bool& bOutSuccess)
 {
 	Ar << Actor;
@@ -302,7 +312,7 @@ void UWvAbilityEffectDataAsset::CreateExData(FOnceApplyEffect& Effect)
 		return;
 	}
 
-	if (Effect.ExData)
+	if (!IsValid(Effect.ExData))
 	{
 		UE_LOG(LogWvAbility, Warning, TEXT("already created instance Effect.ExData => %s"), *FString(__FUNCTION__));
 		return;
@@ -326,7 +336,7 @@ void UWvAbilityEffectDataAsset::CreateExData(FOnceApplyEffect& Effect)
 bool UApplyEffectExData::GetExactFeatureTag(FGameplayTag FeatureGroup, FGameplayTag& ExactTag)
 {
 	FGameplayTagContainer Filter = FeatureTags.Filter(FGameplayTagContainer(FeatureGroup));
-	if (Filter.Num() == 0)
+	if (Filter.IsEmpty())
 	{
 		Filter = ASC_GLOBAL()->ApplyEffectFeatureGroupTemplate.Filter(FGameplayTagContainer(FeatureGroup));
 	}
@@ -337,7 +347,7 @@ bool UApplyEffectExData::GetExactFeatureTag(FGameplayTag FeatureGroup, FGameplay
 bool UApplyEffectExData::GetExactFeatureTags(FGameplayTag FeatureGroup, FGameplayTagContainer& ExactTags)
 {
 	FGameplayTagContainer Filter = FeatureTags.Filter(FGameplayTagContainer(FeatureGroup));
-	if (Filter.Num() == 0)
+	if (Filter.IsEmpty())
 	{
 		Filter = ASC_GLOBAL()->ApplyEffectFeatureGroupTemplate.Filter(FGameplayTagContainer(FeatureGroup));
 	}

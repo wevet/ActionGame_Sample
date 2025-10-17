@@ -17,21 +17,15 @@
 #include "Component/WvCharacterMovementTypes.h"
 
 // builtin
-#include "BehaviorTree/BehaviorTree.h"
 #include "AbilitySystemInterface.h"
-#include "Containers/Array.h"
-#include "Engine/EngineTypes.h"
-#include "GameplayCueInterface.h"
-#include "GameplayTagAssetInterface.h"
-#include "GenericTeamAgentInterface.h"
 #include "Perception/AISightTargetInterface.h"
-#include "Perception/AIPerceptionStimuliSourceComponent.h"
 #include "CharacterTrajectoryComponent.h"
-
 #include "HAL/Platform.h"
 #include "GameFramework/Character.h"
 #include "UObject/UObjectGlobals.h"
+#include "Logging/LogMacros.h"
 #include "BaseCharacter.generated.h"
+
 
 namespace CharacterDebug
 {
@@ -70,6 +64,7 @@ class UCombatComponent;
 class UStatusComponent;
 class UWeaknessComponent;
 class UClimbingComponent;
+class ULadderComponent;
 class UWvAnimInstance;
 class UWvFaceAnimInstance;
 class UStaticMeshComponent;
@@ -77,7 +72,9 @@ class ULODSyncComponent;
 class USignificanceComponent;
 class UMinimapMarkerComponent;
 class UChooserTable;
+class UBehaviorTree;
 
+DECLARE_LOG_CATEGORY_EXTERN(LogBaseCharacter, All, All)
 
 UCLASS()
 class REDEMPTION_API ABaseCharacter : public ACharacter, 
@@ -327,7 +324,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = Action)
 	const bool OverlayStateChange(const ELSOverlayState CurrentOverlay);
 
-	const bool HandleAttackPawnPrepare();
+	const bool HasAttackReady();
 
 	void BeginDeathAction();
 	void EndDeathAction(const float Interval);
@@ -524,6 +521,8 @@ public:
 
 	UWvAnimInstance* GetWvAnimInstance() const;
 
+	virtual void RollAction();
+
 
 	UFUNCTION(BlueprintCallable, Category = "Locomotion|Ragdoll")
 	void Test_StartRagdoll();
@@ -612,6 +611,9 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Component, meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<class UClimbingComponent> ClimbingComponent;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Component, meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<class ULadderComponent> LadderComponent;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Component, meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<class USceneComponent> HeldObjectRoot;

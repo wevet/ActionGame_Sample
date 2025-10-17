@@ -24,7 +24,7 @@ public:
 	UFUNCTION(BlueprintCallable)
 	static UWvAbilityDataAsset* GetAbilityData(const UGameplayAbility* Ability);
 
-	static UGameplayEffect* NewModifyAttributeGE(FGameplayAttribute Attribute, float Magnitude, FGameplayTag GETag, UObject* Outer = nullptr);
+	static UGameplayEffect* NewModifyAttributeGE(FGameplayAttribute& Attribute, const float Magnitude, const FGameplayTag& GETag, UObject* Outer = nullptr);
 
 	//--------filter start
 	static void FilterOverlaps(const TArray<FWvOverlapResult>& Overlaps, TArray<FWvOverlapResult>& OutOverlaps, TScriptInterface<IWvAbilityTargetInterface> Source, const FWvTargetDataFilter& TargetDataFilter);

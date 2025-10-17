@@ -135,11 +135,6 @@ FGameplayTag AWeaponBaseActor::GetPluralInputTriggerTag() const
 }
 
 
-const bool AWeaponBaseActor::HandleAttackPrepare()
-{
-	return true;
-}
-
 bool AWeaponBaseActor::IsCurrentAmmosEmpty() const
 {
 	return false;

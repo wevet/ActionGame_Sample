@@ -12,13 +12,13 @@
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FPlayMontageAndWaitForEventDelegate, FGameplayTag, EventTag, FGameplayEventData, EventData);
 
 /**
- * 
+ *
  */
 UCLASS()
 class REDEMPTION_API UWvAT_PlayMontageAndWaitForEvent : public UWvAbilityTask
 {
 	GENERATED_BODY()
-	
+
 public:
 	UWvAT_PlayMontageAndWaitForEvent(const FObjectInitializer& ObjectInitializer);
 
@@ -34,6 +34,9 @@ public:
 	/** The montage started blending out */
 	UPROPERTY(BlueprintAssignable)
 	FPlayMontageAndWaitForEventDelegate OnBlendOut;
+
+	UPROPERTY(BlueprintAssignable)
+	FPlayMontageAndWaitForEventDelegate OnBlendIn;
 
 	/** The montage was interrupted */
 	UPROPERTY(BlueprintAssignable)
@@ -57,39 +60,39 @@ public:
 		float StartTimeSeconds = 0.0f,
 		FName StartSection = NAME_None,
 		bool bStopWhenAbilityEnds = true,
-		float AnimRootMotionTranslationScale = 1.0f, 
+		float AnimRootMotionTranslationScale = 1.0f,
 		float StartingPosition = 0.0f);
 
 public:
 	/** Montage that is playing */
 	UPROPERTY()
-	UAnimMontage* MontageToPlay;
+	TObjectPtr<class UAnimMontage> MontageToPlay;
 
 	/** List of tags to match against gameplay events */
 	UPROPERTY()
-	FGameplayTagContainer EventTags;
+	FGameplayTagContainer EventTags{ FGameplayTagContainer::EmptyContainer };
 
 	/** Playback rate */
 	UPROPERTY()
-	float Rate;
+	float Rate{ 1.0f };
 
 	/** Section to start montage from */
 	UPROPERTY()
-	FName StartSection;
+	FName StartSection{ NAME_None };
 
 	UPROPERTY()
-	float StartTimeSeconds;
+	float StartTimeSeconds{ 0.f };
 
 	/** Modifies how root motion movement to apply */
 	UPROPERTY()
-	float AnimRootMotionTranslationScale{1.0f};
+	float AnimRootMotionTranslationScale{ 1.0f };
 
 	UPROPERTY()
-	float StartingPosition{0.f};
+	float StartingPosition{ 0.f };
 
 	/** Rather montage should be aborted if ability ends */
 	UPROPERTY()
-	bool bStopWhenAbilityEnds;
+	bool bStopWhenAbilityEnds{ true };
 
 private:
 	/** Checks if the ability is playing a montage and stops that montage, returns true if a montage was stopped, false if not. */
@@ -98,12 +101,17 @@ private:
 	/** Returns our ability system component */
 	UWvAbilitySystemComponent* GetTargetAbilitySystemComponent();
 
+	void OnMontageBlendedIn(UAnimMontage* Montage);
 	void OnMontageBlendingOut(UAnimMontage* Montage, bool bInterrupted);
-	void OnAbilityCancelled();
 	void OnMontageEnded(UAnimMontage* Montage, bool bInterrupted);
 	void OnGameplayEvent(FGameplayTag EventTag, const FGameplayEventData* Payload);
 
+	void OnAbilityCancelled();
+
 	FOnMontageBlendingOutStarted BlendingOutDelegate;
+
+	FOnMontageBlendedInEnded BlendedingInDelegate;
+
 	FOnMontageEnded MontageEndedDelegate;
 	FDelegateHandle CancelledHandle;
 	FDelegateHandle EventHandle;

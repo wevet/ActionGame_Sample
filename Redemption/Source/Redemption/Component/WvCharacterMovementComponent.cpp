@@ -52,6 +52,7 @@ DEFINE_LOG_CATEGORY_STATIC(LogCharacterMovement, Log, All);
 DECLARE_CYCLE_STAT(TEXT("Char Update Acceleration"), STAT_CharUpdateAcceleration, STATGROUP_Character);
 DECLARE_CYCLE_STAT(TEXT("Char StepUp"), STAT_CharStepUp, STATGROUP_Character);
 DECLARE_CYCLE_STAT(TEXT("Char PhysWalking"), STAT_CharPhysWalking, STATGROUP_Character);
+//DECLARE_CYCLE_STAT(TEXT("Char ProcessLanded"), STAT_CharProcessLanded, STATGROUP_Character);
 
 
 using namespace CharacterDebug;
@@ -212,7 +213,8 @@ bool UWvCharacterMovementComponent::CanAttemptJump() const
 	{
 		if (ASC->HasMatchingGameplayTag(TAG_Locomotion_ForbidMovement) || 
 			ASC->HasMatchingGameplayTag(TAG_Locomotion_ForbidJump) ||
-			ASC->HasMatchingGameplayTag(TAG_Character_StateMelee))
+			ASC->HasMatchingGameplayTag(TAG_Character_StateMelee) || 
+			ASC->HasMatchingGameplayTag(TAG_Character_ActionRoll))
 		{
 			UE_LOG(LogCharacterMovement, Verbose, TEXT("forbid movement or forbid jump => %s"), *FString(__FUNCTION__));
 			return false;
@@ -247,6 +249,7 @@ const FWvCharacterGroundInfo& UWvCharacterMovementComponent::GetGroundInfo()
 	}
 	else
 	{
+
 		const UCapsuleComponent* CapsuleComp = CharacterOwner->GetCapsuleComponent();
 		check(CapsuleComp);
 
@@ -527,7 +530,19 @@ void UWvCharacterMovementComponent::OnMovementModeChanged(EMovementMode Previous
 			}
 		}
 		break;
+
+		case EMovementMode::MOVE_Falling:
+		{
+			if (PreviousMovementMode != EMovementMode::MOVE_Falling)
+			{
+				const FVector ComponentLocation = UpdatedComponent->GetComponentLocation();
+				FallStartZ = ComponentLocation.Z;
+				bLastLandingWasHard = false;
+			}
+		}
+		break;
 	}
+
 
 	const ECustomMovementMode PreviousCMM = (ECustomMovementMode)PreviousCustomMode;
 	switch (PreviousCMM)
@@ -1304,6 +1319,35 @@ bool UWvCharacterMovementComponent::CheckFall(const FFindFloorResult& OldFloor, 
 	}
 	return false;
 }
+
+void UWvCharacterMovementComponent::ProcessLanded(const FHitResult& Hit, float remainingTime, int32 Iterations)
+{
+
+	//SCOPE_CYCLE_COUNTER(STAT_CharProcessLanded);
+	// 着地直前の計測値を先に算出
+
+	const FVector ComponentLocation = UpdatedComponent->GetComponentLocation();
+	const float LandZ = Hit.bBlockingHit ? Hit.ImpactPoint.Z : ComponentLocation.Z;
+	const float FallHeight = FMath::Max(0.f, FallStartZ - LandZ);
+
+	Super::ProcessLanded(Hit, remainingTime, Iterations);
+
+	LastFallHeight = FallHeight;
+	bLastLandingWasHard = (FallHeight >= HardLandingMinFallHeight);
+
+
+	if (bLastLandingWasHard)
+	{
+		//FGameplayEventData EventData;
+		//EventData.Instigator = BaseCharacter;
+		//EventData.Target = nullptr;
+		//UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(BaseCharacter, TAG_Character_ActionRoll, EventData);
+
+		BaseCharacter->RollAction();
+		UE_LOG(LogCharacterMovement, Warning, TEXT("on fire hard landing : [%s]"), *FString(__FUNCTION__));
+	}
+}
+
 
 void UWvCharacterMovementComponent::SavePenetrationAdjustment(const FHitResult& Hit)
 {

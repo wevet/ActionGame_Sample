@@ -66,7 +66,7 @@ private:
 	FCombatInputData CombatInputData;
 
 	UPROPERTY()
-	UWvAT_WaitKeyPress* WaitReleaseTask;
+	TObjectPtr<UWvAT_WaitKeyPress> WaitReleaseTask;
 
 
 	void HandleAIRemoveDelegate();

@@ -124,12 +124,11 @@ void UWvAbility_Death::PlayHitReactMontage(UAnimMontage* Montage)
 		Montage, 
 		FGameplayTagContainer(),
 		1.0, 
-		0.f, 
-		FName("Default"), true, 1.0f);
+		0.f, FName("Default"), true, 1.0f);
 
-	MontageTask->OnCancelled.AddDynamic(this, &UWvAbility_Death::OnPlayMontageCompleted_Event);
-	MontageTask->OnInterrupted.AddDynamic(this, &UWvAbility_Death::OnPlayMontageCompleted_Event);
-	MontageTask->OnCompleted.AddDynamic(this, &UWvAbility_Death::OnPlayMontageCompleted_Event);
+	MontageTask->OnCancelled.AddDynamic(this, &ThisClass::OnPlayMontageCompleted_Event);
+	MontageTask->OnInterrupted.AddDynamic(this, &ThisClass::OnPlayMontageCompleted_Event);
+	MontageTask->OnCompleted.AddDynamic(this, &ThisClass::OnPlayMontageCompleted_Event);
 	MontageTask->ReadyForActivation();
 }
 

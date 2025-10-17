@@ -55,7 +55,15 @@ public:
 	virtual void Notify_Equip() override;
 	virtual void Notify_UnEquip() override;
 
-	virtual const bool HandleAttackPrepare();
+	/// <summary>
+	/// UŒ‚‚Ì€”õ‚ª‚Å‚«‚Ä‚¢‚é‚©‚Ç‚¤‚©‚ğ”»’è
+	/// </summary>
+	/// <returns>UŒ‚‚Ì€”õ‚ª‚Å‚«‚Ä‚¢‚ê‚Î true</returns>
+	virtual const bool HasAttackReady()
+	{
+		return true; 
+	}
+
 	virtual bool IsCurrentAmmosEmpty() const;
 	virtual FGameplayTag GetPluralInputTriggerTag() const;
 

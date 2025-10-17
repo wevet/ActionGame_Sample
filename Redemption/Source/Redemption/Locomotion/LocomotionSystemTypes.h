@@ -432,8 +432,6 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
 	bool HasAcceleration{ false };
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
-	bool bIsMassAgent{ false };
 
 	ELSMovementMode LSPrevMovementMode = ELSMovementMode::Grounded;
 
@@ -441,7 +439,13 @@ public:
 	FLocomotionEssencialVariables()
 	{}
 
-	void Init(const FRotator Rotation);
+	FORCEINLINE void Init(const FRotator& Rotation)
+	{
+		LastVelocityRotation = Rotation;
+		LookingRotation = Rotation;
+		LastMovementInputRotation = Rotation;
+		CharacterRotation = Rotation;
+	}
 };
 
 USTRUCT(BlueprintType)
@@ -480,8 +484,9 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (EditCondition = "bHasAmmo"))
 	float TraceRange = 2000.0f;
 
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	class UTexture2D* Texture{nullptr};
+	TObjectPtr<class UTexture2D> Texture{nullptr};
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FVector2D AttackRange{0.f, 300.0f};
@@ -492,16 +497,27 @@ public:
 	UPROPERTY()
 	int32 CurrentAmmo{ 0 };
 
-	FPawnAttackParam();
+	FPawnAttackParam()
+	{
+		//
+	}
 
 #if WITH_EDITOR
 	void Modify();
 #endif
 
-	void Initialize();
+	FORCEINLINE void Initialize()
+	{
+		CurrentAmmo = ClipType;
+	}
 
-	bool IsEmptyCurrentAmmo() const;
-	bool IsEmptyAmmo() const;
+	// No loaded ammunition.
+	FORCEINLINE bool IsEmptyCurrentAmmo() const { return CurrentAmmo <= 0 && !IsEmptyAmmo(); }
+
+	// Completely out of bullets.
+	FORCEINLINE bool IsEmptyAmmo() const { return MaxAmmo <= 0; }
+
+
 	bool IsCurrentFullAmmo() const;
 
 	void DecrementAmmos();
@@ -717,45 +733,90 @@ public:
 #pragma endregion
 
 
-#pragma region Climbing
+UENUM()
+enum class EQTEState : uint8
+{
+	Inactive,
+	Running,
+	Succeeded,
+	Failed
+};
+
 USTRUCT(BlueprintType)
-struct REDEMPTION_API FQTEData
+struct FQTEData
 {
 	GENERATED_BODY()
 
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	float Timer{0.f};
+	float DurationSeconds{ 5.f };
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	float RequirePressCount{0.f};
+	int32 RequiredPressesCount{10};
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	bool bIsGameControlTimer = false;
 
 public:
-	void UpdateTimer(const float DeltaTime);
+	FQTEData()
+	{
+	}
+
+	FORCEINLINE void SetParameters(const float InDurationSeconds, const int32 InRequiredPressesCount)
+	{
+		DurationSeconds = InDurationSeconds;
+		RequiredPressesCount = InRequiredPressesCount;
+	}
+
+	FORCEINLINE void Begin()
+	{
+		PressCount = 0;
+		CurTimer = 0.0f;
+		bSystemEnable = true;
+	}
+
+	FORCEINLINE void Reset()
+	{
+		//PressCount = 0;
+		//CurTimer = 0.0f;
+		bSystemEnable = false;
+	}
+
+	FORCEINLINE float GetTimerProgress() const
+	{
+		return ((DurationSeconds - CurTimer) / DurationSeconds);
+	}
+
+	FORCEINLINE float GetPressCountProgress() const
+	{
+		return (RequiredPressesCount > 0) ? FMath::Clamp(static_cast<float>(PressCount) / RequiredPressesCount, 0.f, 1.f) : 1.f;
+	}
+
+	FORCEINLINE bool IsTimerActive() const
+	{
+		return (CurTimer >= DurationSeconds);
+	}
+
+	FORCEINLINE void IncrementPress()
+	{
+		//auto Value = FMath::RandRange(RangeMin, RangeMax);
+		++PressCount;
+	}
+
 	bool IsSuccess() const;
-	float GetTimerProgress() const;
-	float GetPressCountProgress() const;
-	void IncrementPress();
-
-	void Begin();
-	void Reset();
-	bool IsTimeOver() const;
-	FQTEData();
-
-	void SetParameters(const float InTimer, const float InCount);
-	void ModifyTimer(const float Min, const float Current, const float Max);
+	void SetDurationSeconds(const float Min, const float Current, const float Max);
+	void Tick(const float DeltaTime);
 
 
 private:
-	float CurPressCount;
-	float CurTimer;
-	bool bSystemEnable;
+	int32 PressCount{0};
+	float CurTimer{0.f};
+	bool bSystemEnable{false};
 
 };
 
+
+#pragma region Climbing
 USTRUCT(BlueprintType)
 struct REDEMPTION_API FClimbingLedge
 {
@@ -1012,6 +1073,10 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	EAttackWeaponState WeaponState{ EAttackWeaponState::EmptyWeapon };
 
+	/// <summary>
+	/// apply to ChooserTable
+	/// </summary>
+	/// <returns></returns>
 	FWeaponCharacterAnimationInput()
 	{
 	}
@@ -1036,6 +1101,7 @@ struct FWvReplicatedAcceleration
 	int8 AccelZ = 0;
 	// Raw Z accel rate component, quantized to represent [-MaxAcceleration, MaxAcceleration]
 };
+
 
 USTRUCT(BlueprintType)
 struct REDEMPTION_API FAccessoryData

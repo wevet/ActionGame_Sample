@@ -56,11 +56,10 @@ void ABaseArea::PreReplication(IRepChangedPropertyTracker& ChangedPropertyTracke
 /// disable walk ignore all interaction
 /// </summary>
 /// <param name="InCharacter"></param>
-void ABaseArea::OnCharacterEnter_Callback(ABaseCharacter* InCharacter)
+void ABaseArea::OnCharacterEnter_WalkOnly(ABaseCharacter* InCharacter)
 {
 	if (InCharacter && InCharacter->GetWvAbilitySystemComponent())
 	{
-		//InCharacter->GetWvAbilitySystemComponent()->AddGameplayTag(TAG_Locomotion_ForbidMovement, 1);
 		InCharacter->GetWvAbilitySystemComponent()->AddGameplayTag(TAG_Locomotion_ForbidClimbing, 1);
 		InCharacter->GetWvAbilitySystemComponent()->AddGameplayTag(TAG_Locomotion_ForbidMantling, 1);
 		InCharacter->GetWvAbilitySystemComponent()->AddGameplayTag(TAG_Locomotion_ForbidJump, 1);
@@ -78,11 +77,10 @@ void ABaseArea::OnCharacterEnter_Callback(ABaseCharacter* InCharacter)
 /// enable all interaction
 /// </summary>
 /// <param name="InCharacter"></param>
-void ABaseArea::OnCharacterExit_Callback(ABaseCharacter* InCharacter)
+void ABaseArea::OnCharacterExit_WalkOnly(ABaseCharacter* InCharacter)
 {
 	if (InCharacter && InCharacter->GetWvAbilitySystemComponent())
 	{
-		//InCharacter->GetWvAbilitySystemComponent()->RemoveGameplayTag(TAG_Locomotion_ForbidMovement, 1);
 		InCharacter->GetWvAbilitySystemComponent()->RemoveGameplayTag(TAG_Locomotion_ForbidClimbing, 1);
 		InCharacter->GetWvAbilitySystemComponent()->RemoveGameplayTag(TAG_Locomotion_ForbidMantling, 1);
 		InCharacter->GetWvAbilitySystemComponent()->RemoveGameplayTag(TAG_Locomotion_ForbidJump, 1);

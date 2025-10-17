@@ -175,14 +175,14 @@ bool UCombatComponent::AbilityDamageBoxTrace(class UWvAbilityBase* Ability, cons
 	TArray<FWvBattleDamageAttackTargetInfo> HitTargetInfos;
 	BoxTraceMulti(HitTargetInfos, Start, End, HalfSize, Orientation, ActorsToIgnore);
 
-	if (HitTargetInfos.Num() == 0)
+	if (HitTargetInfos.IsEmpty())
 	{
 		return false;
 	}
 
-	for (int32 Index = 0; Index < HitTargetInfos.Num(); ++Index)
+	for (FWvBattleDamageAttackTargetInfo& Info : HitTargetInfos)
 	{
-		ActorsToIgnore.Add(HitTargetInfos[Index].Target);
+		ActorsToIgnore.Add(Info.Target);
 	}
 	AbilityTraceAttackToASC(Ability, EffectGroupIndex, HitTargetInfos, Start);
 	return true;
@@ -193,14 +193,14 @@ bool UCombatComponent::AbilityDamageCapsuleTrace(class UWvAbilityBase* Ability, 
 	TArray<FWvBattleDamageAttackTargetInfo> HitTargetInfos;
 	CapsuleTraceMulti(HitTargetInfos, Start, End, Radius, HalfHeight, CapsuleQuat, ActorsToIgnore);
 
-	if (HitTargetInfos.Num() == 0)
+	if (HitTargetInfos.IsEmpty())
 	{
 		return false;
 	}
 
-	for (int32 Index = 0; Index < HitTargetInfos.Num(); ++Index)
+	for (FWvBattleDamageAttackTargetInfo& Info : HitTargetInfos)
 	{
-		ActorsToIgnore.Add(HitTargetInfos[Index].Target);
+		ActorsToIgnore.Add(Info.Target);
 	}
 	AbilityTraceAttackToASC(Ability, EffectGroupIndex, HitTargetInfos, Start);
 	return true;
@@ -263,7 +263,7 @@ void UCombatComponent::CapsuleTraceMulti(TArray<FWvBattleDamageAttackTargetInfo>
 
 void UCombatComponent::HitResultEnemyFilter(TArray<FHitResult>& Hits, TArray<FWvBattleDamageAttackTargetInfo>& HitTargetInfos)
 {
-	if (Hits.Num() < 0)
+	if (Hits.IsEmpty())
 	{
 		return;
 	}
@@ -366,7 +366,7 @@ const bool UCombatComponent::LineOfSightTraceOuter(class UWvAbilityBase* Ability
 /// <returns></returns>
 const bool UCombatComponent::LineOfSightTraceOuterEnvironments(class UWvAbilityBase* Ability, const int32 EffectGroupIndex, const TArray<FHitResult>& HitResults, const FVector SourceLocation)
 {
-	for (const FHitResult HitResult : HitResults)
+	for (const FHitResult& HitResult : HitResults)
 	{
 		LineOfSightTraceOuterEnvironment(Ability, EffectGroupIndex, HitResult, SourceLocation);
 		if (HasEnvironmentFilterClass(HitResult))
@@ -435,7 +435,7 @@ const bool UCombatComponent::BulletTraceAttackToAbilitySystemComponent(class UWv
 	TArray<FWvBattleDamageAttackTargetInfo> HitTargetInfos;
 	HitResultEnemyFilter(Hits, HitTargetInfos);
 
-	if (HitTargetInfos.Num() == 0)
+	if (HitTargetInfos.IsEmpty())
 	{
 		return false;
 	}
@@ -1171,13 +1171,20 @@ const FVector UCombatComponent::GetFormationPoint(const APawn* InPawn)
 	}
 
 	TArray<FVector> Points;
-	UWvCommonUtils::CircleSpawnPoints(Num, ASC_GLOBAL()->BotLeaderConfig.FormationRadius, Character->GetActorLocation(), Points);
+
+	const FBotLeaderConfig& Config = ASC_GLOBAL()->BotLeaderConfig;
+	UWvCommonUtils::CircleSpawnPoints(Num, Config.FormationRadius, Character->GetActorLocation(), Points);
 	return Points[SelectIndex];
 }
 
 bool UCombatComponent::CanFollow() const
 {
-	const int32 StackCount = IsValid(ASC_GLOBAL()) ? ASC_GLOBAL()->BotLeaderConfig.FollowStackCount : K_FOLLOW_NUM;
+	int32 StackCount = K_FOLLOW_NUM;
+	if (IsValid(ASC_GLOBAL()))
+	{
+		const FBotLeaderConfig& Config = ASC_GLOBAL()->BotLeaderConfig;
+		StackCount = Config.FollowStackCount;
+	}
 	return Followers.Num() < StackCount;
 }
 #pragma endregion

@@ -28,8 +28,8 @@ protected:
 
 
 public:
-	void OnCharacterEnter_Callback(ABaseCharacter* InCharacter);
+	void OnCharacterEnter_WalkOnly(ABaseCharacter* InCharacter);
 	
 
-	void OnCharacterExit_Callback(ABaseCharacter* InCharacter);
+	void OnCharacterExit_WalkOnly(ABaseCharacter* InCharacter);
 };

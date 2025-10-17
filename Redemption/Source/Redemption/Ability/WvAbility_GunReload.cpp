@@ -84,9 +84,9 @@ void UWvAbility_GunReload::ActivateAbility(const FGameplayAbilitySpecHandle Hand
 		HoldWeapon->DoReload();
 	}
 
-	MontageTask->OnCancelled.AddDynamic(this, &UWvAbility_GunReload::OnPlayMontageCompleted_Event);
-	MontageTask->OnInterrupted.AddDynamic(this, &UWvAbility_GunReload::OnPlayMontageCompleted_Event);
-	MontageTask->OnCompleted.AddDynamic(this, &UWvAbility_GunReload::OnPlayMontageCompleted_Event);
+	MontageTask->OnCancelled.AddDynamic(this, &ThisClass::OnPlayMontageCompleted_Event);
+	MontageTask->OnInterrupted.AddDynamic(this, &ThisClass::OnPlayMontageCompleted_Event);
+	MontageTask->OnCompleted.AddDynamic(this, &ThisClass::OnPlayMontageCompleted_Event);
 	MontageTask->ReadyForActivation();
 }
 
@@ -114,7 +114,7 @@ UAnimMontage* UWvAbility_GunReload::FindChooserTable(AWeaponBaseActor* InWeaponB
 	if (AssetChooserTable)
 	{
 		FWeaponCharacterAnimationInput Input;
-		Input.WeaponState = WeaponBaseActor->GetAttackWeaponState();
+		Input.WeaponState = InWeaponBaseActor->GetAttackWeaponState();
 
 		FChooserEvaluationContext Context;
 		Context.AddStructParam(Input);

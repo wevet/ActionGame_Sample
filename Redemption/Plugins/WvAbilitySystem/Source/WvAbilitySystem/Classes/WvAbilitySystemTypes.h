@@ -208,28 +208,20 @@ struct FWvOverlapResult
 {
 	GENERATED_BODY()
 
+public:
 	bool IsValid() const;
 
-	UPROPERTY()
-	TWeakObjectPtr<class AActor> Actor;
+	AActor* GetActor() const;
+	UPrimitiveComponent* GetComponent() const;
+	bool NetSerialize(FArchive& Ar, class UPackageMap* Map, bool& bOutSuccess);
 
-	UPROPERTY()
+
+	TWeakObjectPtr<class AActor> Actor;
 	TWeakObjectPtr<class UPrimitiveComponent> Component;
 
 	UPROPERTY()
-	int32 ItemIndex = -1;
+	int32 ItemIndex = INDEX_NONE;
 
-	FORCEINLINE AActor* GetActor() const
-	{
-		return Actor.Get();
-	}
-
-	FORCEINLINE UPrimitiveComponent* GetComponent() const
-	{
-		return Component.Get();
-	}
-
-	bool NetSerialize(FArchive& Ar, class UPackageMap* Map, bool& bOutSuccess);
 };
 
 // All members of FHitResult are PODs.
@@ -726,7 +718,7 @@ public:
 	EHitReactDirection HitDirection{ EHitReactDirection::Forward};
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	class UAnimMontage* Montage = nullptr;
+	TObjectPtr<class UAnimMontage> Montage = nullptr;
 };
 
 USTRUCT(BlueprintType)
@@ -742,7 +734,7 @@ public:
 	TArray<FHitReactConditionInfo> Montages;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	class UAnimMontage* NormalMontage = nullptr;
+	TObjectPtr<class UAnimMontage> NormalMontage = nullptr;
 };
 
 UENUM(BlueprintType)
@@ -776,10 +768,10 @@ class WVABILITYSYSTEM_API UWvHitReactDataAsset : public UDataAsset
 
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	class UDataTable* NormalHitReactTable{nullptr};
+	TObjectPtr<class UDataTable> NormalHitReactTable{nullptr};
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	class UDataTable* SpecialHitReactTable{ nullptr };
+	TObjectPtr<class UDataTable> SpecialHitReactTable{ nullptr };
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	TMap<FName, class UDataTable*> WeaponHitReactTables;
@@ -833,7 +825,7 @@ public:
 	float ShakeDuration{1.0f};
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	UCurveFloat* DampingCurve{nullptr};
+	TObjectPtr<class UCurveFloat> DampingCurve{nullptr};
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FTransmitShakableBoneInfo Transmits;
@@ -899,7 +891,7 @@ public:
 	float Direction = 0.f;
 
 	UPROPERTY()
-	UCurveFloat* DampingCurve = nullptr;
+	TObjectPtr<class UCurveFloat> DampingCurve = nullptr;
 };
 
 UCLASS(MinimalAPI)
@@ -942,6 +934,9 @@ struct FBotConfig
 public:
 	UPROPERTY(EditDefaultsOnly)
 	float FootStepMaxVolume = 0.5f;
+
+	UPROPERTY(EditDefaultsOnly)
+	float PlayerToDistanceThreshold = 5000.0f;
 
 	UPROPERTY(EditDefaultsOnly)
 	float PlayerDistThreshold = 300.0f;
@@ -1009,7 +1004,7 @@ public:
 	bool IsTurnAround = true;
 
 	UPROPERTY(EditDefaultsOnly)
-	class UAnimMontage* Montage{nullptr};
+	TObjectPtr<class UAnimMontage> Montage{nullptr};
 };
 
 USTRUCT(BlueprintType)
@@ -1111,7 +1106,7 @@ public:
 	}
 
 	UPROPERTY(EditDefaultsOnly)
-	UAnimMontage* DefaultComboMontage;
+	TObjectPtr<class UAnimMontage> DefaultComboMontage;
 
 	UPROPERTY(EditDefaultsOnly)
 	TMap<FGameplayTag, UAnimMontage*> TagToComboMontageMap;
@@ -1175,10 +1170,10 @@ class WVABILITYSYSTEM_API UCharacterVFXDataAsset : public UDataAsset
 
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	UMaterialInterface* OverlayMaterial{nullptr};
+	TObjectPtr<class UMaterialInterface> OverlayMaterial{nullptr};
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	UMaterialInterface* FaceOverlayMaterial{ nullptr };
+	TObjectPtr<class UMaterialInterface> FaceOverlayMaterial{ nullptr };
 };
 #pragma endregion
 
@@ -1247,7 +1242,7 @@ public:
 	EBodyShapeType BodyShapeType = EBodyShapeType::Normal;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	UAnimMontage* AnimMontage = nullptr;
+	TObjectPtr<class UAnimMontage> AnimMontage = nullptr;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float PlayRate = 1.0f;

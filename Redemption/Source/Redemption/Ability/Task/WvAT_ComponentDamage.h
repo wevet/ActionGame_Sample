@@ -23,22 +23,34 @@ class REDEMPTION_API UWvAT_ComponentDamage : public UWvAbilityTask
 public:
 	UFUNCTION(BlueprintCallable, Category = "Ability|Tasks", meta = (HidePin = "OwningAbility", DefaultToSelf = "OwningAbility", BlueprintInternalUseOnly = "TRUE"))
 	static UWvAT_ComponentDamage* ComponentFrameAction(UGameplayAbility* OwningAbility,
-		FName TaskName, float TotalDuration, float IntervalTime, FName BoneName,
-		TArray<int32> EffectIdxs, TArray<int32> EffectCompIdxs, TArray<UShapeComponent*> Shapes);
+		FName TaskName, 
+		float TotalDuration, 
+		float IntervalTime, 
+		FName BoneName,
+		TArray<int32> EffectIdxs, 
+		TArray<int32> EffectCompIdxs, 
+		TArray<UShapeComponent*> Shapes);
 
 	virtual void Activate() override;
-
 	virtual void TickTask(float DeltaTime) override;
 
 protected:
-	FName SourceName;
-	float DurationTime;
-	float IntervalTime;
-	TArray<int32> EffectGroupIndexs;
-	TArray<int32> EffectCompIndexs;
-	TArray<UShapeComponent*> ShapeComponents;
+	virtual void OnDestroy(bool bInOwnerFinished) override;
 
-	float NotifyTime;
+protected:
+	FName SourceName{ NAME_None };
+	float DurationTime{ 0.f };
+	float IntervalTime{ 0.f };
+	float NotifyTime{ 0.f };
+
+	UPROPERTY()
+	TArray<int32> EffectGroupIndexs;
+
+	UPROPERTY()
+	TArray<int32> EffectCompIndexs;
+
+	UPROPERTY()
+	TArray<UShapeComponent*> ShapeComponents;
 
 	UPROPERTY()
 	TArray<AActor*> HitActors;
@@ -47,9 +59,9 @@ protected:
 	TArray<AActor*> ActorsToIgnore;
 
 	UPROPERTY()
-	USkeletalMeshComponent* SkelMeshComp;
+	TObjectPtr<class USkeletalMeshComponent> SkelMeshComp{ nullptr };
 
-	float NextTraceTime;
+	float NextTraceTime{ 0.f };
 	FTransform CurrentTransform;
 
 	//FTransform InitialArtBoneTransfrom;
@@ -61,7 +73,7 @@ protected:
 	//FVector AttactArtScale;
 
 	UPROPERTY()
-	class UCombatComponent* CombatComponent;
+	TObjectPtr<class UCombatComponent> CombatComponent{ nullptr };
 
 protected:
 	void Execute();

@@ -300,13 +300,12 @@ void UClimbingAnimInstance::CreateProperties()
 		return;
 	}
 
-	LocomotionComponent = Cast<ULocomotionComponent>(Character->GetComponentByClass(ULocomotionComponent::StaticClass()));
+	CharacterMovementComponent = Character->FindComponentByClass<UWvCharacterMovementComponent>();
+	LocomotionComponent = Character->FindComponentByClass<ULocomotionComponent>();
 
 	LadderComponent = Character->FindComponentByClass<ULadderComponent>();
+	ClimbingComponent = Character->FindComponentByClass<UClimbingComponent>();
 
-	CharacterMovementComponent = Cast<UWvCharacterMovementComponent>(Character->GetCharacterMovement());
-
-	ClimbingComponent = Cast<UClimbingComponent>(Character->GetComponentByClass(UClimbingComponent::StaticClass()));
 	if (ClimbingComponent)
 	{
 		RootOffset.Z = (ClimbingComponent->ConstCapsuleOffset - 10.0f);

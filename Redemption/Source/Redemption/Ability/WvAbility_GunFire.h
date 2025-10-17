@@ -33,7 +33,7 @@ protected:
 	int32 GameplayEffectGroupIndexs = 0;
 
 	UPROPERTY(EditDefaultsOnly)
-	TObjectPtr<UChooserTable> AssetChooserTable;
+	TObjectPtr<UChooserTable> AssetChooserTable{ nullptr };
 
 	UPROPERTY(EditDefaultsOnly)
 	float Randomize = 150.0f;
@@ -46,12 +46,11 @@ private:
 	void OnPlayGunFireCompleted_Event(FGameplayTag EventTag, FGameplayEventData EventData);
 
 	UPROPERTY()
-	class UWvAT_PlayMontageAndWaitForEvent* MontageTask;
+	TObjectPtr<class UWvAT_PlayMontageAndWaitForEvent> MontageTask{ nullptr };
 	
 	UPROPERTY()
-	class UWvAT_BulletDamage* DamageTask;
+	TObjectPtr<class UWvAT_BulletDamage> DamageTask{ nullptr };
 
-	UPROPERTY()
 	TWeakObjectPtr<AWeaponBaseActor> WeaponBaseActor;
 
 	UAnimMontage* FindChooserTable(AWeaponBaseActor* InWeaponBaseActor) const;

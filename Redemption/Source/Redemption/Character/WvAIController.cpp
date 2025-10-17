@@ -869,7 +869,7 @@ void AWvAIController::HandleTargetState()
 
 const bool AWvAIController::HandleAttackPawnPrepare()
 {
-	return BaseCharacter->HandleAttackPawnPrepare();
+	return BaseCharacter->HasAttackReady();
 }
 
 bool AWvAIController::IsTargetDead() const

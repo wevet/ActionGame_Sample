@@ -29,11 +29,6 @@ void UWvFoleyEventAnimNotify::Notify(USkeletalMeshComponent* MeshComp, UAnimSequ
 		return;
 	}
 
-	if (bIsDisableTrace)
-	{
-		SpawnNoTraceSoundAndEffect(OwnerActor, MeshComp);
-		return;
-	}
 
 	// Distance to the foot downward is asset-dependent, so it is made into a property.
 	const FVector SocketLocation = MeshComp->GetSocketLocation(SocketName);
@@ -166,8 +161,9 @@ void UWvFoleyEventAnimNotify::CalculateVolume(AActor* Owner)
 
 	if (UWvCommonUtils::IsBotPawn(Owner))
 	{
-		const float BotVolume = ASC_GLOBAL()->BotConfig.FootStepMaxVolume;
-		constexpr float Threshold = 5000.0f;
+		const FBotConfig& BotConfig = ASC_GLOBAL()->BotConfig;
+		const float BotVolume = BotConfig.FootStepMaxVolume;
+		const float Threshold = BotConfig.PlayerToDistanceThreshold;
 		const float Distance = UWvCommonUtils::PlayerPawnToDistance(Owner);
 		Volume = UKismetMathLibrary::MapRangeClamped(Distance, 0.f, Threshold, 1.0f, 0.f);
 		Volume = FMath::Clamp(Volume, 0.f, BotVolume);

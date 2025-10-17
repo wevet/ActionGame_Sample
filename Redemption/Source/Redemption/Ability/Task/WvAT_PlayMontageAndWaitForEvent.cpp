@@ -8,11 +8,12 @@
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(WvAT_PlayMontageAndWaitForEvent)
 
+
 UWvAT_PlayMontageAndWaitForEvent::UWvAT_PlayMontageAndWaitForEvent(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
 	Rate = 1.0f;
 	StartTimeSeconds = 0.0f;
-	bStopWhenAbilityEnds = true;
+	//bStopWhenAbilityEnds = true;
 }
 
 UWvAbilitySystemComponent* UWvAT_PlayMontageAndWaitForEvent::GetTargetAbilitySystemComponent()
@@ -53,6 +54,16 @@ void UWvAT_PlayMontageAndWaitForEvent::OnMontageBlendingOut(UAnimMontage* Montag
 		}
 	}
 }
+
+
+void UWvAT_PlayMontageAndWaitForEvent::OnMontageBlendedIn(UAnimMontage* Montage)
+{
+	if (ShouldBroadcastAbilityTaskDelegates())
+	{
+		OnBlendIn.Broadcast(FGameplayTag(), FGameplayEventData());
+	}
+}
+
 
 void UWvAT_PlayMontageAndWaitForEvent::OnAbilityCancelled()
 {
@@ -161,6 +172,9 @@ void UWvAT_PlayMontageAndWaitForEvent::Activate()
 				BlendingOutDelegate.BindUObject(this, &UWvAT_PlayMontageAndWaitForEvent::OnMontageBlendingOut);
 				AnimInstance->Montage_SetBlendingOutDelegate(BlendingOutDelegate, MontageToPlay);
 
+				BlendedingInDelegate.BindUObject(this, &UWvAT_PlayMontageAndWaitForEvent::OnMontageBlendedIn);
+				AnimInstance->Montage_SetBlendedInDelegate(BlendedingInDelegate, MontageToPlay);
+
 				MontageEndedDelegate.BindUObject(this, &UWvAT_PlayMontageAndWaitForEvent::OnMontageEnded);
 				AnimInstance->Montage_SetEndDelegate(MontageEndedDelegate, MontageToPlay);
 
@@ -250,12 +264,14 @@ bool UWvAT_PlayMontageAndWaitForEvent::StopPlayingMontage()
 	// The ability would have been interrupted, in which case we should automatically stop the montage
 	if (AbilitySystemComponent.IsValid() && Ability)
 	{
-		if (AbilitySystemComponent->GetAnimatingAbility() == Ability && AbilitySystemComponent->GetCurrentMontage() == MontageToPlay)
+		if (AbilitySystemComponent->GetAnimatingAbility() == Ability &&
+			AbilitySystemComponent->GetCurrentMontage() == MontageToPlay)
 		{
 			// Unbind delegates so they don't get called as well
 			FAnimMontageInstance* MontageInstance = AnimInstance->GetActiveInstanceForMontage(MontageToPlay);
 			if (MontageInstance)
 			{
+				MontageInstance->OnMontageBlendedInEnded.Unbind();
 				MontageInstance->OnMontageBlendingOutStarted.Unbind();
 				MontageInstance->OnMontageEnded.Unbind();
 			}
@@ -276,9 +292,16 @@ FString UWvAT_PlayMontageAndWaitForEvent::GetDebugString() const
 		const FGameplayAbilityActorInfo* ActorInfo = Ability->GetCurrentActorInfo();
 		UAnimInstance* AnimInstance = ActorInfo->GetAnimInstance();
 
-		if (AnimInstance != nullptr)
+		if (IsValid(AnimInstance))
 		{
-			PlayingMontage = AnimInstance->Montage_IsActive(MontageToPlay) ? MontageToPlay : AnimInstance->GetCurrentActiveMontage();
+			if (MontageToPlay && AnimInstance->Montage_IsPlaying(MontageToPlay))
+			{
+				PlayingMontage = MontageToPlay;
+			}
+			else
+			{
+				PlayingMontage = AnimInstance->GetCurrentActiveMontage();
+			}
 		}
 	}
 	return FString::Printf(TEXT("PlayMontageAndWaitForEvent. MontageToPlay: %s  (Currently Playing): %s"), *GetNameSafe(MontageToPlay), *GetNameSafe(PlayingMontage));

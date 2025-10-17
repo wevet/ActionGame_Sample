@@ -5,7 +5,11 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "Locomotion/LocomotionSystemTypes.h"
+#include "Logging/LogMacros.h"
 #include "ItemBaseActor.generated.h"
+
+
+DECLARE_LOG_CATEGORY_EXTERN(LogBaseItem, All, All)
 
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FItemEquipDelegate, const bool, bWasEquip);

@@ -37,20 +37,6 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "MainUI|Variable")
 	TObjectPtr<class APlayerCharacter> CharacterOwner;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "MainUI|Variable")
-	FName PlayerHealthKeyName;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "MainUI|Variable")
-	FName PlayerSkillKeyName;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "MainUI|Variable")
-	FName WeaponFocusKeyName;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "MainUI|Variable")
-	FName BasePanelKeyName;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "MainUI|Variable")
-	FName WeaponWindowKeyName;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "MainUI|Variable")
 	TSubclassOf<class UWeaponWindow> WindowTemplate;
@@ -62,19 +48,19 @@ protected:
 	void CreateWeaponWindow(UUniformGridPanel* GridPanel);
 
 private:
-	UPROPERTY()
+	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<class UPlayerHealth> PlayerHealthWidget;
 
-	UPROPERTY()
+	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<class UPlayerSkill> PlayerSkillWidget;
 
-	UPROPERTY()
+	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<class UWeaponFocus> WeaponFocusWidget;
 
 	UPROPERTY()
 	TObjectPtr<class UWeaponWindow> WeaponWindowWidget;
 
-	UPROPERTY()
+	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<class UCanvasPanel> BasePanelWidget;
 
 	int32 PrevWeaponIndex;

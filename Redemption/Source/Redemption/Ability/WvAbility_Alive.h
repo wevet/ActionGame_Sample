@@ -18,22 +18,23 @@ class REDEMPTION_API UWvAbility_Alive : public UWvGameplayAbility
 	GENERATED_UCLASS_BODY()
 
 protected:
-	virtual bool CanActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayTagContainer* SourceTags = nullptr, const FGameplayTagContainer* TargetTags = nullptr, OUT FGameplayTagContainer* OptionalRelevantTags = nullptr) const override;
 	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
 	virtual void EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled) override;
 
-	UPROPERTY(EditDefaultsOnly)
-	UAnimMontage* GetUpFromFront;
 
 	UPROPERTY(EditDefaultsOnly)
-	UAnimMontage* GetUpFromBack;
+	TObjectPtr<class UAnimMontage> GetUpFromFront;
+
+	UPROPERTY(EditDefaultsOnly)
+	TObjectPtr<class UAnimMontage> GetUpFromBack;
+
 
 private:
 	UFUNCTION()
 	void OnPlayMontageCompleted_Event(FGameplayTag EventTag, FGameplayEventData EventData);
 
 	UPROPERTY()
-	class UWvAT_PlayMontageAndWaitForEvent* MontageTask;
+	TObjectPtr<class UWvAT_PlayMontageAndWaitForEvent> MontageTask{ nullptr };
 	
 	TWeakObjectPtr<ABaseCharacter> Character;
 

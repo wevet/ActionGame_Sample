@@ -3,8 +3,8 @@
 
 #include "Ability/WvAbility_VehicleDrive.h"
 #include "Redemption.h"
-#include "WvGameplayEffectContext.h"
-#include "WvGameplayTargetData.h"
+//#include "WvGameplayEffectContext.h"
+//#include "WvGameplayTargetData.h"
 #include "WvAbilitySystemBlueprintFunctionLibrary.h"
 
 #include "Character/BaseCharacter.h"
@@ -12,7 +12,7 @@
 #include "Vehicle/WvWheeledVehiclePawn.h"
 #include "Misc/WvCommonUtils.h"
 
-#include "Kismet/GameplayStatics.h"
+//#include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "Kismet/KismetSystemLibrary.h"
 
@@ -129,13 +129,11 @@ void UWvAbility_VehicleDrive::PlayMontage()
 		FGameplayTagContainer(),
 		1.0,
 		0.f,
-		FName("Default"),
-		true,
-		1.0f);
+		FName("Default"), true, 1.0f);
 
-	MontageTask->OnCancelled.AddDynamic(this, &UWvAbility_VehicleDrive::OnPlayMontageCompleted_Event);
-	MontageTask->OnInterrupted.AddDynamic(this, &UWvAbility_VehicleDrive::OnPlayMontageCompleted_Event);
-	MontageTask->OnCompleted.AddDynamic(this, &UWvAbility_VehicleDrive::OnPlayMontageCompleted_Event);
+	MontageTask->OnCancelled.AddDynamic(this, &ThisClass::OnPlayMontageCompleted_Event);
+	MontageTask->OnInterrupted.AddDynamic(this, &ThisClass::OnPlayMontageCompleted_Event);
+	MontageTask->OnCompleted.AddDynamic(this, &ThisClass::OnPlayMontageCompleted_Event);
 	MontageTask->ReadyForActivation();
 }
 

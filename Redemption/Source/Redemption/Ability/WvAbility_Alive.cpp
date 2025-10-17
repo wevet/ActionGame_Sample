@@ -17,10 +17,7 @@ UWvAbility_Alive::UWvAbility_Alive(const FObjectInitializer& ObjectInitializer) 
 	bRetriggerInstancedAbility = true;
 }
 
-bool UWvAbility_Alive::CanActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayTagContainer* SourceTags /*= nullptr*/, const FGameplayTagContainer* TargetTags /*= nullptr*/, OUT FGameplayTagContainer* OptionalRelevantTags /*= nullptr*/) const
-{
-	return Super::CanActivateAbility(Handle, ActorInfo, SourceTags, TargetTags, OptionalRelevantTags);
-}
+
 
 void UWvAbility_Alive::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
 {
@@ -64,9 +61,9 @@ void UWvAbility_Alive::ActivateAbility(const FGameplayAbilitySpecHandle Handle, 
 		FGameplayTagContainer(),
 		1.0, 0.f, FName("Default"), true, 1.0f);
 
-	MontageTask->OnCancelled.AddDynamic(this, &UWvAbility_Alive::OnPlayMontageCompleted_Event);
-	MontageTask->OnInterrupted.AddDynamic(this, &UWvAbility_Alive::OnPlayMontageCompleted_Event);
-	MontageTask->OnCompleted.AddDynamic(this, &UWvAbility_Alive::OnPlayMontageCompleted_Event);
+	MontageTask->OnCancelled.AddDynamic(this, &ThisClass::OnPlayMontageCompleted_Event);
+	MontageTask->OnInterrupted.AddDynamic(this, &ThisClass::OnPlayMontageCompleted_Event);
+	MontageTask->OnCompleted.AddDynamic(this, &ThisClass::OnPlayMontageCompleted_Event);
 	MontageTask->ReadyForActivation();
 
 }

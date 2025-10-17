@@ -24,8 +24,8 @@ class REDEMPTION_API UWvAbilityTask : public UAbilityTask
 public:
 
 	UPROPERTY()
-	class UWvGameplayAbility* WvAbility;
+	TObjectPtr<class UWvGameplayAbility> WvAbility;
 
 	UPROPERTY()
-	class UWvAbilitySystemComponent* WvAbilitySystemComponent;
+	TObjectPtr<class UWvAbilitySystemComponent> WvAbilitySystemComponent;
 };

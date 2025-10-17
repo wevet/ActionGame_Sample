@@ -2,6 +2,8 @@
 
 #include "ItemBaseActor.h"
 
+DEFINE_LOG_CATEGORY(LogBaseItem)
+
 #include UE_INLINE_GENERATED_CPP_BY_NAME(ItemBaseActor)
 
 

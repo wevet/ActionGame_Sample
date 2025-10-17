@@ -20,7 +20,7 @@ public:
 
 	virtual void DoFire() override;
 	virtual bool IsAvailable() const override;
-	virtual const bool HandleAttackPrepare() override;
+	virtual const bool HasAttackReady() override;
 	virtual bool IsCurrentAmmosEmpty() const override;
 
 

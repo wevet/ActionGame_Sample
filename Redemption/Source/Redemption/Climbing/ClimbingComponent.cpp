@@ -985,7 +985,7 @@ void UClimbingComponent::PrepareToHoldingLedge()
 		FVector OutHealth{0.f, 0.f, 0.f};
 		Character->GetCharacterHealth(OutHealth);
 
-		QTEActionComponent->ModifyTimer(OutHealth);
+		QTEActionComponent->SetDurationSeconds(OutHealth);
 		QTEActionComponent->Begin(EQTEType::Climbing);
 	}
 #endif

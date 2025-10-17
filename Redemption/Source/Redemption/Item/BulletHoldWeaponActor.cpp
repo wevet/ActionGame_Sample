@@ -39,7 +39,7 @@ void ABulletHoldWeaponActor::DoFire()
 
 	if (PawnAttackParam.IsEmptyAmmo())
 	{
-		UE_LOG(LogTemp, Warning, TEXT("IsEmptyAmmo => %s"), *FString(__FUNCTION__));
+		UE_LOG(LogBaseItem, Warning, TEXT("IsEmptyAmmo => %s"), *FString(__FUNCTION__));
 		return;
 	}
 
@@ -61,10 +61,17 @@ void ABulletHoldWeaponActor::DoFire()
 
 }
 
-const bool ABulletHoldWeaponActor::HandleAttackPrepare()
+const bool ABulletHoldWeaponActor::HasAttackReady()
 {
 	if (!Character.IsValid())
 	{
+		UE_LOG(LogBaseItem, Error, TEXT("Owner not valid : [%s]"), *FString(__FUNCTION__));
+		return true;
+	}
+
+	if (!IsValid(Character->GetWvAbilitySystemComponent()))
+	{
+		UE_LOG(LogBaseItem, Error, TEXT("Owner GAS not valid : [%s]"), *FString(__FUNCTION__));
 		return true;
 	}
 
@@ -73,17 +80,16 @@ const bool ABulletHoldWeaponActor::HandleAttackPrepare()
 		if (Character->GetWvAbilitySystemComponent()->HasMatchingGameplayTag(TAG_Character_Action_GunReload))
 		{
 			// reloading..
-			//UE_LOG(LogTemp, Warning, TEXT("reloading.. => %s"), *FString(__FUNCTION__));
 			return false;
 		}
 		else
 		{
-			UE_LOG(LogTemp, Log, TEXT("reload ability start => %s"), *FString(__FUNCTION__));
+			UE_LOG(LogBaseItem, Log, TEXT("reload ability start => %s"), *FString(__FUNCTION__));
 			Notify_ReloadOwner();
 			return false;
 		}
 	}
-	UE_LOG(LogTemp, Log, TEXT("not empty => %s"), *FString(__FUNCTION__));
+
 	return true;
 }
 

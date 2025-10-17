@@ -85,7 +85,7 @@ void UWvAbility_GunFire::ActivateAbility(const FGameplayAbilitySpecHandle Handle
 		Randomize,
 		GameplayEffectGroupIndexs);
 
-	DamageTask->OnCompleted.AddDynamic(this, &UWvAbility_GunFire::OnPlayGunFireCompleted_Event);
+	DamageTask->OnCompleted.AddDynamic(this, &ThisClass::OnPlayGunFireCompleted_Event);
 	DamageTask->ReadyForActivation();
 
 	MontageTask = UWvAT_PlayMontageAndWaitForEvent::PlayMontageAndWaitForEvent(
@@ -93,11 +93,13 @@ void UWvAbility_GunFire::ActivateAbility(const FGameplayAbilitySpecHandle Handle
 		FName("GunFire"),
 		Montage,
 		FGameplayTagContainer(),
-		1.0, 0.f, FName("Default"), true, 1.0f);
+		1.0,
+		0.f, 
+		FName("Default"), true, 1.0f);
 
-	MontageTask->OnCancelled.AddDynamic(this, &UWvAbility_GunFire::OnPlayMontageCompleted_Event);
-	MontageTask->OnInterrupted.AddDynamic(this, &UWvAbility_GunFire::OnPlayMontageCompleted_Event);
-	MontageTask->OnCompleted.AddDynamic(this, &UWvAbility_GunFire::OnPlayMontageCompleted_Event);
+	MontageTask->OnCancelled.AddDynamic(this, &ThisClass::OnPlayMontageCompleted_Event);
+	MontageTask->OnInterrupted.AddDynamic(this, &ThisClass::OnPlayMontageCompleted_Event);
+	MontageTask->OnCompleted.AddDynamic(this, &ThisClass::OnPlayMontageCompleted_Event);
 	MontageTask->ReadyForActivation();
 }
 
@@ -124,7 +126,7 @@ UAnimMontage* UWvAbility_GunFire::FindChooserTable(AWeaponBaseActor* InWeaponBas
 	if (AssetChooserTable)
 	{
 		FWeaponCharacterAnimationInput Input;
-		Input.WeaponState = WeaponBaseActor->GetAttackWeaponState();
+		Input.WeaponState = InWeaponBaseActor->GetAttackWeaponState();
 
 		FChooserEvaluationContext Context;
 		Context.AddStructParam(Input);

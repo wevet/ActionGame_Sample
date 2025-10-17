@@ -17,6 +17,8 @@
 #include "AbilitySystemBlueprintLibrary.h"
 #include "Components/WidgetComponent.h"
 
+DEFINE_LOG_CATEGORY(LogQTE)
+
 #include UE_INLINE_GENERATED_CPP_BY_NAME(QTEActionComponent)
 
 
@@ -62,7 +64,7 @@ void UQTEActionComponent::TickComponent(float DeltaTime, ELevelTick TickType, FA
 
 	if (IsPlaying())
 	{
-		Update(DeltaTime);
+		Tick_Internal(DeltaTime);
 	}
 }
 
@@ -94,21 +96,21 @@ void UQTEActionComponent::Begin(const EQTEType InQTEType)
 /// z => max
 /// </summary>
 /// <param name="TimerValue"></param>
-void UQTEActionComponent::ModifyTimer(const FVector TimerValue)
+void UQTEActionComponent::SetDurationSeconds(const FVector TimerValue)
 {
-	QTEData.ModifyTimer(TimerValue.X, TimerValue.Y, TimerValue.Z);
+	QTEData.SetDurationSeconds(TimerValue.X, TimerValue.Y, TimerValue.Z);
 }
 
-void UQTEActionComponent::SetParameters(const float InTimer, const float InCount)
+void UQTEActionComponent::SetParameters(const float InDurationSeconds, const int32 InRequiredPressesCount)
 {
-	QTEData.SetParameters(InTimer, InCount);
+	QTEData.SetParameters(InDurationSeconds, InRequiredPressesCount);
 }
 
-void UQTEActionComponent::Update(const float DeltaTime)
+void UQTEActionComponent::Tick_Internal(const float DeltaTime)
 {
-	if (!QTEData.IsTimeOver())
+	if (QTEData.IsTimerActive())
 	{
-		QTEData.UpdateTimer(DeltaTime);
+		QTEData.Tick(DeltaTime);
 	}
 	else
 	{

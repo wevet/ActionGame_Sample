@@ -8,12 +8,15 @@
 #include "Locomotion/LocomotionSystemTypes.h"
 #include "AsyncComponentInterface.h"
 #include "Engine/StreamableManager.h"
+#include "Logging/LogMacros.h"
 #include "QTEActionComponent.generated.h"
 
 class UWidgetComponent;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FQTEBeginDelegate);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FQTEEndDelegate, bool, InSuccess);
+
+DECLARE_LOG_CATEGORY_EXTERN(LogQTE, All, All)
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class REDEMPTION_API UQTEActionComponent : public UActorComponent, public IAsyncComponentInterface
@@ -53,8 +56,8 @@ public:
 	void End();
 	void Abort();
 
-	void ModifyTimer(const FVector TimerValue);
-	void SetParameters(const float InTimer, const float InCount);
+	void SetDurationSeconds(const FVector TimerValue);
+	void SetParameters(const float InDurationSeconds, const int32 InRequiredPressesCount);
 
 	void ShowQTEWidgetComponent(const bool NewVisibility);
 
@@ -72,21 +75,19 @@ protected:
 	FQTEData QTEData;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "QTE")
-	bool bQTEActivated;
+	bool bQTEActivated{ false };
 
-	EQTEType CurQTEType;
-
-	UPROPERTY()
-	TWeakObjectPtr<class UWidgetComponent> QTEWidgetComponent;
 
 private:
-	void Update(const float DeltaTime);
+	void Tick_Internal(const float DeltaTime);
 	void EndInternal();
 	void SuccessAction();
 	void FailAction();
 
-	bool bQTEEndCallbackResult;
+	bool bQTEEndCallbackResult{ false };
 
+	EQTEType CurQTEType{ EQTEType::None };
+	TWeakObjectPtr<class UWidgetComponent> QTEWidgetComponent;
 	TSharedPtr<FStreamableHandle>  ComponentStreamableHandle;
 
 	void OnLoadWidgetComplete();

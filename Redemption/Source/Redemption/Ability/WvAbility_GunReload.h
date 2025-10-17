@@ -27,14 +27,14 @@ protected:
 
 
 	UPROPERTY(EditDefaultsOnly)
-	TObjectPtr<UChooserTable> AssetChooserTable;
+	TObjectPtr<UChooserTable> AssetChooserTable{ nullptr };
 
 private:
 	UFUNCTION()
 	void OnPlayMontageCompleted_Event(FGameplayTag EventTag, FGameplayEventData EventData);
 
 	UPROPERTY()
-	class UWvAT_PlayMontageAndWaitForEvent* MontageTask;
+	TObjectPtr<class UWvAT_PlayMontageAndWaitForEvent> MontageTask{ nullptr };
 
 	TWeakObjectPtr<AWeaponBaseActor> WeaponBaseActor;
 
