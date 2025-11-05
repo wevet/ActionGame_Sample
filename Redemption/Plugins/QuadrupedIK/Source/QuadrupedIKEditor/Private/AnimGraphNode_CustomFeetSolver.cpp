@@ -3,7 +3,7 @@
 #include "AnimGraphNode_CustomFeetSolver.h"
 #include "Animation/AnimInstance.h"
 #include "UObject/AnimPhysObjectVersion.h"
-//#include "CustomFootSolverEditMode.h"
+#include "CustomFootSolverEditMode.h"
 #include "AnimationGraphSchema.h"
 #include "DrawDebugHelpers.h"
 #include "AnimationGraphSchema.h"
@@ -15,11 +15,12 @@ void UAnimGraphNode_CustomFeetSolver::CreateOutputPins()
 	CreatePin(EGPD_Output, UAnimationGraphSchema::PC_Struct, FComponentSpacePoseLink::StaticStruct(), TEXT("Pose"));
 }
 
-//FEditorModeID UAnimGraphNode_CustomFeetSolver::GetEditorMode() const
-//{
-//	return CustomFootSolverEditMode::FootSolverModeID;
-//}
+FEditorModeID UAnimGraphNode_CustomFeetSolver::GetEditorMode() const
+{
+	return FFootSolverEditModes::CustomFootSolver;
+}
 
+#if false
 void UAnimGraphNode_CustomFeetSolver::Draw(FPrimitiveDrawInterface* PDI, USkeletalMeshComponent* PreviewSkelMeshComp) const
 {
 	if (PreviewSkelMeshComp)
@@ -30,4 +31,4 @@ void UAnimGraphNode_CustomFeetSolver::Draw(FPrimitiveDrawInterface* PDI, USkelet
 		}
 	}
 }
-
+#endif

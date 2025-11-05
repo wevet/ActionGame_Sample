@@ -1,9 +1,5 @@
 // Copyright 2022 wevet works All Rights Reserved.
 
-// In UE4, FAnimNodeEditMode didn't have a module API, so I had to copy-paste the contents of FAnimNodeEditMode to an external module
-// I will remove this class in the future when I turn off UE4 support.
-#if	ENGINE_MAJOR_VERSION == 4
-
 #include "CustomIKControlBaseEditMode.h"
 #include "EditorViewportClient.h"
 #include "IPersonaPreviewScene.h"
@@ -91,16 +87,7 @@ bool FCustomIKControlBaseEditMode::SetWidgetMode(UE::Widget::EWidgetMode InWidge
 	return false;
 }
 
-FName FCustomIKControlBaseEditMode::GetSelectedBone() const
-{
-	UAnimGraphNode_CustomIKControlBase* SkelControl = Cast<UAnimGraphNode_CustomIKControlBase>(AnimNode);
-	if (SkelControl != nullptr)
-	{
 
-	}
-
-	return NAME_None;
-}
 
 void FCustomIKControlBaseEditMode::EnterMode(UAnimGraphNode_Base* InEditorNode, FAnimNode_Base* InRuntimeNode)
 {
@@ -330,9 +317,18 @@ void FCustomIKControlBaseEditMode::Tick(FEditorViewportClient* ViewportClient, f
 	}
 }
 
+bool FCustomIKControlBaseEditMode::SupportsPoseWatch()
+{
+	return false;
+}
+
+void FCustomIKControlBaseEditMode::RegisterPoseWatchedNode(UAnimGraphNode_Base* InEditorNode, FAnimNode_Base* InRuntimeNode)
+{
+}
+
 void FCustomIKControlBaseEditMode::ConvertToComponentSpaceTransform(const USkeletalMeshComponent* SkelComp, const FTransform& InTransform, FTransform& OutCSTransform, int32 BoneIndex, EBoneControlSpace Space)
 {
-	USkeleton* Skeleton = SkelComp->SkeletalMesh->GetSkeleton();
+	USkeleton* Skeleton = SkelComp->GetSkeletalMeshAsset()->GetSkeleton();
 
 	switch (Space)
 	{
@@ -354,7 +350,7 @@ void FCustomIKControlBaseEditMode::ConvertToComponentSpaceTransform(const USkele
 			const int32 ParentIndex = Skeleton->GetReferenceSkeleton().GetParentIndex(BoneIndex);
 			if (ParentIndex != INDEX_NONE)
 			{
-				const int32 MeshParentIndex = Skeleton->GetMeshBoneIndexFromSkeletonBoneIndex(SkelComp->SkeletalMesh, ParentIndex);
+				const int32 MeshParentIndex = Skeleton->GetMeshBoneIndexFromSkeletonBoneIndex(SkelComp->GetSkeletalMeshAsset(), ParentIndex);
 				if (MeshParentIndex != INDEX_NONE)
 				{
 					const FTransform ParentTM = SkelComp->GetBoneTransform(MeshParentIndex);
@@ -370,7 +366,7 @@ void FCustomIKControlBaseEditMode::ConvertToComponentSpaceTransform(const USkele
 		case BCS_BoneSpace:
 		if (BoneIndex != INDEX_NONE)
 		{
-			const int32 MeshBoneIndex = Skeleton->GetMeshBoneIndexFromSkeletonBoneIndex(SkelComp->SkeletalMesh, BoneIndex);
+			const int32 MeshBoneIndex = Skeleton->GetMeshBoneIndexFromSkeletonBoneIndex(SkelComp->GetSkeletalMeshAsset(), BoneIndex);
 			if (MeshBoneIndex != INDEX_NONE)
 			{
 				const FTransform BoneTM = SkelComp->GetBoneTransform(MeshBoneIndex);
@@ -383,7 +379,7 @@ void FCustomIKControlBaseEditMode::ConvertToComponentSpaceTransform(const USkele
 		}
 		break;
 		default:
-		if (SkelComp->SkeletalMesh)
+		if (SkelComp->GetSkeletalMeshAsset())
 		{
 			UE_LOG(LogAnimation, Warning, TEXT("ConvertToComponentSpaceTransform: Unknown BoneSpace %d  for Mesh: %s"), (uint8)Space, *SkelComp->SkeletalMesh->GetFName().ToString());
 		}
@@ -398,7 +394,7 @@ void FCustomIKControlBaseEditMode::ConvertToComponentSpaceTransform(const USkele
 
 void FCustomIKControlBaseEditMode::ConvertToBoneSpaceTransform(const USkeletalMeshComponent* SkelComp, const FTransform& InCSTransform, FTransform& OutBSTransform, int32 BoneIndex, EBoneControlSpace Space)
 {
-	USkeleton* Skeleton = SkelComp->SkeletalMesh->GetSkeleton();
+	USkeleton* Skeleton = SkelComp->GetSkeletalMeshAsset()->GetSkeleton();
 
 	switch (Space)
 	{
@@ -419,7 +415,7 @@ void FCustomIKControlBaseEditMode::ConvertToBoneSpaceTransform(const USkeletalMe
 				const int32 ParentIndex = Skeleton->GetReferenceSkeleton().GetParentIndex(BoneIndex);
 				if (ParentIndex != INDEX_NONE)
 				{
-					const int32 MeshParentIndex = Skeleton->GetMeshBoneIndexFromSkeletonBoneIndex(SkelComp->SkeletalMesh, ParentIndex);
+					const int32 MeshParentIndex = Skeleton->GetMeshBoneIndexFromSkeletonBoneIndex(SkelComp->GetSkeletalMeshAsset(), ParentIndex);
 					if (MeshParentIndex != INDEX_NONE)
 					{
 						const FTransform ParentTM = SkelComp->GetBoneTransform(MeshParentIndex);
@@ -438,7 +434,7 @@ void FCustomIKControlBaseEditMode::ConvertToBoneSpaceTransform(const USkeletalMe
 		{
 			if (BoneIndex != INDEX_NONE)
 			{
-				const int32 MeshBoneIndex = Skeleton->GetMeshBoneIndexFromSkeletonBoneIndex(SkelComp->SkeletalMesh, BoneIndex);
+				const int32 MeshBoneIndex = Skeleton->GetMeshBoneIndexFromSkeletonBoneIndex(SkelComp->GetSkeletalMeshAsset(), BoneIndex);
 				if (MeshBoneIndex != INDEX_NONE)
 				{
 					FTransform BoneCSTransform = SkelComp->GetBoneTransform(MeshBoneIndex);
@@ -453,7 +449,7 @@ void FCustomIKControlBaseEditMode::ConvertToBoneSpaceTransform(const USkeletalMe
 		break;
 		default:
 		{
-			UE_LOG(LogAnimation, Warning, TEXT("ConvertToBoneSpaceTransform: Unknown BoneSpace %d  for Mesh: %s"), (int32)Space, *GetNameSafe(SkelComp->SkeletalMesh));
+			UE_LOG(LogAnimation, Warning, TEXT("ConvertToBoneSpaceTransform: Unknown BoneSpace %d  for Mesh: %s"), (int32)Space, *GetNameSafe(SkelComp->GetSkeletalMeshAsset()));
 		}
 		break;
 	}
@@ -681,4 +677,3 @@ FVector FCustomIKControlBaseEditMode::ConvertWidgetLocation(const USkeletalMeshC
 
 #undef LOCTEXT_NAMESPACE
 
-#endif

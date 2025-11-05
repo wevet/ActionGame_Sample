@@ -1,16 +1,18 @@
 // Copyright 2022 wevet works All Rights Reserved.
 
 #pragma once
+#include "CoreMinimal.h"
 #include "CustomIKData.h"
-#include "Animation/InputScaleBias.h"
+#include "UObject/ObjectMacros.h"
+#include "BonePose.h"
 #include "Animation/AnimNodeBase.h"
-#include "AnimNode_CustomIKControlBase.h"
-#include "PredictionAnimInstance.h"
+#include "Animation/InputScaleBias.h"
 #include "AnimNode_CustomSpineSolver.generated.h"
 
 
 class FPrimitiveDrawInterface;
 class USkeletalMeshComponent;
+class UPredictionAnimInstance;
 
 
 USTRUCT(BlueprintInternalUseOnly)
@@ -106,13 +108,13 @@ public:
 
 #pragma region SnakeSettings
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = SnakeSettings, meta = (PinHiddenByDefault))
+	bool bSpineSnakeBone = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = SnakeSettings, meta = (PinHiddenByDefault))
 	float SnakeJointSpeed = 1.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = SnakeSettings, meta = (PinHiddenByDefault))
 	bool bEnableSnakeInterp = true;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = SnakeSettings, meta = (PinHiddenByDefault))
-	bool bSpineSnakeBone = false;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = SnakeSettings, meta = (PinHiddenByDefault))
 	bool bIgnoreEndPoints = false;
@@ -314,40 +316,110 @@ public:
 
 	TArray<FCustomBoneHitPairs> SpineHitPairs;
 
-private:
+protected:
 	virtual void UpdateInternal(const FAnimationUpdateContext& Context);
 	virtual void EvaluateSkeletalControl_AnyThread(FComponentSpacePoseContext& Output, TArray<FBoneTransform>& OutBoneTransforms);
 	virtual bool IsValidToEvaluate(const USkeleton* Skeleton, const FBoneContainer& RequiredBones);
 	virtual void InitializeBoneReferences(FBoneContainer& RequiredBones);
+
+private:
 	void LineTraceControl_AnyThread(FComponentSpacePoseContext& Output, TArray<FBoneTransform>& OutBoneTransforms);
 
-	FRotator CustomLookRotation(FVector LookAt, FVector UpDirection);
-	FVector SmoothApproach(const FVector PastPosition, const FVector PastTargetPosition, const FVector TargetPosition, const float Speed) const;
-	FVector RotateAroundPoint(const FVector InputPoint, const FVector ForwardVector, const FVector Origin, const float Angle) const;
 
-	void TailImpactRotation(const int32 OriginPointIndex, FTransform& OutputTransform, FCSPose<FCompactPose>& MeshBases);
-	void ImpactRotation(const int32 PointIndex, FTransform& OutputTransform, FCSPose<FCompactPose>& MeshBases, const bool bIsReverse);
-	FName GetChildBone(const FName BoneName);
+	void TailImpactRotation(
+		const FComponentSpacePoseContext& Output,
+		const int32 OriginPointIndex, 
+		FTransform& OutputTransform, 
+		FCSPose<FCompactPose>& MeshBases);
 
-	const TArray<FName> BoneArrayMachine(const int32 Index, const FName StartBoneName, const FName EndBoneName, const FName ThighBoneName, const bool bIsFoot);
-	const bool CheckLoopExist(const FVector FeetTraceOffset, const float FeetHeight, const FName StartBoneName, const FName InputBoneName, const FName ThighBoneName, TArray<FName>& OutTotalSpineBoneArray);
-	void ApplyLineTrace(const FVector StartLocation, const FVector EndLocation, FHitResult HitResult, const FName BoneText, const FName TraceTag, FHitResult& OutHitResult, const FLinearColor DebugColor, const bool bDrawLine);
+	void ImpactRotation(
+		const FComponentSpacePoseContext& Output,
+		const int32 PointIndex,
+		FTransform& OutputTransform,
+		FCSPose<FCompactPose>& MeshBases, 
+		const bool bIsReverse);
+
+	const TArray<FName> BoneArrayMachine(
+		const FBoneContainer& RequiredBones,
+		const int32 Index, 
+		const FName& StartBoneName,
+		const FName& EndBoneName,
+		const FName& ThighBoneName,
+		const bool bWasFootBone);
+
+	const bool CheckLoopExist(
+		const FBoneContainer& RequiredBones,
+		const FVector& FeetTraceOffset,
+		const float FeetHeight,
+		const FName& StartBoneName,
+		const FName& InputBoneName,
+		const FName& ThighBoneName,
+		TArray<FName>& OutTotalSpineBoneArray);
+	
+	void ApplyLineTrace(
+		const FAnimationUpdateContext& Context,
+		const FVector& StartLocation, 
+		const FVector& EndLocation,
+		FHitResult& HitResult,
+		const FName& BoneText,
+		const FName& TraceTag,
+		FHitResult& OutHitResult,
+		const FLinearColor& DebugColor,
+		const bool bDrawLine);
 
 	TArray<FCustomBone_SpineFeetPair> Swap_SpineFeetPairArray(TArray<FCustomBone_SpineFeetPair>& OutSpineFeetPair);
-	const FCustomBoneSpineOutput BoneSpineProcessor(FTransform& EffectorTransform, FCSPose<FCompactPose>& MeshBases, TArray<FBoneTransform>& OutBoneTransforms);
-	const FCustomBoneSpineOutput BoneSpineProcessor_Direct(FTransform& EffectorTransform, FCSPose<FCompactPose>& MeshBases, TArray<FBoneTransform>& OutBoneTransforms);
-	const FCustomBoneSpineOutput BoneSpineProcessor_Snake(FTransform& EffectorTransform, FCSPose<FCompactPose>& MeshBases, TArray<FBoneTransform>& OutBoneTransforms);
-	const FCustomBoneSpineOutput BoneSpineProcessor_Transform(FCustomBoneSpineOutput& BoneSpine, FCSPose<FCompactPose>& MeshBases, TArray<FBoneTransform>& OutBoneTransforms);
 
-	FRotator BoneRelativeConversion(const FCompactPoseBoneIndex ModifyBoneIndex, const FRotator TargetRotation, const FBoneContainer& BoneContainer, FCSPose<FCompactPose>& MeshBases) const;
+
+	const FCustomBoneSpineOutput BoneSpineProcessor(
+		const FComponentSpacePoseContext& Output,
+		FTransform& EffectorTransform,
+		FCSPose<FCompactPose>& MeshBases, 
+		TArray<FBoneTransform>& OutBoneTransforms);
+
+
+	const FCustomBoneSpineOutput BoneSpineProcessor_Direct(
+		const FComponentSpacePoseContext& Output,
+		FTransform& EffectorTransform, 
+		FCSPose<FCompactPose>& MeshBases, 
+		TArray<FBoneTransform>& OutBoneTransforms);
+
+
+	const FCustomBoneSpineOutput BoneSpineProcessor_Snake(
+		const FComponentSpacePoseContext& Output,
+		const FTransform& EffectorTransform,
+		FCSPose<FCompactPose>& MeshBases, 
+		TArray<FBoneTransform>& OutBoneTransforms);
+
+
+	const FCustomBoneSpineOutput BoneSpineProcessor_Transform(
+		FCustomBoneSpineOutput& BoneSpine,
+		FCSPose<FCompactPose>& MeshBases, 
+		TArray<FBoneTransform>& OutBoneTransforms);
+
+
+	FRotator BoneRelativeConversion(
+		const FCompactPoseBoneIndex& ModifyBoneIndex, 
+		const FRotator& TargetRotation,
+		const FBoneContainer& BoneContainer, 
+		FCSPose<FCompactPose>& MeshBases) const;
+
+	void FABRIK_BodySystem(
+		const FComponentSpacePoseContext& Output, 
+		const FBoneReference& TipBone,
+		FCSPose<FCompactPose>& MeshBases,
+		TArray<FBoneTransform>& OutBoneTransforms);
+
+	void GetAnimatedPoseInfo(
+		const FComponentSpacePoseContext& Output, 
+		FCSPose<FCompactPose>& MeshBases, 
+		TArray<FBoneTransform>& OutBoneTransforms);
+
 	FVector GetCurrentLocation(FCSPose<FCompactPose>& MeshBases, const FCompactPoseBoneIndex& BoneIndex) const;
-
-	void FABRIK_BodySystem(FComponentSpacePoseContext& Output, FBoneReference TipBone, FCSPose<FCompactPose>& MeshBases, TArray<FBoneTransform>& OutBoneTransforms);
 	void OrthoNormalize(FVector& Normal, FVector& Tangent);
 	void GetResetedPoseInfo(FCSPose<FCompactPose>& MeshBases);
-	void GetAnimatedPoseInfo(FCSPose<FCompactPose>& MeshBases, TArray<FBoneTransform>& OutBoneTransforms);
 
 	bool DoesContainsNaN(const TArray<FBoneTransform>& BoneTransforms) const;
+
 
 	mutable float AdaptiveAlpha = 1;
 	FInputScaleBias AlphaScaleBias;
@@ -386,9 +458,11 @@ private:
 	bool bEveryFootDontHaveChild = false;
 	bool LineTraceInitialized = false;
 
-	FTransform DebugEffectorTransform;
-	FVector RootLocationSaved;
-	FBoneContainer* SavedBoneContainer;
+	//FBoneContainer* SavedBoneContainer;
+	FComponentSpacePoseContext* SavedPoseContext = nullptr;
+
+	FTransform DebugEffectorTransform{ FTransform::Identity };
+	FVector RootLocationSaved{ FVector::ZeroVector };
 	TArray<FCustomBone_SpineFeetPair> SpineFeetPair;
 	TArray<FHitResult> SpineHitBetweenArray;
 	TArray<FVector> SpinePointBetweenArray;
@@ -424,9 +498,14 @@ private:
 	FTransform ChestEffectorTransform = FTransform::Identity;
 	FTransform RootEffectorTransform = FTransform::Identity;
 
-	FComponentSpacePoseContext* SavedPoseContext = nullptr;
-	TObjectPtr<AActor> CharacterOwner = nullptr;
+
+	float CachedDeltaSeconds = 0.f;
+
+
+	UPROPERTY()
 	TObjectPtr<USkeletalMeshComponent> SkeletalMeshComponent = nullptr;
+
+	UPROPERTY()
 	TObjectPtr<UPredictionAnimInstance> PredictionAnimInstance;
 };
 

@@ -18,7 +18,6 @@ class REDEMPTION_API UAbilityInteraction_Traversal : public UWvGameplayAbility
 	GENERATED_UCLASS_BODY()
 
 protected:
-	virtual bool CanActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayTagContainer* SourceTags = nullptr, const FGameplayTagContainer* TargetTags = nullptr, OUT FGameplayTagContainer* OptionalRelevantTags = nullptr) const override;
 	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
 	virtual void EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled) override;
 
@@ -26,10 +25,10 @@ protected:
 	void OnPlayMontageCompleted_Event(FGameplayTag EventTag, FGameplayEventData EventData);
 
 	UPROPERTY()
-	class UWvAT_PlayMontageAndWaitForEvent* MontageTask;
+	TObjectPtr<class UWvAT_PlayMontageAndWaitForEvent> MontageTask{ nullptr };
 
 	UPROPERTY()
-	class UWvCharacterMovementComponent* MovementComponent;
+	TObjectPtr<class UWvCharacterMovementComponent> MovementComponent;
 	
 	
 	

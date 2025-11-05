@@ -363,6 +363,7 @@ void ABaseCharacter::BeginPlay()
 	UCharacterInstanceSubsystem::Get()->AssignAICharacter(this);
 }
 
+
 void ABaseCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	WEVET_COMMENT("CharacterInstanceSubsystem API")
@@ -555,7 +556,7 @@ void ABaseCharacter::PreReplication(IRepChangedPropertyTracker& ChangedPropertyT
 
 void ABaseCharacter::OnRep_ReplicatedAcceleration()
 {
-	if (UWvCharacterMovementComponent* WvCharacterMovementComponent = CastChecked<UWvCharacterMovementComponent>(GetCharacterMovement()))
+	if (UWvCharacterMovementComponent* WvCharacterMovementComponent = GetWvCharacterMovementComponent())
 	{
 		// Decompress Acceleration
 		const double MaxAccel = WvCharacterMovementComponent->MaxAcceleration;
@@ -1474,6 +1475,8 @@ void ABaseCharacter::HandleCrouchAction(const bool bCanCrouch)
 
 void ABaseCharacter::HandleGuardAction(const bool bGuardEnable, bool& OutResult)
 {
+
+#if false
 	if (bGuardEnable)
 	{
 		if (!WvAbilitySystemComponent->HasMatchingGameplayTag(TAG_Character_DamageBlock))
@@ -1490,6 +1493,10 @@ void ABaseCharacter::HandleGuardAction(const bool bGuardEnable, bool& OutResult)
 			OutResult = true;
 		}
 	}
+#endif
+
+	WvAbilitySystemComponent->SetGameplayTagCount(TAG_Character_DamageBlock, bGuardEnable ? 1 : 0);
+	OutResult = true;
 }
 
 const bool ABaseCharacter::HasAttackReady()
@@ -2669,23 +2676,8 @@ void ABaseCharacter::CencelActiveAbilities(const FGameplayTagContainer Container
 /// <param name="IsEnable"></param>
 void ABaseCharacter::SkillEnableAction(const bool IsEnable)
 {
-	if (IsEnable)
-	{
-		if (!WvAbilitySystemComponent->HasMatchingGameplayTag(TAG_Character_StateSkill_Enable))
-		{
-			WvAbilitySystemComponent->AddGameplayTag(TAG_Character_StateSkill_Enable, 1);
-			OnSkillEnableDelegate.Broadcast(IsEnable);
-		}
-
-	}
-	else
-	{
-		if (WvAbilitySystemComponent->HasMatchingGameplayTag(TAG_Character_StateSkill_Enable))
-		{
-			WvAbilitySystemComponent->RemoveGameplayTag(TAG_Character_StateSkill_Enable, 1);
-			OnSkillEnableDelegate.Broadcast(IsEnable);
-		}
-	}
+	WvAbilitySystemComponent->SetGameplayTagCount(TAG_Character_StateSkill_Enable, IsEnable ? 1 : 0);
+	OnSkillEnableDelegate.Broadcast(IsEnable);
 }
 
 void ABaseCharacter::SkillAction()

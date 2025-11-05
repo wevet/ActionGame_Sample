@@ -140,3 +140,9 @@ void FAnimNode_CustomIKControlBase::EvaluateSkeletalControl_AnyThread(FComponent
 	DECLARE_SCOPE_HIERARCHICAL_COUNTER_ANIMNODE(EvaluateSkeletalControl_AnyThread)
 }
 
+
+FVector FAnimNode_CustomIKControlBase::GetCurrentLocation(FCSPose<FCompactPose>& MeshBases, const FCompactPoseBoneIndex& BoneIndex)
+{
+	return MeshBases.GetComponentSpaceTransform(BoneIndex).GetLocation();
+}
+

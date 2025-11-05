@@ -75,6 +75,8 @@ protected:
 	virtual void InitializeBoneReferences(const FBoneContainer& RequiredBones) {};
 	void AddDebugNodeData(FString& OutDebugData);
 
+	FVector GetCurrentLocation(FCSPose<FCompactPose>& MeshBases, const FCompactPoseBoneIndex& BoneIndex);
+
 private:
 	TArray<FBoneTransform> BoneTransforms;
 };

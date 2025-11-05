@@ -1,9 +1,4 @@
 
-// In UE4, FAnimNodeEditMode didn't have a module API, so I had to copy-paste the contents of FAnimNodeEditMode to an external module
-// I will remove this class in the future when I turn off UE4 support.
-#if	ENGINE_MAJOR_VERSION == 4
-
-
 // Copyright 2022 wevet works All Rights Reserved.
 #pragma once
 
@@ -27,7 +22,7 @@ class USkeletalMeshComponent;
 struct FViewportClick;
 
 
-class FCustomIKControlBaseEditMode : public IAnimNodeEditMode
+class QUADRUPEDIKEDITOR_API FCustomIKControlBaseEditMode : public IAnimNodeEditMode
 {
 
 public:
@@ -36,7 +31,6 @@ public:
 	virtual UE::Widget::EWidgetMode GetWidgetMode() const override;
 	virtual UE::Widget::EWidgetMode ChangeToNextWidgetMode(UE::Widget::EWidgetMode CurWidgetMode) override;
 	virtual bool SetWidgetMode(UE::Widget::EWidgetMode InWidgetMode) override;
-	virtual FName GetSelectedBone() const override;
 	virtual void DoTranslation(FVector& InTranslation) override;
 	virtual void DoRotation(FRotator& InRotation) override;
 	virtual void DoScale(FVector& InScale) override;
@@ -60,6 +54,9 @@ public:
 	virtual bool ShouldDrawWidget() const override;
 	virtual void Tick(FEditorViewportClient* ViewportClient, float DeltaTime) override;
 
+	virtual bool SupportsPoseWatch() override;
+	virtual void RegisterPoseWatchedNode(UAnimGraphNode_Base* InEditorNode, FAnimNode_Base* InRuntimeNode)  override;
+
 protected:
 	static void ConvertToComponentSpaceTransform(const USkeletalMeshComponent* SkelComp, const FTransform& InTransform, FTransform& OutCSTransform, int32 BoneIndex, EBoneControlSpace Space);
 	static void ConvertToBoneSpaceTransform(const USkeletalMeshComponent* SkelComp, const FTransform& InCSTransform, FTransform& OutBSTransform, int32 BoneIndex, EBoneControlSpace Space);
@@ -80,4 +77,4 @@ private:
 };
 
 
-#endif
+

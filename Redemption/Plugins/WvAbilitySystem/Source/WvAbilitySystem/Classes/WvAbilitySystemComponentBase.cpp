@@ -823,6 +823,7 @@ void UWvAbilitySystemComponentBase::SetGameplayTagCount(const FGameplayTag& Game
 	const int32 CurCount = GetTagCount(GameplayTag);
 	if (CurCount == Count)
 	{
+		UE_LOG(LogWvAbility, Warning, TEXT("Same Tag Count [%s] : CurCount => %d, Count => %d"), *FString(__FUNCTION__), CurCount, Count);
 		return;
 	}
 
@@ -840,8 +841,7 @@ bool UWvAbilitySystemComponentBase::IsAnimatingCombo() const
 {
 	if (const UWvAbilityBase* PlayingAbility = Cast<UWvAbilityBase>(LocalAnimMontageInfo.AnimatingAbility))
 	{
-		const int32 ComboNum = PlayingAbility->GetComboRequiredTag().Num();
-		return (ComboNum > 0);
+		return !PlayingAbility->GetComboRequiredTag().IsEmpty();
 	}
 	return false;
 }

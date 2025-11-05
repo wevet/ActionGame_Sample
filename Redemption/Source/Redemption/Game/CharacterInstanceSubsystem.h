@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Subsystems/GameInstanceSubsystem.h"
+#include "Tickable.h"
 #include "CharacterInstanceSubsystem.generated.h"
 
 
@@ -14,7 +15,7 @@ class UWvSkeletalMeshComponent;
  * 
  */
 UCLASS()
-class REDEMPTION_API UCharacterInstanceSubsystem : public UGameInstanceSubsystem
+class REDEMPTION_API UCharacterInstanceSubsystem : public UGameInstanceSubsystem, public FTickableGameObject
 {
 	GENERATED_BODY()
 	
@@ -23,6 +24,12 @@ public:
 	UCharacterInstanceSubsystem();
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 	virtual void Deinitialize() override;
+
+	// ~FTickableGameObject
+	virtual TStatId GetStatId() const;
+	virtual bool IsTickable() const;
+	virtual void Tick(float DeltaTime) override;
+	// ~FTickableGameObject
 
 public:
 	static UCharacterInstanceSubsystem* Get();
@@ -56,6 +63,8 @@ public:
 	void StartCinematicCharacter(ABaseCharacter* InCharacter);
 	void StopCinematicCharacter(ABaseCharacter* InCharacter);
 
+	TArray<ABaseCharacter*> GetIgnorePlayerArray() const;
+
 private:
 	UPROPERTY()
 	TArray<ABaseCharacter*> Characters;
@@ -67,4 +76,5 @@ private:
 
 	TArray<UWvSkeletalMeshComponent*> GetSkelMeshComponents(const ABaseCharacter* InCharacter) const;
 
+	bool bIsTickable = false;
 };

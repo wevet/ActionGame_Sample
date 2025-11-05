@@ -42,6 +42,7 @@ void UWvAnimNotifyState_ComboEnable::AbilityNotifyBegin(USkeletalMeshComponent* 
 
 	LastPressedTag = FGameplayTag::EmptyTag;
 	CurTime = 0.f;
+	bIsSuccessfullyResult = false;
 	TriggerTag = GetInputCombo(AbilityData);
 
 	CombatInputData.Reset();
@@ -125,7 +126,7 @@ void UWvAnimNotifyState_ComboEnable::AbilityNotifyEnd(USkeletalMeshComponent* Me
 	Character.Reset();
 	LocomotionComponent.Reset();
 
-	if (Ability)
+	if (Ability && !bIsSuccessfullyResult)
 	{
 		Ability->SetComboTriggerTag(FGameplayTag::EmptyTag);
 	}
@@ -203,6 +204,7 @@ void UWvAnimNotifyState_ComboEnable::PressedToCombo()
 		if (CurrentAbility)
 		{
 			CurrentAbility->SetComboTriggerTag(LastPressedTag);
+			bIsSuccessfullyResult = true;
 		}
 		else
 		{

@@ -90,6 +90,14 @@ void UWvAbilityBase::OnAvatarSet(const FGameplayAbilityActorInfo* ActorInfo, con
 	}
 }
 
+void UWvAbilityBase::CancelAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateCancelAbility)
+{
+	Super::CancelAbility(Handle, ActorInfo, ActivationInfo, bReplicateCancelAbility);
+
+
+}
+
+
 bool UWvAbilityBase::OnCheckCost(const FGameplayAttribute& Attribute, float CostValue) const
 {
 	if (bIgnoreAbilityCheckCost)
@@ -296,6 +304,8 @@ TArray <FGameplayTag> UWvAbilityBase::GetComboRequiredTag() const
 void UWvAbilityBase::SetComboTriggerTag(const FGameplayTag Tag)
 {
 	ComboTriggerTag = Tag;
+
+	//UE_LOG(LogWvAbility, Log, TEXT("[%s] : ComboTriggerTag => %s"), *FString(__FUNCTION__),  *ComboTriggerTag.GetTagName().ToString());
 }
 
 FGameplayTag& UWvAbilityBase::GetComboTriggerTag()

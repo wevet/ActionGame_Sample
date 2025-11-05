@@ -54,6 +54,13 @@ enum class EIKInterpRotationType : uint8
 	LegacyRotation UMETA(DisplayName = "Normal Interpolation")
 };
 
+UENUM(BlueprintType)
+enum class EArmTwistIKType : uint8
+{
+	PoseAxisTwist UMETA(DisplayName = "Twist arms relative to arm pose axis"),
+	UpAxisTwist UMETA(DisplayName = "Twist arms relative to vertical axis"),
+};
+
 
 struct FCustomBoneStruct
 {
@@ -179,8 +186,9 @@ struct QUADRUPEDIK_API FCustomBone_FingerData
 	float ChainNumber = 2.0f;
 };
 
+
 USTRUCT(BlueprintType)
-struct QUADRUPEDIK_API FCustomBone_FootData
+struct FCustomBone_FootData
 {
 	GENERATED_BODY()
 
@@ -243,9 +251,9 @@ struct QUADRUPEDIK_API FCustomBone_FootData
 };
 
 USTRUCT(Blueprintable)
-struct QUADRUPEDIK_API FCustomIKData_MultiInput
+struct FCustomIKData_MultiInput
 {
-	GENERATED_USTRUCT_BODY()
+	GENERATED_BODY()
 
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = SkeletalControl, meta = (PinHiddenByDefault))
@@ -259,9 +267,9 @@ public:
 };
 
 USTRUCT()
-struct QUADRUPEDIK_API FCustomSocketReference
+struct FCustomSocketReference
 {
-	GENERATED_USTRUCT_BODY()
+	GENERATED_BODY()
 
 private:
 	FTransform CachedSocketLocalTransform;
@@ -333,7 +341,7 @@ public:
 USTRUCT()
 struct QUADRUPEDIK_API FCustomBoneSocketTarget
 {
-	GENERATED_USTRUCT_BODY()
+	GENERATED_BODY()
 
 	UPROPERTY(EditAnywhere, Category = FCustomBoneSocketTarget)
 	bool bUseSocket;
@@ -507,4 +515,181 @@ struct QUADRUPEDIK_API FCustomBoneSocketTarget
 };
 
 
+
+USTRUCT(BlueprintType)
+struct FCustomBone_ArmsData
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, Category = SkeletalControl, meta = (DisplayName = "Clavicle Bone (optional)", PinHiddenByDefault))
+	FBoneReference ClavicleBone;
+
+	UPROPERTY(EditAnywhere, Category = SkeletalControl, meta = (PinHiddenByDefault))
+	FBoneReference ShoulderBoneName;
+
+	UPROPERTY(EditAnywhere, Category = SkeletalControl, meta = (PinHiddenByDefault))
+	FBoneReference ElbowBoneName;
+
+	UPROPERTY(EditAnywhere, Category = SkeletalControl, meta = (PinHiddenByDefault))
+	FBoneReference HandBoneName;
+
+	UPROPERTY(EditAnywhere, Category = SkeletalControl, meta = (PinHiddenByDefault))
+	bool bIsRightHand = true;
+
+	UPROPERTY(EditAnywhere, Category = SkeletalControl, meta = (PinHiddenByDefault))
+	bool bIsInvertLowerTwist = false;
+
+	UPROPERTY(EditAnywhere, Category = SkeletalControl, meta = (PinHiddenByDefault))
+	bool bIsInvertUpperTwist = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = SkeletalControl, meta = (DisplayName = "Local Hand Axis (If accurate hand rotation)", PinHiddenByDefault))
+	FVector LocalDirectionAxis = FVector(0, 1, 0);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = SkeletalControl, meta = (PinHiddenByDefault))
+	FVector ArmAimingOffset{ FVector::ZeroVector };
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = SkeletalControl, meta = (PinHiddenByDefault))
+	bool bIsAccurateHandRotation = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = SkeletalControl, meta = (PinHiddenByDefault))
+	bool bIsRelativeAxis = true;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = SkeletalControl, meta = (PinHiddenByDefault))
+	float MaximumExtension = 1.25f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = SkeletalControl, meta = (PinHiddenByDefault))
+	float MinimumExtension = 0.3f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = SkeletalControl, meta = (PinHiddenByDefault))
+	FVector ElbowPoleOffset = FVector::ZeroVector;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = SkeletalControl, meta = (PinHiddenByDefault))
+	FVector NorthPoleOffset = FVector(0.0f, 100.0f, 0.0f);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = SkeletalControl, meta = (PinHiddenByDefault))
+	FVector SouthPoleOffset = FVector(0.0f, -100.0f, 0.0f);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = SkeletalControl, meta = (PinHiddenByDefault))
+	FVector WestPoleOffset = FVector(100.0f, 0.0f, 0.0f);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = SkeletalControl, meta = (PinHiddenByDefault))
+	FVector EastPoleOffset = FVector(-100.0f, 0.0f, 0.0f);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = SkeletalControl, meta = (PinHiddenByDefault))
+	bool bIsOverrideLimits = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = SkeletalControl, meta = (PinHiddenByDefault))
+	FVector2D MaxArm_HAngle = FVector2D(-45.0f, 45.0f);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = SkeletalControl, meta = (PinHiddenByDefault))
+	FVector2D MaxArm_VAngle = FVector2D(-45.0f, 45.0f);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = SkeletalControl, meta = (PinHiddenByDefault))
+	FVector2D InnerClavicle_HLimit = FVector2D(45.0f, -45.0f);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = SkeletalControl, meta = (PinHiddenByDefault))
+	FVector2D InnerClavicle_VLimit = FVector2D(45.0f, -45.0f);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = SkeletalControl, meta = (PinHiddenByDefault))
+	FVector2D OuterClavicle_HLimit = FVector2D(-45.0f, 45.0f);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = SkeletalControl, meta = (PinHiddenByDefault))
+	FVector2D OuterClavicle_VLimit = FVector2D(-45.0f, 45.0f);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = SkeletalControl, meta = (PinHiddenByDefault))
+	FVector2D ShoulderInnerRange = FVector2D(5.0f, -5.0f);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = SkeletalControl, meta = (PinHiddenByDefault))
+	FVector2D ShoulderOuterRange = FVector2D(-125.0f, 125.0f);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = SkeletalControl, meta = (PinHiddenByDefault))
+	FVector2D ForeArmAngleLimit = FVector2D(-180.0f, 180.0f);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = SkeletalControl, meta = (PinHiddenByDefault))
+	float TwistOffsetReverse = 180.0f;
+
+	float LastShoulderAngle = 0.0f;
+	float LastForarmAngle = 0.0f;
+	FRotator LastClavicleRotation = FRotator::ZeroRotator;
+	FRotator LastHandRotation = FRotator::ZeroRotator;
+};
+
+
+USTRUCT(BlueprintType)
+struct FBone_SingleArmElement
+{
+	GENERATED_BODY()
+
+public:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = SkeletalControl, meta = (PinHiddenByDefault))
+	FTransform OverrideArmTransform = FTransform::Identity;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = SkeletalControl, meta = (PinHiddenByDefault))
+	float ArmAlpha = 1;
+};
+
+USTRUCT(BlueprintType)
+struct FCustomBone_Overrided_Location_Data
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = SkeletalControl, meta = (PinHiddenByDefault))
+	TArray<FBone_SingleArmElement> ArmTargetLocationOverrides;
+};
+
+
+USTRUCT()
+struct FCCDIK_Modified_ChainLink
+{
+	GENERATED_BODY()
+
+public:
+	FVector Position;
+	FVector SolverLocalPositions;
+	FVector Axis;
+	FQuat BoneRotation;
+	float Length;
+	int32 BoneIndex;
+	int32 TransformIndex;
+	FVector DefaultDirToParent;
+	TArray<int32> ChildZeroLengthTransformIndices;
+
+	FCCDIK_Modified_ChainLink() :
+		Position(FVector::ZeroVector),
+		Length(0.f),
+		BoneIndex(INDEX_NONE),
+		TransformIndex(INDEX_NONE),
+		DefaultDirToParent(FVector(-1.f, 0.f, 0.f))
+	{
+	}
+
+	FCCDIK_Modified_ChainLink(const FVector& InPosition, const FVector& LocalPosition, const FQuat& InRotation, const float InLength, const FCompactPoseBoneIndex& InBoneIndex, const int32& InTransformIndex) :
+		Position(InPosition),
+		SolverLocalPositions(LocalPosition),
+		BoneRotation(InRotation),
+		Length(InLength),
+		BoneIndex(InBoneIndex.GetInt()),
+		TransformIndex(InTransformIndex),
+		DefaultDirToParent(FVector(-1.f, 0.f, 0.f))
+	{
+	}
+
+	FCCDIK_Modified_ChainLink(const FVector& InPosition, const float InLength, const FCompactPoseBoneIndex& InBoneIndex, const int32& InTransformIndex, const FVector& InDefaultDirToParent) :
+		Position(InPosition),
+		Length(InLength),
+		BoneIndex(InBoneIndex.GetInt()),
+		TransformIndex(InTransformIndex),
+		DefaultDirToParent(InDefaultDirToParent)
+	{
+	}
+
+	FCCDIK_Modified_ChainLink(const FVector& InPosition, const float InLength, const int32 InBoneIndex, const int32 InTransformIndex) :
+		Position(InPosition),
+		Length(InLength),
+		BoneIndex(InBoneIndex),
+		TransformIndex(InTransformIndex),
+		DefaultDirToParent(FVector(-1.f, 0.f, 0.f))
+	{
+	}
+};
 

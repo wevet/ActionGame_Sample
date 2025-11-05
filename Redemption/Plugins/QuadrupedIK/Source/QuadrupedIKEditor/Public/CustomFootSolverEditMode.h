@@ -8,11 +8,13 @@
 #include "CustomIKControlBaseEditMode.h"
 
 
-#if	ENGINE_MAJOR_VERSION == 5
-class FCustomFootSolverEditMode : public FAnimNodeEditMode
-#else
-class FCustomFootSolverEditMode : public FCustomIKControlBaseEditMode
-#endif
+
+struct QUADRUPEDIKEDITOR_API FFootSolverEditModes
+{
+	const static FEditorModeID CustomFootSolver;
+};
+
+class QUADRUPEDIKEDITOR_API FCustomFootSolverEditMode : public FCustomIKControlBaseEditMode
 {
 public:
 	FCustomFootSolverEditMode()

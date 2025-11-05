@@ -15,10 +15,6 @@ UAbilityInteraction_Traversal::UAbilityInteraction_Traversal(const FObjectInitia
 	bRetriggerInstancedAbility = true;
 }
 
-bool UAbilityInteraction_Traversal::CanActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayTagContainer* SourceTags /*= nullptr*/, const FGameplayTagContainer* TargetTags /*= nullptr*/, OUT FGameplayTagContainer* OptionalRelevantTags /*= nullptr*/) const
-{
-	return Super::CanActivateAbility(Handle, ActorInfo, SourceTags, TargetTags, OptionalRelevantTags);
-}
 
 void UAbilityInteraction_Traversal::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
 {
@@ -48,12 +44,11 @@ void UAbilityInteraction_Traversal::ActivateAbility(const FGameplayAbilitySpecHa
 
 	Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
 
-#if WITH_EDITOR
+#if false
 	if (TriggerEventData)
 	{
 		const FString Msg = TriggerEventData->EventTag.ToString();
-		UE_LOG(LogTemp, Log, TEXT("TagName => %s, AnimationName => %s, funcName => %s"), *Msg, *GetNameSafe(TraversalActionData.ChosenMontage),
-			*FString(__FUNCTION__));
+		UE_LOG(LogTemp, Log, TEXT("TagName => %s, AnimationName => %s, funcName => %s"), *Msg, *GetNameSafe(TraversalActionData.ChosenMontage), *FString(__FUNCTION__));
 	}
 #endif
 

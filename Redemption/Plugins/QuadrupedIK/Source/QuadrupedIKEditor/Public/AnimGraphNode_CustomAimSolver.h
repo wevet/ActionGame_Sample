@@ -3,8 +3,8 @@
 
 #include "CoreMinimal.h"
 #include "AnimGraphNode_Base.h"
-#include "AnimNode_CustomFeetSolver.h"
-#include "AnimGraphNode_CustomFeetSolver.generated.h"
+#include "AnimNode_CustomAimSolver.h"
+#include "AnimGraphNode_CustomAimSolver.generated.h"
 
 
 class FPrimitiveDrawInterface;
@@ -14,18 +14,18 @@ class FPrimitiveDrawInterface;
  * 
  */
 UCLASS()
-class QUADRUPEDIKEDITOR_API UAnimGraphNode_CustomFeetSolver : public UAnimGraphNode_Base
+class QUADRUPEDIKEDITOR_API UAnimGraphNode_CustomAimSolver : public UAnimGraphNode_Base
 {
 	GENERATED_BODY()
 
 public:
-	UAnimGraphNode_CustomFeetSolver(const FObjectInitializer& ObjectInitializer)
+	UAnimGraphNode_CustomAimSolver(const FObjectInitializer& ObjectInitializer)
 	{
 	}
 
 	virtual FText GetNodeTitle(ENodeTitleType::Type TitleType) const override
 	{
-		return FText::FromString(FString("Foot Solver"));
+		return FText::FromString(FString("Aim Solver"));
 	}
 
 	virtual FText GetTooltipText() const override
@@ -43,12 +43,13 @@ public:
 		return FLinearColor(0, 1, 1, 1);
 	}
 
-	//virtual void Draw(FPrimitiveDrawInterface* PDI, USkeletalMeshComponent* PreviewSkelMeshComp) const override;
+	virtual void Draw(FPrimitiveDrawInterface* PDI, USkeletalMeshComponent* PreviewSkelMeshComp) const override;
 	virtual void CreateOutputPins() override;
-	virtual FEditorModeID GetEditorMode() const override;
+
+	virtual void PostEditChangeProperty(struct FPropertyChangedEvent& PropertyChangedEvent) override;
 
 	UPROPERTY(EditAnywhere, Category = Settings)
-	FAnimNode_CustomFeetSolver Node;
+	FAnimNode_CustomAimSolver Node;
 
 };
 

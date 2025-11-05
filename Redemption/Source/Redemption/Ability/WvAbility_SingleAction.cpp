@@ -49,6 +49,15 @@ void UWvAbility_SingleAction::ActivateAbility(const FGameplayAbilitySpecHandle H
 		MontageTask->EndTask();
 	}
 
+#if WITH_EDITOR
+	if (TriggerEventData)
+	{
+		const FString Msg = TriggerEventData->EventTag.ToString();
+		UE_LOG(LogTemp, Log, TEXT("[%s] : TagName => %s"), *FString(__FUNCTION__), *Msg);
+	}
+#endif
+
+
 	constexpr float PlayRate = 1.0f;
 
 	MontageTask = UWvAT_PlayMontageAndWaitForEvent::PlayMontageAndWaitForEvent(

@@ -38,14 +38,29 @@ UCharacterInstanceSubsystem* UCharacterInstanceSubsystem::Get()
 
 void UCharacterInstanceSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
-	//UE_LOG(LogTemp, Log, TEXT("%s"), *FString(__FUNCTION__));
+
+	bIsTickable = true;
 }
 
 void UCharacterInstanceSubsystem::Deinitialize()
 {
-	//UE_LOG(LogTemp, Log, TEXT("%s"), *FString(__FUNCTION__));
 
 	Characters.Reset(0);
+}
+
+TStatId UCharacterInstanceSubsystem::GetStatId() const
+{
+	RETURN_QUICK_DECLARE_CYCLE_STAT(UCharacterInstanceSubsystem, STATGROUP_Tickables);
+}
+
+bool UCharacterInstanceSubsystem::IsTickable() const
+{
+	return bIsTickable;
+}
+
+void UCharacterInstanceSubsystem::Tick(float DeltaTime)
+{
+
 }
 
 void UCharacterInstanceSubsystem::WorldCharacterIterator(TArray<class ABaseCharacter*>& OutCharacterArray)
@@ -210,6 +225,18 @@ TArray<ABaseCharacter*> UCharacterInstanceSubsystem::GetLeaderAgent() const
 	return Result;
 }
 
+TArray<ABaseCharacter*> UCharacterInstanceSubsystem::GetIgnorePlayerArray() const
+{
+	TArray<ABaseCharacter*> Result;
+	for (auto Character : Characters)
+	{
+		if (IsValid(Character) && Character->IsBotCharacter())
+		{
+			Result.Add(Character);
+		}
+	}
+	return Result;
+}
 
 void UCharacterInstanceSubsystem::GeneratorSpawnedFinish()
 {

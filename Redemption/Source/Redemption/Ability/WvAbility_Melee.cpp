@@ -52,11 +52,13 @@ void UWvAbility_Melee::ActivateAbility(const FGameplayAbilitySpecHandle Handle, 
 
 		if (HasComboTrigger())
 		{
-			UE_LOG(LogTemp, Error, TEXT("playing combo melee => %s, GAS => %s, [%s]"),
+			UE_LOG(LogTemp, Warning, TEXT("playing combo melee => %s, GAS => %s, [%s]"),
 				*GetComboTriggerTag().GetTagName().ToString(),
 				*GetNameSafe(this),
 				*FString(__FUNCTION__));
 		}
+
+#if false
 		else
 		{
 			UE_LOG(LogTemp, Warning, TEXT("playing first melee Tag => %s, GAS => %s, [%s]"),
@@ -64,6 +66,8 @@ void UWvAbility_Melee::ActivateAbility(const FGameplayAbilitySpecHandle Handle, 
 				*GetNameSafe(this),
 				*FString(__FUNCTION__));
 		}
+#endif
+
 	}
 
 	// Combo’†‚É”w–Ê‚ÖStick‚ðŒX‚¯‚½

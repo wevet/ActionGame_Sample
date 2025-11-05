@@ -3,17 +3,22 @@
 #pragma once
 
 #include "CoreMinimal.h"
+
+#include "Locomotion/LocomotionSystemTypes.h"
+#include "Locomotion/LocomotionInterface.h"
+#include "WvAbilitySystemTypes.h"
+
 #include "Animation/AnimInstance.h"
 #include "Animation/AnimInstanceProxy.h"
 #include "Animation/AnimationAsset.h"
-#include "Character/BaseCharacter.h"
+//#include "Character/BaseCharacter.h"
 #include "GameplayEffectTypes.h"
 #include "PoseSearch/PoseSearchLibrary.h"
-#include "Locomotion/LocomotionSystemTypes.h"
-#include "WvAbilitySystemTypes.h"
-#include "Locomotion/LocomotionInterface.h"
+#include "Logging/LogMacros.h"
+
 #include "WvAnimInstance.generated.h"
 
+class ABaseCharacter;
 class UAbilitySystemComponent;
 class ULocomotionComponent;
 class UWvCharacterMovementComponent;
@@ -109,6 +114,8 @@ public:
 };
 
 
+DECLARE_LOG_CATEGORY_EXTERN(LogWvAnimation, All, All)
+
 /**
  * 
  */
@@ -185,15 +192,15 @@ protected:
 	UPROPERTY()
 	TObjectPtr<class ABaseCharacter> Character;
 
-	UPROPERTY()
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<class UCapsuleComponent> CapsuleComponent;
 
-	UPROPERTY()
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<class ULocomotionComponent> LocomotionComponent;
-
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<class UWvCharacterMovementComponent> CharacterMovementComponent;
+
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
 	FCharacterOverlayInfo CharacterOverlayInfo;
@@ -313,7 +320,7 @@ protected:
 	EWvDirectionType DirectionType;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Locomotion")
-	UCurveFloat* LandAlphaCurve;
+	UCurveFloat* LandAlphaCurve{nullptr};
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Accessory")
 	EGenderType GenderType;
@@ -359,7 +366,7 @@ protected:
 	float GroundDistanceThreshold = 150.0f;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Climbing")
-	bool bIsClimbing;
+	bool bIsClimbing{ false };
 
 	// GameplayTags that can be mapped to Blueprint variables; when a Tag is added or removed, the // variable is automatically updated.
 	// Instead of querying the GameplayTag manually, these should be used.
@@ -368,13 +375,13 @@ protected:
 
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "MotionMatching")
-	FVector LandingVelocity;
+	FVector LandingVelocity{FVector::ZeroVector};
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "MotionMatching")
-	bool bWasJustLanded;
+	bool bWasJustLanded{false};
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "MotionMatching")
-	FTransform RootTransform;
+	FTransform RootTransform{ FTransform::Identity };
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "MotionMatching")
 	FMovementDirectionThresholds MovementDirectionThresholds;
@@ -387,6 +394,7 @@ protected:
 	//UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "MotionMatching")
 	//FTransform CharacterTransform;
 
+	UFUNCTION()
 	virtual void TagChangeEvent(const FGameplayTag CallBackTag, int32 NewCount);
 
 private:

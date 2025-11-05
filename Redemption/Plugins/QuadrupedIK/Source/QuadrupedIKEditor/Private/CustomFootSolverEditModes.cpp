@@ -10,23 +10,21 @@
 #include "Materials/MaterialInstanceDynamic.h"
 
 
+const FEditorModeID FFootSolverEditModes::CustomFootSolver("AnimGraph.BoneControl.CustomFootSolver");
+
 
 void FCustomFootSolverEditMode::EnterMode(class UAnimGraphNode_Base* InEditorNode, struct FAnimNode_Base* InRuntimeNode)
 {
 	RuntimeNode = static_cast<FAnimNode_CustomFeetSolver*>(InRuntimeNode);
 	GraphNode = CastChecked<UAnimGraphNode_CustomFeetSolver>(InEditorNode);
-#if	ENGINE_MAJOR_VERSION == 4
 	FCustomIKControlBaseEditMode::EnterMode(InEditorNode, InRuntimeNode);
-#endif
 }
 
 void FCustomFootSolverEditMode::ExitMode()
 {
 	RuntimeNode = nullptr;
 	GraphNode = nullptr;
-#if	ENGINE_MAJOR_VERSION == 4
 	FCustomIKControlBaseEditMode::ExitMode();
-#endif
 }
 
 FVector FCustomFootSolverEditMode::GetWidgetLocation() const

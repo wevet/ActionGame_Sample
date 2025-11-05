@@ -65,6 +65,8 @@ public:
 
 	virtual void OnAvatarSet(const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilitySpec& Spec) override;
 
+	virtual void CancelAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateCancelAbility) override;
+
 	UFUNCTION()
 	bool OnCheckCost(const FGameplayAttribute& Attribute, float CostValue) const;
 

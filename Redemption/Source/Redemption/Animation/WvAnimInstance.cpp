@@ -10,6 +10,7 @@
 #include "PredictionAnimInstance.h"
 #include "Redemption.h"
 #include "Climbing/ClimbingAnimInstance.h"
+#include "Character/BaseCharacter.h"
 
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemGlobals.h"
@@ -30,6 +31,8 @@ using namespace CharacterDebug;
 using namespace LocomotionDebug;
 
 //#include UE_INLINE_GENERATED_CPP_BY_NAME(WvAnimInstance)
+
+DEFINE_LOG_CATEGORY(LogWvAnimation)
 
 #pragma region Proxy
 void FBaseAnimInstanceProxy::Initialize(UAnimInstance* InAnimInstance)
@@ -107,7 +110,9 @@ void UWvAnimInstance::NativeInitializeAnimation()
 		return;
 	}
 
-	CharacterMovementComponent = CastChecked<UWvCharacterMovementComponent>(Character->GetCharacterMovement());
+	bOwnerPlayerController = bool(Cast<APlayerController>(Character->GetController()));
+
+	CharacterMovementComponent = Character->GetWvCharacterMovementComponent();
 	LocomotionComponent = Character->GetLocomotionComponent();
 	CapsuleComponent = Character->GetCapsuleComponent();
 
@@ -128,16 +133,16 @@ void UWvAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 	Super::NativeUpdateAnimation(DeltaSeconds);
 
 #if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
-	const int32 RelevantConsoleValue = CVarDebugLocomotionSystem.GetValueOnAnyThread();
-	if (RelevantConsoleValue > 0 && RelevantConsoleValue < 2)
+	const int32 RelevantConsoleValue = CVarDebugLocomotionSystem.GetValueOnGameThread();
+	if (RelevantConsoleValue > 0)
 	{
 		if (IsValid(Character))
 		{
-			bOwnerPlayerController = bool(Cast<APlayerController>(Character->GetController()));
 			DrawRelevantAnimation();
 		}
 	}
 #endif
+
 }
 
 void UWvAnimInstance::NativeThreadSafeUpdateAnimation(float DeltaSeconds)

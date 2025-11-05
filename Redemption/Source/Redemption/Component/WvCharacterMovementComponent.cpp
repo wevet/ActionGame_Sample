@@ -2929,7 +2929,6 @@ const bool UWvCharacterMovementComponent::TraceAlongHitPlane(const FHitResult& H
 	{
 		bIsTraversalTraceComplex = true;
 	}
-	//const EDrawDebugTrace::Type TraceType = (CVarDebugCharacterTraversal.GetValueOnGameThread() > 0) ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None;
 	const EDrawDebugTrace::Type TraceType = EDrawDebugTrace::None;
 #else
 	bIsTraversalTraceComplex = false;
@@ -3002,7 +3001,7 @@ float UWvCharacterMovementComponent::CalcurateLedgeOffsetHeight(const FTraversal
 		UKismetSystemLibrary::DrawDebugSphere(GetWorld(), BaseCharacter->GetActorLocation(), 10.0f, 12, FLinearColor(FColor::Blue), 10.0f, 1.0f);
 		UKismetSystemLibrary::DrawDebugSphere(GetWorld(), Pos, 10.0f, 12, FLinearColor(FColor::Cyan), 10.0f, 1.0f);
 
-		UE_LOG(LogTemp, Log, TEXT("[%s] => DeltaZ:[%.3f], LowDeltaZ:[%.3f], CapsuleHeight:[%.3f], CapsuleHalfHeight:[%.3f]"),
+		UE_LOG(LogCharacterMovement, Log, TEXT("[%s] => DeltaZ:[%.3f], LowDeltaZ:[%.3f], CapsuleHeight:[%.3f], CapsuleHalfHeight:[%.3f]"),
 			*FString(__FUNCTION__), DeltaZ, LowDeltaZ, CapsuleHeight, CapsuleHalfHeight);
 
 	}
@@ -3012,8 +3011,11 @@ float UWvCharacterMovementComponent::CalcurateLedgeOffsetHeight(const FTraversal
 	switch (InTraversalActionData.ActionType)
 	{
 	case ETraversalType::Vault:
-		return (CapsuleHalfHeight * 1.7f);
-		//return FMath::Clamp(DeltaZ, CapsuleHalfHeight * 0.8f, CapsuleHalfHeight * 1.2f);
+		{
+			const float VaultOffset = 1.7f;
+			return (CapsuleHalfHeight * VaultOffset);
+			//return FMath::Clamp(DeltaZ, CapsuleHalfHeight * 0.8f, CapsuleHalfHeight * 1.2f);
+		}
 		break;
 
 	case ETraversalType::Mantle:
@@ -3023,13 +3025,13 @@ float UWvCharacterMovementComponent::CalcurateLedgeOffsetHeight(const FTraversal
 			if (bIsLedgeHigherThanCapsule)
 			{
 				// 落下中に自分より高い棚を掴む → 安全に大きめのオフセット
-				UE_LOG(LogTemp, Log, TEXT("Falling Ledge is higher than character."));
+				UE_LOG(LogCharacterMovement, Log, TEXT("Falling Ledge is higher than character."));
 				return FMath::Clamp(DeltaZ, CapsuleHalfHeight, CapsuleHalfHeight * 2.0f);
 			}
 			else
 			{
 				// 足下に近い or 体内にある → DeltaZ優先
-				UE_LOG(LogTemp, Log, TEXT("Falling Ledge is in the character's capsule or low"));
+				UE_LOG(LogCharacterMovement, Log, TEXT("Falling Ledge is in the character's capsule or low"));
 				return FMath::Max(DeltaZ, CapsuleHalfHeight);
 			}
 		}
@@ -3038,13 +3040,13 @@ float UWvCharacterMovementComponent::CalcurateLedgeOffsetHeight(const FTraversal
 			if (bIsLedgeHigherThanCapsule)
 			{
 				// 地上からで、自分より高い棚
-				UE_LOG(LogTemp, Log, TEXT("Grounded Ledge is higher than character."));
+				UE_LOG(LogCharacterMovement, Log, TEXT("Grounded Ledge is higher than character."));
 				return FMath::Clamp(DeltaZ, CapsuleHalfHeight, CapsuleHalfHeight * 1.8f);
 			}
 			else
 			{
 				// 地上からで、自分より低い棚（ジャンプ補正込み）
-				UE_LOG(LogTemp, Log, TEXT("Grounded Ledge is in the character's capsule or low"));
+				UE_LOG(LogCharacterMovement, Log, TEXT("Grounded Ledge is in the character's capsule or low"));
 				return FMath::Max(LowDeltaZ, CapsuleHalfHeight);
 			}
 

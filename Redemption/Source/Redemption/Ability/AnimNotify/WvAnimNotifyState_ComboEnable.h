@@ -58,6 +58,7 @@ private:
 
 	float CurTime{ 0.f };
 	bool IsImmediatelyExecute{ false };
+	bool bIsSuccessfullyResult{false};
 
 	TWeakObjectPtr<ABaseCharacter> Character;
 	TWeakObjectPtr<ULocomotionComponent> LocomotionComponent;

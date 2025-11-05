@@ -56,16 +56,14 @@ public class QuadrupedIKEditor : ModuleRules
 		BuildVersion Version;
 		if (BuildVersion.TryRead(BuildVersion.GetDefaultFileName(), out Version))
 		{
-			if (Version.MajorVersion == 5)
-			{
-				PrivateDependencyModuleNames.AddRange(new string[] { "EditorFramework" });
-
-				// From UE5.1, BaseClass of EditMode move to new Module 
-				if (Version.MinorVersion >= 1)
+			PrivateDependencyModuleNames.AddRange(
+				new string[]
 				{
-					PrivateDependencyModuleNames.AddRange(new string[] { "AnimationEditMode" });
+					"EditorFramework",
+					"AnimationEditMode",
 				}
-			}
+			);
+
 		}
 
 	}

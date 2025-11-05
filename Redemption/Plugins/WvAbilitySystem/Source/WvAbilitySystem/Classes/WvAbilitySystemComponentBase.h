@@ -99,6 +99,7 @@ public:
 	bool HasActivatingAbilitiesWithTag(const FGameplayTag Tag) const;
 	bool IsAnimatingCombo() const;
 
+	void SetGameplayTagCount(const FGameplayTag& GameplayTag, int32 Count = 1);
 
 protected:
 	virtual void OnComponentDestroyed(bool bDestroyingHierarchy) override;
@@ -108,7 +109,6 @@ protected:
 	virtual void Debug_Internal(struct FAbilitySystemComponentDebugInfo& Info) override;
 
 	bool FindGameplayAttributeByName(const FString& AttributeName, FGameplayAttribute& OutAttribute) const;
-	void SetGameplayTagCount(const FGameplayTag& GameplayTag, int32 Count = 1);
 
 
 

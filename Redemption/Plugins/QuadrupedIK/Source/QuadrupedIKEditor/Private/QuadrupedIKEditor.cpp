@@ -10,12 +10,12 @@
 
 void FQuadrupedIKEditorModule::StartupModule()
 {
-	FEditorModeRegistry::Get().RegisterMode<FCustomFootSolverEditMode>("AnimGraph.BoneControl.CustomFootSolver", LOCTEXT("CustomFootSolverEditMode", "CustomFootSolver"), FSlateIcon(), false);
+	FEditorModeRegistry::Get().RegisterMode<FCustomFootSolverEditMode>(FFootSolverEditModes::CustomFootSolver, LOCTEXT("CustomFootSolverEditMode", "CustomFootSolver"), FSlateIcon(), false);
 }
 
 void FQuadrupedIKEditorModule::ShutdownModule()
 {
-	FEditorModeRegistry::Get().UnregisterMode("AnimGraph.BoneControl.CustomFootSolver");
+	FEditorModeRegistry::Get().UnregisterMode(FFootSolverEditModes::CustomFootSolver);
 }
 
 #undef LOCTEXT_NAMESPACE
