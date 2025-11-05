@@ -4,22 +4,22 @@
 #include "CoreMinimal.h"
 #include "UnrealWidget.h"
 #include "AnimNodeEditMode.h"
-#include "AnimGraphNode_CustomFeetSolver.h"
+#include "AnimGraphNode_CustomAimSolver.h"
 #include "CustomIKControlBaseEditMode.h"
 
-struct FAnimNode_CustomFootSolver;
+struct FAnimNode_CustomAimSolver;
 
 
-struct QUADRUPEDIKEDITOR_API FFootSolverEditModes
+struct QUADRUPEDIKEDITOR_API FAimSolverEditModes
 {
-	const static FEditorModeID CustomFootSolver;
+	const static FEditorModeID CustomAimSolver;
 };
 
 
-class QUADRUPEDIKEDITOR_API FCustomFootSolverEditMode : public FCustomIKControlBaseEditMode
+class QUADRUPEDIKEDITOR_API FCustomAimSolverEditMode : public FCustomIKControlBaseEditMode
 {
 public:
-	FCustomFootSolverEditMode()
+	FCustomAimSolverEditMode()
 	{
 	};
 
@@ -29,19 +29,24 @@ public:
 	virtual UE::Widget::EWidgetMode GetWidgetMode() const override;
 	virtual FName GetSelectedBone() const override;
 	virtual void DoTranslation(FVector& InTranslation) override;
+	virtual void DoRotation(FRotator& InRotation) override;
+
 	virtual void Render(const FSceneView* View, FViewport* Viewport, FPrimitiveDrawInterface* PDI) override;
 	virtual bool HandleClick(FEditorViewportClient* InViewportClient, HHitProxy* HitProxy, const FViewportClick& Click) override;
 
+	FVector TargetTransformPosition{FVector::ZeroVector};
+
 	float SpineIndex = 0.0f;
 	float FootIndex = 0.0f;
-	float FingerIndex = 0.0f;
-
-	bool bKneeSelection = true;
-	bool bFingerSelection = false;
-	bool bFootBoxSelection = false;
+	float ElbowArmIndex = 0.0f;
+	bool bIsElbowPoleMode = false;
+	bool bIsNsewPoleMethod = false;
+	bool bIsArmManipulation = false;
+	int32 NSEWIndex = 1;
+	int32 ArmIndex = 0;
 
 private:
-	struct FAnimNode_CustomFeetSolver* RuntimeNode;
-	class UAnimGraphNode_CustomFeetSolver* GraphNode;
+	struct FAnimNode_CustomAimSolver* RuntimeNode;
+	class UAnimGraphNode_CustomAimSolver* GraphNode;
 };
 

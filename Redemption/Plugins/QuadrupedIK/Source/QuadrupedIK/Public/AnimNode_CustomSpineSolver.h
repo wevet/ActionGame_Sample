@@ -503,7 +503,7 @@ private:
 
 
 	UPROPERTY()
-	TObjectPtr<USkeletalMeshComponent> SkeletalMeshComponent = nullptr;
+	TObjectPtr<USkeletalMeshComponent> owning_skel = nullptr;
 
 	UPROPERTY()
 	TObjectPtr<UPredictionAnimInstance> PredictionAnimInstance;

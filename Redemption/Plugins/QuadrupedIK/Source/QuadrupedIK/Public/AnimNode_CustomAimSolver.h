@@ -33,14 +33,8 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = ReachingAndSeparateAim, meta = (DisplayName = "Overrided Arm Aim Target Array", PinHiddenByDefault))
 	FCustomBone_Overrided_Location_Data ArmTargetLocationOverrides;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = ReachingAndSeparateAim, meta = (DisplayName = "Hand aiming/reaching use the override target transforms ?", PinHiddenByDefault))
-	bool bIsUseSeparateTargets = false;
-
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = ReachingAndSeparateAim, meta = (DisplayName = "Hand rotations use the override target transforms ?", PinHiddenByDefault))
 	bool bIsOverrideHandRotation = false;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = ReachingAndSeparateAim, meta = (DisplayName = "Reach instead of aiming ? (Only for arms)", PinHiddenByDefault))
-	bool bIsReachInstead = false;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = ReachingAndSeparateAim, meta = (DisplayName = "Make hands positions influence body ?  (If multi-arm aiming) ", PinHiddenByDefault))
 	bool bIsAggregateHandBody = false;
@@ -63,8 +57,7 @@ protected:
 
 
 #pragma region OptionalInputData
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = OptionalInputData, meta = (PinHiddenByDefault))
-	FCustomIKData_MultiInput SolverInputData;
+
 
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = OptionalInputData, meta = (DisplayName = "Main Arm Index", PinHiddenByDefault))
@@ -204,39 +197,28 @@ protected:
 #pragma endregion
 
 
-	UPROPERTY(EditAnywhere, Category = Debug)
-	FTransform DebugLookAtTransform{ FTransform::Identity };
 
-	UPROPERTY(EditAnywhere, EditFixedSize, Category = Debug)
-	TArray<FTransform> DebugHandTransforms;
 
 
 public:
 	FAnimNode_CustomAimSolver();
 	virtual void Initialize_AnyThread(const FAnimationInitializeContext& Context) override;
-	virtual void UpdateInternal(const FAnimationUpdateContext& Context) override;
-	virtual void EvaluateComponentSpaceInternal(FComponentSpacePoseContext& Context) override;
-	virtual void EvaluateSkeletalControl_AnyThread(FComponentSpacePoseContext& Output, TArray<FBoneTransform>& OutBoneTransforms) override;
-	virtual void InitializeBoneReferences(const FBoneContainer& RequiredBones) override;
-
-	virtual bool IsValidToEvaluate(const USkeleton* Skeleton, const FBoneContainer& RequiredBones) override;
-	virtual void Evaluate_AnyThread(FPoseContext& Output) override;
-
 	virtual int32 GetLODThreshold() const override { return LODThreshold; }
+	virtual void ConditionalDebugDraw(FPrimitiveDrawInterface* PDI, USkeletalMeshComponent* PreviewSkelMeshComp) const;
 
 	//#if WITH_EDITOR
 	void ResizeDebugLocations(int32 NewSize);
 	//#endif
 
-	virtual void ConditionalDebugDraw(FPrimitiveDrawInterface* PDI, USkeletalMeshComponent* PreviewSkelMeshComp) const;
-
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = OptionalInputData, meta = (DisplayName = "Hands Input (optional)", PinHiddenByDefault))
-	TArray<FCustomBone_ArmsData> AimingHandLimbs;
-
 
 protected:
+	virtual void UpdateInternal(const FAnimationUpdateContext& Context) override;
+	virtual void EvaluateSkeletalControl_AnyThread(FComponentSpacePoseContext& Output, TArray<FBoneTransform>& OutBoneTransforms) override;
+	virtual bool IsValidToEvaluate(const USkeleton* Skeleton, const FBoneContainer& RequiredBones) override;
+	virtual void InitializeBoneReferences(const FBoneContainer& RequiredBones) override;
+	
 
+private:
 	const TArray<FName> BoneArrayMachine(
 		const FBoneContainer& RequiredBones,
 		const int32 Index,
@@ -288,6 +270,7 @@ protected:
 		FComponentSpacePoseContext& Output,
 		TArray<FBoneTransform>& OutBoneTransforms);
 
+
 	FVector AnimLocationLerp(const FVector& InStartPosition, const FVector& InEndPosition, const float InDeltaSeconds) const;
 
 	TArray<FCustomBone_SpineFeetPair> Swap_Spine_Pairs(TArray<FCustomBone_SpineFeetPair>& test_list);
@@ -300,14 +283,43 @@ protected:
 	FQuat LookRotation(const FVector& LookAt, const FVector& UpDirection);
 	
 
+	// editor module getter
+public:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = OptionalInputData, meta = (DisplayName = "Hands Input (optional)", PinHiddenByDefault))
+	TArray<FCustomBone_ArmsData> AimingHandLimbs;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = OptionalInputData, meta = (PinHiddenByDefault))
+	FCustomIKData_MultiInput SolverInputData;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = ReachingAndSeparateAim, meta = (DisplayName = "Reach instead of aiming ? (Only for arms)", PinHiddenByDefault))
+	bool bIsReachInstead = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = ReachingAndSeparateAim, meta = (DisplayName = "Hand aiming/reaching use the override target transforms ?", PinHiddenByDefault))
+	bool bIsUseSeparateTargets = false;
+
+	UPROPERTY(EditAnywhere, Category = Debug)
+	FTransform DebugLookAtTransform{ FTransform::Identity };
+
+	UPROPERTY(EditAnywhere, EditFixedSize, Category = Debug)
+	TArray<FTransform> DebugHandTransforms;
+
+
+	TArray<FTransform> ElbowBoneTransformArray = TArray<FTransform>();
+	TArray<FTransform> KneeAnimatedTransformArray = TArray<FTransform>();
+	TArray<FTransform> HandDefaultTransformArray = TArray<FTransform>();
+	FTransform HeadOrigTransform{ FTransform::Identity };
+
+	bool bIsNsewPoleMethod = false;
+	bool bIsFocusDebugtarget = true;
+
+
 
 private:
 
-	bool bIsNsewPoleMethod = false;
+
 	bool bIsUpArmTwistTechnique = false;
 	FTransform MainHandDefaultTransform{ FTransform::Identity };
 	FTransform MainHandNewTransform{ FTransform::Identity };
-	FTransform HeadOrigTransform{ FTransform::Identity };
 
 	FCustomBoneStruct IKBoneData;
 
@@ -323,7 +335,7 @@ private:
 	FHitResult AimHitResult;
 
 	float HitResultHeight = 0.0f;
-	bool bIsFocusDebugtarget = true;
+
 
 	float ToggleAlpha = 0.0f;
 	float HandToggleAlpha = 0.0f;
@@ -382,10 +394,6 @@ private:
 	TArray<FBoneTransform> LegIKBoneTransforms;
 	TArray<FBoneTransform> HandIKBoneTransforms;
 	TArray<FBoneTransform> LerpHandIKBoneTransforms;
-
-	TArray<FTransform> KneeAnimatedTransformArray = TArray<FTransform>();
-	TArray<FTransform> ElbowBoneTransformArray = TArray<FTransform>();
-	TArray<FTransform> HandDefaultTransformArray = TArray<FTransform>();
 
 
 	TArray<FCompactPoseBoneIndex> SpineIndices;

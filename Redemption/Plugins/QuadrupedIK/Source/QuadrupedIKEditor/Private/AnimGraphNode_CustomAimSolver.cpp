@@ -3,10 +3,9 @@
 #include "AnimGraphNode_CustomAimSolver.h"
 #include "Animation/AnimInstance.h"
 #include "UObject/AnimPhysObjectVersion.h"
-//#include "CustomFootSolverEditMode.h"
+#include "CustomAimSolverEditMode.h"
 #include "AnimationGraphSchema.h"
 #include "DrawDebugHelpers.h"
-#include "AnimationGraphSchema.h"
 #include "Components/SkeletalMeshComponent.h"
 
 
@@ -19,7 +18,7 @@ void UAnimGraphNode_CustomAimSolver::PostEditChangeProperty(FPropertyChangedEven
 {
 	Super::PostEditChangeProperty(PropertyChangedEvent);
 	FName PropertyName = (PropertyChangedEvent.Property != NULL) ? PropertyChangedEvent.Property->GetFName() : NAME_None;
-	if (PropertyName.ToString().Equals("Aiming_Hand_Limbs"))
+	if (PropertyName.ToString().Equals("AimingHandLimbs"))
 	{
 #if WITH_EDITOR
 		Node.ResizeDebugLocations(Node.AimingHandLimbs.Num());
@@ -28,10 +27,11 @@ void UAnimGraphNode_CustomAimSolver::PostEditChangeProperty(FPropertyChangedEven
 
 }
 
-//FEditorModeID UAnimGraphNode_CustomAimSolver::GetEditorMode() const
-//{
-//	return CustomFootSolverEditMode::FootSolverModeID;
-//}
+FEditorModeID UAnimGraphNode_CustomAimSolver::GetEditorMode() const
+{
+	return FAimSolverEditModes::CustomAimSolver;
+}
+
 
 void UAnimGraphNode_CustomAimSolver::Draw(FPrimitiveDrawInterface* PDI, USkeletalMeshComponent* PreviewSkelMeshComp) const
 {
@@ -43,4 +43,5 @@ void UAnimGraphNode_CustomAimSolver::Draw(FPrimitiveDrawInterface* PDI, USkeleta
 		}
 	}
 }
+
 

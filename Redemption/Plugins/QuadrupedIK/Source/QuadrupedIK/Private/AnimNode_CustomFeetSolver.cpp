@@ -678,12 +678,16 @@ void FAnimNode_CustomFeetSolver::EvaluateSkeletalControl_AnyThread(FComponentSpa
 	}
 
 	const FTransform& ComponentToWorld = Output.AnimInstanceProxy->GetComponentTransform();
+	const auto Scale = Output.AnimInstanceProxy->GetActorTransform().GetScale3D();
 
-	if (bEnableSolver && (FVector(0.0f, 0.0f, 0.0f) - Output.AnimInstanceProxy->GetActorTransform().GetScale3D()).Size() > 0 &&
+
+	if (bEnableSolver && (FVector(0.0f, 0.0f, 0.0f) - Scale).Size() > 0.0f &&
 		FAnimWeight::IsRelevant(ActualAlpha) && 
 		IsValidToEvaluate(Output.AnimInstanceProxy->GetSkeleton(), Output.AnimInstanceProxy->GetRequiredBones()) &&
-		SpineFeetPair.Num() > 0 && !Output.ContainsNaN())
+		SpineFeetPair.Num() > 0 && 
+		!Output.ContainsNaN())
 	{
+
 		LineTraceControl_AnyThread(Output, BoneTransforms);
 		GetAnimatedPoseInfo(Output.Pose);
 
@@ -691,7 +695,9 @@ void FAnimNode_CustomFeetSolver::EvaluateSkeletalControl_AnyThread(FComponentSpa
 		{
 			if (Index < SpineFeetPair.Num() && Index < SpineAnimatedTransformPairs.Num())
 			{
-				const FCompactPoseBoneIndex ModBoneIndex_Local_I = SpineFeetPair[Index].SpineBoneRef.GetCompactPoseIndex(Output.Pose.GetPose().GetBoneContainer());
+				const FCompactPoseBoneIndex ModBoneIndex_Local_I = SpineFeetPair[Index].SpineBoneRef.GetCompactPoseIndex(
+					Output.Pose.GetPose().GetBoneContainer());
+
 				FTransform ComponentBoneTrans_Local_I = Output.Pose.GetComponentSpaceTransform(ModBoneIndex_Local_I);
 				const FVector LerpDataLocal_I = ComponentToWorld.TransformPosition(ComponentBoneTrans_Local_I.GetLocation());
 				SpineAnimatedTransformPairs[Index].SpineInvolved = (ComponentBoneTrans_Local_I)*ComponentToWorld;
@@ -713,7 +719,7 @@ void FAnimNode_CustomFeetSolver::EvaluateSkeletalControl_AnyThread(FComponentSpa
 					{
 						const FCompactPoseBoneIndex ModifyBoneIndex_Local_J = SpineFeetPair[Index].FeetArray[JIndex].GetCompactPoseIndex(
 							Output.Pose.GetPose().GetBoneContainer());
-						FTransform ComponentBoneTransform_Local_J = Output.Pose.GetComponentSpaceTransform(ModifyBoneIndex_Local_J);
+						const FTransform ComponentBoneTransform_Local_J = Output.Pose.GetComponentSpaceTransform(ModifyBoneIndex_Local_J);
 
 						if (Index < SpineAnimatedTransformPairs.Num())
 						{
@@ -774,7 +780,9 @@ void FAnimNode_CustomFeetSolver::EvaluateSkeletalControl_AnyThread(FComponentSpa
 		ComponentPose.EvaluateComponentSpace(Output);
 
 		if (!bUseOptionalRefFeetRef)
+		{
 			CalculateFeetRotation(Output, FeetRotationArray);
+		}
 
 		SCOPE_CYCLE_COUNTER(STAT_CustomFeetSolver_Eval);
 		check(OutBoneTransforms.Num() == 0);

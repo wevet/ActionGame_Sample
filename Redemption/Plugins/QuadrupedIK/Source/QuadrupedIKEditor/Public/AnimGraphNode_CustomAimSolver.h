@@ -30,7 +30,7 @@ public:
 
 	virtual FText GetTooltipText() const override
 	{
-		return FText::FromString(FString("Responsible for handling foot ik towards the terrain hit data . "));
+		return FText::FromString(FString("Responsible for handling aiming towards a specific target."));
 	}
 
 	virtual FString GetNodeCategory() const override
@@ -47,6 +47,8 @@ public:
 	virtual void CreateOutputPins() override;
 
 	virtual void PostEditChangeProperty(struct FPropertyChangedEvent& PropertyChangedEvent) override;
+
+	virtual FEditorModeID GetEditorMode() const override;
 
 	UPROPERTY(EditAnywhere, Category = Settings)
 	FAnimNode_CustomAimSolver Node;

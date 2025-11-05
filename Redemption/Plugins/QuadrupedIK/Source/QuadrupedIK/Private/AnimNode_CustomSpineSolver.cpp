@@ -47,7 +47,7 @@ void FAnimNode_CustomSpineSolver::Initialize_AnyThread(const FAnimationInitializ
 
 	if (Context.AnimInstanceProxy)
 	{
-		SkeletalMeshComponent = Context.AnimInstanceProxy->GetSkelMeshComponent();
+		owning_skel = Context.AnimInstanceProxy->GetSkelMeshComponent();
 		PredictionAnimInstance = Cast<UPredictionAnimInstance>(Context.AnimInstanceProxy->GetAnimInstanceObject());
 	}
 }
@@ -1559,42 +1559,51 @@ void FAnimNode_CustomSpineSolver::InitializeBoneReferences(FBoneContainer& Requi
 		if (SpineFeetPair.Num() > 1 && !bSolveShouldFail)
 		{
 			TArray<FCompactPoseBoneIndex> BoneIndices;
+
+			const FCompactPoseBoneIndex RootIndex = SpineFeetPair[0].SpineBoneRef.GetCompactPoseIndex(RequiredBones);
+			FCompactPoseBoneIndex BoneIndex = SpineFeetPair.Last().SpineBoneRef.GetCompactPoseIndex(RequiredBones);
+			
+			BoneIndices.Reserve(RequiredBones.GetNumBones());
+
+			// Tip→Root で積んで、最後に反転して Root→Tip に並べる
+			for (int32 Step = 0; Step < RequiredBones.GetNumBones(); ++Step)
 			{
-
-				const FCompactPoseBoneIndex RootIndex = SpineFeetPair[0].SpineBoneRef.GetCompactPoseIndex(RequiredBones);
-				FCompactPoseBoneIndex BoneIndex = SpineFeetPair[SpineFeetPair.Num() - 1].SpineBoneRef.GetCompactPoseIndex(RequiredBones);
-				int32 WhileCounter = 0;
-				constexpr int32 MAX = 500;
-				constexpr int32 THRESHOLD = 450;
-				do
+				BoneIndices.Add(BoneIndex);
+				if (BoneIndex == RootIndex)
 				{
-					BoneIndices.Insert(BoneIndex, 0);
-					WhileCounter++;
-
-					const auto BN = SkeletalMeshComponent->GetBoneName(BoneIndex.GetInt());
-					const auto Parent_Bone = SkeletalMeshComponent->GetParentBone(BN);
-					const auto Bone_Ind = SkeletalMeshComponent->GetBoneIndex(Parent_Bone);
-					BoneIndex = FCompactPoseBoneIndex(Bone_Ind);
-
-				} while (BoneIndex != RootIndex && WhileCounter < MAX);
-
-				if (WhileCounter > THRESHOLD)
-				{
-					bSolveShouldFail = true;
+					Algo::Reverse(BoneIndices); // Root→Tip に並べ替え
+					break;
 				}
 
-				BoneIndices.Insert(BoneIndex, 0);
+				const FCompactPoseBoneIndex Parent = RequiredBones.GetParentBoneIndex(BoneIndex);
+				if (!Parent.IsValid())
+				{
+					// Rootに辿れない（別ツリー等）→失敗
+					BoneIndices.Reset();
+					break;
+				}
+				BoneIndex = Parent;
 			}
 
-			CombinedIndiceArray = BoneIndices;
-			if (TickCounter < MAX_TICK_COUNTER)
+			if (BoneIndices.Num() == 0 || BoneIndices[0] != RootIndex)
 			{
-				SpineBetweenTransformArray.AddDefaulted(CombinedIndiceArray.Num() - 2);
-				SpineHitEdgeArray.AddDefaulted(CombinedIndiceArray.Num() - 2);
-				SpineBetweenOffsetTransformArray.AddDefaulted(CombinedIndiceArray.Num() - 2);
-				SpineBetweenHeightArray.AddDefaulted(CombinedIndiceArray.Num() - 2);
-				SnakeSpinePositionArray.AddDefaulted(CombinedIndiceArray.Num());
+				bSolveShouldFail = true;
 			}
+			else
+			{
+				CombinedIndiceArray = MoveTemp(BoneIndices);
+
+				if (TickCounter < MAX_TICK_COUNTER)
+				{
+					const int32 Between = FMath::Max(CombinedIndiceArray.Num() - 2, 0);
+					SpineBetweenTransformArray.AddDefaulted(Between);
+					SpineHitEdgeArray.AddDefaulted(Between);
+					SpineBetweenOffsetTransformArray.AddDefaulted(Between);
+					SpineBetweenHeightArray.AddDefaulted(Between);
+					SnakeSpinePositionArray.AddDefaulted(Between);
+				}
+			}
+
 		}
 
 		for (int32 SIndex = 0; SIndex < SnakeSpinePositionArray.Num(); SIndex++)

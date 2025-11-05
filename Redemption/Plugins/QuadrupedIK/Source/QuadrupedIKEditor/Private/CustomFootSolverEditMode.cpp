@@ -188,11 +188,7 @@ void FCustomFootSolverEditMode::Render(const FSceneView* View, FViewport* Viewpo
 
 bool FCustomFootSolverEditMode::HandleClick(FEditorViewportClient* InViewportClient, HHitProxy* HitProxy, const FViewportClick& Click)
 {
-#if	ENGINE_MAJOR_VERSION == 4
 	bool bResult = FCustomIKControlBaseEditMode::HandleClick(InViewportClient, HitProxy, Click);
-#else
-	bool bResult = false;
-#endif
 
 	if (HitProxy && HitProxy->IsA(HFootSolverHandleHitProxy::StaticGetType()))
 	{
