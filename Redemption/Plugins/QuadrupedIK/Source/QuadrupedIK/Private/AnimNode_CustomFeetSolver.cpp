@@ -48,6 +48,7 @@ void FAnimNode_CustomFeetSolver::Initialize_AnyThread(const FAnimationInitialize
 	Super::Initialize_AnyThread(Context);
 	if (Context.AnimInstanceProxy)
 	{
+		owning_skel = Context.AnimInstanceProxy->GetSkelMeshComponent();
 		PredictionAnimInstance = Cast<UPredictionAnimInstance>(Context.AnimInstanceProxy->GetAnimInstanceObject());
 	}
 	BlendRefPose.Initialize(Context);
@@ -904,7 +905,7 @@ FVector FAnimNode_CustomFeetSolver::RotateAroundPoint(const FVector InputPoint, 
 {
 	FVector OrbitDirection;
 	OrbitDirection = InputPoint - Origin;
-	FVector AxisDir = UKismetMathLibrary::RotateAngleAxis(OrbitDirection, Angle, ForwardVector);
+	const FVector AxisDir = UKismetMathLibrary::RotateAngleAxis(OrbitDirection, Angle, ForwardVector);
 	const FVector Result = InputPoint + (AxisDir - OrbitDirection);
 	return Result;
 }
@@ -974,7 +975,8 @@ void FAnimNode_CustomFeetSolver::ApplyTwoBoneIK(
 	FTransform UpperLimbCSTransformX = MeshBasesSaved.Pose.GetComponentSpaceTransform(UpperLimbIndex);
 	FTransform EndBoneCSTransformX = MeshBasesSaved.Pose.GetComponentSpaceTransform(IKBoneCompactPoseIndex);
 
-#if false
+	// don't remove it !
+#if 1
 	if (!Owner->GetWorld()->IsGameWorld())
 	{
 		FeetModofyTransformArray[SpineIndex][FeetIndex] = EndBoneCSTransformX;
@@ -993,9 +995,6 @@ void FAnimNode_CustomFeetSolver::ApplyTwoBoneIK(
 		}
 
 	}
-#else
-	FeetModofyTransformArray[SpineIndex][FeetIndex] = EndBoneCSTransformX;
-
 #endif
 
 	FTransform RootBoneCSTransform = FTransform::Identity;
@@ -1010,10 +1009,9 @@ void FAnimNode_CustomFeetSolver::ApplyTwoBoneIK(
 	FVector EffectorLocationPoint = ComponentToWorld.InverseTransformPosition( 
 		SpineAnimatedTransformPairs[SpineIndex].AssociatedFootArray[FeetIndex].GetLocation());
 
-	const float DeltaSeconds = CachedDeltaSeconds;//SkelMeshComp->GetWorld()->GetDeltaSeconds();
+	const float DeltaSeconds = CachedDeltaSeconds;
 
-	//if (!bFirstTimeSetup && bHasAtleastHit && bEnableSolver)
-	if (bHasAtleastHit && bEnableSolver)
+	if (!bFirstTimeSetup && bHasAtleastHit && bEnableSolver)
 	{
 		FTransform EndBoneWorldTransform = EndBoneCSTransform;
 		FAnimationRuntime::ConvertCSTransformToBoneSpace(
@@ -1328,7 +1326,6 @@ void FAnimNode_CustomFeetSolver::ApplyTwoBoneIK(
 
 			if (!bIgnoreLerping)
 			{
-				//SkelMeshComp->GetWorld()->DeltaTimeSeconds;
 				const float DT = CachedDeltaSeconds;
 				FeetModofyTransformArray[SpineIndex][FeetIndex].SetRotation(
 					UKismetMathLibrary::RLerp(
@@ -1357,11 +1354,14 @@ void FAnimNode_CustomFeetSolver::ApplyTwoBoneIK(
 	//	AlphaTemp = FootAlphaArray[SpineIndex][FeetIndex];
 	//}
 
-	if (!Owner->GetWorld()->IsGameWorld())
+#if WITH_EDITOR
+	if (GIsEditor)
 	{
-		AlphaTemp = 0.f;
-		//FootAlphaArray[SpineIndex][FeetIndex] = 0.0f;
+		/* プレビュー用処理 */
+		FootAlphaArray[SpineIndex][FeetIndex] = 0.0f;
 	}
+#endif
+
 
 	FTransform FeetTransform = EndBoneCSTransformX;
 	FAnimationRuntime::ConvertCSTransformToBoneSpace(
@@ -2071,7 +2071,6 @@ TArray<FName> FAnimNode_CustomFeetSolver::BoneArrayMachine_Feet(
 		}
 
 		IterationCount++;
-
 		const FName CurBoneName = SpineBoneArray[IterationCount - 1];
 		const int32 CurBoneIndex = RefSkel.FindBoneIndex(CurBoneName);
 		if (CurBoneIndex == INDEX_NONE)
@@ -2087,11 +2086,10 @@ TArray<FName> FAnimNode_CustomFeetSolver::BoneArrayMachine_Feet(
 			SpineBoneArray.Add(ParentName);
 		}
 
-
 		if (!bWasFootBone)
 		{
 			FCustomBone_SpineFeetPair Instance;
-			Instance.SpineBoneRef = FBoneReference(SpineBoneArray[SpineBoneArray.Num() - 1]);
+			Instance.SpineBoneRef = FBoneReference(SpineBoneArray.Last());
 			Instance.SpineBoneRef.Initialize(RequiredBones);
 			SpineFeetPair.Add(Instance);
 		}
@@ -2158,7 +2156,6 @@ TArray<FName> FAnimNode_CustomFeetSolver::BoneArrayMachine(
 		}
 
 		IterationCount++;
-
 		const FName CurBoneName = SpineBoneArray[IterationCount - 1];
 		const int32 CurBoneIndex = RefSkel.FindBoneIndex(CurBoneName);
 		if (CurBoneIndex == INDEX_NONE)
@@ -2177,7 +2174,7 @@ TArray<FName> FAnimNode_CustomFeetSolver::BoneArrayMachine(
 		if (!bWasFootBone)
 		{
 			FCustomBone_SpineFeetPair Instance;
-			Instance.SpineBoneRef = FBoneReference(SpineBoneArray[SpineBoneArray.Num() - 1]);
+			Instance.SpineBoneRef = FBoneReference(SpineBoneArray.Last());
 			Instance.SpineBoneRef.Initialize(RequiredBones);
 			SpineFeetPair.Add(Instance);
 		}

@@ -130,7 +130,7 @@ void FAnimNode_CustomSpineSolver::GetAnimatedPoseInfo(
 
 	constexpr float TickThrehold = 4;
 
-	if ((Owner->GetWorld()->IsGameWorld()) && TickCounter > TickThrehold)
+	if ((Owner->GetWorld()->IsGameWorld()) && TickCounter > TickThrehold) 
 	{
 		for (int32 Index = 0; Index < ExtraSpineIndiceArray.Num(); Index++)
 		{
@@ -304,7 +304,7 @@ void FAnimNode_CustomSpineSolver::GetAnimatedPoseInfo(
 							FTransform ThighTransform = MeshBases.GetComponentSpaceTransform(SpineFeetPair[SpineIndex].ThighArray[FeetIndex].CachedCompactPoseIndex)
 								* StabilizationPelvis;
 
-							FQuat const thigh_original_rotation = ThighTransform.GetRotation();
+							const FQuat ThighOrigRotation = ThighTransform.GetRotation();
 							const float StabValue = (PelvisSlopeDirection > 0.0f) ? PelvisUpSlopeStabilizationAlpha : PelvisDownSlopeStabilizationAlpha;
 							PelvisSlopeStabAlpha = FMath::FInterpTo(PelvisSlopeStabAlpha, 
 								StabValue, 
@@ -312,7 +312,7 @@ void FAnimNode_CustomSpineSolver::GetAnimatedPoseInfo(
 								LocationLerpSpeed / 10.0f);
 
 							ThighTransform.SetRotation(FQuat::Slerp(
-								thigh_original_rotation, 
+								ThighOrigRotation, 
 								MeshBases.GetComponentSpaceTransform(SpineFeetPair[SpineIndex].ThighArray[FeetIndex].CachedCompactPoseIndex).GetRotation(), 
 								PelvisSlopeStabAlpha));
 
@@ -1605,6 +1605,51 @@ void FAnimNode_CustomSpineSolver::InitializeBoneReferences(FBoneContainer& Requi
 			}
 
 		}
+
+#if false
+
+		if (SpineFeetPair.Num() > 1 && !bSolveShouldFail)
+		{
+			TArray<FCompactPoseBoneIndex> BoneIndices;
+			{
+
+				const FCompactPoseBoneIndex RootIndex = SpineFeetPair[0].SpineBoneRef.GetCompactPoseIndex(RequiredBones);
+				FCompactPoseBoneIndex BoneIndex = SpineFeetPair[SpineFeetPair.Num() - 1].SpineBoneRef.GetCompactPoseIndex(RequiredBones);
+				int32 WhileCounter = 0;
+				constexpr int32 MAX = 500;
+				constexpr int32 THRESHOLD = 450;
+				do
+				{
+					BoneIndices.Insert(BoneIndex, 0);
+					WhileCounter++;
+
+					const auto BN = owning_skel->GetBoneName(BoneIndex.GetInt());
+					const auto Parent_Bone = owning_skel->GetParentBone(BN);
+					const auto Bone_Ind = owning_skel->GetBoneIndex(Parent_Bone);
+					BoneIndex = FCompactPoseBoneIndex(Bone_Ind);
+
+				} while (BoneIndex != RootIndex && WhileCounter < MAX);
+
+				if (WhileCounter > THRESHOLD)
+				{
+					bSolveShouldFail = true;
+				}
+
+				BoneIndices.Insert(BoneIndex, 0);
+			}
+
+			CombinedIndiceArray = BoneIndices;
+			if (TickCounter < MAX_TICK_COUNTER)
+			{
+				const int32 Between = FMath::Max(CombinedIndiceArray.Num() - 2, 0);
+				SpineBetweenTransformArray.AddDefaulted(Between);
+				SpineHitEdgeArray.AddDefaulted(Between);
+				SpineBetweenOffsetTransformArray.AddDefaulted(Between);
+				SpineBetweenHeightArray.AddDefaulted(Between);
+				SnakeSpinePositionArray.AddDefaulted(Between);
+			}
+		}
+#endif
 
 		for (int32 SIndex = 0; SIndex < SnakeSpinePositionArray.Num(); SIndex++)
 		{

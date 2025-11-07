@@ -273,7 +273,7 @@ private:
 
 	FVector AnimLocationLerp(const FVector& InStartPosition, const FVector& InEndPosition, const float InDeltaSeconds) const;
 
-	TArray<FCustomBone_SpineFeetPair> Swap_Spine_Pairs(TArray<FCustomBone_SpineFeetPair>& test_list);
+	TArray<FCustomBone_SpineFeetPair> SwapSpinePairs(TArray<FCustomBone_SpineFeetPair>& OutSpineFeetArray);
 
 	void GetAnimatedPoseInfo(FCSPose<FCompactPose>& MeshBases, TArray<FBoneTransform>& OutBoneTransforms);
 	void Make_All_Bones(FCSPose<FCompactPose>& MeshBases);

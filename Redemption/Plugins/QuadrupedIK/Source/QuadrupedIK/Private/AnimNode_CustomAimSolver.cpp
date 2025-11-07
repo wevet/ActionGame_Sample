@@ -501,7 +501,7 @@ void FAnimNode_CustomAimSolver::InitializeBoneReferences(const FBoneContainer& R
 		}
 		else
 		{
-			SpineFeetPair = Swap_Spine_Pairs(SpineFeetPair);
+			SpineFeetPair = SwapSpinePairs(SpineFeetPair);
 		}
 
 		if (TickCounter < MAX_TICK_COUNTER)
@@ -689,12 +689,12 @@ void FAnimNode_CustomAimSolver::InitializeBoneReferences(const FBoneContainer& R
 }
 
 
-TArray<FCustomBone_SpineFeetPair> FAnimNode_CustomAimSolver::Swap_Spine_Pairs(TArray<FCustomBone_SpineFeetPair>& InSpineFeetPair)
+TArray<FCustomBone_SpineFeetPair> FAnimNode_CustomAimSolver::SwapSpinePairs(TArray<FCustomBone_SpineFeetPair>& OutSpineFeetArray)
 {
 	// 各 SpineFeetPair ごとに、Feet を BoneIndex 降順へバブルソート
-	for (int32 Index = 0; Index < InSpineFeetPair.Num(); ++Index)
+	for (int32 Index = 0; Index < OutSpineFeetArray.Num(); ++Index)
 	{
-		auto& Pair = InSpineFeetPair[Index];
+		auto& Pair = OutSpineFeetArray[Index];
 		auto& Feet = Pair.FeetArray;
 		auto& Knee = Pair.KneeArray;
 		auto& Thigh = Pair.ThighArray;
@@ -736,7 +736,7 @@ TArray<FCustomBone_SpineFeetPair> FAnimNode_CustomAimSolver::Swap_Spine_Pairs(TA
 		} while (bSwapped);
 	}
 
-	return InSpineFeetPair;
+	return OutSpineFeetArray;
 }
 
 

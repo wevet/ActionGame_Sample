@@ -339,6 +339,9 @@ private:
 
 	UPROPERTY()
 	TObjectPtr<UPredictionAnimInstance> PredictionAnimInstance{ nullptr };
+
+	UPROPERTY()
+	TObjectPtr<USkeletalMeshComponent> owning_skel = nullptr;
 	
 	TArray<FCustomBoneSpineFeetPair_WS> SpineAnimatedTransformPairs;
 	TArray<FCompactPoseBoneIndex> SpineIndices;
