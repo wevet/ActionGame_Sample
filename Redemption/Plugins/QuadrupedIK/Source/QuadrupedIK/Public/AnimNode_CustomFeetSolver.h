@@ -34,8 +34,6 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Settings, meta = (PinHiddenByDefault))
 	bool bAutomaticLeg = false;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Settings, meta = (PinHiddenByDefault))
-	bool bUseOptionalRefFeetRef = true;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Settings, meta = (PinShownByDefault))
 	bool bEnableSolver = true;
@@ -292,7 +290,7 @@ private:
 	void GetAnimatedPoseInfo(FCSPose<FCompactPose>& MeshBases);
 
 
-	FVector RotateAroundPoint(const FVector InputPoint, const FVector ForwardVector, const FVector Origin, const float Angle) const;
+	FVector RotateAroundPoint(const FVector& InputPoint, const FVector& ForwardVector, const FVector& Origin, const float Angle) const;
 
 	FCustomBoneStruct IKBoneData;
 	int32 FeetCounter{ 0 };
