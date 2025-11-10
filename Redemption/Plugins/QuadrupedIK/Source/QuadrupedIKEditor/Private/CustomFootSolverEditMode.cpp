@@ -137,7 +137,7 @@ void FCustomFootSolverEditMode::Render(const FSceneView* View, FViewport* Viewpo
 				FTransform FingerTransform = RuntimeNode->KneeAnimatedTransformArray[Index];
 				const int SpineOrderIndex = RuntimeNode->SpineFeetPair[Index].OrderIndexArray[JIndex];
 
-				if (RuntimeNode->AffectToesAlways)
+				if (RuntimeNode->bIsAffectToesAlways)
 				{
 					for (int32 kFinger = 0; kFinger < RuntimeNode->SpineTransformPairs[Index].AssociatedFingerArray[JIndex].Num(); kFinger++)
 					{

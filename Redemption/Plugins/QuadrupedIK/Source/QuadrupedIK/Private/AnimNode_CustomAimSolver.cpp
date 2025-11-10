@@ -19,6 +19,7 @@
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(AnimNode_CustomAimSolver)
 
+DECLARE_CYCLE_STAT(TEXT("CustomAimSolver Eval"), STAT_CustomAimSolver_Eval, STATGROUP_Anim);
 
 FAnimNode_CustomAimSolver::FAnimNode_CustomAimSolver()
 {
@@ -216,8 +217,11 @@ void FAnimNode_CustomAimSolver::EvaluateSkeletalControl_AnyThread(FComponentSpac
 {
 	const FBoneContainer& BoneContainer = Output.Pose.GetPose().GetBoneContainer();
 
+	SCOPE_CYCLE_COUNTER(STAT_CustomAimSolver_Eval);
+
 	if (ToggleAlpha > 0.01f)
 	{
+
 		TArray<FBoneTransform> BoneTransforms_input = TArray<FBoneTransform>();
 
 		for (int32 Index = 0; Index < SolverInputData.FeetBones.Num(); Index++)

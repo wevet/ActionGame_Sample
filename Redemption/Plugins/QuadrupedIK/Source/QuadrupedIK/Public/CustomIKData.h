@@ -40,6 +40,11 @@ enum class EIKRaycastType : uint8
 	BoxTrace UMETA(DisplayName = "Box Trace")
 };
 
+/*
+* 足の位置の補間方法を選択
+* デフォルトでは、最適な滑らかさと解答速度を提供する分割位置補間を使用
+* オプションでレガシー補間法を使用することができる
+*/
 UENUM(BlueprintType)
 enum class EIKInterpLocationType : uint8
 {
@@ -47,6 +52,12 @@ enum class EIKInterpLocationType : uint8
 	LegacyLocation UMETA(DisplayName = "Normal Interpolation")
 };
 
+
+/*
+* 足の回転の補間方法を選択
+* デフォルトでは、最適な滑らかさと解答速度を提供する分割位置補間を使用
+* オプションでレガシー補間法を使用することができる
+*/
 UENUM(BlueprintType)
 enum class EIKInterpRotationType : uint8
 {
@@ -692,4 +703,8 @@ public:
 	{
 	}
 };
+
+
+
+
 

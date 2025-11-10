@@ -250,4 +250,18 @@ public:
 		const float H_ClampMin,
 		const float H_ClampMax,
 		const bool bIsUseNaturalRotations);
+
+
+	static FORCEINLINE float RateToAlpha(const float RatePerSec, const float DeltaSeconds)
+	{
+		if (RatePerSec <= 0.f || DeltaSeconds <= 0.f)
+		{
+			return 0.f;
+
+		}
+		// 1 - exp(-Rate * dt) : FPS‚É‹­‚¢
+		return 1.f - FMath::Exp(-RatePerSec * DeltaSeconds);
+	}
+
+
 };

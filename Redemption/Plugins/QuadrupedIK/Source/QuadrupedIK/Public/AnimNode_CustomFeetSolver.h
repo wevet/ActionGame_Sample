@@ -79,7 +79,7 @@ public:
 	bool bEnableFootLiftLimit = true;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Settings, meta = (PinHiddenByDefault))
-	bool AffectToesAlways = true;
+	bool bIsAffectToesAlways = true;
 
 	UPROPERTY(EditAnywhere, Category = Settings, meta = (PinHiddenByDefault))
 	FRuntimeFloatCurve FingerVelocityCurve;
@@ -234,18 +234,14 @@ private:
 
 	FVector AnimationLocationLerp(
 		const bool bIsHit, 
-		const int32 SpineIndex,
-		const int32 FeetIndex,
-		const FVector StartPosition, 
-		const FVector EndPosition, 
+		const FVector& StartPosition, 
+		const FVector& EndPosition,
 		const float DeltaSeconds) const;
 
 	FQuat AnimationQuatSlerp(
 		const bool bIsHit,
-		const int32 SpineIndex, 
-		const int32 FeetIndex, 
-		const FQuat StartRotation, 
-		const FQuat EndRotation, 
+		const FQuat& StartRotation,
+		const FQuat& EndRotation,
 		const float DeltaSeconds) const;
 
 	FRotator RotationFromImpactNormal(

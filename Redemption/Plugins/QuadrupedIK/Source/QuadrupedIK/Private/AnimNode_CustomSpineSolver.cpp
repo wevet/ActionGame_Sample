@@ -21,6 +21,7 @@
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(AnimNode_CustomSpineSolver)
 
+DECLARE_CYCLE_STAT(TEXT("CustomSpineSolver Eval"), STAT_CustomSpineSolver_Eval, STATGROUP_Anim);
 
 FAnimNode_CustomSpineSolver::FAnimNode_CustomSpineSolver()
 {
@@ -396,6 +397,8 @@ void FAnimNode_CustomSpineSolver::GetAnimatedPoseInfo(
 void FAnimNode_CustomSpineSolver::EvaluateComponentSpace_AnyThread(FComponentSpacePoseContext& Output)
 {
 	checkSlow(Output.Pose.GetPose().IsValid());
+
+	SCOPE_CYCLE_COUNTER(STAT_CustomSpineSolver_Eval);
 
 	const bool bHasNonZeroScale = !Output.AnimInstanceProxy->GetActorTransform().GetScale3D().IsNearlyZero();
 	
