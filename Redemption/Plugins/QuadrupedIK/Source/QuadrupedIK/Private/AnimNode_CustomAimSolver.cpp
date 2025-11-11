@@ -16,6 +16,8 @@
 #define MAX_MAX_TICK_COUNTER 500
 #define ITERATION_COUNTER 50
 
+#define DISABLE_TICK_COUNTER 1
+
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(AnimNode_CustomAimSolver)
 
@@ -423,7 +425,9 @@ void FAnimNode_CustomAimSolver::InitializeBoneReferences(const FBoneContainer& R
 		SpineFeetPair.Empty();
 		TotalSpineNameArray.Empty();
 
+#if !DISABLE_TICK_COUNTER
 		if (TickCounter < MAX_TICK_COUNTER)
+#endif
 		{
 			SpineTransformPairs.Empty();
 			SpineAnimatedTransformPairs.Empty();
@@ -478,14 +482,18 @@ void FAnimNode_CustomAimSolver::InitializeBoneReferences(const FBoneContainer& R
 
 		const TArray<FCustomBone_SpineFeetPair>& K_FeetPair = SpineFeetPair;
 
+#if !DISABLE_TICK_COUNTER
 		if (TickCounter < MAX_TICK_COUNTER)
+#endif
 		{
 			TotalSpineAlphas.AddDefaulted(K_FeetPair.Num());
 		}
 
 		for (int32 Index = 0; Index < K_FeetPair.Num(); Index++)
 		{
+#if !DISABLE_TICK_COUNTER
 			if (TickCounter < MAX_TICK_COUNTER)
+#endif
 			{
 				TotalSpineAlphas[Index] = 0;
 			}
@@ -508,7 +516,9 @@ void FAnimNode_CustomAimSolver::InitializeBoneReferences(const FBoneContainer& R
 			SpineFeetPair = SwapSpinePairs(SpineFeetPair);
 		}
 
+#if !DISABLE_TICK_COUNTER
 		if (TickCounter < MAX_TICK_COUNTER)
+#endif
 		{
 			SpineHitPairs.AddDefaulted(SpineFeetPair.Num());
 			SpineTransformPairs.AddDefaulted(SpineFeetPair.Num());
@@ -548,7 +558,9 @@ void FAnimNode_CustomAimSolver::InitializeBoneReferences(const FBoneContainer& R
 
 			SpineFeetPair[Index].FeetHeightArray.AddDefaulted(FeetArrayNum);
 
+#if !DISABLE_TICK_COUNTER
 			if (TickCounter < MAX_TICK_COUNTER)
+#endif
 			{
 				SpineHitPairs[Index].FeetHitArray.AddDefaulted(FeetArrayNum);
 
@@ -623,7 +635,9 @@ void FAnimNode_CustomAimSolver::InitializeBoneReferences(const FBoneContainer& R
 			}
 		}
 
+#if !DISABLE_TICK_COUNTER
 		if (TickCounter < MAX_TICK_COUNTER)
+#endif
 		{
 			SpineBetweenTransforms.Empty();
 			SpineBetweenHeights.Empty();
@@ -652,7 +666,9 @@ void FAnimNode_CustomAimSolver::InitializeBoneReferences(const FBoneContainer& R
 
 			CombinedIndices = BoneIndices;
 
+#if !DISABLE_TICK_COUNTER
 			if (TickCounter < MAX_TICK_COUNTER)
+#endif
 			{
 				SpineBetweenTransforms.AddDefaulted(CombinedIndices.Num() - 2);
 				SpineHitEdges.AddDefaulted(CombinedIndices.Num() - 2);
@@ -662,7 +678,9 @@ void FAnimNode_CustomAimSolver::InitializeBoneReferences(const FBoneContainer& R
 			}
 		}
 
+#if !DISABLE_TICK_COUNTER
 		if (TickCounter < MAX_TICK_COUNTER)
+#endif
 		{
 			SpineHitBetweenArray.AddDefaulted(SpineBetweenTransforms.Num());
 		}

@@ -987,7 +987,7 @@ void FAnimNode_CustomFeetSolver::ApplyTwoBoneIK(
 					TempImpactRef.Z = (EndBoneWorldTransform.GetLocation() - CharacterDirectionVector * FeetRootHeights[SpineIndex][FeetIndex]).Z;
 				}
 
-				if (bIgnoreLocationLerping) // || FeetCounter < FEET_COUTER_THRESHOLD
+				if (bIgnoreLocationLerping) 
 				{
 					FeetImpactPointArray[SpineIndex][FeetIndex] = TempImpactRef;
 				}
@@ -1072,12 +1072,27 @@ void FAnimNode_CustomFeetSolver::ApplyTwoBoneIK(
 			}
 		}
 
+#if 1
+		const FVector UpCS = CharacterDirectionVectorCS.GetSafeNormal();
+		const FVector NormalCS = UKismetMathLibrary::InverseTransformDirection(ComponentToWorld,
+			SpineHitPairs[SpineIndex].FeetHitArray[FeetIndex].ImpactNormal);
+		const float TiltRad = FMath::Acos(FMath::Clamp(FVector::DotProduct(UpCS, NormalCS), -1.f, 1.f));
+		const float TiltDeg = FMath::RadiansToDegrees(TiltRad);
+
+		EffectorLocationPoint.Z += TiltDeg *
+			SolverInputData.FeetBones[SpineFeetPair[SpineIndex].OrderIndexArray[FeetIndex]].FeetSlopeOffsetMultiplier *
+			ScaleMode;
+
+#else
+
 		FQuat Rotated_Difference = Original_EndBoneCSTransform.GetRotation() * FeetModofyTransformArray[SpineIndex][FeetIndex].GetRotation().Inverse();
 		EffectorLocationPoint.Z += FMath::Max(
-			FMath::Abs(FRotator(Rotated_Difference).Roll), 
-			FMath::Abs(FRotator(Rotated_Difference).Pitch)) * 
-			SolverInputData.FeetBones[SpineFeetPair[SpineIndex].OrderIndexArray[FeetIndex]].FeetSlopeOffsetMultiplier * 
+			FMath::Abs(FRotator(Rotated_Difference).Roll),
+			FMath::Abs(FRotator(Rotated_Difference).Pitch)) *
+			SolverInputData.FeetBones[SpineFeetPair[SpineIndex].OrderIndexArray[FeetIndex]].FeetSlopeOffsetMultiplier *
 			ScaleMode;
+#endif
+
 
 		FeetModofyTransformArray[SpineIndex][FeetIndex].SetLocation(EffectorLocationPoint);
 
@@ -1295,7 +1310,6 @@ void FAnimNode_CustomFeetSolver::ApplyTwoBoneIK(
 	if (!Owner->GetWorld()->IsGameWorld())
 	{
 		AlphaTemp = 0.0f;
-		//FootAlphaArray[SpineIndex][FeetIndex] = 0.0f;
 	}
 #endif
 
