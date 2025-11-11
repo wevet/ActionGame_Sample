@@ -76,7 +76,6 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Settings, meta = (PinHiddenByDefault))
 	bool bEnableFootLiftLimit = true;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Settings, meta = (PinHiddenByDefault))
 	bool bIsAffectToesAlways = true;
 
 	UPROPERTY(EditAnywhere, Category = Settings, meta = (PinHiddenByDefault))
@@ -172,7 +171,7 @@ private:
 		const int32 SpineIndex,
 		const int32 FeetIndex, 
 		const TEnumAsByte<enum EBoneControlSpace> EffectorLocationSpace, 
-		TEnumAsByte<enum EBoneControlSpace> JointTargetLocationSpace, 
+		const TEnumAsByte<enum EBoneControlSpace> JointTargetLocationSpace,
 		FComponentSpacePoseContext& MeshBasesSaved, 
 		TArray<FBoneTransform>& OutBoneTransforms);
 
@@ -181,8 +180,8 @@ private:
 		const FBoneReference& IKFootBone,
 		const int32 SpineIndex, 
 		const int32 FeetIndex, 
-		TEnumAsByte<enum EBoneControlSpace> EffectorLocationSpace,
-		TEnumAsByte<enum EBoneControlSpace> JointTargetLocationSpace, 
+		const TEnumAsByte<enum EBoneControlSpace> EffectorLocationSpace,
+		const TEnumAsByte<enum EBoneControlSpace> JointTargetLocationSpace,
 		FComponentSpacePoseContext& MeshBasesSaved,
 		TArray<FBoneTransform>& OutBoneTransforms);
 
@@ -293,7 +292,7 @@ private:
 	FVector RotateAroundPoint(const FVector& InputPoint, const FVector& ForwardVector, const FVector& Origin, const float Angle) const;
 
 	FCustomBoneStruct IKBoneData;
-	int32 FeetCounter{ 0 };
+	//int32 FeetCounter{ 0 };
 	int32 FirstTimeCounter{ 0 };
 	float TargetFPS{ -1.0f };
 	float ScaleMode{ 1.0f };
