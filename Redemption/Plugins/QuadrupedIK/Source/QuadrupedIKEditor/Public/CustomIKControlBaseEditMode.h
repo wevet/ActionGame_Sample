@@ -58,13 +58,57 @@ public:
 	virtual void RegisterPoseWatchedNode(UAnimGraphNode_Base* InEditorNode, FAnimNode_Base* InRuntimeNode)  override;
 
 protected:
-	static void ConvertToComponentSpaceTransform(const USkeletalMeshComponent* SkelComp, const FTransform& InTransform, FTransform& OutCSTransform, int32 BoneIndex, EBoneControlSpace Space);
-	static void ConvertToBoneSpaceTransform(const USkeletalMeshComponent* SkelComp, const FTransform& InCSTransform, FTransform& OutBSTransform, int32 BoneIndex, EBoneControlSpace Space);
-	static FVector ConvertCSVectorToBoneSpace(const USkeletalMeshComponent* SkelComp, FVector& InCSVector, FCSPose<FCompactHeapPose>& MeshBases, const FName& BoneName, const EBoneControlSpace Space);
-	static FVector ConvertCSVectorToBoneSpace(const USkeletalMeshComponent* SkelComp, FVector& InCSVector, FCSPose<FCompactHeapPose>& MeshBases, const FCustomBoneSocketTarget& InTarget, const EBoneControlSpace Space);
-	static FQuat ConvertCSRotationToBoneSpace(const USkeletalMeshComponent* SkelComp, FRotator& InCSRotator, FCSPose<FCompactHeapPose>& MeshBases, const FName& BoneName, const EBoneControlSpace Space);
-	static FVector ConvertWidgetLocation(const USkeletalMeshComponent* InSkelComp, FCSPose<FCompactHeapPose>& InMeshBases, const FName& BoneName, const FVector& InLocation, const EBoneControlSpace Space);
-	static FVector ConvertWidgetLocation(const USkeletalMeshComponent* InSkelComp, FCSPose<FCompactHeapPose>& InMeshBases, const FCustomBoneSocketTarget& Target, const FVector& InLocation, const EBoneControlSpace Space);
+	static void ConvertToComponentSpaceTransform(
+		const USkeletalMeshComponent* SkelComp, 
+		const FTransform& InTransform, 
+		FTransform& OutCSTransform, 
+		int32 BoneIndex, 
+		EBoneControlSpace Space);
+
+	static void ConvertToBoneSpaceTransform(
+		const USkeletalMeshComponent* SkelComp, 
+		const FTransform& InCSTransform,
+		FTransform& OutBSTransform, 
+		int32 BoneIndex, 
+		EBoneControlSpace Space);
+
+	static FVector ConvertCSVectorToBoneSpace(
+		const USkeletalMeshComponent* SkelComp,
+		FVector& InCSVector, 
+		FCSPose<FCompactHeapPose>& MeshBases,
+		const FName& BoneName,
+		const EBoneControlSpace Space);
+
+
+
+	static FQuat ConvertCSRotationToBoneSpace(
+		const USkeletalMeshComponent* SkelComp, 
+		FRotator& InCSRotator,
+		FCSPose<FCompactHeapPose>& MeshBases, 
+		const FName& BoneName, 
+		const EBoneControlSpace Space);
+
+	static FVector ConvertWidgetLocation(
+		const USkeletalMeshComponent* InSkelComp, 
+		FCSPose<FCompactHeapPose>& InMeshBases, 
+		const FName& BoneName, 
+		const FVector& InLocation, 
+		const EBoneControlSpace Space);
+
+	static FVector ConvertCSVectorToBoneSpace(
+		const USkeletalMeshComponent* SkelComp,
+		FVector& InCSVector,
+		FCSPose<FCompactHeapPose>& MeshBases,
+		const FCustomBoneSocketTarget& InTarget,
+		const EBoneControlSpace Space);
+
+
+	static FVector ConvertWidgetLocation(
+		const USkeletalMeshComponent* InSkelComp, 
+		FCSPose<FCompactHeapPose>& InMeshBases,
+		const FCustomBoneSocketTarget& InTarget,
+		const FVector& InLocation, 
+		const EBoneControlSpace Space);
 
 protected:
 	class UAnimGraphNode_Base* AnimNode;

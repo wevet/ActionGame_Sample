@@ -273,6 +273,10 @@
 			"Enabled": true
 		},
 		{
+			"Name": "GameplayStateTree",
+			"Enabled": true
+		},		
+		{
 			"Name": "SkeletalMerging",
 			"Enabled": true
 		},

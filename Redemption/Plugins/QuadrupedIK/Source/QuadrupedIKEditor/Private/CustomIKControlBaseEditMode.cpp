@@ -192,6 +192,7 @@ bool FCustomIKControlBaseEditMode::EndTracking(FEditorViewportClient* InViewport
 	return true;
 }
 
+
 bool FCustomIKControlBaseEditMode::InputKey(FEditorViewportClient* InViewportClient, FViewport* InViewport, FKey InKey, EInputEvent InEvent)
 {
 	bool bHandled = false;
@@ -217,7 +218,13 @@ bool FCustomIKControlBaseEditMode::InputKey(FEditorViewportClient* InViewportCli
 	return bHandled;
 }
 
-bool FCustomIKControlBaseEditMode::InputDelta(FEditorViewportClient* InViewportClient, FViewport* InViewport, FVector& InDrag, FRotator& InRot, FVector& InScale)
+
+bool FCustomIKControlBaseEditMode::InputDelta(
+	FEditorViewportClient* InViewportClient, 
+	FViewport* InViewport, 
+	FVector& InDrag,
+	FRotator& InRot, 
+	FVector& InScale)
 {
 	const EAxisList::Type CurrentAxis = InViewportClient->GetCurrentWidgetAxis();
 	const UE::Widget::EWidgetMode WidgetMode = InViewportClient->GetWidgetMode();
@@ -280,6 +287,7 @@ bool FCustomIKControlBaseEditMode::ShouldDrawWidget() const
 	return true;
 }
 
+
 void FCustomIKControlBaseEditMode::DoTranslation(FVector& InTranslation)
 {
 	UAnimGraphNode_CustomIKControlBase* SkelControl = Cast<UAnimGraphNode_CustomIKControlBase>(AnimNode);
@@ -317,6 +325,7 @@ void FCustomIKControlBaseEditMode::Tick(FEditorViewportClient* ViewportClient, f
 	}
 }
 
+
 bool FCustomIKControlBaseEditMode::SupportsPoseWatch()
 {
 	return false;
@@ -326,7 +335,12 @@ void FCustomIKControlBaseEditMode::RegisterPoseWatchedNode(UAnimGraphNode_Base* 
 {
 }
 
-void FCustomIKControlBaseEditMode::ConvertToComponentSpaceTransform(const USkeletalMeshComponent* SkelComp, const FTransform& InTransform, FTransform& OutCSTransform, int32 BoneIndex, EBoneControlSpace Space)
+void FCustomIKControlBaseEditMode::ConvertToComponentSpaceTransform(
+	const USkeletalMeshComponent* SkelComp, 
+	const FTransform& InTransform, 
+	FTransform& OutCSTransform,
+	int32 BoneIndex, 
+	EBoneControlSpace Space)
 {
 	USkeleton* Skeleton = SkelComp->GetSkeletalMeshAsset()->GetSkeleton();
 
@@ -392,7 +406,13 @@ void FCustomIKControlBaseEditMode::ConvertToComponentSpaceTransform(const USkele
 }
 
 
-void FCustomIKControlBaseEditMode::ConvertToBoneSpaceTransform(const USkeletalMeshComponent* SkelComp, const FTransform& InCSTransform, FTransform& OutBSTransform, int32 BoneIndex, EBoneControlSpace Space)
+
+void FCustomIKControlBaseEditMode::ConvertToBoneSpaceTransform(
+	const USkeletalMeshComponent* SkelComp,
+	const FTransform& InCSTransform, 
+	FTransform& OutBSTransform, 
+	int32 BoneIndex, 
+	EBoneControlSpace Space)
 {
 	USkeleton* Skeleton = SkelComp->GetSkeletalMeshAsset()->GetSkeleton();
 
@@ -455,7 +475,13 @@ void FCustomIKControlBaseEditMode::ConvertToBoneSpaceTransform(const USkeletalMe
 	}
 }
 
-FVector FCustomIKControlBaseEditMode::ConvertCSVectorToBoneSpace(const USkeletalMeshComponent* SkelComp, FVector& InCSVector, FCSPose<FCompactHeapPose>& MeshBases, const FCustomBoneSocketTarget& InTarget, const EBoneControlSpace Space)
+
+FVector FCustomIKControlBaseEditMode::ConvertCSVectorToBoneSpace(
+	const USkeletalMeshComponent* SkelComp, 
+	FVector& InCSVector, 
+	FCSPose<FCompactHeapPose>& MeshBases, 
+	const FCustomBoneSocketTarget& InTarget,
+	const EBoneControlSpace Space)
 {
 	FVector OutVector = FVector::ZeroVector;
 
@@ -488,7 +514,13 @@ FVector FCustomIKControlBaseEditMode::ConvertCSVectorToBoneSpace(const USkeletal
 	return OutVector;
 }
 
-FVector FCustomIKControlBaseEditMode::ConvertCSVectorToBoneSpace(const USkeletalMeshComponent* SkelComp, FVector& InCSVector, FCSPose<FCompactHeapPose>& MeshBases, const FName& BoneName, const EBoneControlSpace Space)
+
+FVector FCustomIKControlBaseEditMode::ConvertCSVectorToBoneSpace(
+	const USkeletalMeshComponent* SkelComp, 
+	FVector& InCSVector,
+	FCSPose<FCompactHeapPose>& MeshBases, 
+	const FName& BoneName, 
+	const EBoneControlSpace Space)
 {
 	FVector OutVector = FVector::ZeroVector;
 
@@ -529,7 +561,13 @@ FVector FCustomIKControlBaseEditMode::ConvertCSVectorToBoneSpace(const USkeletal
 	return OutVector;
 }
 
-FQuat FCustomIKControlBaseEditMode::ConvertCSRotationToBoneSpace(const USkeletalMeshComponent* SkelComp, FRotator& InCSRotator, FCSPose<FCompactHeapPose>& MeshBases, const FName& BoneName, const EBoneControlSpace Space)
+
+FQuat FCustomIKControlBaseEditMode::ConvertCSRotationToBoneSpace(
+	const USkeletalMeshComponent* SkelComp, 
+	FRotator& InCSRotator,
+	FCSPose<FCompactHeapPose>& MeshBases, 
+	const FName& BoneName, 
+	const EBoneControlSpace Space)
 {
 	FQuat OutQuat = FQuat::Identity;
 
@@ -579,7 +617,13 @@ FQuat FCustomIKControlBaseEditMode::ConvertCSRotationToBoneSpace(const USkeletal
 	return OutQuat;
 }
 
-FVector FCustomIKControlBaseEditMode::ConvertWidgetLocation(const USkeletalMeshComponent* InSkelComp, FCSPose<FCompactHeapPose>& InMeshBases, const FCustomBoneSocketTarget& Target, const FVector& InLocation, const EBoneControlSpace Space)
+
+FVector FCustomIKControlBaseEditMode::ConvertWidgetLocation(
+	const USkeletalMeshComponent* InSkelComp,
+	FCSPose<FCompactHeapPose>& InMeshBases, 
+	const FCustomBoneSocketTarget& InTarget,
+	const FVector& InLocation,
+	const EBoneControlSpace Space)
 {
 	FVector WidgetLoc = FVector::ZeroVector;
 
@@ -594,7 +638,7 @@ FVector FCustomIKControlBaseEditMode::ConvertWidgetLocation(const USkeletalMeshC
 
 		case BCS_ParentBoneSpace:
 		{
-			const FCompactPoseBoneIndex CompactBoneIndex = Target.GetCompactPoseBoneIndex();
+			const FCompactPoseBoneIndex CompactBoneIndex = InTarget.GetCompactPoseBoneIndex();
 
 			if (CompactBoneIndex != INDEX_NONE)
 			{
@@ -609,7 +653,7 @@ FVector FCustomIKControlBaseEditMode::ConvertWidgetLocation(const USkeletalMeshC
 				}
 				else
 				{
-					UE_LOG(LogAnimation, Warning, TEXT("Using socket(%d), Socket name(%s), Bone name(%s)"), Target.bUseSocket, *Target.SocketReference.SocketName.ToString(), *Target.BoneReference.BoneName.ToString());
+					UE_LOG(LogAnimation, Warning, TEXT("Using socket(%d), Socket name(%s), Bone name(%s)"), InTarget.bUseSocket, *InTarget.SocketReference.SocketName.ToString(), *InTarget.BoneReference.BoneName.ToString());
 				}
 			}
 		}
@@ -618,7 +662,13 @@ FVector FCustomIKControlBaseEditMode::ConvertWidgetLocation(const USkeletalMeshC
 	return WidgetLoc;
 }
 
-FVector FCustomIKControlBaseEditMode::ConvertWidgetLocation(const USkeletalMeshComponent* SkelComp, FCSPose<FCompactHeapPose>& MeshBases, const FName& BoneName, const FVector& Location, const EBoneControlSpace Space)
+
+FVector FCustomIKControlBaseEditMode::ConvertWidgetLocation(
+	const USkeletalMeshComponent* SkelComp, 
+	FCSPose<FCompactHeapPose>& MeshBases, 
+	const FName& BoneName, 
+	const FVector& Location, 
+	const EBoneControlSpace Space)
 {
 	FVector WidgetLoc = FVector::ZeroVector;
 

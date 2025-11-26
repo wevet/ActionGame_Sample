@@ -5,6 +5,28 @@
 #include "Engine/SkeletalMeshSocket.h"
 
 
+FCustomBoneSocketTarget::FCustomBoneSocketTarget(FName InName/* = NAME_None*/, bool bInUseSocket/* = false*/)
+{
+	bUseSocket = bInUseSocket;
+
+	if (bUseSocket)
+	{
+		SocketReference.SocketName = InName;
+	}
+	else
+	{
+		BoneReference.BoneName = InName;
+	}
+}
+
+void FCustomBoneSocketTarget::Initialize(const FAnimInstanceProxy* InAnimInstanceProxy)
+{
+	if (bUseSocket)
+	{
+		SocketReference.InitializeSocketInfo(InAnimInstanceProxy);
+	}
+}
+
 void FCustomSocketReference::InitializeSocketInfo(const FAnimInstanceProxy* InAnimInstanceProxy)
 {
 	CachedSocketMeshBoneIndex = INDEX_NONE;
@@ -58,4 +80,52 @@ void FCustomBoneSocketTarget::InitializeBoneReferences(const FBoneContainer& Req
 	}
 }
 
+
+bool FCustomBoneSocketTarget::HasValidSetup() const
+{
+	if (bUseSocket)
+	{
+		return SocketReference.HasValidSetup();
+	}
+	return BoneReference.BoneIndex != INDEX_NONE;
+}
+
+
+bool FCustomBoneSocketTarget::HasTargetSetup() const
+{
+	if (bUseSocket)
+	{
+		return (SocketReference.SocketName != NAME_None);
+	}
+	return (BoneReference.BoneName != NAME_None);
+}
+
+
+FName FCustomBoneSocketTarget::GetTargetSetup() const
+{
+	if (bUseSocket)
+	{
+		return (SocketReference.SocketName);
+	}
+	return (BoneReference.BoneName);
+}
+
+bool FCustomBoneSocketTarget::IsValidToEvaluate(const FBoneContainer& RequiredBones) const
+{
+	if (bUseSocket)
+	{
+		return SocketReference.IsValidToEvaluate();
+	}
+	return BoneReference.IsValidToEvaluate(RequiredBones);
+}
+
+
+FCompactPoseBoneIndex FCustomBoneSocketTarget::GetCompactPoseBoneIndex() const
+{
+	if (bUseSocket)
+	{
+		return SocketReference.GetCachedSocketCompactBoneIndex();
+	}
+	return BoneReference.CachedCompactPoseIndex;
+}
 

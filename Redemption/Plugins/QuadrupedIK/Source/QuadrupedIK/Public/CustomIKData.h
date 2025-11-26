@@ -354,83 +354,31 @@ struct QUADRUPEDIK_API FCustomBoneSocketTarget
 {
 	GENERATED_BODY()
 
-	UPROPERTY(EditAnywhere, Category = FCustomBoneSocketTarget)
+	UPROPERTY(EditAnywhere, Category = CustomBoneSocketTarget)
 	bool bUseSocket;
 
-	UPROPERTY(EditAnywhere, Category = FCustomBoneSocketTarget, meta = (EditCondition = "!bUseSocket"))
+	UPROPERTY(EditAnywhere, Category = CustomBoneSocketTarget, meta = (EditCondition = "!bUseSocket"))
 	FBoneReference BoneReference;
 
-	UPROPERTY(EditAnywhere, Category = FCustomBoneSocketTarget, meta = (EditCondition = "bUseSocket"))
+	UPROPERTY(EditAnywhere, Category = CustomBoneSocketTarget, meta = (EditCondition = "bUseSocket"))
 	FCustomSocketReference SocketReference;
 
-	FCustomBoneSocketTarget(FName InName = NAME_None, bool bInUseSocket = false)
-	{
-		bUseSocket = bInUseSocket;
-
-		if (bUseSocket)
-		{
-			SocketReference.SocketName = InName;
-		}
-		else
-		{
-			BoneReference.BoneName = InName;
-		}
-	}
+	FCustomBoneSocketTarget(FName InName = NAME_None, bool bInUseSocket = false);
 
 	void InitializeBoneReferences(const FBoneContainer& RequiredBones);
 
-	void Initialize(const FAnimInstanceProxy* InAnimInstanceProxy)
-	{
-		if (bUseSocket)
-		{
-			SocketReference.InitializeSocketInfo(InAnimInstanceProxy);
-		}
-	}
+	void Initialize(const FAnimInstanceProxy* InAnimInstanceProxy);
 
-	bool HasValidSetup() const
-	{
-		if (bUseSocket)
-		{
-			return SocketReference.HasValidSetup();
-		}
-		return BoneReference.BoneIndex != INDEX_NONE;
-	}
 
-	bool HasTargetSetup() const
-	{
-		if (bUseSocket)
-		{
-			return (SocketReference.SocketName != NAME_None);
-		}
-		return (BoneReference.BoneName != NAME_None);
-	}
+	bool HasValidSetup() const;
 
-	FName GetTargetSetup() const
-	{
-		if (bUseSocket)
-		{
-			return (SocketReference.SocketName);
-		}
-		return (BoneReference.BoneName);
-	}
+	bool HasTargetSetup() const;
 
-	bool IsValidToEvaluate(const FBoneContainer& RequiredBones) const
-	{
-		if (bUseSocket)
-		{
-			return SocketReference.IsValidToEvaluate();
-		}
-		return BoneReference.IsValidToEvaluate(RequiredBones);
-	}
+	FName GetTargetSetup() const;
 
-	FCompactPoseBoneIndex GetCompactPoseBoneIndex() const
-	{
-		if (bUseSocket)
-		{
-			return SocketReference.GetCachedSocketCompactBoneIndex();
-		}
-		return BoneReference.CachedCompactPoseIndex;
-	}
+	bool IsValidToEvaluate(const FBoneContainer& RequiredBones) const;
+
+	FCompactPoseBoneIndex GetCompactPoseBoneIndex() const;
 
 	template<typename poseType>
 	FTransform GetTargetTransform(const FVector& TargetOffset, FCSPose<poseType>& InPose, const FTransform& InComponentToWorld) const
@@ -685,23 +633,6 @@ public:
 	{
 	}
 
-	FCCDIK_Modified_ChainLink(const FVector& InPosition, const float InLength, const FCompactPoseBoneIndex& InBoneIndex, const int32& InTransformIndex, const FVector& InDefaultDirToParent) :
-		Position(InPosition),
-		Length(InLength),
-		BoneIndex(InBoneIndex.GetInt()),
-		TransformIndex(InTransformIndex),
-		DefaultDirToParent(InDefaultDirToParent)
-	{
-	}
-
-	FCCDIK_Modified_ChainLink(const FVector& InPosition, const float InLength, const int32 InBoneIndex, const int32 InTransformIndex) :
-		Position(InPosition),
-		Length(InLength),
-		BoneIndex(InBoneIndex),
-		TransformIndex(InTransformIndex),
-		DefaultDirToParent(FVector(-1.f, 0.f, 0.f))
-	{
-	}
 };
 
 

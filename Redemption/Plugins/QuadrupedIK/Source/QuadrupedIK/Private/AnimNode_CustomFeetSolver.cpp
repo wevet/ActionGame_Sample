@@ -16,7 +16,6 @@
 
 DECLARE_CYCLE_STAT(TEXT("CustomFeetSolver Eval"), STAT_CustomFeetSolver_Eval, STATGROUP_Anim);
 
-#define FEET_COUNTER_LIMIT 500
 #define ITERATION_COUNTER 50
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(AnimNode_CustomFeetSolver)
@@ -51,6 +50,25 @@ void FAnimNode_CustomFeetSolver::Initialize_AnyThread(const FAnimationInitialize
 		PredictionAnimInstance = Cast<UPredictionAnimInstance>(Context.AnimInstanceProxy->GetAnimInstanceObject());
 	}
 	BlendRefPose.Initialize(Context);
+
+
+	PreviousMovementDirection = FVector::ZeroVector;
+	DirectionChangeAlpha = 0.0f;
+	DirectionChangeSmoothing = 1.0f;
+
+	// 前フレームの足位置配列を初期化
+	PreviousFeetLocations.Empty();
+	for (int32 Index = 0; Index < SolverInputData.FeetBones.Num(); Index++)
+	{
+		TArray<FVector> FootLocArray;
+		//auto A = SolverInputData.FeetBones[Index];
+
+		for (int32 j = 0; j < SolverInputData.FeetBones[Index].FingerBoneArray.Num(); j++)
+		{
+			FootLocArray.Add(FVector::ZeroVector);
+		}
+		PreviousFeetLocations.Add(FootLocArray);
+	}
 }
 
 
@@ -107,11 +125,13 @@ void FAnimNode_CustomFeetSolver::GetAnimatedPoseInfo(FCSPose<FCompactPose>& Mesh
 	}
 }
 
+
+
 void FAnimNode_CustomFeetSolver::CalculateFeetRotation(FComponentSpacePoseContext& Output, TArray<TArray<FTransform>> FeetRotationArray)
 {
 	const FTransform& ComponentToWorld = Output.AnimInstanceProxy->GetComponentTransform();
-
 	constexpr float TempScale = 3.0f;
+
 
 	for (int32 SpineIndex = 0; SpineIndex < SpineHitPairs.Num(); SpineIndex++)
 	{
@@ -167,10 +187,23 @@ void FAnimNode_CustomFeetSolver::CalculateFeetRotation(FComponentSpacePoseContex
 				const float SideDzThreshold = TempScale * ScaleMode;
 				const bool bUseFourPoint = (DzFront < FrontDzThreshold) && (DzSide < SideDzThreshold);
 
+
+				// CSで定義されている基準ベクトル
+
+				const FVector MeshFwdWS = Output.AnimInstanceProxy->GetSkelMeshComponent()->GetForwardVector();
+				const FVector FwdWS = UKismetMathLibrary::TransformDirection(
+					ComponentToWorld, 
+					UKismetMathLibrary::InverseTransformDirection(ComponentToWorld, MeshFwdWS));
+
+				const FVector UpWS = UKismetMathLibrary::TransformDirection(ComponentToWorld, CharacterDirectionVectorCS);
+				const FVector RightWS = FVector::CrossProduct(FwdWS, UpWS).GetSafeNormal();
+
+
 				if (bUseFourPoint)
 				{
-					const FVector ImpactForward = (FeetHit.ImpactPoint - FeetFront.ImpactPoint).GetSafeNormal();
-					const FVector RightCross = (FeetRight.ImpactPoint - FeetLeft.ImpactPoint).GetSafeNormal();
+					FVector ImpactForward = (FeetHit.ImpactPoint - FeetFront.ImpactPoint).GetSafeNormal();
+					FVector RightCross = (FeetRight.ImpactPoint - FeetLeft.ImpactPoint).GetSafeNormal();
+
 					FVector ImpactForwardFinal = FVector::CrossProduct(ImpactForward, RightCross).GetSafeNormal();
 					ImpactForwardFinal = UKismetMathLibrary::InverseTransformDirection(
 						ComponentToWorld,
@@ -198,27 +231,23 @@ void FAnimNode_CustomFeetSolver::CalculateFeetRotation(FComponentSpacePoseContex
 					Output.Pose.GetComponentSpaceTransform(SpineFeetPair[SpineIndex].FeetArray[FeetIndex].CachedCompactPoseIndex),
 					FeetLimit);
 
-
 				const FRotator DirectionRotation = RotatedRotation;
 
-				if (!bIgnoreLerping)
-				{
-					FeetModofyTransformArray[SpineIndex][FeetIndex].SetRotation(
-						AnimationQuatSlerp(
-							SpineHitPairs[SpineIndex].FeetHitArray[FeetIndex].bBlockingHit,
-							FeetModofyTransformArray[SpineIndex][FeetIndex].GetRotation(),
-							DirectionRotation.Quaternion(),
-							DTRotationSpeed));
-				}
-				else
-				{
-					FeetModofyTransformArray[SpineIndex][FeetIndex].SetRotation(DirectionRotation.Quaternion());
-				}
+				auto Res = AnimationQuatSlerp(
+					SpineHitPairs[SpineIndex].FeetHitArray[FeetIndex].bBlockingHit,
+					FeetModofyTransformArray[SpineIndex][FeetIndex].GetRotation(),
+					DirectionRotation.Quaternion(),
+					DTRotationSpeed);
+
+				FeetModofyTransformArray[SpineIndex][FeetIndex].SetRotation(Res);
+
 				FeetModifiedNormalArray[SpineIndex][FeetIndex] = ImpactNormal;
 
 			}
 
-			if (bIsAffectToesAlways)
+
+
+			if (bIsCalcIKToes)
 			{
 				for (int32 FingerIndex = 0; FingerIndex < SpineHitPairs[SpineIndex].FingerHitArray[FeetIndex].Num(); FingerIndex++)
 				{
@@ -274,26 +303,26 @@ void FAnimNode_CustomFeetSolver::CalculateFeetRotation(FComponentSpacePoseContex
 								NormalFingerImpact);
 						}
 
-						const FRotator RotatedFingerRotation = RotationFromImpactNormal(SpineIndex, FeetIndex, true, Output, NormalFingerImpact, 
-							BoneTransformFinger, FeetLimit);
+						const FRotator RotatedFingerRotation = RotationFromImpactNormal(
+							SpineIndex, 
+							FeetIndex, 
+							true, 
+							Output, 
+							NormalFingerImpact, 
+							BoneTransformFinger, 
+							FeetLimit);
 
-						if (!bIgnoreLerping)
-						{
-							FeetFingerTransformArray[SpineIndex][FeetIndex][FingerIndex].SetRotation(
-								AnimationQuatSlerp(
-									bHasForwardFingerHits, 
-									FeetFingerTransformArray[SpineIndex][FeetIndex][FingerIndex].GetRotation(), 
-									RotatedFingerRotation.Quaternion(), 
-									DTRotationSpeed)
-							);
-						}
-						else
-						{
-							FeetFingerTransformArray[SpineIndex][FeetIndex][FingerIndex].SetRotation(RotatedFingerRotation.Quaternion());
-						}
+						auto Res = AnimationQuatSlerp(
+							bHasForwardFingerHits,
+							FeetFingerTransformArray[SpineIndex][FeetIndex][FingerIndex].GetRotation(),
+							RotatedFingerRotation.Quaternion(),
+							DTRotationSpeed);
+
+						FeetFingerTransformArray[SpineIndex][FeetIndex][FingerIndex].SetRotation(Res);
 					}
 				}
 			}
+
 
 		}
 
@@ -301,6 +330,17 @@ void FAnimNode_CustomFeetSolver::CalculateFeetRotation(FComponentSpacePoseContex
 }
 
 
+/// <summary>
+/// @wip
+/// </summary>
+/// <param name="SpineIndex"></param>
+/// <param name="FeetIndex"></param>
+/// <param name="bIsFinger"></param>
+/// <param name="Output"></param>
+/// <param name="NormalImpactInput"></param>
+/// <param name="OriginalBoneTransform"></param>
+/// <param name="FeetLimit"></param>
+/// <returns></returns>
 FRotator FAnimNode_CustomFeetSolver::RotationFromImpactNormal(
 	const int32 SpineIndex, 
 	const int32 FeetIndex, 
@@ -312,6 +352,9 @@ FRotator FAnimNode_CustomFeetSolver::RotationFromImpactNormal(
 {
 
 	const FTransform& ComponentToWorld = Output.AnimInstanceProxy->GetComponentTransform();
+	const auto SK = Output.AnimInstanceProxy->GetSkelMeshComponent();
+	const AActor* Owner = SK->GetOwner();
+
 
 	const FVector ImpactNormal = UKismetMathLibrary::InverseTransformDirection(
 		ComponentToWorld,
@@ -322,9 +365,11 @@ FRotator FAnimNode_CustomFeetSolver::RotationFromImpactNormal(
 		0.0f, 
 		UKismetMathLibrary::DegAtan2(ImpactNormal.Y, ImpactNormal.Z) * 1);
 
+
 	const FVector UnitNormalImpact = CharacterDirectionVectorCS;
 	const FRotator UnitNormalRotation = FRotator(
-		UKismetMathLibrary::DegAtan2(UnitNormalImpact.X, UnitNormalImpact.Z) * -1, 0, 
+		UKismetMathLibrary::DegAtan2(UnitNormalImpact.X, UnitNormalImpact.Z) * -1, 
+		0, 
 		UKismetMathLibrary::DegAtan2(UnitNormalImpact.Y, UnitNormalImpact.Z) * 1);
 
 	if (!bEnablePitch)
@@ -352,7 +397,9 @@ FRotator FAnimNode_CustomFeetSolver::RotationFromImpactNormal(
 		TestTransform1.SetRotation(Forward_Rotation_Difference * TestTransform1.GetRotation());
 	}
 	NormalRotation = FRotator(NormalRotation.Quaternion() * (TestTransform1.Rotator()).Quaternion());
+
 	return NormalRotation;
+
 }
 
 
@@ -461,13 +508,43 @@ void FAnimNode_CustomFeetSolver::UpdateInternal(const FAnimationUpdateContext& C
 	const AActor* Owner = Context.AnimInstanceProxy->GetSkelMeshComponent()->GetOwner();
 
 	const float DeltaSeconds = CachedDeltaSeconds;
-	TargetFPS = (1.0f / FMath::Max(DeltaSeconds, KINDA_SMALL_NUMBER));
 	ScaleMode = ComponentToWorld.GetScale3D().Z * VirtualScale;
+
+	FVector CurrentMovementDirection = FVector::ZeroVector;
+	FRotator CurrentCharacterRotation = FRotator::ZeroRotator;
 
 	if (Owner)
 	{
-		CharacterMovementSpeed = Owner->GetVelocity().Size();
+		CharacterMovementSpeed = Owner->GetVelocity().Size2D();
+		CurrentMovementDirection = Owner->GetVelocity().GetSafeNormal();
+		CurrentCharacterRotation = Owner->GetActorRotation();
 	}
+
+	// 方向転換の検出
+	if (!PreviousMovementDirection.IsNearlyZero() && !CurrentMovementDirection.IsNearlyZero())
+	{
+		float DirectionDot = FVector::DotProduct(PreviousMovementDirection, CurrentMovementDirection);
+		// 90度以上の方向転換を検出 (Dot < 0)
+		if (DirectionDot < 0.7f) // 約45度以上の変化
+		{
+			DirectionChangeAlpha = FMath::Max(DirectionChangeAlpha, 1.0f);
+		}
+	}
+
+	if (!PreviousCharacterRotation.IsZero())
+	{
+		FRotator RotationDelta = (CurrentCharacterRotation - PreviousCharacterRotation).GetNormalized();
+		CharacterRotationLag = FMath::Abs(RotationDelta.Yaw) * Context.GetDeltaTime();
+	}
+
+	// 方向転換アルファを徐々に減衰
+	DirectionChangeAlpha = FMath::Max(0.0f, DirectionChangeAlpha - Context.GetDeltaTime() * 2.0f);
+	DirectionChangeSmoothing = FMath::Clamp(1.0f - DirectionChangeAlpha, 0.3f, 1.0f);
+	PreviousMovementDirection = CurrentMovementDirection;
+
+	PreviousCharacterRotation = CurrentCharacterRotation;
+	CachedCharacterRotation = CurrentCharacterRotation;
+
 
 	const float ExtraMultiplier = InterpolationVelocityCurve.GetRichCurve()->Eval(CharacterMovementSpeed);
 	DTLocationSpeed = FMath::Clamp(DeltaSeconds * 15.0f * LocationLerpSpeed * ExtraMultiplier, 0.0f, 1.0f);
@@ -929,15 +1006,17 @@ void FAnimNode_CustomFeetSolver::ApplyTwoBoneIK(
 	FTransform UpperLimbCSTransformX = MeshBasesSaved.Pose.GetComponentSpaceTransform(UpperLimbIndex);
 	FTransform EndBoneCSTransformX = MeshBasesSaved.Pose.GetComponentSpaceTransform(IKBoneCompactPoseIndex);
 
+	FTransform& Joint_MainTarget = FeetModofyTransformArray[SpineIndex][FeetIndex];
+
 	// don't remove it ! fixed
 	if (!Owner->GetWorld()->IsGameWorld())
 	{
-		FeetModofyTransformArray[SpineIndex][FeetIndex] = EndBoneCSTransformX;
+		Joint_MainTarget = EndBoneCSTransformX;
 	}
 
 	if (bFirstTimeSetup)
 	{
-		FeetModofyTransformArray[SpineIndex][FeetIndex] = EndBoneCSTransformX;
+		Joint_MainTarget = EndBoneCSTransformX;
 
 		if (FirstTimeCounter > 5)
 		{
@@ -964,7 +1043,7 @@ void FAnimNode_CustomFeetSolver::ApplyTwoBoneIK(
 
 	const float DeltaSeconds = CachedDeltaSeconds;
 
-	if (!bFirstTimeSetup && bEnableSolver) //bHasAtleastHit && 
+	if (!bFirstTimeSetup && bEnableSolver) 
 	{
 		FTransform EndBoneWorldTransform = EndBoneCSTransform;
 		FAnimationRuntime::ConvertCSTransformToBoneSpace(
@@ -987,22 +1066,19 @@ void FAnimNode_CustomFeetSolver::ApplyTwoBoneIK(
 					TempImpactRef.Z = (EndBoneWorldTransform.GetLocation() - CharacterDirectionVector * FeetRootHeights[SpineIndex][FeetIndex]).Z;
 				}
 
-				if (bIgnoreLocationLerping) 
-				{
-					FeetImpactPointArray[SpineIndex][FeetIndex] = TempImpactRef;
-				}
-				else
-				{
-					FeetImpactPointArray[SpineIndex][FeetIndex] = AnimationLocationLerp(
-						SpineHitPairs[SpineIndex].FeetHitArray[FeetIndex].bBlockingHit, 
-						FVector(TempImpactRef.X, TempImpactRef.Y, FeetImpactPointArray[SpineIndex][FeetIndex].Z), 
-						TempImpactRef, 
-						DTLocationSpeed);
-				}
+				FeetImpactPointArray[SpineIndex][FeetIndex] = AnimationLocationLerp(
+					SpineHitPairs[SpineIndex].FeetHitArray[FeetIndex].bBlockingHit,
+					FVector(TempImpactRef.X, TempImpactRef.Y, FeetImpactPointArray[SpineIndex][FeetIndex].Z),
+					TempImpactRef,
+					DTLocationSpeed);
 			}
 
-			EffectorLocationPoint = (FeetImpactPointArray[SpineIndex][FeetIndex] + CharacterDirectionVector * FeetRootHeights[SpineIndex][FeetIndex]);
-			const float FeetLimit = FMath::Clamp(FMath::Abs(SolverInputData.FeetBones[SpineFeetPair[SpineIndex].OrderIndexArray[FeetIndex]].FeetRotationLimit), 1, 90);
+			const auto& L_Origin = FeetImpactPointArray[SpineIndex][FeetIndex];
+
+			EffectorLocationPoint = (L_Origin + CharacterDirectionVector * FeetRootHeights[SpineIndex][FeetIndex]);
+			const float FeetLimit = FMath::Clamp(
+				FMath::Abs(SolverInputData.FeetBones[SpineFeetPair[SpineIndex].OrderIndexArray[FeetIndex]].FeetRotationLimit), 1, 90);
+
 			float LimitAlphaValue = FeetLimit / 90.0f;
 			LimitAlphaValue = LimitAlphaValue * ComplexSimpleFootVelocityCurve.GetRichCurve()->Eval(CharacterMovementSpeed);
 
@@ -1012,10 +1088,10 @@ void FAnimNode_CustomFeetSolver::ApplyTwoBoneIK(
 					UKismetMathLibrary::VLerp(CharacterDirectionVector, FeetModifiedNormalArray[SpineIndex][FeetIndex], LimitAlphaValue)));
 
 				FTransform Origin_Transform = FTransform::Identity;
-				Origin_Transform.SetLocation(FeetImpactPointArray[SpineIndex][FeetIndex]);
+				Origin_Transform.SetLocation(L_Origin);
 
 				FTransform New_Transform = FTransform::Identity;
-				New_Transform.SetLocation(FeetImpactPointArray[SpineIndex][FeetIndex]);
+				New_Transform.SetLocation(L_Origin);
 				New_Transform.SetRotation(Post_Rotated_Normal);
 
 				const FTransform Diff_Transform = Origin_Transform.Inverse() * New_Transform;
@@ -1036,19 +1112,22 @@ void FAnimNode_CustomFeetSolver::ApplyTwoBoneIK(
 			FVector Formatted_Effector_Point = EffectorLocationPoint;
 			if (bEnableFootLiftLimit)
 			{
+
+				const auto L_Idx = SpineFeetPair[SpineIndex].OrderIndexArray[FeetIndex];
+
 				Formatted_Effector_Point = UpperLimbCSTransform.GetLocation() + Point_Thigh_Dir * 
 					FMath::Clamp(Point_Thigh_Size, 
-						Effector_Thigh_Size * FMath::Abs(SolverInputData.FeetBones[SpineFeetPair[SpineIndex].OrderIndexArray[FeetIndex]].MinFeetExtension), 
-						Effector_Thigh_Size * FMath::Abs(SolverInputData.FeetBones[SpineFeetPair[SpineIndex].OrderIndexArray[FeetIndex]].MaxFeetExtension));
+						Effector_Thigh_Size * 
+						FMath::Abs(SolverInputData.FeetBones[L_Idx].MinFeetExtension),
+						Effector_Thigh_Size * 
+						FMath::Abs(SolverInputData.FeetBones[L_Idx].MaxFeetExtension));
 
 				const float Foot_Lift_Height = (Formatted_Effector_Point - Original_EndBoneCSTransform.GetLocation()).Size();
 
-				if (SolverInputData.FeetBones[SpineFeetPair[SpineIndex].OrderIndexArray[FeetIndex]].MaxFeetLift > 0.0f)
+				if (SolverInputData.FeetBones[L_Idx].MaxFeetLift > 0.0f)
 				{
-					Formatted_Effector_Point = Original_EndBoneCSTransform.GetLocation() + 
-						CharacterDirectionVectorCS * 
-						FMath::Clamp(Foot_Lift_Height, 0, 
-							SolverInputData.FeetBones[SpineFeetPair[SpineIndex].OrderIndexArray[FeetIndex]].MaxFeetLift);
+					Formatted_Effector_Point = Original_EndBoneCSTransform.GetLocation() + CharacterDirectionVectorCS * 
+						FMath::Clamp(Foot_Lift_Height, 0.0f, SolverInputData.FeetBones[L_Idx].MaxFeetLift);
 				}
 			}
 
@@ -1072,29 +1151,17 @@ void FAnimNode_CustomFeetSolver::ApplyTwoBoneIK(
 			}
 		}
 
-#if 1
-		const FVector UpCS = CharacterDirectionVectorCS.GetSafeNormal();
-		const FVector NormalCS = UKismetMathLibrary::InverseTransformDirection(ComponentToWorld,
-			SpineHitPairs[SpineIndex].FeetHitArray[FeetIndex].ImpactNormal);
-		const float TiltRad = FMath::Acos(FMath::Clamp(FVector::DotProduct(UpCS, NormalCS), -1.f, 1.f));
-		const float TiltDeg = FMath::RadiansToDegrees(TiltRad);
 
-		EffectorLocationPoint.Z += TiltDeg *
-			SolverInputData.FeetBones[SpineFeetPair[SpineIndex].OrderIndexArray[FeetIndex]].FeetSlopeOffsetMultiplier *
-			ScaleMode;
+		FQuat Rotated_Difference = Original_EndBoneCSTransform.GetRotation() * 
+			Joint_MainTarget.GetRotation().Inverse();
 
-#else
-
-		FQuat Rotated_Difference = Original_EndBoneCSTransform.GetRotation() * FeetModofyTransformArray[SpineIndex][FeetIndex].GetRotation().Inverse();
 		EffectorLocationPoint.Z += FMath::Max(
 			FMath::Abs(FRotator(Rotated_Difference).Roll),
 			FMath::Abs(FRotator(Rotated_Difference).Pitch)) *
 			SolverInputData.FeetBones[SpineFeetPair[SpineIndex].OrderIndexArray[FeetIndex]].FeetSlopeOffsetMultiplier *
 			ScaleMode;
-#endif
 
-
-		FeetModofyTransformArray[SpineIndex][FeetIndex].SetLocation(EffectorLocationPoint);
+		Joint_MainTarget.SetLocation(EffectorLocationPoint);
 
 		const float DX = 1.0f - FMath::Exp(-10 * DeltaSeconds);
 		const FHitResult& HitData = SpineHitPairs[SpineIndex].FeetHitArray[FeetIndex];
@@ -1111,7 +1178,7 @@ void FAnimNode_CustomFeetSolver::ApplyTwoBoneIK(
 			ShiftSpeed);
 	}
 
-	FTransform EffectorTransform(ComponentToWorld.TransformPosition(FeetModofyTransformArray[SpineIndex][FeetIndex].GetLocation()));
+	FTransform EffectorTransform(ComponentToWorld.TransformPosition(Joint_MainTarget.GetLocation()));
 
 	FAnimationRuntime::ConvertBoneSpaceTransformToCS(
 		ComponentToWorld,
@@ -1265,19 +1332,19 @@ void FAnimNode_CustomFeetSolver::ApplyTwoBoneIK(
 			if (Owner)
 			{
 				const FTransform FeetCSTransform = MeshBasesSaved.Pose.GetComponentSpaceTransform(IKBoneCompactPoseIndex);
-				const FTransform Feet_Saved_Transform = FTransform(FeetModofyTransformArray[SpineIndex][FeetIndex].Rotator());
+				const FTransform Feet_Saved_Transform = FTransform(Joint_MainTarget.Rotator());
 				if (bShouldRotateFeet)
 				{
-					EndBoneCSTransform.SetRotation(FeetModofyTransformArray[SpineIndex][FeetIndex].GetRotation());
+					EndBoneCSTransform.SetRotation(Joint_MainTarget.GetRotation());
 				}
 			}
 
 		}
 		else
 		{
-			if (FeetModofyTransformArray[SpineIndex][FeetIndex].Rotator().Equals(FRotator::ZeroRotator))
+			if (Joint_MainTarget.Rotator().Equals(FRotator::ZeroRotator))
 			{
-				FeetModofyTransformArray[SpineIndex][FeetIndex].SetRotation(EndBoneCSTransform.GetRotation());
+				Joint_MainTarget.SetRotation(EndBoneCSTransform.GetRotation());
 			}
 
 			if (!bIgnoreLerping)
@@ -1285,19 +1352,19 @@ void FAnimNode_CustomFeetSolver::ApplyTwoBoneIK(
 				const float DT = CachedDeltaSeconds;
 				const float L_Speed = FMath::Clamp(DT * FeetRotationSpeed * 5, 0.0f, 1.0f);
 
-				FeetModofyTransformArray[SpineIndex][FeetIndex].SetRotation(
+				Joint_MainTarget.SetRotation(
 					UKismetMathLibrary::RLerp(
-						FeetModofyTransformArray[SpineIndex][FeetIndex].Rotator(), 
+						Joint_MainTarget.Rotator(),
 						EndBoneCSTransform.Rotator(), L_Speed, true).Quaternion());
 			}
 			else
 			{
-				FeetModofyTransformArray[SpineIndex][FeetIndex].SetRotation(EndBoneCSTransform.GetRotation());
+				Joint_MainTarget.SetRotation(EndBoneCSTransform.GetRotation());
 			}
 
 			if (bShouldRotateFeet)
 			{
-				EndBoneCSTransform.SetRotation(FeetModofyTransformArray[SpineIndex][FeetIndex].GetRotation());
+				EndBoneCSTransform.SetRotation(Joint_MainTarget.GetRotation());
 			}
 		}
 
@@ -1331,7 +1398,8 @@ void FAnimNode_CustomFeetSolver::ApplyTwoBoneIK(
 	OutBoneTransforms.Add(FBoneTransform(LowerLimbIndex, Lerped_LowerLimbCSTransform));
 	OutBoneTransforms.Add(FBoneTransform(IKBoneCompactPoseIndex, Lerped_EndBoneCSTransform));
 
-	if (bIsAffectToesAlways)
+
+	if (bIsCalcIKToes)
 	{
 		for (int32 FingerIndex = 0; FingerIndex < SpineHitPairs[SpineIndex].FingerHitArray[FeetIndex].Num(); FingerIndex++)
 		{
@@ -1352,6 +1420,8 @@ void FAnimNode_CustomFeetSolver::ApplyTwoBoneIK(
 					Lerped_FingerCSTransform));
 		}
 	}
+
+
 
 }
 
@@ -1403,6 +1473,8 @@ void FAnimNode_CustomFeetSolver::ApplySingleBoneIK(
 
 	const float DeltaSeconds = CachedDeltaSeconds;
 	const float DX = (1.0f - FMath::Exp(-10.0f * DeltaSeconds));
+
+	FTransform& Joint_MainTarget = FeetModofyTransformArray[SpineIndex][FeetIndex];
 
 	if ((SpineHitPairs[SpineIndex].FeetHitArray[FeetIndex].bBlockingHit) && bEnableSolver) //&& bHasAtleastHit 
 	{
@@ -1549,6 +1621,34 @@ void FAnimNode_CustomFeetSolver::ApplySingleBoneIK(
 void FAnimNode_CustomFeetSolver::LineTraceControl_AnyThread(FComponentSpacePoseContext& Output, TArray<FBoneTransform>& OutBoneTransforms)
 {
 	const FTransform& ComponentToWorld = Output.AnimInstanceProxy->GetComponentTransform();
+
+	// 前フレームの足位置との差分を計算して急激な変化を抑制
+	for (int32 SpineIndex = 0; SpineIndex < FeetImpactPointArray.Num(); SpineIndex++)
+	{
+		for (int32 FeetIndex = 0; FeetIndex < FeetImpactPointArray[SpineIndex].Num(); FeetIndex++)
+		{
+			if (PreviousFeetLocations.IsValidIndex(SpineIndex) &&
+				PreviousFeetLocations[SpineIndex].IsValidIndex(FeetIndex))
+			{
+				FVector CurrentLocation = FeetImpactPointArray[SpineIndex][FeetIndex];
+				FVector PreviousLocation = PreviousFeetLocations[SpineIndex][FeetIndex];
+
+				// 方向転換時は前フレームとの差分を制限
+				float MaxDistance = 50.0f * (1.0f - DirectionChangeAlpha * 0.7f);
+				FVector Delta = CurrentLocation - PreviousLocation;
+
+				if (Delta.Size() > MaxDistance)
+				{
+					Delta = Delta.GetSafeNormal() * MaxDistance;
+					FeetImpactPointArray[SpineIndex][FeetIndex] = PreviousLocation + Delta;
+				}
+			}
+		}
+	}
+
+	// 現在の位置を保存
+	PreviousFeetLocations = FeetImpactPointArray;
+
 
 	if (SpineHitPairs.Num() > 0 && SpineFeetPair.Num() > 0 && SpineTransformPairs.Num() > 0 && !Output.Pose.GetPose().ContainsNaN())
 	{
@@ -1926,13 +2026,15 @@ TArray<FCustomBone_SpineFeetPair> FAnimNode_CustomFeetSolver::SwapSpinePairs(TAr
 	return OutSpineFeetArray;
 }
 
+
 FVector FAnimNode_CustomFeetSolver::AnimationLocationLerp(
 	const bool bIsHit, 
 	const FVector& StartPosition,
 	const FVector& EndPosition,
 	const float DeltaSeconds) const
 {
-	if (TargetFPS < FPSLerpTreshold)
+
+	if (bIgnoreLerping || bIsHit) 
 	{
 		return EndPosition;
 	}
@@ -1940,13 +2042,16 @@ FVector FAnimNode_CustomFeetSolver::AnimationLocationLerp(
 	const FVector StartPositionValue = StartPosition;
 	const FVector EndPositionValue = EndPosition;
 	constexpr float Max = 6.0f;
-	const FVector Diff = (StartPositionValue - EndPositionValue) / FMath::Clamp<float>(Max - LocationLerpSpeed, 1.0f, Max);
+	const FVector Diff = (StartPositionValue - EndPositionValue) / FMath::Clamp(Max - LocationLerpSpeed, 1.0f, Max);
 	if (LocationInterpType == EIKInterpLocationType::DivisiveLocation)
 	{
 		return StartPositionValue - Diff;
 	}
-	return UKismetMathLibrary::VLerp(StartPositionValue, EndPositionValue, DeltaSeconds);
+
+	const float InterpSpeed =FMath::Abs(LocationLerpSpeed);
+	return FMath::VInterpTo(StartPosition, EndPosition, DeltaSeconds, InterpSpeed);
 }
+
 
 FQuat FAnimNode_CustomFeetSolver::AnimationQuatSlerp(
 	const bool bIsHit, 
@@ -1954,21 +2059,30 @@ FQuat FAnimNode_CustomFeetSolver::AnimationQuatSlerp(
 	const FQuat& EndRotation,
 	const float DeltaSeconds) const
 {
-	if (TargetFPS < FPSLerpTreshold)
+
+	if (bIgnoreLerping || bIsHit) 
 	{
 		return EndRotation;
 	}
 
-	const FQuat StartRotationValue = StartRotation;
-	const FQuat EndRotationValue = EndRotation;
-	const FQuat Diff = ((StartRotationValue.Inverse() * (EndRotationValue * 0.5f).GetNormalized())).GetNormalized();
+
+	const float Speed = FMath::Max(0.0f, DTRotationSpeed); 
+	const float Local_Alpha = FMath::Clamp(Speed * DeltaSeconds, 0.0f, 1.0f);
+
 	if (RotationInterpType == EIKInterpRotationType::DivisiveRotation)
 	{
-		const FQuat QuatResult = StartRotationValue * (Diff);
-		return QuatResult;
+		// 「割り算式」の意味合いを明確化： Start -> End への一回分の割合(1/divisor) で進める
+		const float Divisor = FMath::Clamp(LocationLerpSpeed, 1.0f, 10.0f);
+		const float DivAlpha = FMath::Clamp(1.0f / Divisor, 0.0f, 1.0f);
+		return FQuat::Slerp(StartRotation, EndRotation, DivAlpha).GetNormalized();
 	}
-	return FQuat::Slerp(StartRotationValue, EndRotationValue, DeltaSeconds);
+
+	// 通常は速度*DeltaSeconds を alpha として Slerp
+	return FQuat::Slerp(StartRotation, EndRotation, Local_Alpha).GetNormalized();
+
 }
+
+
 
 TArray<FName> FAnimNode_CustomFeetSolver::BoneArrayMachine_Feet(
 	const FBoneContainer& RequiredBones,
@@ -2146,6 +2260,7 @@ TArray<FName> FAnimNode_CustomFeetSolver::BoneArrayMachine(
 	} while (IterationCount < MaxIterationCount && !bWasFinish);
 	return SpineBoneArray;
 }
+
 
 bool FAnimNode_CustomFeetSolver::CheckLoopExist(
 	const FBoneContainer& RequiredBones,

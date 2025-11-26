@@ -44,12 +44,11 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Settings)
 	TEnumAsByte<ETraceTypeQuery> TraceChannel = ETraceTypeQuery::TraceTypeQuery1;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Settings)
-	float FPSLerpTreshold = 25.0f;
 
-	//UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Settings, meta = (PinHiddenByDefault))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Settings, meta = (PinHiddenByDefault))
 	float LineTraceUpperHeight = 200.0f;
-	//UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Settings, meta = (PinHiddenByDefault))
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Settings, meta = (PinHiddenByDefault))
 	float LineTraceDownHeight = 5.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Settings, meta = (PinHiddenByDefault))
@@ -61,28 +60,32 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Settings, meta = (PinHiddenByDefault))
 	bool bEnableRoll = true;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Settings, meta = (PinHiddenByDefault))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Settings, meta = (PinHiddenByDefault, DisplayName = "Character UpVector"))
 	FVector CharacterDirectionVectorCS = FVector(0.0f, 0.0f, 1.0f);
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Settings, meta = (PinHiddenByDefault))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Settings, meta = (PinHiddenByDefault, DisplayName = "Character ForwardDirection"))
 	FVector CharacterForwardDirectionVector_CS = FVector(0.0f, 1.0f, 0.0f);
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Settings)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Settings, meta = (PinHiddenByDefault, DisplayName = "Pole Vector"))
 	FVector PolesForwardDirectionVector_CS = FVector(0.0f, 1.0f, 0.0f);
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Settings, meta = (PinHiddenByDefault))
-	bool bUseFourPointFeets = false;
+	bool bUseFourPointFeets = true;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Settings, meta = (PinHiddenByDefault))
 	bool bEnableFootLiftLimit = true;
 
-	bool bIsAffectToesAlways = true;
-
-	UPROPERTY(EditAnywhere, Category = Settings, meta = (PinHiddenByDefault))
-	FRuntimeFloatCurve FingerVelocityCurve;
+	/// <summary>
+	/// calcurate finger joints
+	/// </summary>
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Settings, meta = (PinHiddenByDefault))
+	bool bIsCalcIKToes = false;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Settings, meta = (PinHiddenByDefault))
 	float MaxLegIKAngle = 65.0f;
+
+	UPROPERTY(EditAnywhere, Category = Settings, meta = (PinHiddenByDefault))
+	FRuntimeFloatCurve FingerVelocityCurve;
 
 	UPROPERTY(EditAnywhere, Category = Settings, meta = (PinHiddenByDefault))
 	FRuntimeFloatCurve TraceDownMultiplierCurve;
@@ -115,9 +118,6 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = InterpSettings, meta = (PinHiddenByDefault))
 	bool bIgnoreLerping = false;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = InterpSettings, meta = (PinHiddenByDefault))
-	bool bIgnoreLocationLerping = false;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = InterpSettings, meta = (PinHiddenByDefault))
 	bool bEnableComplexRotationMethod = false;
@@ -294,7 +294,6 @@ private:
 	FCustomBoneStruct IKBoneData;
 	//int32 FeetCounter{ 0 };
 	int32 FirstTimeCounter{ 0 };
-	float TargetFPS{ -1.0f };
 	float ScaleMode{ 1.0f };
 	float DTLocationSpeed{ 0.0f };
 	float DTRotationSpeed{ 0.0f };
@@ -348,5 +347,13 @@ private:
 	TArray<FCompactPoseBoneIndex> CombinedIndices;
 
 
+	FVector PreviousMovementDirection;
+	float DirectionChangeAlpha;
+	float DirectionChangeSmoothing;
+	TArray<TArray<FVector>> PreviousFeetLocations; // 前フレームの足位置を保存
+
+	FRotator CachedCharacterRotation;
+	FRotator PreviousCharacterRotation;
+	float CharacterRotationLag; // キャラクター回転の遅延量
 };
 
