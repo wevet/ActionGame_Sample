@@ -295,10 +295,10 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = SpineAdvancedTweaks, meta = (PinHiddenByDefault))
 	float ExtensionSwitchSpeed = 2.0f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = ComponentDirectionSettings, meta = (PinHiddenByDefault))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Settings, meta = (PinHiddenByDefault, DisplayName = "Character UpVector"))
 	FVector CharacterDirectionVectorCS = FVector(0.0f, 0.0f, 1.0f);
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = ComponentDirectionSettings, meta = (PinHiddenByDefault))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Settings, meta = (PinHiddenByDefault, DisplayName = "Character ForwardDirection"))
 	FVector ForwardDirectionVector = FVector(0.0f, 1.0f, 0.0f);
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = ComponentDirectionSettings, meta = (PinHiddenByDefault))

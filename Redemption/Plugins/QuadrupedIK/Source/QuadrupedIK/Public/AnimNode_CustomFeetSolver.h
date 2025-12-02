@@ -108,13 +108,10 @@ public:
 	float ShiftSpeed = 2.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = InterpSettings, meta = (PinHiddenByDefault))
-	float LocationLerpSpeed = 1.0f;
+	float LocationLerpSpeed = 6.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = InterpSettings, meta = (PinHiddenByDefault))
-	float FeetRotationSpeed = 2.0f;
-
-	//UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = InterpSettings, meta = (PinHiddenByDefault))
-	//bool bIgnoreShiftSpeed = false;
+	float FeetRotationSpeed = 6.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = InterpSettings, meta = (PinHiddenByDefault))
 	bool bIgnoreLerping = false;
@@ -195,7 +192,7 @@ private:
 		const float HClampMax) const;
 
 	
-	TArray<FName> BoneArrayMachine(
+	TArray<FName> BoneArrayMachine_Spine(
 		const FBoneContainer& RequiredBones,
 		const int32 Index, 
 		const FName& StartBoneName,
