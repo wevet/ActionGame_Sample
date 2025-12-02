@@ -263,5 +263,5 @@ public:
 		return 1.f - FMath::Exp(-RatePerSec * DeltaSeconds);
 	}
 
-
+	static const bool DoesContainsNaN(const TArray<FBoneTransform>& BoneTransforms);
 };

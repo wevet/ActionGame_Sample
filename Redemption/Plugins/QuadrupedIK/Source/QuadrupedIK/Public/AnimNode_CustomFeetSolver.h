@@ -140,7 +140,7 @@ public:
 	TArray<FCustomBoneSpineFeetPair_WS> SpineTransformPairs;
 	TArray<TArray<TArray<FTransform>>> FeetFingerTransformArray;
 
-
+	TArray<FBoneReference> KneeBoneRefArray;
 
 public:
 	FAnimNode_CustomFeetSolver();
@@ -205,24 +205,14 @@ private:
 	TArray<FName> BoneArrayMachine_Feet(
 		const FBoneContainer& RequiredBones,
 		const int32 Index, 
-		const FName& StartBoneName,
-		const FName& KneeBoneName,
-		const FName& ThighBoneName,
+		const FCustomBone_FootData& FootData,
 		const FName& EndBoneName,
 		const bool bWasFootBone);
 
 	bool CheckLoopExist(
 		const FBoneContainer& RequiredBones,
 		const int32 OrderIndex,
-		const float FeetSlopeOffsetMultiplier,
-		const TArray<FCustomBone_FingerData>& FingerArray,
-		const float FeetAlpha,
-		const float MaxFleetFloat,
-		const FVector& FeetTraceOffset,
-		const FVector& KneeDirectionOffset,
-		const float FeetRotationLimit,
-		const FRotator& FeetRotationOffset,
-		const float FeetHeight,
+		const FCustomBone_FootData& InFootData,
 		const FName& StartBone,
 		const FName& KneeBone,
 		const FName& ThighBone,
@@ -261,8 +251,7 @@ private:
 		const float TraceRadius,
 		FHitResult& OutHitResult,
 		const FLinearColor& DebugColor,
-		const bool bRenderTrace,
-		const bool bDrawLine);
+		const bool bRenderTrace);
 
 	FRotator BoneRelativeConversion(
 		const FAnimationUpdateContext& Context,
@@ -279,17 +268,16 @@ private:
 		const FBoneContainer& BoneContainer,
 		FCSPose<FCompactPose>& MeshBases) const;
 
-	void LineTraceControl_AnyThread(FComponentSpacePoseContext& Output, TArray<FBoneTransform>& OutBoneTransforms);
+	void PrepareAnimatedPoseInfo_AnyThread(FComponentSpacePoseContext& Output, TArray<FBoneTransform>& OutBoneTransforms);
 
 
 	TArray<FCustomBone_SpineFeetPair> SwapSpinePairs(TArray<FCustomBone_SpineFeetPair>& OutSpineFeetArray);
 
-	void GetFeetHeights(FComponentSpacePoseContext& Output);
+	void CalculateFeetFeetHeight(FComponentSpacePoseContext& Output);
 	void CalculateFeetRotation(FComponentSpacePoseContext& Output, TArray<TArray<FTransform>> FeetRotationArray);
 	void GetAnimatedPoseInfo(FCSPose<FCompactPose>& MeshBases);
 
 
-	FVector RotateAroundPoint(const FVector& InputPoint, const FVector& ForwardVector, const FVector& Origin, const float Angle) const;
 
 	FCustomBoneStruct IKBoneData;
 	//int32 FeetCounter{ 0 };

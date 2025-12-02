@@ -152,7 +152,7 @@ void FAnimNode_CustomAimSolver::ConditionalDebugDraw(FPrimitiveDrawInterface* PD
 
 void FAnimNode_CustomAimSolver::UpdateInternal(const FAnimationUpdateContext& Context)
 {
-	Super::UpdateInternal(Context);
+	//Super::UpdateInternal(Context);
 	TraceStartList.Empty();
 	TraceEndList.Empty();
 	ToggleInterpolationSpeed = FMath::Clamp(ToggleInterpolationSpeed, 0.25f, 100);

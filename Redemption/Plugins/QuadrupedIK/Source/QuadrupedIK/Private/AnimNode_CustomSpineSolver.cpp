@@ -58,6 +58,10 @@ void FAnimNode_CustomSpineSolver::Initialize_AnyThread(const FAnimationInitializ
 }
 
 
+/// <summary>
+/// ボーンの情報をキャッシュ
+/// </summary>
+/// <param name="Context"></param>
 void FAnimNode_CustomSpineSolver::CacheBones_AnyThread(const FAnimationCacheBonesContext& Context)
 {
 	FAnimNode_Base::CacheBones_AnyThread(Context);
@@ -169,7 +173,7 @@ void FAnimNode_CustomSpineSolver::GetAnimatedPoseInfo(
 						TotalSpineAlphaArray[Index], 
 						1.0f,
 						1.0f - SmoothValue, 
-						FormatShiftSpeed * 0.5f);
+						FormatShiftSpeed);
 				}
 				else
 				{
@@ -177,7 +181,7 @@ void FAnimNode_CustomSpineSolver::GetAnimatedPoseInfo(
 						TotalSpineAlphaArray[Index], 
 						0.0f, 
 						1.0f - SmoothValue, 
-						FormatShiftSpeed * 0.5f);
+						FormatShiftSpeed);
 				}
 
 				TotalSpineAlphaArray[Index] = FMath::Clamp(TotalSpineAlphaArray[Index], 0.0f, 1.0f);
@@ -325,7 +329,8 @@ void FAnimNode_CustomSpineSolver::GetAnimatedPoseInfo(
 							PelvisSlopeStabAlpha = FMath::FInterpTo(PelvisSlopeStabAlpha, 
 								StabValue, 
 								CachedDeltaSeconds,
-								LocationLerpSpeed / 10.0f);
+								LocationLerpSpeed);
+								//LocationLerpSpeed / 10.0f);
 
 							ThighTransform.SetRotation(FQuat::Slerp(
 								ThighOrigRotation, 
@@ -360,7 +365,8 @@ void FAnimNode_CustomSpineSolver::GetAnimatedPoseInfo(
 							ChestSlopeStabAlpha = FMath::FInterpTo(ChestSlopeStabAlpha, 
 								StabValue, 
 								CachedDeltaSeconds,
-								LocationLerpSpeed / 10);
+								LocationLerpSpeed);
+								//LocationLerpSpeed / 10.0f);
 
 							ThighTransform.SetRotation(FQuat::Slerp(
 								ThighOriginalRotation, 
@@ -409,6 +415,10 @@ void FAnimNode_CustomSpineSolver::GetAnimatedPoseInfo(
 }
 
 
+/// <summary>
+/// アニメーションの評価とボーン変形の適用
+/// </summary>
+/// <param name="Output"></param>
 void FAnimNode_CustomSpineSolver::EvaluateComponentSpace_AnyThread(FComponentSpacePoseContext& Output)
 {
 	checkSlow(Output.Pose.GetPose().IsValid());
@@ -581,7 +591,7 @@ void FAnimNode_CustomSpineSolver::EvaluateComponentSpace_AnyThread(FComponentSpa
 
 			} while (bIsSwapped);
 
-			checkSlow(!DoesContainsNaN(FinalBoneTransformArray));
+			checkSlow(!UQuadrupedIKLibrary::DoesContainsNaN(FinalBoneTransformArray));
 			if (FinalBoneTransformArray.Num() > 0)
 			{
 				const float BlendWeight = FMath::Clamp<float>(ActualAlpha, 0.f, 1.f);
@@ -599,18 +609,6 @@ void FAnimNode_CustomSpineSolver::EvaluateComponentSpace_AnyThread(FComponentSpa
 	}
 }
 
-
-bool FAnimNode_CustomSpineSolver::DoesContainsNaN(const TArray<FBoneTransform>& BoneTransforms_input) const
-{
-	for (int32 Index = 0; Index < BoneTransforms_input.Num(); ++Index)
-	{
-		if (BoneTransforms_input[Index].Transform.ContainsNaN())
-		{
-			return true;
-		}
-	}
-	return false;
-}
 
 
 void FAnimNode_CustomSpineSolver::ConditionalDebugDraw(FPrimitiveDrawInterface* PDI, USkeletalMeshComponent* PreviewSkelMeshComp) const
@@ -733,6 +731,7 @@ void FAnimNode_CustomSpineSolver::UpdateInternal(const FAnimationUpdateContext& 
 		const FVector F_OffsetLocal = DirectionForward * ExtraForwardTraceOffset;
 		FeetMidPoint = FeetMidPoint + F_OffsetLocal;
 
+		// snake bone
 		if (bSpineSnakeBone)
 		{
 			if (SpinePointBetweenArray.Num() > 0 && SpineHitBetweenArray.Num() > 0 && SpineBetweenTransformArray.Num() > 0)
@@ -753,11 +752,13 @@ void FAnimNode_CustomSpineSolver::UpdateInternal(const FAnimationUpdateContext& 
 						FLinearColor::Red, 
 						false);
 
-					if (SpineHitBetweenArray[Index].bBlockingHit)
+					const FHitResult& CurHitResult = SpineHitBetweenArray[Index];
+
+					if (CurHitResult.bBlockingHit)
 					{
 						if (SpinePointBetweenArray[Index] == FVector::ZeroVector || TickCounter < MAX_TICK_COUNTER || !bEnableSnakeInterp)
 						{
-							SpinePointBetweenArray[Index] = SpineHitBetweenArray[Index].ImpactPoint;
+							SpinePointBetweenArray[Index] = CurHitResult.ImpactPoint;
 						}
 						else
 						{
@@ -767,7 +768,7 @@ void FAnimNode_CustomSpineSolver::UpdateInternal(const FAnimationUpdateContext& 
 
 								const FVector ImpactPointInverse = UKismetMathLibrary::InverseTransformLocation(
 									ComponentToWorld,
-									SpineHitBetweenArray[Index].ImpactPoint);
+									CurHitResult.ImpactPoint);
 								SpiralPoint.X = ImpactPointInverse.X;
 								SpiralPoint.Y = ImpactPointInverse.Y;
 								SpiralPoint = UKismetMathLibrary::TransformLocation(ComponentToWorld, SpiralPoint);
@@ -776,7 +777,7 @@ void FAnimNode_CustomSpineSolver::UpdateInternal(const FAnimationUpdateContext& 
 
 							SpinePointBetweenArray[Index] = UKismetMathLibrary::VInterpTo(
 								SpinePointBetweenArray[Index], 
-								SpineHitBetweenArray[Index].ImpactPoint,
+								CurHitResult.ImpactPoint,
 								1 - FMath::Exp(-SmoothFactor * CachedDeltaSeconds), FormatSnakeLerp);
 
 						}
@@ -812,10 +813,11 @@ void FAnimNode_CustomSpineSolver::UpdateInternal(const FAnimationUpdateContext& 
 						ModifyFeetTransform.GetLocation() + CharacterDirectionVector * K_StartScale,
 						ModifyFeetTransform.GetLocation() - CharacterDirectionVector * K_EndScale,
 						SpineHitPairs[Index].FeetHitArray[JIndex],
-						SpineFeetPair[Index].FeetArray[JIndex].BoneName, 
 						SpineFeetPair[Index].FeetArray[JIndex].BoneName,
-						SpineHitPairs[Index].FeetHitArray[JIndex], 
-						FLinearColor::Red, false);
+						SpineFeetPair[Index].FeetArray[JIndex].BoneName,
+						SpineHitPairs[Index].FeetHitArray[JIndex],
+						FLinearColor::Red,
+						false);
 
 					// feet hit
 					if (SpineHitPairs[Index].FeetHitArray[JIndex].bBlockingHit)
@@ -841,7 +843,7 @@ void FAnimNode_CustomSpineSolver::UpdateInternal(const FAnimationUpdateContext& 
 							SpineHitPairs[Index].FeetHitPointArray[JIndex] = UKismetMathLibrary::VInterpTo(
 								SpineHitPairs[Index].FeetHitPointArray[JIndex],
 								SpineHitPairs[Index].FeetHitArray[JIndex].ImpactPoint,
-								1 - FMath::Exp(-SmoothFactor * CachedDeltaSeconds), 
+								1 - FMath::Exp(-SmoothFactor * CachedDeltaSeconds),
 								FormatTraceLerp * 0.1f);
 						}
 					}
@@ -878,11 +880,12 @@ void FAnimNode_CustomSpineSolver::UpdateInternal(const FAnimationUpdateContext& 
 					Context,
 					FeetCenterPoint + CharacterDirectionVector * K_StartScale,
 					FeetCenterPoint - CharacterDirectionVector * K_EndScale,
-					SpineHitPairs[Index].ParentSpineHit, 
-					SpineFeetPair[Index].SpineBoneRef.BoneName, 
+					SpineHitPairs[Index].ParentSpineHit,
 					SpineFeetPair[Index].SpineBoneRef.BoneName,
-					SpineHitPairs[Index].ParentSpineHit, 
-					FLinearColor::Red, false);
+					SpineFeetPair[Index].SpineBoneRef.BoneName,
+					SpineHitPairs[Index].ParentSpineHit,
+					FLinearColor::Red,
+					false);
 
 				// spine hit
 				if (SpineHitPairs[Index].ParentSpineHit.bBlockingHit)
@@ -909,8 +912,8 @@ void FAnimNode_CustomSpineSolver::UpdateInternal(const FAnimationUpdateContext& 
 						const float InterpSpeed = 1 - FMath::Exp(-SmoothFactor * CachedDeltaSeconds);
 
 						SpineHitPairs[Index].ParentSpinePoint = UKismetMathLibrary::VInterpTo(
-							SpineHitPairs[Index].ParentSpinePoint, 
-							SpineHitPairs[Index].ParentSpineHit.ImpactPoint, 
+							SpineHitPairs[Index].ParentSpinePoint,
+							SpineHitPairs[Index].ParentSpineHit.ImpactPoint,
 							InterpSpeed,
 							FormatTraceLerp * 0.1f);
 					}
@@ -929,210 +932,230 @@ void FAnimNode_CustomSpineSolver::UpdateInternal(const FAnimationUpdateContext& 
 				F_Offset_Index = FVector::ZeroVector;
 
 				// 4 direction hits
+				const float UpHit = (LineTraceUpperHeight * ComponentScale);
+				const float DownHit = (LineTraceDownwardHeight * 1 * ComponentScale);
+				const FVector SpiralLeftUpper = FeetCenterPoint + CharacterDirectionVector * UpHit + (RightDir * ComponentScale * VirtualLegWidth);
+				const FVector SpiralRightUpper = FeetCenterPoint + CharacterDirectionVector * UpHit - (RightDir * ComponentScale * VirtualLegWidth);
+				const FVector SpiralFrontUpper = FeetCenterPoint + CharacterDirectionVector * UpHit + (ForwardDir * ComponentScale * VirtualLegWidth);
+				const FVector SpiralBackUpper = FeetCenterPoint + CharacterDirectionVector * UpHit - (ForwardDir * ComponentScale * VirtualLegWidth);
+
+
+				ApplyLineTrace(
+					Context,
+					SpiralLeftUpper,
+					FeetCenterPoint - CharacterDirectionVector * DownHit + (RightDir * ComponentScale * VirtualLegWidth),
+					SpineHitPairs[Index].ParentLeftHit,
+					SpineFeetPair[Index].SpineBoneRef.BoneName,
+					SpineFeetPair[Index].SpineBoneRef.BoneName,
+					SpineHitPairs[Index].ParentLeftHit,
+					FLinearColor::Green,
+					true);
+
+				// right
+				ApplyLineTrace(
+					Context,
+					SpiralRightUpper,
+					FeetCenterPoint - CharacterDirectionVector * DownHit - (RightDir * ComponentScale * VirtualLegWidth),
+					SpineHitPairs[Index].ParentRightHit,
+					SpineFeetPair[Index].SpineBoneRef.BoneName,
+					SpineFeetPair[Index].SpineBoneRef.BoneName,
+					SpineHitPairs[Index].ParentRightHit,
+					FLinearColor::Green,
+					true);
+
+				// front
+				ApplyLineTrace(
+					Context,
+					SpiralFrontUpper,
+					FeetCenterPoint - CharacterDirectionVector * DownHit + (ForwardDir * ComponentScale * VirtualLegWidth),
+					SpineHitPairs[Index].ParentFrontHit,
+					SpineFeetPair[Index].SpineBoneRef.BoneName,
+					SpineFeetPair[Index].SpineBoneRef.BoneName,
+					SpineHitPairs[Index].ParentFrontHit,
+					FLinearColor::Green,
+					true);
+
+				// back
+				ApplyLineTrace(
+					Context,
+					SpiralBackUpper,
+					FeetCenterPoint - CharacterDirectionVector * DownHit - (ForwardDir * ComponentScale * VirtualLegWidth),
+					SpineHitPairs[Index].ParentBackHit,
+					SpineFeetPair[Index].SpineBoneRef.BoneName,
+					SpineFeetPair[Index].SpineBoneRef.BoneName,
+					SpineHitPairs[Index].ParentBackHit,
+					FLinearColor::Green,
+					true);
+
+
+				const FHitResult& LeftHit = SpineHitPairs[Index].ParentLeftHit;
+				const FHitResult& RightHit = SpineHitPairs[Index].ParentRightHit;
+				const FHitResult& FrontHit = SpineHitPairs[Index].ParentFrontHit;
+				const FHitResult& BackHit = SpineHitPairs[Index].ParentBackHit;
+
+				// left hit
+				if (LeftHit.bBlockingHit)
 				{
-					const float UpHit = (LineTraceUpperHeight * ComponentScale);
-					const float DownHit = (LineTraceDownwardHeight * 1 * ComponentScale);
-					const FVector SpiralLeftUpper = FeetCenterPoint + CharacterDirectionVector * UpHit + (RightDir * ComponentScale * VirtualLegWidth);
-					const FVector SpiralRightUpper = FeetCenterPoint + CharacterDirectionVector * UpHit - (RightDir * ComponentScale * VirtualLegWidth);
-					const FVector SpiralFrontUpper = FeetCenterPoint + CharacterDirectionVector * UpHit + (ForwardDir * ComponentScale * VirtualLegWidth);
-					const FVector SpiralBackUpper = FeetCenterPoint + CharacterDirectionVector * UpHit - (ForwardDir * ComponentScale * VirtualLegWidth);
-
-					ApplyLineTrace(
-						Context,
-						SpiralLeftUpper, 
-						FeetCenterPoint - CharacterDirectionVector * DownHit + (RightDir * ComponentScale * VirtualLegWidth),
-						SpineHitPairs[Index].ParentLeftHit,
-						SpineFeetPair[Index].SpineBoneRef.BoneName, 
-						SpineFeetPair[Index].SpineBoneRef.BoneName,
-						SpineHitPairs[Index].ParentLeftHit,
-						FLinearColor::Green, true);
-
-					ApplyLineTrace(
-						Context,
-						SpiralRightUpper, 
-						FeetCenterPoint - CharacterDirectionVector * DownHit - (RightDir * ComponentScale * VirtualLegWidth),
-						SpineHitPairs[Index].ParentRightHit,
-						SpineFeetPair[Index].SpineBoneRef.BoneName, 
-						SpineFeetPair[Index].SpineBoneRef.BoneName,
-						SpineHitPairs[Index].ParentRightHit, 
-						FLinearColor::Green, true);
-
-					ApplyLineTrace(
-						Context,
-						SpiralFrontUpper, 
-						FeetCenterPoint - CharacterDirectionVector * DownHit + (ForwardDir * ComponentScale * VirtualLegWidth),
-						SpineHitPairs[Index].ParentFrontHit,
-						SpineFeetPair[Index].SpineBoneRef.BoneName,
-						SpineFeetPair[Index].SpineBoneRef.BoneName,
-						SpineHitPairs[Index].ParentFrontHit,
-						FLinearColor::Green, true);
-
-					ApplyLineTrace(
-						Context,
-						SpiralBackUpper, 
-						FeetCenterPoint - CharacterDirectionVector * DownHit - (ForwardDir * ComponentScale * VirtualLegWidth),
-						SpineHitPairs[Index].ParentBackHit,
-						SpineFeetPair[Index].SpineBoneRef.BoneName, 
-						SpineFeetPair[Index].SpineBoneRef.BoneName,
-						SpineHitPairs[Index].ParentBackHit, 
-						FLinearColor::Green, true);
-
-					// left hit
-					if (SpineHitPairs[Index].ParentLeftHit.bBlockingHit)
+					if (SpineHitPairs[Index].ParentLeftPoint.IsNearlyZero())
 					{
-						if (SpineHitPairs[Index].ParentLeftPoint == FVector::ZeroVector || TickCounter < MAX_TICK_COUNTER || bIgnoreLerping)
-						{
-							SpineHitPairs[Index].ParentLeftPoint = SpineHitPairs[Index].ParentLeftHit.ImpactPoint;
-						}
-						else
-						{
-							FVector SpiralPoint = SpineHitPairs[Index].ParentLeftPoint;
-							SpiralPoint = UKismetMathLibrary::InverseTransformLocation(ComponentToWorld, SpiralPoint);
-							const FVector ImpactPointInverse = UKismetMathLibrary::InverseTransformLocation(
-								ComponentToWorld,
-								SpineHitPairs[Index].ParentLeftHit.ImpactPoint);
-
-							SpiralPoint.X = ImpactPointInverse.X;
-							SpiralPoint.Y = ImpactPointInverse.Y;
-							SpiralPoint = UKismetMathLibrary::TransformLocation(ComponentToWorld, SpiralPoint);
-							SpineHitPairs[Index].ParentLeftPoint = SpiralPoint;
-
-							const float InterpSpeed = 1 - FMath::Exp(-SmoothFactor * CachedDeltaSeconds);
-
-							SpineHitPairs[Index].ParentLeftPoint = UKismetMathLibrary::VInterpTo(
-								SpineHitPairs[Index].ParentLeftPoint, 
-								SpineHitPairs[Index].ParentLeftHit.ImpactPoint,
-								InterpSpeed, 
-								FormatTraceLerp * 0.1f);
-						}
+						SpineHitPairs[Index].ParentLeftPoint = LeftHit.ImpactPoint;
 					}
 					else
 					{
-						FVector SpiralPoint = SpiralLeftUpper;
+						FVector SpiralPoint = SpineHitPairs[Index].ParentLeftPoint;
 						SpiralPoint = UKismetMathLibrary::InverseTransformLocation(ComponentToWorld, SpiralPoint);
-						SpiralPoint.Z = 0.0f;
+						const FVector ImpactPointInverse = UKismetMathLibrary::InverseTransformLocation(
+							ComponentToWorld,
+							LeftHit.ImpactPoint);
+
+						SpiralPoint.X = ImpactPointInverse.X;
+						SpiralPoint.Y = ImpactPointInverse.Y;
 						SpiralPoint = UKismetMathLibrary::TransformLocation(ComponentToWorld, SpiralPoint);
 						SpineHitPairs[Index].ParentLeftPoint = SpiralPoint;
-					}
 
-					// right hit
-					if (SpineHitPairs[Index].ParentRightHit.bBlockingHit)
-					{
-						if (SpineHitPairs[Index].ParentRightPoint == FVector::ZeroVector || TickCounter < MAX_TICK_COUNTER || bIgnoreLerping)
-						{
-							SpineHitPairs[Index].ParentRightPoint = SpineHitPairs[Index].ParentRightHit.ImpactPoint;
-						}
-						else
-						{
-							FVector SpiralPoint = SpineHitPairs[Index].ParentRightPoint;
-							SpiralPoint = UKismetMathLibrary::InverseTransformLocation(ComponentToWorld, SpiralPoint);
-							const FVector ImpactPointInverse = UKismetMathLibrary::InverseTransformLocation(
-								ComponentToWorld,
-								SpineHitPairs[Index].ParentRightHit.ImpactPoint);
+						const float InterpSpeed = 1 - FMath::Exp(-SmoothFactor * CachedDeltaSeconds);
 
-							SpiralPoint.X = ImpactPointInverse.X;
-							SpiralPoint.Y = ImpactPointInverse.Y;
-							SpiralPoint = UKismetMathLibrary::TransformLocation(ComponentToWorld, SpiralPoint);
-							SpineHitPairs[Index].ParentRightPoint = SpiralPoint;
-
-							const float InterpSpeed = 1 - FMath::Exp(-SmoothFactor * CachedDeltaSeconds);
-
-							SpineHitPairs[Index].ParentRightPoint = UKismetMathLibrary::VInterpTo(
-								SpineHitPairs[Index].ParentRightPoint, 
-								SpineHitPairs[Index].ParentRightHit.ImpactPoint,
-								InterpSpeed, 
-								FormatTraceLerp * 0.1f);
-						}
-					}
-					else
-					{
-						FVector SpiralPoint = SpiralRightUpper;
-						SpiralPoint = UKismetMathLibrary::InverseTransformLocation(ComponentToWorld, SpiralPoint);
-						SpiralPoint.Z = 0.0f;
-						SpiralPoint = UKismetMathLibrary::TransformLocation(ComponentToWorld, SpiralPoint);
-						SpineHitPairs[Index].ParentRightPoint = SpiralPoint;
-					}
-
-					// front hit
-					if (SpineHitPairs[Index].ParentFrontHit.bBlockingHit)
-					{
-						if (SpineHitPairs[Index].ParentFrontPoint == FVector::ZeroVector || TickCounter < 10 || bIgnoreLerping)
-						{
-							SpineHitPairs[Index].ParentFrontPoint = SpineHitPairs[Index].ParentFrontHit.ImpactPoint;
-						}
-						else
-						{
-							FVector SpiralPoint = SpineHitPairs[Index].ParentFrontPoint;
-							SpiralPoint = UKismetMathLibrary::InverseTransformLocation(ComponentToWorld, SpiralPoint);
-							const FVector ImpactPointInverse = UKismetMathLibrary::InverseTransformLocation(
-								ComponentToWorld,
-								SpineHitPairs[Index].ParentFrontHit.ImpactPoint);
-
-							SpiralPoint.X = ImpactPointInverse.X;
-							SpiralPoint.Y = ImpactPointInverse.Y;
-							SpiralPoint = UKismetMathLibrary::TransformLocation(ComponentToWorld, SpiralPoint);
-							SpineHitPairs[Index].ParentFrontPoint = SpiralPoint;
-
-							const float InterpSpeed = 1 - FMath::Exp(-SmoothFactor * CachedDeltaSeconds);
-
-							SpineHitPairs[Index].ParentFrontPoint = UKismetMathLibrary::VInterpTo(
-								SpineHitPairs[Index].ParentFrontPoint,
-								SpineHitPairs[Index].ParentFrontHit.ImpactPoint,
-								InterpSpeed, 
-								FormatTraceLerp * 0.1f);
-						}
-					}
-					else
-					{
-						FVector SpiralPoint = SpiralFrontUpper;
-						SpiralPoint = UKismetMathLibrary::InverseTransformLocation(ComponentToWorld, SpiralPoint);
-						SpiralPoint.Z = 0.0f;
-						SpiralPoint = UKismetMathLibrary::TransformLocation(ComponentToWorld, SpiralPoint);
-						SpineHitPairs[Index].ParentFrontPoint = SpiralPoint;
-					}
-
-					// back hit
-					if (SpineHitPairs[Index].ParentBackHit.bBlockingHit)
-					{
-						if (SpineHitPairs[Index].ParentBackPoint == FVector::ZeroVector || TickCounter < MAX_TICK_COUNTER || bIgnoreLerping)
-						{
-							SpineHitPairs[Index].ParentBackPoint = SpineHitPairs[Index].ParentBackHit.ImpactPoint;
-						}
-						else
-						{
-							FVector SpiralPoint = SpineHitPairs[Index].ParentBackPoint;
-							SpiralPoint = UKismetMathLibrary::InverseTransformLocation(ComponentToWorld, SpiralPoint);
-							const FVector ImpactPointInverse = UKismetMathLibrary::InverseTransformLocation(
-								ComponentToWorld,
-								SpineHitPairs[Index].ParentBackHit.ImpactPoint);
-							SpiralPoint.X = ImpactPointInverse.X;
-							SpiralPoint.Y = ImpactPointInverse.Y;
-							SpiralPoint = UKismetMathLibrary::TransformLocation(ComponentToWorld, SpiralPoint);
-							SpineHitPairs[Index].ParentBackPoint = SpiralPoint;
-
-							const float InterpSpeed = 1 - FMath::Exp(-SmoothFactor * CachedDeltaSeconds);
-							SpineHitPairs[Index].ParentBackPoint = UKismetMathLibrary::VInterpTo(
-								SpineHitPairs[Index].ParentBackPoint, 
-								SpineHitPairs[Index].ParentBackHit.ImpactPoint,
-								InterpSpeed, 
-								FormatTraceLerp * 0.1f);
-						}
-					}
-					else
-					{
-						FVector SpiralPoint = SpiralBackUpper;
-						SpiralPoint = UKismetMathLibrary::InverseTransformLocation(ComponentToWorld, SpiralPoint);
-						SpiralPoint.Z = 0.0f;
-						SpiralPoint = UKismetMathLibrary::TransformLocation(ComponentToWorld, SpiralPoint);
-						SpineHitPairs[Index].ParentBackPoint = SpiralPoint;
+						SpineHitPairs[Index].ParentLeftPoint = UKismetMathLibrary::VInterpTo(
+							SpineHitPairs[Index].ParentLeftPoint,
+							LeftHit.ImpactPoint,
+							InterpSpeed,
+							FormatTraceLerp);
 					}
 				}
+				else
+				{
+					FVector SpiralPoint = SpiralLeftUpper;
+					SpiralPoint = UKismetMathLibrary::InverseTransformLocation(ComponentToWorld, SpiralPoint);
+					SpiralPoint.Z = 0.0f;
+					SpiralPoint = UKismetMathLibrary::TransformLocation(ComponentToWorld, SpiralPoint);
+					SpineHitPairs[Index].ParentLeftPoint = SpiralPoint;
+				}
+
+				// right hit
+				if (RightHit.bBlockingHit)
+				{
+					if (SpineHitPairs[Index].ParentRightPoint.IsNearlyZero())
+					{
+						SpineHitPairs[Index].ParentRightPoint = RightHit.ImpactPoint;
+					}
+					else
+					{
+						FVector SpiralPoint = SpineHitPairs[Index].ParentRightPoint;
+						SpiralPoint = UKismetMathLibrary::InverseTransformLocation(ComponentToWorld, SpiralPoint);
+						const FVector ImpactPointInverse = UKismetMathLibrary::InverseTransformLocation(
+							ComponentToWorld,
+							RightHit.ImpactPoint);
+
+						SpiralPoint.X = ImpactPointInverse.X;
+						SpiralPoint.Y = ImpactPointInverse.Y;
+						SpiralPoint = UKismetMathLibrary::TransformLocation(ComponentToWorld, SpiralPoint);
+						SpineHitPairs[Index].ParentRightPoint = SpiralPoint;
+
+						const float InterpSpeed = 1 - FMath::Exp(-SmoothFactor * CachedDeltaSeconds);
+
+						SpineHitPairs[Index].ParentRightPoint = UKismetMathLibrary::VInterpTo(
+							SpineHitPairs[Index].ParentRightPoint,
+							RightHit.ImpactPoint,
+							InterpSpeed,
+							FormatTraceLerp);
+					}
+				}
+				else
+				{
+					FVector SpiralPoint = SpiralRightUpper;
+					SpiralPoint = UKismetMathLibrary::InverseTransformLocation(ComponentToWorld, SpiralPoint);
+					SpiralPoint.Z = 0.0f;
+					SpiralPoint = UKismetMathLibrary::TransformLocation(ComponentToWorld, SpiralPoint);
+					SpineHitPairs[Index].ParentRightPoint = SpiralPoint;
+				}
+
+				// front hit
+				if (FrontHit.bBlockingHit)
+				{
+					if (SpineHitPairs[Index].ParentFrontPoint.IsNearlyZero())
+					{
+						SpineHitPairs[Index].ParentFrontPoint = FrontHit.ImpactPoint;
+					}
+					else
+					{
+						FVector SpiralPoint = SpineHitPairs[Index].ParentFrontPoint;
+						SpiralPoint = UKismetMathLibrary::InverseTransformLocation(ComponentToWorld, SpiralPoint);
+						const FVector ImpactPointInverse = UKismetMathLibrary::InverseTransformLocation(
+							ComponentToWorld,
+							FrontHit.ImpactPoint);
+
+						SpiralPoint.X = ImpactPointInverse.X;
+						SpiralPoint.Y = ImpactPointInverse.Y;
+						SpiralPoint = UKismetMathLibrary::TransformLocation(ComponentToWorld, SpiralPoint);
+						SpineHitPairs[Index].ParentFrontPoint = SpiralPoint;
+
+						const float InterpSpeed = 1 - FMath::Exp(-SmoothFactor * CachedDeltaSeconds);
+
+						SpineHitPairs[Index].ParentFrontPoint = UKismetMathLibrary::VInterpTo(
+							SpineHitPairs[Index].ParentFrontPoint,
+							FrontHit.ImpactPoint,
+							InterpSpeed,
+							FormatTraceLerp);
+					}
+				}
+				else
+				{
+					FVector SpiralPoint = SpiralFrontUpper;
+					SpiralPoint = UKismetMathLibrary::InverseTransformLocation(ComponentToWorld, SpiralPoint);
+					SpiralPoint.Z = 0.0f;
+					SpiralPoint = UKismetMathLibrary::TransformLocation(ComponentToWorld, SpiralPoint);
+					SpineHitPairs[Index].ParentFrontPoint = SpiralPoint;
+				}
+
+				// back hit
+				if (BackHit.bBlockingHit)
+				{
+					if (SpineHitPairs[Index].ParentBackPoint.IsNearlyZero())
+					{
+						SpineHitPairs[Index].ParentBackPoint = BackHit.ImpactPoint;
+					}
+					else
+					{
+						FVector SpiralPoint = SpineHitPairs[Index].ParentBackPoint;
+						SpiralPoint = UKismetMathLibrary::InverseTransformLocation(ComponentToWorld, SpiralPoint);
+						const FVector ImpactPointInverse = UKismetMathLibrary::InverseTransformLocation(
+							ComponentToWorld,
+							BackHit.ImpactPoint);
+						SpiralPoint.X = ImpactPointInverse.X;
+						SpiralPoint.Y = ImpactPointInverse.Y;
+						SpiralPoint = UKismetMathLibrary::TransformLocation(ComponentToWorld, SpiralPoint);
+						SpineHitPairs[Index].ParentBackPoint = SpiralPoint;
+
+						const float InterpSpeed = 1 - FMath::Exp(-SmoothFactor * CachedDeltaSeconds);
+						SpineHitPairs[Index].ParentBackPoint = UKismetMathLibrary::VInterpTo(
+							SpineHitPairs[Index].ParentBackPoint,
+							BackHit.ImpactPoint,
+							InterpSpeed,
+							FormatTraceLerp);
+					}
+				}
+				else
+				{
+					FVector SpiralPoint = SpiralBackUpper;
+					SpiralPoint = UKismetMathLibrary::InverseTransformLocation(ComponentToWorld, SpiralPoint);
+					SpiralPoint.Z = 0.0f;
+					SpiralPoint = UKismetMathLibrary::TransformLocation(ComponentToWorld, SpiralPoint);
+					SpineHitPairs[Index].ParentBackPoint = SpiralPoint;
+				}
+
+
+
 			}
 		}
 
 	}
 }
 
+
+void FAnimNode_CustomSpineSolver::UpdateInternal_Async(const FAnimationUpdateContext& Context)
+{
+
+}
 
 
 void FAnimNode_CustomSpineSolver::EvaluateSkeletalControl_AnyThread(FComponentSpacePoseContext& Output, TArray<FBoneTransform>& OutBoneTransforms)
@@ -1224,6 +1247,7 @@ void FAnimNode_CustomSpineSolver::EvaluateSkeletalControl_AnyThread(FComponentSp
 }
 
 
+
 void FAnimNode_CustomSpineSolver::LineTraceControl_AnyThread(FComponentSpacePoseContext& Output, TArray<FBoneTransform>& OutBoneTransforms)
 {
 	LineTraceInitialized = false;
@@ -1256,7 +1280,9 @@ void FAnimNode_CustomSpineSolver::LineTraceControl_AnyThread(FComponentSpacePose
 				}
 
 				SpineTransformPairArray[Index].AssociatedFootArray[JIndex] = FTransform(Lerp_Location_J);
-				SpineTransformPairArray[Index].AssociatedFootArray[JIndex].AddToTranslation((UKismetMathLibrary::TransformDirection(ComponentToWorld, SpineFeetPair[Index].FeetTraceOffsetArray[JIndex])));
+				SpineTransformPairArray[Index].AssociatedFootArray[JIndex].AddToTranslation(
+					(UKismetMathLibrary::TransformDirection(ComponentToWorld, SpineFeetPair[Index].FeetTraceOffsetArray[JIndex])));
+
 				const FCompactPoseBoneIndex ModifyBoneIndex_Knee_J = SpineFeetPair[Index].KneeArray[JIndex].GetCompactPoseIndex(
 					Output.Pose.GetPose().GetBoneContainer());
 
@@ -1445,15 +1471,13 @@ void FAnimNode_CustomSpineSolver::InitializeBoneReferences(FBoneContainer& Requi
 
 		}
 
-		{
-			SpineHitPairs.AddDefaulted(SpineFeetPair.Num());
-			SpineTransformPairArray.AddDefaulted(SpineFeetPair.Num());
-			SpineAnimTransformPairArray.AddDefaulted(SpineFeetPair.Num());
-			TotalSpineAngleArray.AddDefaulted(SpineFeetPair.Num());
-			TerrainLocationArray.AddDefaulted(SpineFeetPair.Num());
-			SpineLocationDiffArray.AddDefaulted(SpineFeetPair.Num());
-			SpineRotationDiffArray.AddDefaulted(SpineFeetPair.Num());
-		}
+		SpineHitPairs.AddDefaulted(SpineFeetPair.Num());
+		SpineTransformPairArray.AddDefaulted(SpineFeetPair.Num());
+		SpineAnimTransformPairArray.AddDefaulted(SpineFeetPair.Num());
+		TotalSpineAngleArray.AddDefaulted(SpineFeetPair.Num());
+		TerrainLocationArray.AddDefaulted(SpineFeetPair.Num());
+		SpineLocationDiffArray.AddDefaulted(SpineFeetPair.Num());
+		SpineRotationDiffArray.AddDefaulted(SpineFeetPair.Num());
 
 		for (int32 Index = 0; Index < SpineFeetPair.Num(); Index++)
 		{
@@ -1496,21 +1520,19 @@ void FAnimNode_CustomSpineSolver::InitializeBoneReferences(FBoneContainer& Requi
 				}
 			}
 
+			const int32 FeetNum = SpineFeetPair[Index].FeetArray.Num();
+			SpineFeetPair[Index].FeetHeightArray.AddDefaulted(FeetNum);
+			SpineHitPairs[Index].FeetHitArray.AddDefaulted(FeetNum);
+			SpineHitPairs[Index].FeetHitPointArray.AddDefaulted(FeetNum);
+			SpineTransformPairArray[Index].AssociatedFootArray.AddDefaulted(FeetNum);
+			SpineTransformPairArray[Index].AssociatedKneeArray.AddDefaulted(FeetNum);
+			SpineTransformPairArray[Index].AssociatedToeArray.AddDefaulted(FeetNum);
+			SpineAnimTransformPairArray[Index].AssociatedFootArray.AddDefaulted(FeetNum);
+			SpineAnimTransformPairArray[Index].AssociatedKneeArray.AddDefaulted(FeetNum);
+			SpineAnimTransformPairArray[Index].AssociatedToeArray.AddDefaulted(FeetNum);
 
-			SpineFeetPair[Index].FeetHeightArray.AddDefaulted(SpineFeetPair[Index].FeetArray.Num());
 
-			{
-				SpineHitPairs[Index].FeetHitArray.AddDefaulted(SpineFeetPair[Index].FeetArray.Num());
-				SpineHitPairs[Index].FeetHitPointArray.AddDefaulted(SpineFeetPair[Index].FeetArray.Num());
-				SpineTransformPairArray[Index].AssociatedFootArray.AddDefaulted(SpineFeetPair[Index].FeetArray.Num());
-				SpineTransformPairArray[Index].AssociatedKneeArray.AddDefaulted(SpineFeetPair[Index].FeetArray.Num());
-				SpineTransformPairArray[Index].AssociatedToeArray.AddDefaulted(SpineFeetPair[Index].FeetArray.Num());
-				SpineAnimTransformPairArray[Index].AssociatedFootArray.AddDefaulted(SpineFeetPair[Index].FeetArray.Num());
-				SpineAnimTransformPairArray[Index].AssociatedKneeArray.AddDefaulted(SpineFeetPair[Index].FeetArray.Num());
-				SpineAnimTransformPairArray[Index].AssociatedToeArray.AddDefaulted(SpineFeetPair[Index].FeetArray.Num());
-			}
-
-			if (SpineFeetPair[Index].FeetArray.Num() > 0)
+			if (FeetNum > 0)
 			{
 				bFeetIsEmpty = false;
 			}

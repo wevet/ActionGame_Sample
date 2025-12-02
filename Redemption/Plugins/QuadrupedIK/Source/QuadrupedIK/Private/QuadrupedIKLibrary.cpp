@@ -1663,3 +1663,16 @@ const FVector UQuadrupedIKLibrary::ClampRotateVector(
 }
 
 
+const bool UQuadrupedIKLibrary::DoesContainsNaN(const TArray<FBoneTransform>& BoneTransforms)
+{
+	for (int32 Index = 0; Index < BoneTransforms.Num(); ++Index)
+	{
+		if (BoneTransforms[Index].Transform.ContainsNaN())
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
+

@@ -82,6 +82,9 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = BasicSettings)
 	bool bDisplayLineTrace = false;
+
+
+
 #pragma endregion
 
 #pragma region MasterCurveSettings
@@ -315,12 +318,14 @@ public:
 	virtual void ConditionalDebugDraw(FPrimitiveDrawInterface* PDI, USkeletalMeshComponent* PreviewSkelMeshComp) const;
 
 	TArray<FCustomBoneHitPairs> SpineHitPairs;
-
+\
 protected:
-	virtual void UpdateInternal(const FAnimationUpdateContext& Context);
-	virtual void EvaluateSkeletalControl_AnyThread(FComponentSpacePoseContext& Output, TArray<FBoneTransform>& OutBoneTransforms);
-	virtual bool IsValidToEvaluate(const USkeleton* Skeleton, const FBoneContainer& RequiredBones);
-	virtual void InitializeBoneReferences(FBoneContainer& RequiredBones);
+	void UpdateInternal(const FAnimationUpdateContext& Context);
+	void UpdateInternal_Async(const FAnimationUpdateContext& Context);
+
+	void EvaluateSkeletalControl_AnyThread(FComponentSpacePoseContext& Output, TArray<FBoneTransform>& OutBoneTransforms);
+	bool IsValidToEvaluate(const USkeleton* Skeleton, const FBoneContainer& RequiredBones);
+	void InitializeBoneReferences(FBoneContainer& RequiredBones);
 
 private:
 	void LineTraceControl_AnyThread(FComponentSpacePoseContext& Output, TArray<FBoneTransform>& OutBoneTransforms);
@@ -418,7 +423,6 @@ private:
 	void OrthoNormalize(FVector& Normal, FVector& Tangent);
 	void GetResetedPoseInfo(FCSPose<FCompactPose>& MeshBases);
 
-	bool DoesContainsNaN(const TArray<FBoneTransform>& BoneTransforms) const;
 
 
 	mutable float AdaptiveAlpha = 1;
@@ -428,7 +432,7 @@ private:
 	float FormatLocationLerp = 15.0f;
 	float FormatTraceLerp = 15.0f;
 	float FormatSnakeLerp = 2.0f;
-	float FormatShiftSpeed = 100.0f;
+	float FormatShiftSpeed = 50.0f;
 	float ComponentScale = 1.0f;
 	float MaxFormatedHeight = 100.0f;
 	float MaxFormatedDipHeightChest = 100.0f;
