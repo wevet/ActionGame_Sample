@@ -222,6 +222,9 @@ void UQTEActionComponent::FindWidgetComponent()
 	}
 }
 
+/// <summary>
+/// 
+/// </summary>
 void UQTEActionComponent::RequestAsyncLoad()
 {
 	if (!QTEWidgetComponent.IsValid())
@@ -230,15 +233,28 @@ void UQTEActionComponent::RequestAsyncLoad()
 	}
 
 
+	if (QTEWidgetClass.IsValid())
+	{
+		OnLoadWidgetComplete();
+		return;
+	}
+
 	if (!QTEWidgetClass.IsNull() && QTEWidgetComponent.IsValid())
 	{
 		FStreamableManager& StreamableManager = UWvGameInstance::GetStreamableManager();
-		const FSoftObjectPath ObjectPath = QTEWidgetClass.ToSoftObjectPath();
 
-		ComponentStreamableHandle = StreamableManager.RequestAsyncLoad(ObjectPath, [this] 
+		const FSoftObjectPath ObjectPath = QTEWidgetClass.ToSoftObjectPath();
+		TWeakObjectPtr<UQTEActionComponent> WeakThis(this);
+
+		ComponentStreamableHandle = StreamableManager.RequestAsyncLoad(ObjectPath, FStreamableDelegate::CreateUObject(this, &ThisClass::OnLoadWidgetComplete));
+
+#if 0
+		ComponentStreamableHandle = StreamableManager.RequestAsyncLoad(ObjectPath, [WeakThis]
 		{
-			this->OnLoadWidgetComplete();
+			WeakThis->OnLoadWidgetComplete();
 		});
+#endif
+
 	}
 	else
 	{
@@ -249,6 +265,12 @@ void UQTEActionComponent::RequestAsyncLoad()
 
 void UQTEActionComponent::OnLoadWidgetComplete()
 {
+
+	if (!ComponentStreamableHandle.IsValid())
+	{
+		return;
+	}
+
 	UObject* LoadedObj = ComponentStreamableHandle.Get()->GetLoadedAsset();
 	if (LoadedObj)
 	{

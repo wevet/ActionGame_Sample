@@ -52,7 +52,7 @@ DEFINE_LOG_CATEGORY_STATIC(LogCharacterMovement, Log, All);
 DECLARE_CYCLE_STAT(TEXT("Char Update Acceleration"), STAT_CharUpdateAcceleration, STATGROUP_Character);
 DECLARE_CYCLE_STAT(TEXT("Char StepUp"), STAT_CharStepUp, STATGROUP_Character);
 DECLARE_CYCLE_STAT(TEXT("Char PhysWalking"), STAT_CharPhysWalking, STATGROUP_Character);
-//DECLARE_CYCLE_STAT(TEXT("Char ProcessLanded"), STAT_CharProcessLanded, STATGROUP_Character);
+DECLARE_CYCLE_STAT(TEXT("Char ProcessLanded"), STAT_CharProcessLanded, STATGROUP_Character);
 
 
 using namespace CharacterDebug;
@@ -847,7 +847,6 @@ float UWvCharacterMovementComponent::SlideAlongSurface(const FVector& Delta, flo
 
 	FVector SlideDelta = ComputeSlideVector(Delta, Time, Normal, Hit);
 	const float Dot = SlideDelta.GetSafeNormal() | Delta.GetSafeNormal();
-	//UE_LOG(LogTemp, Log, TEXT("Dot => %.3f, AllowSlideCosAngle => %.3f"), Dot, AllowSlideCosAngle);
 
 	const bool bWasIsTraversaling = IsTraversaling();
 
@@ -858,7 +857,7 @@ float UWvCharacterMovementComponent::SlideAlongSurface(const FVector& Delta, flo
 		const float FirstHitPercent = Hit.Time;
 		PercentTimeApplied = FirstHitPercent;
 
-		//UE_LOG(LogTemp, Log, TEXT("PercentTimeApplied => %.3f"), PercentTimeApplied);
+
 		if (Hit.IsValidBlockingHit())
 		{
 			// Notify first impact
@@ -1031,8 +1030,10 @@ void UWvCharacterMovementComponent::PhysWalking(float deltaTime, int32 Iteration
 			{
 				// ジャンプしていいか確認する
 				// @todo collision : 唯一問題になりそうなのは、oldbaseがワールドコリジョンをオンにしていることです。
-				bool bMustJump = bZeroDelta || (OldBase == nullptr || (!OldBase->IsQueryCollisionEnabled() && MovementBaseUtility::IsDynamicBase(OldBase)));
-				if ((bMustJump || !bCheckedFall) && CheckFall(OldFloor, CurrentFloor.HitResult, Delta, OldLocation, remainingTime, timeTick, Iterations, bMustJump))
+				const bool bMustJump = bZeroDelta || (OldBase == nullptr || (!OldBase->IsQueryCollisionEnabled() && 
+					MovementBaseUtility::IsDynamicBase(OldBase)));
+				if ((bMustJump || !bCheckedFall) && 
+					CheckFall(OldFloor, CurrentFloor.HitResult, Delta, OldLocation, remainingTime, timeTick, Iterations, bMustJump))
 				{
 					return;
 				}
@@ -1087,14 +1088,9 @@ void UWvCharacterMovementComponent::PhysWalking(float deltaTime, int32 Iteration
 			// See if we need to start falling.
 			if (!CurrentFloor.IsWalkableFloor() && !CurrentFloor.HitResult.bStartPenetrating)
 			{
-#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
-				if (CVarDebugFallEdgeSystem.GetValueOnAnyThread() > 0)
-				{
-					UE_LOG(LogTemp, Log, TEXT("not IsWalkableFloor"));
-				}
-#endif // !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
+				const bool bMustJump = bJustTeleported || bZeroDelta || (OldBase == nullptr ||
+					(!OldBase->IsQueryCollisionEnabled() && MovementBaseUtility::IsDynamicBase(OldBase)));
 
-				const bool bMustJump = bJustTeleported || bZeroDelta || (OldBase == nullptr || (!OldBase->IsQueryCollisionEnabled() && MovementBaseUtility::IsDynamicBase(OldBase)));
 				if ((bMustJump || !bCheckedFall) && CheckFall(OldFloor, CurrentFloor.HitResult, Delta, OldLocation, remainingTime, timeTick, Iterations, bMustJump))
 				{
 					return;
@@ -1320,10 +1316,16 @@ bool UWvCharacterMovementComponent::CheckFall(const FFindFloorResult& OldFloor, 
 	return false;
 }
 
+/// <summary>
+/// 高低差の着地処理
+/// </summary>
+/// <param name="Hit"></param>
+/// <param name="remainingTime"></param>
+/// <param name="Iterations"></param>
 void UWvCharacterMovementComponent::ProcessLanded(const FHitResult& Hit, float remainingTime, int32 Iterations)
 {
 
-	//SCOPE_CYCLE_COUNTER(STAT_CharProcessLanded);
+	SCOPE_CYCLE_COUNTER(STAT_CharProcessLanded);
 	// 着地直前の計測値を先に算出
 
 	const FVector ComponentLocation = UpdatedComponent->GetComponentLocation();
@@ -1490,7 +1492,7 @@ void UWvCharacterMovementComponent::HandleEdgeDetectionCompleted(const FTraceHan
 
 void UWvCharacterMovementComponent::TriggerFallEdgePrediction()
 {
-	UE_LOG(LogTemp, Warning, TEXT("Fall edge prediction triggered!"));
+	UE_LOG(LogCharacterMovement, Warning, TEXT("Fall edge prediction triggered!"));
 
 	// BaseCharacter->PlayFallEdgeWarningAnimation();
 }
@@ -1674,8 +1676,8 @@ void UWvCharacterMovementComponent::TraceForwardToFindWall(const FMantleTraceSet
 #if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
 	if (CVarDebugMantlingSystem.GetValueOnGameThread() > 0)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("%s"), *FString(__FUNCTION__));
-		UE_LOG(LogTemp, Warning, TEXT("result => %s"), OutHitResult ? TEXT("true") : TEXT("false"));
+		UE_LOG(LogCharacterMovement, Warning, TEXT("%s"), *FString(__FUNCTION__));
+		UE_LOG(LogCharacterMovement, Warning, TEXT("result => %s"), OutHitResult ? TEXT("true") : TEXT("false"));
 	}
 #endif
 
@@ -1744,8 +1746,8 @@ void UWvCharacterMovementComponent::SphereTraceByMantleCheck(const FMantleTraceS
 #if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
 	if (CVarDebugMantlingSystem.GetValueOnGameThread() > 0)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("%s"), *FString(__FUNCTION__));
-		UE_LOG(LogTemp, Warning, TEXT("result => %s"), OutHitResult ? TEXT("true") : TEXT("false"));
+		UE_LOG(LogCharacterMovement, Warning, TEXT("%s"), *FString(__FUNCTION__));
+		UE_LOG(LogCharacterMovement, Warning, TEXT("result => %s"), OutHitResult ? TEXT("true") : TEXT("false"));
 	}
 #endif
 }
@@ -1887,7 +1889,7 @@ void UWvCharacterMovementComponent::MantleStart(const float InMantleHeight, cons
 
 	if (!MantleParams.AnimMontage)
 	{
-		UE_LOG(LogTemp, Error, TEXT("nullptr Mantle AnimMontage  : %s"), *FString(__FUNCTION__));
+		UE_LOG(LogCharacterMovement, Error, TEXT("nullptr Mantle AnimMontage  : %s"), *FString(__FUNCTION__));
 		return;
 	}
 
@@ -2033,7 +2035,7 @@ void UWvCharacterMovementComponent::MantleEnd()
 void UWvCharacterMovementComponent::OnMantleEnd()
 {
 	MantleEnd();
-	UE_LOG(LogTemp, Log, TEXT("[%s]"), *FString(__FUNCTION__));
+	UE_LOG(LogCharacterMovement, Log, TEXT("[%s]"), *FString(__FUNCTION__));
 }
 
 /// <summary>
@@ -2263,10 +2265,16 @@ void UWvCharacterMovementComponent::PhysLaddering(float deltaTime, int32 Iterati
 #pragma region AsyncLoad
 void UWvCharacterMovementComponent::RequestAsyncLoad()
 {
-	FStreamableManager& StreamableManager = UWvGameInstance::GetStreamableManager();
+	if (MantleDA.IsValid())
+	{
+		OnLoadMantleDA();
+		return;
+	}
+
 
 	if (!MantleDA.IsNull())
 	{
+		FStreamableManager& StreamableManager = UWvGameInstance::GetStreamableManager();
 		const FSoftObjectPath ObjectPath = MantleDA.ToSoftObjectPath();
 		ComponentStreamableHandle = StreamableManager.RequestAsyncLoad(ObjectPath, FStreamableDelegate::CreateUObject(this, &ThisClass::OnMantleAssetLoadComplete));
 	}
@@ -2276,20 +2284,23 @@ void UWvCharacterMovementComponent::RequestAsyncLoad()
 void UWvCharacterMovementComponent::OnMantleAssetLoadComplete()
 {
 	OnLoadMantleDA();
-	ComponentStreamableHandle.Reset();
+	if (ComponentStreamableHandle.IsValid())
+	{
+		ComponentStreamableHandle.Reset();
+	}
 }
 
 void UWvCharacterMovementComponent::OnLoadMantleDA()
 {
-	bool bIsResult = false;
-	do
+
+	MantleDAInstance = MantleDA.Get();
+	UE_LOG(LogCharacterMovement, Log, TEXT("Complete %s => [%s]"), *GetNameSafe(MantleDAInstance), *FString(__FUNCTION__));
+
+	if (!IsValid(MantleDAInstance))
 	{
-		MantleDAInstance = MantleDA.LoadSynchronous();
-		bIsResult = (IsValid(MantleDAInstance));
-
-	} while (!bIsResult);
-	UE_LOG(LogTemp, Log, TEXT("Complete %s => [%s]"), *GetNameSafe(MantleDAInstance), *FString(__FUNCTION__));
-
+		UE_LOG(LogCharacterMovement, Error, TEXT("[%s] : Failed MantleDA Instance not valid. "), *FString(__FUNCTION__));
+		return;
+	}
 
 	// Bindings
 	if (IsValid(MantleDAInstance->MantleTimelineCurve))
@@ -2303,7 +2314,6 @@ void UWvCharacterMovementComponent::OnLoadMantleDA()
 		MantleTimeline->SetTimelineLengthMode(TL_TimelineLength);
 		MantleTimeline->AddInterpFloat(MantleDAInstance->MantleTimelineCurve, TimelineUpdated);
 
-		//UE_LOG(LogTemp, Log, TEXT("setup result MantleTimeline => [%s]"), *FString(__FUNCTION__));
 	}
 }
 #pragma endregion
@@ -2359,7 +2369,7 @@ const bool UWvCharacterMovementComponent::TryTraversalAction()
 {
 	if (!IsValid(TraversalChooserTable))
 	{
-		UE_LOG(LogTemp, Error, TEXT("not valid TraversalChooserTable: [%s]"), *FString(__FUNCTION__));
+		UE_LOG(LogCharacterMovement, Error, TEXT("not valid TraversalChooserTable: [%s]"), *FString(__FUNCTION__));
 		return false;
 	}
 
@@ -2368,13 +2378,14 @@ const bool UWvCharacterMovementComponent::TryTraversalAction()
 #if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
 		if (CVarDebugCharacterTraversal.GetValueOnGameThread() > 0)
 		{
-			UE_LOG(LogTemp, Warning, TEXT("now playing traversaling..: [%s]"), *FString(__FUNCTION__));
+			UE_LOG(LogCharacterMovement, Warning, TEXT("now playing traversaling..: [%s]"), *FString(__FUNCTION__));
 		}
 #endif
 		return false;
 	}
 
-	if (IsClimbing() || IsLaddering() || IsMantling())
+	// disble custom moving
+	if (((MovementMode == MOVE_Custom)) && UpdatedComponent)
 	{
 		return false;
 	}
@@ -2391,14 +2402,14 @@ const bool UWvCharacterMovementComponent::TryTraversalAction()
 #if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
 		if (CVarDebugCharacterTraversal.GetValueOnGameThread() > 0)
 		{
-			UE_LOG(LogTemp, Warning, TEXT("not valid TraversalDataCheckInputs: [%s]"), *FString(__FUNCTION__));
+			UE_LOG(LogCharacterMovement, Warning, TEXT("not valid TraversalDataCheckInputs: [%s]"), *FString(__FUNCTION__));
 		}
 #endif
 		return false;
 	}
 
 
-	const auto SelectedMovementMode = TraversalDataCheckInput.MovementMode;
+	const EMovementMode SelectedMovementMode = TraversalDataCheckInput.MovementMode;
 
 	// Step 1: キャラ位置・カプセルサイズをキャッシュ
 	const FVector ActorLocation = CharacterOwner->GetActorLocation();
@@ -2444,6 +2455,7 @@ const bool UWvCharacterMovementComponent::TryTraversalAction()
 		{
 			if (HitActor->IsA(ExcludedClass))
 			{
+				// disable climbing actor class
 				return false;
 			}
 		}
@@ -2459,7 +2471,7 @@ const bool UWvCharacterMovementComponent::TryTraversalAction()
 #if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
 		if (CVarDebugCharacterTraversal.GetValueOnGameThread() > 0)
 		{
-			UE_LOG(LogTemp, Error, TEXT("bHasFrontLedge is false: [%s]"), *FString(__FUNCTION__));
+			UE_LOG(LogCharacterMovement, Error, TEXT("bHasFrontLedge is false: [%s]"), *FString(__FUNCTION__));
 		}
 #endif
 		return false;
@@ -2472,7 +2484,7 @@ const bool UWvCharacterMovementComponent::TryTraversalAction()
 	HasRoomCheck_FrontLedgeLocation += (FVector(0.f, 0.f, CapsuleHalfHeight + BaseOffset));
 	
 
-	const float CalcCapsuleHeight = CapsuleHalfHeight * 0.8f;
+	const float CalcCapsuleHeight = CapsuleHalfHeight * 0.5f;
 
 	HitResult.Reset();
 	const bool bCapsuleHitResult = UKismetSystemLibrary::CapsuleTraceSingle(
@@ -2505,7 +2517,7 @@ const bool UWvCharacterMovementComponent::TryTraversalAction()
 	if (!bLocalHitResult)
 	{
 		TraversalCheckResult.bHasFrontLedge = false;
-		UE_LOG(LogTemp, Log, TEXT("HasRoom blocked: Time=%.2f PenDepth=%.2f"), HitResult.Time, HitResult.PenetrationDepth);
+		UE_LOG(LogCharacterMovement, Log, TEXT("HasRoom blocked: Time=%.2f PenDepth=%.2f"), HitResult.Time, HitResult.PenetrationDepth);
 		return false;
 	}
 
@@ -2520,12 +2532,15 @@ const bool UWvCharacterMovementComponent::TryTraversalAction()
 	HasRoomCheck_BackLedgeLocation += (TraversalCheckResult.BackLedgeNormal * (CapsuleRadius + BaseOffset));
 	HasRoomCheck_BackLedgeLocation += (FVector(0.f, 0.f, CapsuleHalfHeight + BaseOffset));
 
+	constexpr float DepthCapsuleScale = 0.7f;
+
 	HitResult.Reset();
 	const bool bIsDepthHitResult = UKismetSystemLibrary::CapsuleTraceSingle(
 		GetWorld(), 
 		HasRoomCheck_FrontLedgeLocation, 
 		HasRoomCheck_BackLedgeLocation,
-		CapsuleRadius, CapsuleHalfHeight,
+		CapsuleRadius * DepthCapsuleScale,
+		CapsuleHalfHeight,
 		TraceTypeQuery, false,
 		IgnoreActors, TraceType, HitResult, true,
 		FLinearColor::Red, FLinearColor::Green, DrawTime);
@@ -2533,7 +2548,7 @@ const bool UWvCharacterMovementComponent::TryTraversalAction()
 
 	if (!bIsDepthHitResult)
 	{
-		// Step 3.5: もし余裕があれば、障害物の奥行きを前後の棚位置の差で取っておく。
+		// 奥行きが貫通した（＝飛び越え可能な薄い障害物）
 		auto ObstacleDepth_Diff = (TraversalCheckResult.FrontLedgeLocation - TraversalCheckResult.BackLedgeLocation);
 		TraversalCheckResult.ObstacleDepth = (ObstacleDepth_Diff).Size2D();
 
@@ -2550,7 +2565,8 @@ const bool UWvCharacterMovementComponent::TryTraversalAction()
 			GetWorld(),
 			TraceStartPos,
 			TraceEndPos,
-			CapsuleRadius, CapsuleHalfHeight,
+			CapsuleRadius * DepthCapsuleScale,
+			CapsuleHalfHeight,
 			TraceTypeQuery, false,
 			IgnoreActors, TraceType, RoomHitResult, true,
 			FLinearColor::Blue, FLinearColor::Yellow, DrawTime);
@@ -2568,11 +2584,12 @@ const bool UWvCharacterMovementComponent::TryTraversalAction()
 	}
 	else
 	{
-		// Step 3.5: もし余裕がなければ、
-		// 障害物の深さを、前方のレッジとトレースインパクトポイントの差を使って保存し、後方のレッジを無効にする。
+		// 奥行きチェックがブロックされた（＝厚い壁、または上が広い台）
+		// この場合、BackLedgeがないので自動的にMantle判定へ回るようにフラグを設定
 		TraversalCheckResult.ObstacleDepth = (HitResult.ImpactPoint - TraversalCheckResult.FrontLedgeLocation).Size2D();
-		TraversalCheckResult.bHasBackLedge = false;
-		UE_LOG(LogTemp, Warning, TEXT("bIsDepthHitResult is true: [%s]"), *FString(__FUNCTION__));
+		//TraversalCheckResult.bHasBackLedge = false;
+		TraversalCheckResult.bHasBackFloor = false;
+		UE_LOG(LogCharacterMovement, Log, TEXT("Depth blocked: Switching to Mantle logic. Depth: %.2f"), TraversalCheckResult.ObstacleDepth);
 	}
 
 
@@ -2617,7 +2634,7 @@ const bool UWvCharacterMovementComponent::TryTraversalAction()
 			LogString += FString::Printf(TEXT("Obstacle Depth: %.2f\n"), Input.ObstacleDepth);
 			LogString += FString::Printf(TEXT("Back Ledge Height: %.2f\n"), Input.BackLedgeHeight);
 			LogString += FString::Printf(TEXT("MovementMode: %s\n"), *StaticEnum<EMovementMode>()->GetValueAsString(Input.MovementMode));
-			UE_LOG(LogTemp, Error, TEXT("[Traversal Log]\n%s"), *LogString);
+			UE_LOG(LogCharacterMovement, Error, TEXT("[Traversal Log]\n%s"), *LogString);
 		}
 #endif
 		return false;
@@ -2642,7 +2659,7 @@ const bool UWvCharacterMovementComponent::TryTraversalAction()
 	auto Montage = Cast<UAnimMontage>(Result.SelectedAnim);
 	if (!IsValid(Montage))
 	{
-		UE_LOG(LogTemp, Error, TEXT("not valid Montage: [%s]"), *FString(__FUNCTION__));
+		UE_LOG(LogCharacterMovement, Error, TEXT("not valid Montage: [%s]"), *FString(__FUNCTION__));
 		return false;
 	}
 
@@ -2710,7 +2727,7 @@ void UWvCharacterMovementComponent::PrintTraversalActionData()
 	LogString += FString::Printf(TEXT("Play Rate: %.2f\n"), Data.PlayRate);
 	LogString += FString::Printf(TEXT("MovementMode: %s\n"), *StaticEnum<EMovementMode>()->GetValueAsString(Data.MovementMode));
 
-	UE_LOG(LogTemp, Log, TEXT("[Traversal Log]\n%s"), *LogString);
+	UE_LOG(LogCharacterMovement, Log, TEXT("[Traversal Log]\n%s"), *LogString);
 
 	if (GEngine)
 	{
@@ -2879,7 +2896,7 @@ void UWvCharacterMovementComponent::NudgeHitTowardsObjectOrigin(FHitResult& Hit)
 {
 	if (!Hit.Component.IsValid())
 	{
-		UE_LOG(LogTemp, Error, TEXT("not valid hit component: [%s]"), *FString(__FUNCTION__));
+		UE_LOG(LogCharacterMovement, Error, TEXT("not valid hit component: [%s]"), *FString(__FUNCTION__));
 		return;
 	}
 
@@ -2955,7 +2972,7 @@ void UWvCharacterMovementComponent::TraceCorners(const FHitResult& Hit, const FV
 	FHitResult OutHit;
 	if (!TraceAlongHitPlane(Hit, TraceLength, TraceDirection, OutHit))
 	{
-		UE_LOG(LogTemp, Error, TEXT("TraceAlongHitPlane is false: [%s]"), *FString(__FUNCTION__));
+		UE_LOG(LogCharacterMovement, Error, TEXT("TraceAlongHitPlane is false: [%s]"), *FString(__FUNCTION__));
 		return;
 	}
 
@@ -3116,13 +3133,13 @@ void UWvCharacterMovementComponent::TryAndCalculateLedges(FHitResult& HitResult,
 				const FVector LocalLocalDirection = UKismetMathLibrary::NegateVector(LocalDirection);
 				if (!TraceWidth(HitResult, LocalLocalDirection))
 				{
-					UE_LOG(LogTemp, Error, TEXT("LocalLocalDirection is false: [%s]"), *FString(__FUNCTION__));
+					UE_LOG(LogCharacterMovement, Error, TEXT("LocalLocalDirection is false: [%s]"), *FString(__FUNCTION__));
 					return;
 				}
 			}
 			else
 			{
-				UE_LOG(LogTemp, Error, TEXT("LocalDirection is false: [%s]"), *FString(__FUNCTION__));
+				UE_LOG(LogCharacterMovement, Error, TEXT("LocalDirection is false: [%s]"), *FString(__FUNCTION__));
 				return;
 			}
 		}
@@ -3132,7 +3149,7 @@ void UWvCharacterMovementComponent::TryAndCalculateLedges(FHitResult& HitResult,
 	FHitResult NextHit(ForceInit);
 	if (!TraceAlongHitPlane(HitResult, TraceLength, AbsoluteObjectUpVector, NextHit))
 	{
-		UE_LOG(LogTemp, Error, TEXT("TraceAlongHitPlane is false: [%s]"), *FString(__FUNCTION__));
+		UE_LOG(LogCharacterMovement, Error, TEXT("TraceAlongHitPlane is false: [%s]"), *FString(__FUNCTION__));
 		return;
 	}
 
@@ -3175,7 +3192,7 @@ void UWvCharacterMovementComponent::TryAndCalculateLedges(FHitResult& HitResult,
 	const bool bHasBackLedge = bIsResult;
 	if (!bHasBackLedge)
 	{
-		//UE_LOG(LogTemp, Warning, TEXT("bHasBackLedge is false: [%s]"), *FString(__FUNCTION__));
+		//UE_LOG(LogCharacterMovement, Warning, TEXT("bHasBackLedge is false: [%s]"), *FString(__FUNCTION__));
 		//return;
 	}
 

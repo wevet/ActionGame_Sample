@@ -44,11 +44,8 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Settings)
 	TEnumAsByte<ETraceTypeQuery> TraceChannel = ETraceTypeQuery::TraceTypeQuery1;
 
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Settings, meta = (PinHiddenByDefault))
 	float LineTraceUpperHeight = 200.0f;
 	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Settings, meta = (PinHiddenByDefault))
 	float LineTraceDownHeight = 5.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Settings, meta = (PinHiddenByDefault))
@@ -122,9 +119,10 @@ public:
 	UPROPERTY(EditAnywhere, Category = InterpSettings, meta = (PinHiddenByDefault))
 	FRuntimeFloatCurve ComplexSimpleFootVelocityCurve;
 
-	UPROPERTY(EditAnywhere, Category = InterpSettings, meta = (PinHiddenByDefault))
-	FRuntimeFloatCurve InterpolationVelocityCurve;
+	//UPROPERTY(EditAnywhere, Category = InterpSettings, meta = (PinHiddenByDefault))
+	//FRuntimeFloatCurve InterpolationVelocityCurve;
 #pragma endregion
+
 
 	TArray<FCustomBoneHitPairs> SpineHitPairs;
 	TArray<TArray<FVector>> FeetTipLocations;
@@ -293,6 +291,7 @@ private:
 	TArray<bool> bIsLineModeArray = TArray<bool>();
 	TArray<float> TraceRadiusList = TArray<float>();
 
+	TArray<AActor*> IgnoreActors;
 
 	//FBoneContainer* SavedBoneContainer;
 	FComponentSpacePoseContext* SavedPoseContext = nullptr;
@@ -316,6 +315,7 @@ private:
 
 	UPROPERTY()
 	TObjectPtr<UPredictionAnimInstance> PredictionAnimInstance{ nullptr };
+
 
 	UPROPERTY()
 	TObjectPtr<USkeletalMeshComponent> owning_skel = nullptr;

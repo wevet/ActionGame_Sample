@@ -5392,6 +5392,12 @@ void UClimbingComponent::ClimbingActionTimer_Callback()
 
 void UClimbingComponent::RequestAsyncLoad()
 {
+	if (ClimbingCurveDA.IsValid())
+	{
+		OnLoadDA();
+		return;
+	}
+
 	if (!ClimbingCurveDA.IsNull())
 	{
 		FStreamableManager& StreamableManager = UWvGameInstance::GetStreamableManager();
@@ -5403,18 +5409,17 @@ void UClimbingComponent::RequestAsyncLoad()
 void UClimbingComponent::OnDataAssetLoadComplete()
 {
 	OnLoadDA();
-	ComponentStreamableHandle.Reset();
+
+	if (ComponentStreamableHandle.IsValid())
+	{
+		ComponentStreamableHandle.Reset();
+	}
 }
 
 void UClimbingComponent::OnLoadDA()
 {
-	bool bIsResult = false;
-	do
-	{
-		ClimbingCurveDAInstance = ClimbingCurveDA.LoadSynchronous();
-		bIsResult = (IsValid(ClimbingCurveDAInstance));
 
-	} while (!bIsResult);
+	ClimbingCurveDAInstance = ClimbingCurveDA.Get();
 	UE_LOG(LogTemp, Log, TEXT("Complete %s => [%s]"), *GetNameSafe(ClimbingCurveDAInstance), *FString(__FUNCTION__));
 }
 

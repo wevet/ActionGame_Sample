@@ -506,6 +506,12 @@ void UInventoryComponent::CreateWeaponInstances()
 
 void UInventoryComponent::RequestAsyncLoad()
 {
+	if (InventoryDA.IsValid())
+	{
+		OnLoadInventoryDA();
+		return;
+	}
+
 	if (!InventoryDA.IsNull())
 	{
 		FStreamableManager& StreamableManager = UWvGameInstance::GetStreamableManager();
@@ -517,20 +523,16 @@ void UInventoryComponent::RequestAsyncLoad()
 void UInventoryComponent::OnDataAssetLoadComplete()
 {
 	OnLoadInventoryDA();
-	ComponentStreamableHandle.Reset();
-	//UE_LOG(LogTemp, Log, TEXT("[%s]"), *FString(__FUNCTION__));
+
+	if (ComponentStreamableHandle.IsValid())
+	{
+		ComponentStreamableHandle.Reset();
+	}
 }
 
 void UInventoryComponent::OnLoadInventoryDA()
 {
-	bool bIsResult = false;
-	do
-	{
-		InventoryDAInstance = InventoryDA.LoadSynchronous();
-		bIsResult = (IsValid(InventoryDAInstance));
-
-	} while (!bIsResult);
-
+	InventoryDAInstance = InventoryDA.Get();
 	CreateWeaponInstances();
 	UE_LOG(LogTemp, Log, TEXT("Complete %s => [%s]"), *GetNameSafe(InventoryDAInstance), *FString(__FUNCTION__));
 }

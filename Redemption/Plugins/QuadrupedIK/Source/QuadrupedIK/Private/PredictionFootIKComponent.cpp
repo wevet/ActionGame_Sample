@@ -4,12 +4,8 @@
 #include "GameFramework/Character.h"
 #include "Animation/AnimInstance.h"
 
-#pragma region ToePathInfo
-void FPredictionToePathInfo::SetToeContactFloorHeight(float InHeight)
-{
-	ToeContactFloorHeight = InHeight;
-}
 
+#pragma region ToePathInfo
 void FPredictionToePathInfo::Reset()
 {
 	IsPathValid = false;
@@ -17,7 +13,12 @@ void FPredictionToePathInfo::Reset()
 	ToeFloorState = EPredictionToeFloorState::None;
 }
 
-void FPredictionToePathInfo::Update(const USkeletalMeshComponent* InSkMeshComp, const FVector& InRightToeCSPos, const FVector& InLeftToeCSPos, const EPredictionMotionFoot& InFoot, const FName& InToeName)
+
+void FPredictionToePathInfo::Update(const USkeletalMeshComponent* InSkMeshComp,
+	const FVector& InRightToeCSPos,
+	const FVector& InLeftToeCSPos,
+	const EPredictionMotionFoot& InFoot,
+	const FName& InToeName)
 {
 	CurToeCSPos = InFoot == EPredictionMotionFoot::Right ? InRightToeCSPos : InLeftToeCSPos;
 
@@ -28,6 +29,9 @@ void FPredictionToePathInfo::Update(const USkeletalMeshComponent* InSkMeshComp, 
 	}
 
 	CurToePos = InSkMeshComp->GetComponentTransform().ToMatrixWithScale().TransformPosition(CurToeCSPos);
+
+	// @NOTE
+	// ëäëŒç¿ïWÇ…ÇµÇ»Ç¢Ç∆lostÇ∑ÇÈÇÃÇ≈CSç¿ïWî‰är
 	EPredictionToeFloorState LocalToeFloorState = CurToeCSPos.Z < ToeContactFloorHeight ? EPredictionToeFloorState::Contacting : EPredictionToeFloorState::Leaving;
 
 	if (IsContacting() && LocalToeFloorState == EPredictionToeFloorState::Leaving)
@@ -64,6 +68,7 @@ void FPredictionToePathInfo::SetupPath(const FName& InToeName)
 			UE_LOG(LogQuadrupedIK, Verbose, TEXT("%s Path: %s PathSize: %f"), *InToeName.ToString(), *PathTranslation.ToString(), PathTranslation.Size2D());
 		}
 	}
+
 }
 
 bool FPredictionToePathInfo::IsInvalidState() const
@@ -89,6 +94,11 @@ bool FPredictionToePathInfo::IsLeaveStart() const
 bool FPredictionToePathInfo::IsContacStart() const
 {
 	return ToeFloorState == EPredictionToeFloorState::ContactStart;
+}
+
+void FPredictionToePathInfo::SetToeContactFloorHeight(float InHeight)
+{
+	ToeContactFloorHeight = InHeight;
 }
 
 void FPredictionToePathInfo::SetDefaultPathDistance(float InDist)
@@ -163,14 +173,11 @@ void UPredictionFootIKComponent::ChangeSpeedCurveValue(EPredictionGait InGait, f
 	}
 }
 
-void UPredictionFootIKComponent::SetToeCSPos(const FVector& InRightToeCSPos, const FVector& InLeftToeCSPos, const float& InWeight)
+void UPredictionFootIKComponent::SetToeCSPos(const FVector& InRightToeCSPos, const FVector& InLeftToeCSPos)
 {
-	if (InWeight > ToeWeight)
-	{
-		ToeWeight = InWeight;
-		RightToeCSPos = InRightToeCSPos;
-		LeftToeCSPos = InLeftToeCSPos;
-	}
+	//ToeWeight = InWeight;
+	RightToeCSPos = InRightToeCSPos;
+	LeftToeCSPos = InLeftToeCSPos;
 }
 
 void UPredictionFootIKComponent::GetCurveValues(float& OutLeftCurveValue, float& OutRightCurveValue, float& OutMoveSpeedCurveValue, bool& OutIsSwitchGait)
@@ -215,9 +222,9 @@ void UPredictionFootIKComponent::GetCurveValues(float& OutLeftCurveValue, float&
 	//UE_LOG(LogTemp, Log, TEXT("CurGait => %d"), MaxWeightIndex);
 }
 
-void UPredictionFootIKComponent::GetToeCSPos(FVector& OutRightToeCSPos, FVector& OutLeftToeCSPos, bool& ValidWeight)
+void UPredictionFootIKComponent::GetToeCSPos(FVector& OutRightToeCSPos, FVector& OutLeftToeCSPos)
 {
-	ValidWeight = ToeWeight > SMALL_NUMBER;
+	//ValidWeight = ToeWeight > SMALL_NUMBER;
 	OutRightToeCSPos = RightToeCSPos;
 	OutLeftToeCSPos = LeftToeCSPos;
 }

@@ -30,6 +30,8 @@
 
 #include "ChooserFunctionLibrary.h"
 
+DEFINE_LOG_CATEGORY(LogWvCommonUtils)
+
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(WvCommonUtils)
 
@@ -63,7 +65,7 @@ bool UWvCommonUtils::IsHost(const AController* Controller)
 {
 	if (!IsValid(Controller))
 	{
-		UE_LOG(LogTemp, Error, TEXT("UWvCommonUtils::IsHost->Controller is nullptr"));
+		UE_LOG(LogWvCommonUtils, Error, TEXT("UWvCommonUtils::IsHost->Controller is nullptr"));
 		return false;
 	}
 	return (Controller->HasAuthority() && Controller->IsLocalController() && !IsBot(Controller));
@@ -73,14 +75,14 @@ bool UWvCommonUtils::IsBot(const AController* Controller)
 {
 	if (!IsValid(Controller))
 	{
-		//UE_LOG(LogTemp, Error, TEXT("UWvCommonUtils::IsBot -> Controller is nullptr"));
+		//UE_LOG(LogWvCommonUtils, Error, TEXT("UWvCommonUtils::IsBot -> Controller is nullptr"));
 		return false;
 	}
 
 	const UClass* Class = Controller->GetClass();
 	if (!IsValid(Class))
 	{
-		UE_LOG(LogTemp, Error, TEXT("UWvCommonUtils::IsBot -> Class is nullptr"));
+		UE_LOG(LogWvCommonUtils, Error, TEXT("UWvCommonUtils::IsBot -> Class is nullptr"));
 		return false;
 	}
 	//Is a BOT
@@ -169,7 +171,7 @@ FHitReactInfoRow* UWvCommonUtils::FindHitReactInfoRow(ABaseCharacter* Character)
 	IWvAbilitySystemAvatarInterface* Avatar = Cast<IWvAbilitySystemAvatarInterface>(Character);
 	if (!Avatar)
 	{
-		UE_LOG(LogTemp, Error, TEXT("[%s : Avatar is null.]"), *FString(__FUNCTION__));
+		UE_LOG(LogWvCommonUtils, Error, TEXT("[%s : Avatar is null.]"), *FString(__FUNCTION__));
 		return nullptr;
 	}
 
@@ -179,7 +181,7 @@ FHitReactInfoRow* UWvCommonUtils::FindHitReactInfoRow(ABaseCharacter* Character)
 
 	if (!IsValid(CombatComponent) || !IsValid(HitReactDA) || !IsValid(InventoryComponent))
 	{
-		UE_LOG(LogTemp, Error, TEXT("[%s : CombatComponent or HitReactDA or InventoryComponent is null.]"), *FString(__FUNCTION__));
+		UE_LOG(LogWvCommonUtils, Error, TEXT("[%s : CombatComponent or HitReactDA or InventoryComponent is null.]"), *FString(__FUNCTION__));
 		return nullptr;
 	}
 
@@ -387,7 +389,7 @@ AActor* UWvCommonUtils::FindNearestDistanceTarget(AActor* Owner, const TArray<AA
 	for (int32 Index = 0; Index < Actors.Num(); ++Index)
 	{
 		const float Distance2D = (Owner->GetActorLocation() - Actors[Index]->GetActorLocation()).Size2D();
-		UE_LOG(LogTemp, Log, TEXT("ClosestDistance => %.3f, Distance2D => %.3f"), ClosestDistance, Distance2D);
+		UE_LOG(LogWvCommonUtils, Log, TEXT("ClosestDistance => %.3f, Distance2D => %.3f"), ClosestDistance, Distance2D);
 
 		if (Distance2D < ClosestDistance)
 		{
@@ -668,6 +670,7 @@ FHitResult UWvCommonUtils::CapsuleHasRoomCheck(ABaseCharacter* Character, const 
 	const float DrawTime = 1.0f;
 
 	auto TraceType = EDrawDebugTrace::Type::None;
+
 #if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
 	if ((CharacterDebug::CVarDebugMantlingSystem.GetValueOnGameThread() > 0) || (CharacterDebug::CVarDebugCharacterTraversal.GetValueOnGameThread() > 0))
 	{
@@ -692,8 +695,8 @@ FHitResult UWvCommonUtils::CapsuleHasRoomCheck(ABaseCharacter* Character, const 
 			FLinearColor(0.932733f, 0.29136f, 1.0f, 1.0f),        // light purple
 			1.0f);
 
-		UE_LOG(LogTemp, Warning, TEXT("%s"), *FString(__FUNCTION__));
-		UE_LOG(LogTemp, Warning, TEXT("result => %s"), bIsHitResult ? TEXT("true") : TEXT("false"));
+		UE_LOG(LogWvCommonUtils, Warning, TEXT("%s"), *FString(__FUNCTION__));
+		UE_LOG(LogWvCommonUtils, Warning, TEXT("result => %s"), bIsHitResult ? TEXT("true") : TEXT("false"));
 	}
 #endif
 

@@ -42,8 +42,6 @@ struct QUADRUPEDIK_API FPredictionToePathInfo
 	GENERATED_BODY()
 
 public:
-	void SetToeContactFloorHeight(float InHeight);
-
 	void Reset();
 	void Update(const USkeletalMeshComponent* InSkMeshComp, const FVector& InRightToeCSPos, const FVector& InLeftToeCSPos, const EPredictionMotionFoot& InFoot, const FName& InToeName);
 	void SetupPath(const FName& InToeName);
@@ -54,6 +52,7 @@ public:
 	bool IsLeaveStart() const;
 	bool IsContacStart() const;
 
+	void SetToeContactFloorHeight(float InHeight);
 	void SetDefaultPathDistance(float InDist);
 
 public:
@@ -96,9 +95,9 @@ public:
 
 public:
 	void SetCurveValue(EPredictionGait InGait, float InWeight, FName InCurveName, float InCurveValue);
-	void SetToeCSPos(const FVector& InRightToeCSPos, const FVector& InLeftToeCSPos, const float& InWeight);
+	void SetToeCSPos(const FVector& InRightToeCSPos, const FVector& InLeftToeCSPos);
 	void GetCurveValues(float& OutLeftCurveValue, float& OutRightCurveValue, float& OutMoveSpeedCurveValue, bool& OutIsSwitchGait);
-	void GetToeCSPos(FVector& OutRightToeCSPos, FVector& OutLeftToeCSPos, bool& ValidWeight);
+	void GetToeCSPos(FVector& OutRightToeCSPos, FVector& OutLeftToeCSPos);
 	void ClearCurveValues();
 	void ClearToeCSPos();
 

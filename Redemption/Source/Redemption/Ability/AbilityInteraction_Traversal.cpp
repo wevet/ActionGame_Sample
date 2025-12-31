@@ -34,7 +34,8 @@ void UAbilityInteraction_Traversal::ActivateAbility(const FGameplayAbilitySpecHa
 		return;
 	}
 
-	const FTraversalActionData TraversalActionData = Character->GetTraversalActionData();
+	const FTraversalActionData& TraversalActionData = Character->GetTraversalActionData();
+
 	if (!TraversalActionData.ChosenMontage)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("[%s : Montage is null.]"), *FString(__FUNCTION__));

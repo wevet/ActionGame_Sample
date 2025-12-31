@@ -11,7 +11,7 @@ class FPrimitiveDrawInterface;
 class USkeletalMeshComponent;
 
 
-USTRUCT(BlueprintType)
+USTRUCT()
 struct QUADRUPEDIK_API FAnimNode_CustomAimSolver : public FAnimNode_CustomIKControlBase
 {
 	GENERATED_BODY()

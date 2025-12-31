@@ -1525,10 +1525,15 @@ void ULadderComponent::DrawDebugShapesFunction()
 
 void ULadderComponent::RequestAsyncLoad()
 {
-	FStreamableManager& StreamableManager = UWvGameInstance::GetStreamableManager();
+	if (AnimationDA.IsValid())
+	{
+		OnLoadAnimationDA();
+		return;
+	}
 
 	if (!AnimationDA.IsNull())
 	{
+		FStreamableManager& StreamableManager = UWvGameInstance::GetStreamableManager();
 		const FSoftObjectPath ObjectPath = AnimationDA.ToSoftObjectPath();
 		ComponentStreamableHandle = StreamableManager.RequestAsyncLoad(ObjectPath, FStreamableDelegate::CreateUObject(this, &ThisClass::OnAnimAssetLoadComplete));
 	}
@@ -1537,18 +1542,17 @@ void ULadderComponent::RequestAsyncLoad()
 void ULadderComponent::OnAnimAssetLoadComplete()
 {
 	OnLoadAnimationDA();
-	ComponentStreamableHandle.Reset();
+
+	if (ComponentStreamableHandle.IsValid())
+	{
+		ComponentStreamableHandle.Reset();
+	}
+
 }
 
 void ULadderComponent::OnLoadAnimationDA()
 {
-	bool bIsResult = false;
-	do
-	{
-		AnimationDAInstance = AnimationDA.LoadSynchronous();
-		bIsResult = (IsValid(AnimationDAInstance));
-
-	} while (!bIsResult);
+	AnimationDAInstance = AnimationDA.Get();
 	UE_LOG(LogTemp, Log, TEXT("Complete %s => [%s]"), *GetNameSafe(AnimationDAInstance), *FString(__FUNCTION__));
 }
 

@@ -165,10 +165,9 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = PelvisControl, meta = (PinHiddenByDefault))
 	float MaxDipHeight = 100.0f;
 
-	UPROPERTY(EditAnywhere, Category = PelvisControl, meta = (PinHiddenByDefault))
-	FRuntimeFloatCurve PelvisHeightMultiplierCurve;
+	//UPROPERTY(EditAnywhere, Category = PelvisControl, meta = (PinHiddenByDefault))
+	//FRuntimeFloatCurve PelvisHeightMultiplierCurve;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = PelvisControl, meta = (PinHiddenByDefault))
 	float PelvisBaseOffset = 0.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = PelvisControl, meta = (PinHiddenByDefault))
@@ -218,8 +217,8 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = ChestControl, meta = (PinHiddenByDefault))
 	float ChestRotationOffset = 0;
 
-	UPROPERTY(EditAnywhere, Category = ChestControl, meta = (PinHiddenByDefault))
-	FRuntimeFloatCurve ChestHeightMultiplierCurve;
+	//UPROPERTY(EditAnywhere, Category = ChestControl, meta = (PinHiddenByDefault))
+	//FRuntimeFloatCurve ChestHeightMultiplierCurve;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = ChestControl, meta = (PinHiddenByDefault))
 	bool bUseFakeChestRotation = false;
@@ -240,9 +239,6 @@ public:
 	float LocationLerpSpeed = 15.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = AdvancedSettings, meta = (PinHiddenByDefault))
-	float MovedLocationLerpSpeed = 5.0f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = AdvancedSettings, meta = (PinHiddenByDefault))
 	float RotationLerpSpeed = 5.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = AdvancedSettings, meta = (PinShownByDefault))
@@ -251,8 +247,8 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = AdvancedSettings, meta = (PinHiddenByDefault))
 	float ChestInfluenceAlpha = 1.0f;
 
-	UPROPERTY(EditAnywhere, Category = AdvancedSettings, meta = (PinHiddenByDefault))
-	FRuntimeFloatCurve InterpolationMultiplierCurve;
+	//UPROPERTY(EditAnywhere, Category = AdvancedSettings, meta = (PinHiddenByDefault))
+	//FRuntimeFloatCurve InterpolationMultiplierCurve;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = AdvancedSettings, meta = (PinHiddenByDefault))
 	float RotationPowerBetween = 1.0f;
@@ -307,6 +303,8 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Miscellaneous, meta = (PinHiddenByDefault))
 	bool bSpineFeetConnect = true;
 #pragma endregion
+
+
 
 public:
 	FAnimNode_CustomSpineSolver();
@@ -425,6 +423,9 @@ private:
 
 
 
+	float MaxFormatedHeight = 0.0f;
+	float MaxFormatedDipHeightChest = 0.0f;
+
 	mutable float AdaptiveAlpha = 1;
 	FInputScaleBias AlphaScaleBias;
 	int32 TickCounter = 0;
@@ -434,8 +435,7 @@ private:
 	float FormatSnakeLerp = 2.0f;
 	float FormatShiftSpeed = 50.0f;
 	float ComponentScale = 1.0f;
-	float MaxFormatedHeight = 100.0f;
-	float MaxFormatedDipHeightChest = 100.0f;
+
 	float SlopeDetectionStrength = 25.0f;
 	float ChestSlopeDetectionStrength = 50.0f;
 	float ExtraForwardTraceOffset = 0.0f;
@@ -498,6 +498,8 @@ private:
 	TArray<FColor> TraceLinearColor = TArray<FColor>();
 	TArray<FVector> TraceStartList = TArray<FVector>();
 	TArray<FVector> TraceEndList = TArray<FVector>();
+
+	TArray<AActor*> IgnoreActors;
 
 	FTransform ChestEffectorTransform = FTransform::Identity;
 	FTransform RootEffectorTransform = FTransform::Identity;

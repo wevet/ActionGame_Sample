@@ -8,14 +8,23 @@
 #include "PredictionAnimInstance.generated.h"
 
 
+namespace PreditctionDebug
+{
+#if !(UE_BUILD_SHIPPING || UE_BUILD_TEST)
+
+	extern TAutoConsoleVariable<int32> CVarDebugFootIKPredictive;
+
+#endif
+}
+
 /**
  * 
  */
-UCLASS()
+UCLASS(transient, Blueprintable, hideCategories = AnimInstance, BlueprintType, meta = (BlueprintThreadSafe))
 class QUADRUPEDIK_API UPredictionAnimInstance : public UAnimInstance
 {
 	GENERATED_BODY()
-	
+
 public:
 	UPredictionAnimInstance();
 	virtual ~UPredictionAnimInstance() {}
@@ -26,16 +35,16 @@ public:
 	virtual void NativeInitializeAnimation() override;
 	virtual void NativeUninitializeAnimation() override;
 	virtual void NativeBeginPlay() override;
-	virtual void NativeUpdateAnimation(float DeltaSeconds) override;
+
 	virtual void NativeThreadSafeUpdateAnimation(float DeltaSeconds) override;
 
 	static float INVALID_TOE_DISTANCE;
 	static float DEFAULT_TOE_HEIGHT_LIMIT;
 
 private:
-	bool TickPredictiveFootIK(float DeltaSeconds, float& OutTargetMeshPosZ, bool BlockPredictive, bool AbnormalMove);
-	void TickReactFootIK(float DeltaSeconds, float& OutTargetMeshPosZ, float InMinHitZ);
-	void TickDisableFootIK(float DeltaSeconds, float& OutTargetMeshPosZ, float Weight, bool EnableInterp);
+	bool TickPredictiveFootIK(const float DeltaSeconds, float& OutTargetMeshPosZ, const bool BlockPredictive, const bool AbnormalMove);
+	void TickReactFootIK(const float DeltaSeconds, float& OutTargetMeshPosZ, const float InMinHitZ);
+	void TickDisableFootIK(const float DeltaSeconds, float& OutTargetMeshPosZ, const float Weight, const bool EnableInterp);
 
 	/// <summary>
 	/// Predictive Step
@@ -46,23 +55,63 @@ private:
 	/// 	4. complete
 	/// </summary>
 	void Step0_Prepare();
-	bool Step1_PredictiveToeEndPos(FVector& OutToeEndPos, const FPredictionToePathInfo& InPastPath, const float& InCurToeCurveValue, const FName& InToeName);
-	void Step2_TraceToePath(TArray<FVector>& OutToePath, float& OutToeHeightLimit, const FVector& InToeStartPos, const FVector& InToeCurPos, FVector InToeEndPos, const FName& InToeName, const float& DeltaSeconds);
-	void Step3_CalcMeshPosZ(float& OutTargetMeshPosZ, const float& InRightEndDist, const float& InLeftEndDist, const FVector& InRightToePos, const FVector& InLeftToePos, const FVector& InRightEndPos, const FVector& InLeftEndPos, const float& DeltaSeconds);
+	bool Step1_PredictiveToeEndPos(
+		FVector& OutToeEndPos, 
+		const FPredictionToePathInfo& InPastPath,
+		const float& InCurToeCurveValue,
+		const FName& InToeName);
+
+	void Step2_TraceToePath(
+		TArray<FVector>& OutToePath, 
+		float& OutToeHeightLimit, 
+		const FVector& InToeStartPos, 
+		const FVector& InToeCurPos, 
+		FVector InToeEndPos, 
+		const FName& InToeName, 
+		const float& DeltaSeconds);
+
+	void Step3_CalcMeshPosZ(
+		float& OutTargetMeshPosZ, 
+		const float& InRightEndDist,
+		const float& InLeftEndDist, 
+		const FVector& InRightToePos, 
+		const FVector& InLeftToePos, 
+		const FVector& InRightEndPos, 
+		const FVector& InLeftEndPos, 
+		const float& DeltaSeconds);
+
 	void Step4_Completed();
 
-	void CurveSampling();
 	void ToePosSampling();
-	void CalcToeEndPosByCurve(FVector& OutToeEndPos, const float& InCurToeCurveValue);
 	void CalcToeEndPosByDefaultDistance(FVector& OutToeEndPos, const FPredictionToePathInfo& InPastPath);
 	void CheckEndPosByTrace(bool& OutEndPosChanged, FVector& OutToeEndPos, const FVector& InLastToeEndPos);
 	void LineTracePath2(bool& OutEndPosValid, TArray<FVector>& OutToePath, const FVector& InToeStartPos, const FVector& InToeEndPos);
-	void GetToeHeightLimitByPathCurve(float& OutHeightLimit, const FVector& InToeCurPos, const TArray<FVector>& InToePath);
-	void CalcPelvisOffset2(float& OutTargetMeshPosZ, FVector& OutFootStartPos, const FVector& InFootEndPos, const FVector& InMappedPos, float dt, EPredictionMotionFoot InLstMotionFoot, EPredictionMotionFoot InCurMotionFoot);
-	void TraceForTwoFoots(float DeltaSeconds, float& OutMinHitZ, float& OutRightFootHeight, float& OutLeftFootHeight, FVector& OutRightHitNor, FVector& OutLeftHitNor);
+
+	void CalcPelvisOffset(
+		float& OutTargetMeshPosZ,
+		FVector& OutFootStartPos, 
+		const FVector& InFootEndPos,
+		const FVector& InMappedPos, 
+		float dt, 
+		EPredictionMotionFoot InLstMotionFoot,
+		EPredictionMotionFoot InCurMotionFoot);
+
+	void TraceForTwoFoots(
+		float DeltaSeconds,
+		float& OutMinHitZ,
+		float& OutRightFootHeight,
+		float& OutLeftFootHeight,
+		FVector& OutRightHitNor, 
+		FVector& OutLeftHitNor);
 
 	void DebugDrawToePath(const TArray<FVector>& InToePath, const FVector& InToePos, FLinearColor InColor);
 	void DebugDrawPelvisPath();
+	const FVector GetCharacterDirection();
+
+	void CurveSampling();
+	void CalcToeEndPosByCurve(FVector& OutToeEndPos, const float& InCurToeCurveValue);
+	void GetToeHeightLimitByPathCurve(float& OutHeightLimit, const FVector& InToeCurPos, const TArray<FVector>& InToePath);
+
 
 public:
 	float GetPelvisFinalOffset() const;
@@ -77,81 +126,73 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "PredictionIK")
 	float GetMaxFeetDistance() const { return MaxFeetDistance; }
 
+
+	virtual void InitializeBoneOffset(const int32 BoneIndex);
+	virtual void SetBoneLocationOffset(const int32 BoneIndex, const FVector& Location);
+	virtual FVector GetBoneLocationOffset(const int32 BoneIndex) const;
+	virtual void SetBoneRotationOffset(const int32 BoneIndex, const FRotator& Rotation);
+	virtual FRotator GetBoneRotationOffset(const int32 BoneIndex) const;
+
 protected:
-	UPROPERTY(EditAnywhere, Category = "Debug")
-	bool bDrawDebug;
 
-	UPROPERTY(EditAnywhere, Category = "Debug", meta = (EditCondition = "bDrawDebug"))
-	bool bDrawDebugForToe;
-
-	UPROPERTY(EditAnywhere, Category = "Debug", meta = (EditCondition = "bDrawDebug"))
-	bool bDrawDebugForPelvis;
-
-	UPROPERTY(EditAnywhere, Category = "Debug", meta = (EditCondition = "bDrawDebug"))
-	bool bDrawDebugForTrace;
 
 #pragma region Config
-	UPROPERTY(EditAnywhere, Category = "Config")
-	uint8 bEnableCurvePredictive : 1;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Config")
+	bool bEnableCurvePredictive{ false };
 
-	UPROPERTY(EditAnywhere, Category = "Config")
-	uint8 bEnableDefaultDistancePredictive : 1;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Config")
+	bool bEnableDefaultDistancePredictive{ true };
 
-	float DefaultToeFirstPathDistance = 200.0f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Config")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Config")
 	float ReactFootIKUpTraceHeight = 100.f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Config")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Config")
 	float ReactFootIKDownTraceHeight = 200.f;
 
-	UPROPERTY(EditAnywhere, Category = "Config")
-	float ToeWidth = 5.f;
-
-	UPROPERTY(EditAnywhere, Category = "Config")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Config")
 	float AbnormalMoveCosAngle = 0.71f;
 
-	UPROPERTY(EditAnywhere, Category = "Config")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Config")
 	float AbnormalMoveTimeLimit = 0.5f;
 
-	UPROPERTY(EditAnywhere, Category = "Config")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Config")
 	float TeleportedDistanceThreshold = 100.f;
 
-	UPROPERTY(EditAnywhere, Category = "Config")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Config")
 	float TraceIntervalLength = 30.f;
 
-	UPROPERTY(EditAnywhere, Category = "Config")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Config")
 	float InvalidToeEndDist = 10.f;
 
-	UPROPERTY(EditAnywhere, Category = "Config")
-	float ToeHeightThreshold = 50.f;
-
-	UPROPERTY(EditAnywhere, Category = "Config")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Config")
 	float PelvisHeightThreshold = 70.f;
 
-	UPROPERTY(EditAnywhere, Category = "Config")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Config")
 	float ReactFootIKHeightThreshold = 60.f;
 
-	UPROPERTY(EditAnywhere, Category = "Config")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Config")
 	float EndPosChangedDistanceSquareThreshold = 100.f;
 
-	UPROPERTY(EditAnywhere, Category = "Config")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Config")
 	float EndPosChangedHeightThreshold = 2.5f;
 
-	UPROPERTY(EditAnywhere, Category = "Config")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Config")
 	float EndPosZInterpSpeed = 15.f;
 
-	UPROPERTY(EditAnywhere, Category = "Config")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Config")
 	float MeshPosZInterpSpeedWhenDisableFootIK = 10.f;
 
-	UPROPERTY(EditAnywhere, Category = "Config")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Config")
 	float MeshPosZInterpSpeedWhenReactFootIK = 10.f;
 
-	UPROPERTY(EditAnywhere, Category = "Config")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Config")
 	float FootIKHeightOffsetInterpSpeed = 10.f;
 
-	UPROPERTY(EditAnywhere, Category = "Config")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Config")
 	float ToeLeaveFloorOffset = 5.0f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Config", meta = (ClampMin = "0.01", ClampMax = "1.0", UIMin = "0.01", UIMax = "1.0"))
+	float PredictiveToeDistanceWeight = 0.5f;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Config")
 	bool bAllowCustomStepHeight = false;
@@ -159,36 +200,33 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Config", meta = (EditCondition = "bAllowCustomStepHeight"))
 	float CustomStepHeight = 45.0f;
 
-	UPROPERTY(EditAnywhere, Category = "Config")
-	FName RightToeName;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Config")
+	FName RightToeName = FName(TEXT("ball_r"));
 
-	UPROPERTY(EditAnywhere, Category = "Config")
-	FName LeftToeName;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Config")
+	FName LeftToeName = FName(TEXT("ball_l"));
 
-	UPROPERTY(EditAnywhere, Category = "Config")
-	FName RightFootName;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Config")
+	FName RightFootName = FName(TEXT("foot_r"));
 
-	UPROPERTY(EditAnywhere, Category = "Config")
-	FName LeftFootName;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Config")
+	FName LeftFootName = FName(TEXT("foot_l"));
 
-	UPROPERTY(EditAnywhere, Category = "Config")
-	FVector TarFootOffset = FVector(0.f, 0.f, 1.5f);
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Config")
-	float LandedInterval = 1.6f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Config")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Config")
 	TEnumAsByte<ETraceTypeQuery> TraceChannel = ETraceTypeQuery::TraceTypeQuery1;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Config")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Config")
 	float MinFeetDistance = 80.0f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Config")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Config")
 	float MaxFeetDistance = 180.0f;
-#pragma endregion
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Config")
+	float WalkSpeed{150.0};
 
-#pragma region ToRigParameter
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Config")
+	float RunSpeed{ 750.0 };
+
 	UPROPERTY(BlueprintReadOnly, Category = "To Rig Parameter")
 	float WeightFootIK = 1.0f;
 
@@ -215,20 +253,20 @@ protected:
 
 	UPROPERTY(BlueprintReadOnly, Category = "To Rig Parameter")
 	FVector LeftFootHitNormal = FVector::ZeroVector;
-
-	UPROPERTY(BlueprintReadOnly, Category = "To Rig Parameter")
-	bool bIsLandingGrounded = false;
-
-	UPROPERTY(BlueprintReadOnly, Category = "Reference")
-	TObjectPtr<class ACharacter> Character;
-
-	UPROPERTY(BlueprintReadOnly, Category = "Reference")
-	TObjectPtr<class UCharacterMovementComponent> CharacterMovementComponent;
-
-	UPROPERTY(BlueprintReadOnly, Category = "Reference")
-	TObjectPtr<class UPredictionFootIKComponent> PredictionFootIKComponent;
 #pragma endregion
 
+
+	UPROPERTY(BlueprintReadOnly, Category = "Reference")
+	TObjectPtr<class ACharacter> Character{ nullptr };
+
+	UPROPERTY(BlueprintReadOnly, Category = "Reference")
+	TObjectPtr<class UCharacterMovementComponent> CharacterMovementComponent{ nullptr };
+
+	UPROPERTY(BlueprintReadOnly, Category = "Reference")
+	TObjectPtr<class UPredictionFootIKComponent> PredictionFootIKComponent{ nullptr };
+
+	UPROPERTY()
+	TArray<AActor*> IgnoreActors;
 
 private:
 	UFUNCTION()
@@ -237,9 +275,10 @@ private:
 	float CurRightToeCurveValue = 0.f;
 	float CurLeftToeCurveValue = 0.f;
 	float CurMoveSpeedCurveValue = 0.f;
-	FVector RightToeCSPos;
-	FVector LeftToeCSPos;
-	bool ValidPredictiveWeight = false;
+	float DefaultToePathDistance = 200.0f;
+
+	FVector RightToeCSPos{ FVector::ZeroVector };
+	FVector LeftToeCSPos{ FVector::ZeroVector };
 
 	FPredictionToePathInfo RightToePathInfo;
 	FPredictionToePathInfo LeftToePathInfo;
@@ -247,17 +286,18 @@ private:
 	TArray<FVector> RightToePath;
 	TArray<FVector> LeftToePath;
 
-	FVector MotionFootStartPos_MapByRootPos;
-	FVector MotionFootStartPos_MapByToePos;
-	FVector MotionFootEndPos;
+	FVector MotionFootStartPos_MapByRootPos{ FVector::ZeroVector };
+	FVector MotionFootStartPos_MapByToePos{ FVector::ZeroVector };
+	FVector MotionFootEndPos{ FVector::ZeroVector };
+	FVector LstCharacterBottomLocation{ FVector::ZeroVector };
+	FVector CurCharacterBottomLocation{ FVector::ZeroVector };
+
+
 	EPredictionMotionFoot CurMotionFoot = EPredictionMotionFoot::None;
 
 	float CharacterMaxStepHeight = 0.f;
 	float CharacterRadius = 0.f;
 	float CharacterWalkableFloorZ = 0.f;
-
-	FVector LstCharacterBottomLocation = FVector::ZeroVector;
-	FVector CurCharacterBottomLocation = FVector::ZeroVector;
 
 	float CurMeshWorldPosZ = 0.f;
 	float CurRightFootWorldPosZ = 0.f;
@@ -266,8 +306,15 @@ private:
 	float WeightOfDisableFootIK = 0.f;
 	float AbnormalMoveTime = 0.f;
 
-	const FVector GetCharacterDirection();
-
-	FTimerHandle Landing_TimerHandle;
 	bool bIsOwnerPlayerController = false;
+
+
+	UPROPERTY()
+	TMap<int32, FVector> OffsetLocations;
+
+	UPROPERTY()
+	TMap<int32, FRotator> OffsetRotations;
+
 };
+
+

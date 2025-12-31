@@ -6,15 +6,12 @@
 #include "Locomotion/LocomotionSystemTypes.h"
 #include "Components/ActorComponent.h"
 #include "Runtime/Launch/Resources/Version.h"
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
 #include "Engine/HitResult.h"
-#else
-#include "Engine/EngineTypes.h"
-#endif
 #include "Async/TaskGraphInterfaces.h"
 #include "AsyncComponentInterface.h"
 #include "Engine/StreamableManager.h"
 #include "Engine/DataAsset.h"
+#include "Logging/LogMacros.h"
 #include "WvCameraFollowComponent.generated.h"
 
 class APlayerCharacter;
@@ -27,6 +24,7 @@ class UHitTargetComponent;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FComponentOnTargetLockedOnOff, AActor*, LookOnTarget, UHitTargetComponent*, LookOnTargetComponent);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FComponentSetRotation, AActor*, LookOnTarget, FRotator, ControlRotation);
+
 
 UCLASS(BlueprintType)
 class REDEMPTION_API UCameraTargetDataAsset : public UDataAsset
@@ -97,6 +95,9 @@ public:
 	bool bIsDesireToSwitch{ false };
 	float TargetRotatingStack{ 0.f };
 };
+
+
+DECLARE_LOG_CATEGORY_EXTERN(LogWvCameraFollow, All, All)
 
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
@@ -266,8 +267,8 @@ private:
 
 	TArray<TWeakObjectPtr<class UHitTargetComponent>> HitTargetComponents;
 
-	TWeakObjectPtr<class AActor> LockedOnTargetActor;
-	TWeakObjectPtr<class UWidgetComponent> TargetLockedOnWidgetComponent;
+	TWeakObjectPtr<class AActor> LockOnTarget;
+	TWeakObjectPtr<class UWidgetComponent> TargetLockUIComponent;
 	TWeakObjectPtr<class UHitTargetComponent> SelectHitTargetComponent;
 
 
@@ -339,7 +340,7 @@ private:
 	void CreateAndAttachTargetLockedOnWidgetComponent(AActor* TargetActor, UHitTargetComponent* TargetComponent);
 	//~ Targeting
 
-	TArray<UHitTargetComponent*> GetTargetComponents() const;
+	TArray<UHitTargetComponent*> GetTargetHitComponents() const;
 	UHitTargetComponent* GetLockTargetComponent() const;
 
 	void TargetLockOn(AActor* TargetToLockOn, UHitTargetComponent* TargetComponent);

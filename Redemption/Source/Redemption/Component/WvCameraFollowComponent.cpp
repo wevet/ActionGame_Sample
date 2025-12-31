@@ -26,6 +26,8 @@
 #include "Async/Async.h"
 
 
+DEFINE_LOG_CATEGORY(LogWvCameraFollow)
+
 #include UE_INLINE_GENERATED_CPP_BY_NAME(WvCameraFollowComponent)
 
 #define SWITCH_COMPONENT_DELAY 2.5f
@@ -57,9 +59,11 @@ FName FCameraTargetPostPhysicsTickFunction::DiagnosticContext(bool bDetailed)
 UWvCameraFollowComponent::UWvCameraFollowComponent()
 {
 	PrimaryComponentTick.bCanEverTick = true;
-	//PrimaryComponentTick.bRunOnAnyThread = true;
+	PrimaryComponentTick.bRunOnAnyThread = false; //fix GT
+	PrimaryComponentTick.TickGroup = TG_PostPhysics;
 
 	TargetableCollisionChannel = ECollisionChannel::ECC_Pawn;
+
 }
 
 void UWvCameraFollowComponent::BeginPlay()
@@ -118,7 +122,7 @@ void UWvCameraFollowComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 
 	ReleaseTargetLockOnWidget();
 
-	LockedOnTargetActor.Reset();
+	LockOnTarget.Reset();
 	SelectHitTargetComponent.Reset();
 
 	CameraTargetDAInstance = nullptr;
@@ -144,7 +148,7 @@ void UWvCameraFollowComponent::OnCameraChange()
 
 void UWvCameraFollowComponent::UpdateCamera(UCurveFloat* LerpCurve)
 {
-	if (!IsValid(LerpCurve))
+	if (!IsValid(LerpCurve) || !IsValid(SpringArmComponent))
 	{
 		return;
 	}
@@ -336,9 +340,9 @@ void UWvCameraFollowComponent::TargetLockOn()
 {
 
 	TArray<AActor*> ActorsToLook = GetAllTargetableOfClass();
-	LockedOnTargetActor = FindNearestTarget(ActorsToLook);
+	LockOnTarget = FindNearestTarget(ActorsToLook);
 	ModifyHitTargetComponents();
-	TargetLockOn(LockedOnTargetActor.Get(), nullptr);
+	TargetLockOn(LockOnTarget.Get(), nullptr);
 }
 
 
@@ -352,7 +356,7 @@ void UWvCameraFollowComponent::TargetLockOff(bool bIsForce/* = true*/)
 	ReleaseTargetLockOnWidget();
 
 
-	if (LockedOnTargetActor.IsValid())
+	if (LockOnTarget.IsValid())
 	{
 		if (bIsForce)
 		{
@@ -365,7 +369,7 @@ void UWvCameraFollowComponent::TargetLockOff(bool bIsForce/* = true*/)
 
 			if (OnTargetLockedOff.IsBound())
 			{
-				OnTargetLockedOff.Broadcast(LockedOnTargetActor.Get(), nullptr);
+				OnTargetLockedOff.Broadcast(LockOnTarget.Get(), nullptr);
 			}
 		}
 		else
@@ -377,7 +381,7 @@ void UWvCameraFollowComponent::TargetLockOff(bool bIsForce/* = true*/)
 	FocusIndex = 0;
 	FocusLastIndex = 0;
 	HitTargetComponents.Empty();
-	LockedOnTargetActor.Reset();
+	LockOnTarget.Reset();
 }
 
 
@@ -389,7 +393,7 @@ void UWvCameraFollowComponent::TargetLockOff(bool bIsForce/* = true*/)
 void UWvCameraFollowComponent::TargetActorWithAxisInput(const float AxisValue, const float DeltaSeconds)
 {
 	// If we're not locked on, do nothing
-	if (!bTargetLocked || !LockedOnTargetActor.IsValid())
+	if (!bTargetLocked || !LockOnTarget.IsValid())
 	{
 		return;
 	}
@@ -409,17 +413,7 @@ void UWvCameraFollowComponent::TargetActorWithAxisInput(const float AxisValue, c
 
 	// For each of these actors, check line trace and ignore Current Target and build the list of actors to look from
 	TArray<AActor*> ActorsToLook = GetAllTargetableOfClass();
-	ActorsToLook.Remove(LockedOnTargetActor.Get());
-
-
-#if false
-	// Lock off target
-	AActor* CurrentTarget = LockedOnTargetActor.Get();
-	// Depending on Axis Value negative / positive, set Direction to Look for (negative: left, positive: right)
-	const float RangeMin = AxisValue < 0 ? 0 : 180;
-	const float RangeMax = AxisValue < 0 ? 180 : 360;
-	TArray<AActor*> TargetsInRange = FindTargetsInRange(ActorsToLook, RangeMin, RangeMax);
-#endif
+	ActorsToLook.Remove(LockOnTarget.Get());
 
 
 	if (bDrawDebug)
@@ -443,7 +437,7 @@ void UWvCameraFollowComponent::TargetActorWithAxisInput(const float AxisValue, c
 		// PlayerController‚Ì‘€ì‚Ís‚í‚È‚¢
 		TargetLockOff(false);
 
-		LockedOnTargetActor = ActorToTarget;
+		LockOnTarget = ActorToTarget;
 		ModifyHitTargetComponents();
 		TargetLockOn(ActorToTarget, nullptr);
 		ActorInfo.bIsSwitching = true;
@@ -460,7 +454,7 @@ void UWvCameraFollowComponent::TargetActorWithAxisInput(const float AxisValue, c
 void UWvCameraFollowComponent::TargetComponentWithAxisInput(const float AxisValue, const float DeltaSeconds)
 {
 	// If we're not locked on, do nothing
-	if (!bTargetLocked || !LockedOnTargetActor.IsValid())
+	if (!bTargetLocked || !LockOnTarget.IsValid())
 	{
 		return;
 	}
@@ -511,7 +505,7 @@ void UWvCameraFollowComponent::TargetComponentWithAxisInput(const float AxisValu
 
 	if (!HitTargetComponents.IsValidIndex(FocusIndex))
 	{
-		UE_LOG(LogTemp, Error, TEXT("NotValid Index => %d, function => %s"), FocusIndex, *FString(__FUNCTION__));
+		UE_LOG(LogWvCameraFollow, Error, TEXT("NotValid Index => %d, function => %s"), FocusIndex, *FString(__FUNCTION__));
 		return;
 	}
 
@@ -519,7 +513,7 @@ void UWvCameraFollowComponent::TargetComponentWithAxisInput(const float AxisValu
 
 	SelectHitTargetComponent.Reset();
 	SelectHitTargetComponent = HitTargetComponents[FocusIndex];
-	TargetLockOn(LockedOnTargetActor.Get(), SelectHitTargetComponent.Get());
+	TargetLockOn(LockOnTarget.Get(), SelectHitTargetComponent.Get());
 	ComponentInfo.bIsSwitching = true;
 	TM.SetTimer(SwitchingTargetComponentTimerHandle, this, &UWvCameraFollowComponent::ResetIsSwitchingTargetComponent, SWITCH_COMPONENT_DELAY);
 }
@@ -527,12 +521,12 @@ void UWvCameraFollowComponent::TargetComponentWithAxisInput(const float AxisValu
 
 AActor* UWvCameraFollowComponent::GetLockedOnTargetActor() const
 {
-	return LockedOnTargetActor.Get();
+	return LockOnTarget.Get();
 }
 
 bool UWvCameraFollowComponent::IsLocked() const
 {
-	return bTargetLocked && LockedOnTargetActor.IsValid();
+	return bTargetLocked && LockOnTarget.IsValid();
 }
 
 
@@ -546,32 +540,32 @@ void UWvCameraFollowComponent::DoTick()
 		//const float DeltaTime = GetWorld()->GetDeltaSeconds();
 		//DoTick(DeltaTime);
 
-		UE_LOG(LogTemp, Log, TEXT("safe thread => %s"), *FString(__FUNCTION__));
+		UE_LOG(LogWvCameraFollow, Log, TEXT("safe thread => %s"), *FString(__FUNCTION__));
 	}
 	else
 	{
-		//UE_LOG(LogTemp, Warning, TEXT("not game thread => %s"), *FString(__FUNCTION__));
+		//UE_LOG(LogWvCameraFollow, Warning, TEXT("not game thread => %s"), *FString(__FUNCTION__));
 	}
 }
 
 
 void UWvCameraFollowComponent::DoTick(const float DeltaTime)
 {
-	if (!bTargetLocked || !LockedOnTargetActor.IsValid())
+	if (!bTargetLocked || !LockOnTarget.IsValid())
 	{
 		return;
 	}
 
-	if (!TargetIsTargetable(LockedOnTargetActor.Get()))
+	if (!TargetIsTargetable(LockOnTarget.Get()))
 	{
 		TargetLockOff();
 		return;
 	}
 
-	SetControlRotationOnTarget(LockedOnTargetActor.Get());
+	SetControlRotationOnTarget(LockOnTarget.Get());
 
 	// Target Locked Off based on Distance
-	const float Distance = GetDistanceFromCharacter(LockedOnTargetActor.Get());
+	const float Distance = GetDistanceFromCharacter(LockOnTarget.Get());
 	if (Distance > MaintainDistanceToKeep)
 	{
 		TargetLockOff();
@@ -631,10 +625,10 @@ TArray<AActor*> UWvCameraFollowComponent::FindTargetsInRange(TArray<AActor*> Act
 /// </summary>
 void UWvCameraFollowComponent::ReleaseTargetLockOnWidget()
 {
-	if (TargetLockedOnWidgetComponent.IsValid())
+	if (TargetLockUIComponent.IsValid())
 	{
-		TargetLockedOnWidgetComponent->DestroyComponent();
-		TargetLockedOnWidgetComponent.Reset();
+		TargetLockUIComponent->DestroyComponent();
+		TargetLockUIComponent.Reset();
 	}
 }
 
@@ -680,14 +674,14 @@ void UWvCameraFollowComponent::ResetIsSwitchingTarget()
 {
 	ActorInfo.bIsSwitching = false;
 	ActorInfo.bIsDesireToSwitch = false;
-	UE_LOG(LogTemp, Log, TEXT("%s"), *FString(__FUNCTION__));
+	UE_LOG(LogWvCameraFollow, Log, TEXT("%s"), *FString(__FUNCTION__));
 }
 
 void UWvCameraFollowComponent::ResetIsSwitchingTargetComponent()
 {
 	ComponentInfo.bIsSwitching = false;
 	ComponentInfo.bIsDesireToSwitch = false;
-	UE_LOG(LogTemp, Log, TEXT("%s"), *FString(__FUNCTION__));
+	UE_LOG(LogWvCameraFollow, Log, TEXT("%s"), *FString(__FUNCTION__));
 }
 
 
@@ -695,7 +689,7 @@ void UWvCameraFollowComponent::BreakLineOfSight()
 {
 	bIsBreakingLineOfSight = false;
 	TargetLockOff();
-	UE_LOG(LogTemp, Log, TEXT("%s"), *FString(__FUNCTION__));
+	UE_LOG(LogWvCameraFollow, Log, TEXT("%s"), *FString(__FUNCTION__));
 }
 
 /// <summary>
@@ -780,10 +774,10 @@ void UWvCameraFollowComponent::ModifyHitTargetComponents()
 	FocusIndex = 0;
 	FocusLastIndex = 0;
 
-	if (LockedOnTargetActor.IsValid())
+	if (LockOnTarget.IsValid())
 	{
 		TArray<UActorComponent*> Components;
-		LockedOnTargetActor->GetComponents(UHitTargetComponent::StaticClass(), Components, true);
+		LockOnTarget->GetComponents(UHitTargetComponent::StaticClass(), Components, true);
 
 		for (UActorComponent* Component : Components)
 		{
@@ -843,12 +837,13 @@ void UWvCameraFollowComponent::CreateAndAttachTargetLockedOnWidgetComponent(AAct
 {
 	if (!IsValid(CameraTargetDAInstance) || !IsValid(CameraTargetDAInstance->LockedOnWidgetClass))
 	{
-		UE_LOG(LogTemp, Error, TEXT("[%s] : Cannot get LockedOnWidgetClass, please ensure it is a valid reference in the Component Properties."), *FString(__FUNCTION__));
+		UE_LOG(LogWvCameraFollow, Error, TEXT("[%s] : Cannot get LockedOnWidgetClass, please ensure it is a valid reference in the Component Properties."), *FString(__FUNCTION__));
 		return;
 	}
 
-	TargetLockedOnWidgetComponent = NewObject<UWidgetComponent>(TargetActor, MakeUniqueObjectName(TargetActor, UWidgetComponent::StaticClass(), FName("TargetLockOn")));
-	TargetLockedOnWidgetComponent->SetWidgetClass(CameraTargetDAInstance->LockedOnWidgetClass);
+	TargetLockUIComponent = NewObject<UWidgetComponent>(TargetActor, MakeUniqueObjectName(TargetActor, UWidgetComponent::StaticClass(), FName("TargetLockOn")));
+
+	TargetLockUIComponent->SetWidgetClass(CameraTargetDAInstance->LockedOnWidgetClass);
 
 	const FName SocketName = CameraTargetDAInstance->LockedOnWidgetParentSocket;
 	UMeshComponent* MeshComponent = TargetActor->FindComponentByClass<UMeshComponent>();
@@ -856,27 +851,28 @@ void UWvCameraFollowComponent::CreateAndAttachTargetLockedOnWidgetComponent(AAct
 
 	if (IsValid(PlayerController))
 	{
-		TargetLockedOnWidgetComponent->SetOwnerPlayer(PlayerController->GetLocalPlayer());
+		TargetLockUIComponent->SetOwnerPlayer(PlayerController->GetLocalPlayer());
 	}
 
 	const FName BoneName = IsValid(TargetComponent) ? TargetComponent->GetAttachBoneName() : SocketName;
-	const auto DrawSize = FVector2D(CameraTargetDAInstance->LockedOnWidgetDrawSize, CameraTargetDAInstance->LockedOnWidgetDrawSize);
-	const auto RelativeLocation = CameraTargetDAInstance->LockedOnWidgetRelativeLocation;
+	const FVector2D DrawSize = FVector2D(CameraTargetDAInstance->LockedOnWidgetDrawSize, CameraTargetDAInstance->LockedOnWidgetDrawSize);
+	const FVector RelativeLocation = CameraTargetDAInstance->LockedOnWidgetRelativeLocation;
 
-	TargetLockedOnWidgetComponent->ComponentTags.Add(K_LOCK_ON_WIDGET_TAG);
-	TargetLockedOnWidgetComponent->SetWidgetSpace(EWidgetSpace::Screen);
-	TargetLockedOnWidgetComponent->SetupAttachment(ParentComponent, BoneName);
-	TargetLockedOnWidgetComponent->SetRelativeLocation(RelativeLocation);
-	TargetLockedOnWidgetComponent->SetDrawSize(DrawSize);
-	TargetLockedOnWidgetComponent->SetVisibility(true);
-	TargetLockedOnWidgetComponent->RegisterComponent();
+	TargetLockUIComponent->ComponentTags.Add(K_LOCK_ON_WIDGET_TAG);
+	TargetLockUIComponent->SetWidgetSpace(EWidgetSpace::Screen);
+	TargetLockUIComponent->SetupAttachment(ParentComponent, BoneName);
+	TargetLockUIComponent->SetRelativeLocation(RelativeLocation);
+	TargetLockUIComponent->SetDrawSize(DrawSize);
+	TargetLockUIComponent->SetVisibility(true);
+	TargetLockUIComponent->RegisterComponent();
 }
 
 TArray<AActor*> UWvCameraFollowComponent::GetAllTargetableOfClass() const
 {
 	TArray<AActor*> ActorsToLook;
 
-	const TArray<UHitTargetComponent*> Components = GetTargetComponents();
+	const TArray<UHitTargetComponent*>& Components = GetTargetHitComponents();
+
 	for (UHitTargetComponent* Component : Components)
 	{
 		AActor* Actor = Component->GetOwner();
@@ -892,14 +888,16 @@ TArray<AActor*> UWvCameraFollowComponent::GetAllTargetableOfClass() const
 	return ActorsToLook;
 }
 
-TArray<UHitTargetComponent*> UWvCameraFollowComponent::GetTargetComponents() const
+TArray<UHitTargetComponent*> UWvCameraFollowComponent::GetTargetHitComponents() const
 {
 	TArray<UPrimitiveComponent*> TargetPrims;
 	// World dynamic object type
 	TArray<TEnumAsByte<EObjectTypeQuery>> ObjectTypes = { EObjectTypeQuery::ObjectTypeQuery2 };
 
 	// Overlap check for targetable component
-	UKismetSystemLibrary::SphereOverlapComponents(Character->GetWorld(), Character->GetActorLocation(), MinimumDistanceToEnable, ObjectTypes, UHitTargetComponent::StaticClass(), TArray<AActor*>{GetOwner()}, TargetPrims);
+	UKismetSystemLibrary::SphereOverlapComponents(
+		Character->GetWorld(), Character->GetActorLocation(), 
+		MinimumDistanceToEnable, ObjectTypes, UHitTargetComponent::StaticClass(), TArray<AActor*>{GetOwner()}, TargetPrims);
 
 	TArray<UHitTargetComponent*> TargetComps;
 	for (UPrimitiveComponent* Comp : TargetPrims)
@@ -939,7 +937,7 @@ bool UWvCameraFollowComponent::TargetIsTargetable(const AActor* Actor)
 /// <returns></returns>
 UHitTargetComponent* UWvCameraFollowComponent::GetLockTargetComponent() const
 {
-	const TArray<UHitTargetComponent*> Components = GetTargetComponents();
+	const TArray<UHitTargetComponent*> Components = GetTargetHitComponents();
 
 	if (Components.IsEmpty())
 	{
@@ -980,7 +978,7 @@ AActor* UWvCameraFollowComponent::FindNearestTarget(const TArray<AActor*>& Actor
 
 	const FVector From = Character->GetActorForwardVector();
 	float BestDot = -FLT_MAX;
-	AActor* Best = nullptr;
+	TWeakObjectPtr<class AActor> Best = nullptr;
 
 	for (AActor* A : Actors)
 	{
@@ -992,8 +990,9 @@ AActor* UWvCameraFollowComponent::FindNearestTarget(const TArray<AActor*>& Actor
 			Best = A;
 		}
 	}
-	return Best;
+	return Best.Get();
 }
+
 
 AActor* UWvCameraFollowComponent::FindNearestDistanceTarget(const TArray<AActor*>& Actors) const
 {
@@ -1004,13 +1003,13 @@ bool UWvCameraFollowComponent::LineTrace(FHitResult& OutHitResult, const AActor*
 {
 	if (!IsValid(Character))
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[%s] - Called with invalid Character: %s"), *FString(__FUNCTION__), *GetNameSafe(Character.Get()));
+		UE_LOG(LogWvCameraFollow, Warning, TEXT("[%s] - Called with invalid Character: %s"), *FString(__FUNCTION__), *GetNameSafe(Character.Get()));
 		return false;
 	}
 
 	if (!IsValid(OtherActor))
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[%s] - Called with invalid OtherActor: %s"), *FString(__FUNCTION__), *GetNameSafe(OtherActor));
+		UE_LOG(LogWvCameraFollow, Warning, TEXT("[%s] - Called with invalid OtherActor: %s"), *FString(__FUNCTION__), *GetNameSafe(OtherActor));
 		return false;
 	}
 
@@ -1029,7 +1028,7 @@ bool UWvCameraFollowComponent::LineTrace(FHitResult& OutHitResult, const AActor*
 		return World->LineTraceSingleByChannel(OutHitResult, Start, End, TargetableCollisionChannel, Params);
 	}
 
-	UE_LOG(LogTemp, Warning, TEXT("[%s] - Called with invalid World: %s"), *FString(__FUNCTION__), *GetNameSafe(GetWorld()));
+	UE_LOG(LogWvCameraFollow, Warning, TEXT("[%s] - Called with invalid World: %s"), *FString(__FUNCTION__), *GetNameSafe(GetWorld()));
 	return false;
 }
 
@@ -1043,7 +1042,7 @@ FRotator UWvCameraFollowComponent::GetControlRotationOnTarget(const AActor* Othe
 {
 	if (!IsValid(PlayerController))
 	{
-		UE_LOG(LogTemp, Error, TEXT("%s - OwnerPlayerController is not valid ..."), *FString(__FUNCTION__));
+		UE_LOG(LogWvCameraFollow, Error, TEXT("%s - OwnerPlayerController is not valid ..."), *FString(__FUNCTION__));
 		return FRotator::ZeroRotator;
 	}
 
@@ -1090,14 +1089,6 @@ void UWvCameraFollowComponent::SetControlRotationOnTarget(AActor* TargetActor) c
 	}
 
 	const FRotator ControlRotation = GetControlRotationOnTarget(TargetActor);
-	//if (OnTargetSetRotation.IsBound())
-	//{
-	//	OnTargetSetRotation.Broadcast(TargetActor, ControlRotation);
-	//}
-	//else
-	//{
-	//	PlayerController->SetControlRotation(ControlRotation);
-	//}
 
 	PlayerController->SetControlRotation(ControlRotation);
 }
@@ -1109,17 +1100,17 @@ float UWvCameraFollowComponent::GetDistanceFromCharacter(const AActor* OtherActo
 
 bool UWvCameraFollowComponent::ShouldBreakLineOfSight() const
 {
-	if (!LockedOnTargetActor.IsValid())
+	if (!LockOnTarget.IsValid())
 	{
 		return true;
 	}
 
 	TArray<AActor*> ActorsToLook = GetAllTargetableOfClass();
-	ActorsToLook.Remove(LockedOnTargetActor.Get());
+	ActorsToLook.Remove(LockOnTarget.Get());
 
 	FHitResult HitResult;
-	const bool bHitResult = LineTrace(HitResult, LockedOnTargetActor.Get(), ActorsToLook);
-	if (bHitResult && HitResult.GetActor() != LockedOnTargetActor)
+	const bool bHitResult = LineTrace(HitResult, LockOnTarget.Get(), ActorsToLook);
+	if (bHitResult && HitResult.GetActor() != LockOnTarget)
 	{
 		return true;
 	}
@@ -1212,10 +1203,15 @@ AActor* UWvCameraFollowComponent::PickByScreenSide(const TArray<AActor*>& Candid
 #pragma region AsyncLoad
 void UWvCameraFollowComponent::RequestAsyncLoad()
 {
-	FStreamableManager& StreamableManager = UWvGameInstance::GetStreamableManager();
+	if (CameraTargetDA.IsValid())
+	{
+		OnLoadCameraTargetSettingsDA();
+		return;
+	}
 
 	if (!CameraTargetDA.IsNull())
 	{
+		FStreamableManager& StreamableManager = UWvGameInstance::GetStreamableManager();
 		const FSoftObjectPath ObjectPath = CameraTargetDA.ToSoftObjectPath();
 		ComponentStreamableHandle = StreamableManager.RequestAsyncLoad(ObjectPath, FStreamableDelegate::CreateUObject(this, &ThisClass::OnDataAssetLoadComplete));
 	}
@@ -1224,19 +1220,16 @@ void UWvCameraFollowComponent::RequestAsyncLoad()
 void UWvCameraFollowComponent::OnDataAssetLoadComplete()
 {
 	OnLoadCameraTargetSettingsDA();
-	ComponentStreamableHandle.Reset();
+	if (ComponentStreamableHandle.IsValid())
+	{
+		ComponentStreamableHandle.Reset();
+	}
 }
 
 void UWvCameraFollowComponent::OnLoadCameraTargetSettingsDA()
 {
-	bool bIsResult = false;
-	do
-	{
-		CameraTargetDAInstance = CameraTargetDA.LoadSynchronous();
-		bIsResult = (IsValid(CameraTargetDAInstance));
-
-	} while (!bIsResult);
-	UE_LOG(LogTemp, Log, TEXT("Complete %s => [%s]"), *GetNameSafe(CameraTargetDAInstance), *FString(__FUNCTION__));
+	CameraTargetDAInstance = CameraTargetDA.Get();
+	UE_LOG(LogWvCameraFollow, Log, TEXT("Complete %s => [%s]"), *GetNameSafe(CameraTargetDAInstance), *FString(__FUNCTION__));
 }
 #pragma endregion
 

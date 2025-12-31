@@ -8,6 +8,7 @@
 #include "EngineUtils.h"
 #include "Component/WvCharacterMovementTypes.h"
 #include "Locomotion/LocomotionSystemTypes.h"
+#include "Logging/LogMacros.h"
 #include "WvCommonUtils.generated.h"
 
 class USkeletalMeshComponent;
@@ -23,6 +24,7 @@ class UPrimitiveComponent;
 struct FHitReactInfoRow;
 //struct FLSComponentAndTransform;
 
+DECLARE_LOG_CATEGORY_EXTERN(LogWvCommonUtils, All, All)
 
 
 /**

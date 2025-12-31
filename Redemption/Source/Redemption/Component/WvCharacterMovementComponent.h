@@ -179,7 +179,7 @@ protected:
 
 #pragma region Traversal
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Character Movement: Traversal")
-	FVector2D TraversalTraceRange{80.0f, 350.0f};
+	FVector2D TraversalTraceRange{80.0f, 400.0f};
 
 	// ƒJƒvƒZƒ‹”¼Œa‚ÉŠ|‚¯‚éŠg’£
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Character Movement: Traversal")
@@ -347,6 +347,7 @@ private:
 	TObjectPtr<class UMantleAnimationDataAsset> MantleDAInstance;
 	TSharedPtr<FStreamableHandle> ComponentStreamableHandle;
 
+	UPROPERTY()
 	FTraversalDataCheckInputs TraversalDataCheckInput;
 	void OnMantleAssetLoadComplete();
 	void OnLoadMantleDA();

@@ -375,6 +375,11 @@ public:
 	TEnumAsByte<EMovementMode> MovementMode{ EMovementMode::MOVE_None };
 
 	void Reset();
+
+	FTraversalActionData()
+	{
+		ActionType = ETraversalType::None;
+	}
 };
 
 
